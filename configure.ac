@@ -24,10 +24,10 @@
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
 # Please remember to document interface changes in the NEWS file.
-AC_INIT(libksba, 0.4.4, gpa-dev@gnupg.org)
+AC_INIT(libksba, 0.4.5, gpa-dev@gnupg.org)
 LIBKSBA_LT_CURRENT=6
 LIBKSBA_LT_AGE=6
-LIBKSBA_LT_REVISION=1
+LIBKSBA_LT_REVISION=2
 #-------------------
 
 PACKAGE=$PACKAGE_NAME
@@ -102,10 +102,10 @@ AC_CHECK_FUNCS([memmove strchr strtol strtoul stpcpy timegm])
 
 
 # To be used in ksba-config
-KSBA_LIBS="-L${libdir} -lksba"
-KSBA_CFLAGS=""
-AC_SUBST(KSBA_LIBS)
-AC_SUBST(KSBA_CFLAGS)
+KSBA_CONFIG_LIBS="-lksba"
+KSBA_CONFIG_CFLAGS=""
+AC_SUBST(KSBA_CONFIG_LIBS)
+AC_SUBST(KSBA_CONFIG_CFLAGS)
 
 AC_CONFIG_FILES([
 Makefile
