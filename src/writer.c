@@ -194,7 +194,7 @@ ksba_writer_set_mem (KsbaWriter w, size_t initial_size)
   return 0;
 }
 
-/* Return the pointer to the memory and the siez of it.  This pointer
+/* Return the pointer to the memory and the size of it.  This pointer
    is valid as long as the writer object is valid and no write
    operations takes place (because they might reallocate the buffer).
    if NBYTES is not NULL, it will receive the number of bytes in this
@@ -210,6 +210,29 @@ ksba_writer_get_mem (KsbaWriter w, size_t *nbytes)
   if (nbytes)
     *nbytes = w->nwritten;
   return w->u.mem.buffer;
+}
+
+/* Return the the memory and the size of it.  The writer object is set
+   back into the uninitalized state; i.e. one of the
+   ksab_writer_set_xxx () must be used before all other operations.
+   if NBYTES is not NULL, it will receive the number of bytes in this
+   buffer which is the same value ksba_writer_tell() returns.
+   
+   In case of an error NULL is returned.  */
+void *
+ksba_writer_snatch_mem (KsbaWriter w, size_t *nbytes)
+{
+  void *p;
+
+  if (!w || w->type != WRITER_TYPE_MEM || w->error)
+    return NULL;
+  if (nbytes)
+    *nbytes = w->nwritten;
+  p = w->u.mem.buffer;
+  w->u.mem.buffer = NULL;
+  w->type = 0;
+  w->nwritten = 0;
+  return p;
 }
 
 
@@ -242,6 +265,9 @@ do_writer_write (KsbaWriter w, const void *buffer, size_t length)
     }
   else if (w->type == WRITER_TYPE_MEM)
     {
+      if (w->error == ENOMEM)
+        return KSBA_Out_Of_Core; /* it does not make sense to proceed then */
+
       if (w->nwritten + length > w->u.mem.size)
         {
           size_t newsize = w->u.mem.size;
@@ -255,7 +281,14 @@ do_writer_write (KsbaWriter w, const void *buffer, size_t length)
           
           p = xtryrealloc (w->u.mem.buffer, newsize);
           if (!p)
+            {
+              /* keep an error flag so that the user does not need to
+                 check the return code of a write but instead use
+                 ksba_writer_error() to check for it or even figure
+                 this state out when using ksba_writer_get_mem() */
+              w->error = ENOMEM;
               return KSBA_Out_Of_Core;
+            }
           w->u.mem.buffer = p;
           w->u.mem.size = newsize;
         }

@@ -44,9 +44,9 @@ libksba_la_SOURCES = \
 	ber-decoder.c ber-decoder.h \
 	der-encoder.c der-encoder.h \
 	cert.c cert.h \
-	cms.c cms.h \
-	cms-parser.c \
+	cms.c cms.h cms-parser.c \
 	crl.c crl.h \
+	certreq.c certreq.h \
 	keyinfo.c keyinfo.h \
 	oid.c dn.c time.c convert.h \
 	util.c util.h shared.h errors.c	\

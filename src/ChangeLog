@@ -1,3 +1,24 @@
+2002-01-10  Werner Koch  <wk@gnupg.org>
+
+	* certreq.c, certreq.h: New.
+	* keyinfo.c (_ksba_keyinfo_from_sexp): New.
+
+	* der-encoder.c: Removed commented code.
+
+2002-01-09  Werner Koch  <wk@gnupg.org>
+
+	* dn.c (count_quoted_string, parse_rdn, write_escaped): New.
+	(_ksba_dn_from_str): Implemented.
+
+	* ber-help.c (_ksba_ber_count_tl): New.
+
+	* util.h (spacep): New.
+	(hexdigitp): Now takes a pointer as arg.
+	
+	* writer.c (do_writer_write): Set the error flag when we are out
+	of core.
+	(ksba_writer_snatch_mem): New.
+
 2002-01-08  Werner Koch  <wk@gnupg.org>
 
 	* writer.c (ksba_writer_set_mem): New.

@@ -21,6 +21,9 @@
 #ifndef KEYINFO_H
 #define KEYINFO_H
 
+#include "asn1-func.h"
+
+
 KsbaError
 _ksba_parse_algorithm_identifier (const unsigned char *der,
                                   size_t derlen,
@@ -34,6 +37,10 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
 
 KsbaError _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
                                  KsbaSexp *r_string);
+
+KsbaError _ksba_keyinfo_from_sexp (KsbaConstSexp sexp,
+                                   unsigned char **r_der, size_t *r_derlen);
+
 KsbaError _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
                                 KsbaSexp *r_string);
 KsbaError _ksba_encval_to_sexp (const unsigned char *der, size_t derlen,

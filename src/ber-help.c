@@ -218,3 +218,57 @@ _ksba_ber_write_tl (KsbaWriter writer,
   return ksba_writer_write (writer, buf, buflen);
 }
 
+
+/* calculate the length of the TL needed to encode a TAG of CLASS.
+   constructed is a flag telling
+   whether the value is a constructed one.  length gives the length of
+   the value, if it is 0 undefinite length is assumed.  length is
+   ignored for the NULL tag. */
+size_t
+_ksba_ber_count_tl (unsigned long tag,
+                    enum tag_class class,
+                    int constructed,
+                    unsigned long length)
+{
+  int buflen = 0;
+
+  if (tag < 0x1f)
+    {
+      buflen++;
+    }
+  else
+    {
+      buflen++; /* assume one and let the actual write function bail out */
+    }
+
+  if (!tag && !class)
+    buflen++; /* end tag */
+  else if (tag == TYPE_NULL && !class)
+    buflen++; /* NULL tag */
+  else if (!length)
+    buflen++; /* indefinite length */
+  else if (length < 128)
+    buflen++; 
+  else 
+    {
+      int i;
+
+      /* fixme: if we know the sizeof an ulong we could support larger
+         objetcs - however this is pretty ridiculous */
+      i = (length <= 0xff ? 1:
+           length <= 0xffff ? 2: 
+           length <= 0xffffff ? 3: 4);
+      
+      buflen++;
+      if (i > 3)
+        buflen++;
+      if (i > 2)
+        buflen++;
+      if (i > 1)
+        buflen++;
+      buflen++;
+    }        
+
+  return buflen;
+}
+

@@ -33,6 +33,7 @@
 #include "asn1-func.h"
 #include "keyinfo.h"
 #include "shared.h"
+#include "ber-help.h"
 
 struct algo_table_s {
   const char *oidstring;
@@ -517,6 +518,257 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
 
   return 0;
 }
+
+
+/* match the algorithm string given in BUF which is of length BUFLEN
+   with the known algorithms from our table and returns the table
+   entries for the DER encoded OID.
+
+   FIXME: We restrict this for now to RSA becuase the code using this
+   function is not yet prepared to handle other algorithms */
+static const unsigned char *
+oid_from_buffer (const unsigned char *buf, int buflen, int *oidlen)
+{
+  int i;
+
+  /* ignore a leading "oid." string */
+  if (buflen > 4 && buf[3] == '.' && digitp (buf+4)
+      && ((buf[0] == 'o' && buf[1] == 'i' && buf[2] == 'd')
+          ||(buf[0] == 'O' && buf[1] == 'I' && buf[2] == 'D')))
+    {
+      buf += 4;
+      buflen -= 4;
+    }
+
+  /* and scan the table */
+  for (i=0; pk_algo_table[i].oid; i++)
+    {
+      if (!pk_algo_table[i].supported)
+        continue;
+      if (buflen == strlen (pk_algo_table[i].oidstring)
+          && !memcmp (buf, pk_algo_table[i].oidstring, buflen))
+        break;
+      if (buflen == strlen (pk_algo_table[i].algo_string)
+          && !memcmp (buf, pk_algo_table[i].algo_string, buflen))
+        break;
+    }
+  if (!pk_algo_table[i].oid)
+    return NULL;
+  
+  if (strcmp (pk_algo_table[i].elem_string, "-ne"))
+    return NULL; /* that is not RSA - we can't handle it yet */
+  *oidlen = pk_algo_table[i].oidlen;
+  return pk_algo_table[i].oid;
+}
+
+
+/* Take a public-key S-Exp and convert it into a DER encoded
+   publicKeyInfo */
+KsbaError
+_ksba_keyinfo_from_sexp (KsbaConstSexp sexp,
+                         unsigned char **r_der, size_t *r_derlen)
+{
+  KsbaError err;
+  const unsigned char *s, *endp;
+  unsigned long n, n1;
+  const unsigned char *oid;
+  int oidlen;
+  int i;
+  struct {
+    const char *name;
+    int namelen;
+    const unsigned char *value;
+    int valuelen;
+  } parm[3];
+  int parmidx;
+  KsbaWriter writer = NULL;
+  void *bitstr_value = NULL;
+  size_t bitstr_len;
+    
+
+  if (!sexp)
+    return KSBA_Invalid_Value;
+
+  s = sexp;
+  if (*s != '(')
+    return KSBA_Invalid_Sexp;
+  s++;
+
+  n = strtoul (s, (char**)&endp, 10);
+  s = endp;
+  if (!n || *s != ':')
+    return KSBA_Invalid_Sexp; /* we don't allow empty lengths */
+  s++;
+  if (n != 10 || memcmp (s, "public-key", 10))
+    return KSBA_Unknown_Sexp;
+  s += 10;
+  if (*s != '(')
+    return digitp (s)? KSBA_Unknown_Sexp : KSBA_Invalid_Sexp;
+  s++;
+
+  /* break out the algorithm ID */
+  n = strtoul (s, (char**)&endp, 10);
+  s = endp;
+  if (!n || *s != ':')
+    return KSBA_Invalid_Sexp; /* we don't allow empty lengths */
+  s++;
+  oid = oid_from_buffer (s, n, &oidlen);
+  if (!oid)
+    return KSBA_Unsupported_Algorithm;
+  s += n;
+
+  /* Collect all the values */
+  for (parmidx = 0; *s != ')' ; parmidx++)
+    {
+      if (parmidx >= DIM(parm))
+        return KSBA_General_Error;
+      if (*s != '(')
+        return digitp (s)? KSBA_Unknown_Sexp : KSBA_Invalid_Sexp;
+      s++;
+      n = strtoul (s, (char**)&endp, 10);
+      s = endp;
+      if (!n || *s != ':')
+        return KSBA_Invalid_Sexp; 
+      s++;
+      parm[parmidx].name = s;
+      parm[parmidx].namelen = n;
+      s += n; 
+      if (!digitp(s))
+        return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+
+      n = strtoul (s, (char**)&endp, 10);
+      s = endp;
+      if (!n || *s != ':')
+        return KSBA_Invalid_Sexp; 
+      s++;
+      parm[parmidx].value = s;
+      parm[parmidx].valuelen = n;
+      s += n;
+      if ( *s != ')')
+        return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+      s++;
+    }
+  s++;
+  /* we need another closing parenthesis */
+  if ( *s != ')' )
+    return KSBA_Invalid_Sexp; 
+
+  /* check that the names match the requirements for RSA */
+  s = "ne"; 
+  if (parmidx != strlen (s))
+    return KSBA_Unknown_Sexp;
+  for (i=0; i < parmidx; i++)
+    {
+      if (parm[i].namelen != 1 || parm[i].name[0] != s[i])
+        return KSBA_Unknown_Sexp;
+    }
+
+  
+  /* Create write object.  We create the keyinfo in 2 steps: 1. we
+     build the inner one and encapsulate it in bit string. 2. we
+     create the outer sequence include the algorithm identifier and
+     the bit string from step 1 */
+  if (!(writer = ksba_writer_new ()))
+    err = KSBA_Out_Of_Core;
+  else
+    err = ksba_writer_set_mem (writer, 1024);
+  if (err)
+    goto leave;
+
+  /* calculate the size of the sequence value and the size of the
+     bit string value */
+  for (n=0, i=0; i < parmidx; i++ )
+    {
+      n += _ksba_ber_count_tl (TYPE_INTEGER, CLASS_UNIVERSAL, 0,
+                                parm[i].valuelen);
+      n += parm[i].valuelen;
+    }
+  
+  n1 = 1; /* # of unused bits */
+  n1 += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
+  n1 += n;
+
+  /* write the bit string header and the number of unused bits */
+  err = _ksba_ber_write_tl (writer, TYPE_BIT_STRING, CLASS_UNIVERSAL, 0, n1);
+  if (!err)
+    err = ksba_writer_write (writer, "", 1);
+  if (err)
+    goto leave;
+  
+  /* write the sequence tag and the integers */
+  err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
+  if (err)
+    goto leave;
+  for (i=0; i < parmidx; i++)
+    {
+      /* fixme: we should make sure that the integer conforms to the
+         ASN.1 encoding rules. */
+      err  = _ksba_ber_write_tl (writer, TYPE_INTEGER, CLASS_UNIVERSAL, 0, 
+                                 parm[i].valuelen);
+      if (!err)
+        err = ksba_writer_write (writer, parm[i].value, parm[i].valuelen);
+      if (err)
+        goto leave;
+    }
+
+  /* get the encoded bit string */
+  bitstr_value = ksba_writer_snatch_mem (writer, &bitstr_len);
+  if (!bitstr_value)
+    {
+      err = KSBA_Out_Of_Core;
+      goto leave;
+    }
+  /* reinitialize the buffer to create the outer sequence */
+  err = ksba_writer_set_mem (writer, 1024);
+  if (err)
+    goto leave;
+
+  /* calulate lengths */
+  n  = _ksba_ber_count_tl (TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, oidlen);
+  n += oidlen;
+  n += _ksba_ber_count_tl (TYPE_NULL, CLASS_UNIVERSAL, 0, 0);
+  
+  n1 = n;
+  n1 += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
+  n1 += bitstr_len;
+
+  /* the outer sequence */
+  err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n1);
+  if (err)
+    goto leave;
+
+  /* the sequence */
+  err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
+  if (err)
+    goto leave;
+
+  /* the object id */
+  err = _ksba_ber_write_tl (writer, TYPE_OBJECT_ID,CLASS_UNIVERSAL, 0, oidlen);
+  if (!err)
+    err = ksba_writer_write (writer, oid, oidlen);
+  if (err)
+    goto leave;
+  /* the parameter */
+  err = _ksba_ber_write_tl (writer, TYPE_NULL, CLASS_UNIVERSAL, 0, 0);
+  if (err)
+    goto leave;
+
+  /* append the pre-constructed bit string */
+  err = ksba_writer_write (writer, bitstr_value, bitstr_len);
+  if (err)
+    goto leave;
+  
+  /* and get the result */
+  *r_der = ksba_writer_snatch_mem (writer, r_derlen);
+  if (!*r_der)
+      err = KSBA_Out_Of_Core;
+
+ leave:
+  ksba_writer_release (writer);
+  xfree (bitstr_value);
+  return err;
+}
+
 
 
 /* Mode 0: work as described under _ksba_sigval_to_sexp

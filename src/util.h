@@ -77,10 +77,11 @@ char *stpcpy (char *a, const char *b);
 #endif
 
 /* some macros to replace ctype ones and avoid locale problems */
+#define spacep(p)   (*(p) == ' ' || *(p) == '\t')
 #define digitp(p)   (*(p) >= '0' && *(p) <= '9')
 #define hexdigitp(a) (digitp (a)                     \
-                      || ((a) >= 'A' && (a) <= 'F')  \
-                      || ((a) >= 'a' && (a) <= 'f'))
+                      || (*(a) >= 'A' && *(a) <= 'F')  \
+                      || (*(a) >= 'a' && *(a) <= 'f'))
 /* the atoi macros assume that the buffer has only valid digits */
 #define atoi_1(p)   (*(p) - '0' )
 #define atoi_2(p)   ((atoi_1(p) * 10) + atoi_1((p)+1))
@@ -94,6 +95,9 @@ char *stpcpy (char *a, const char *b);
 
 
 #endif /* UTIL_H */
+
+
+
 
 
 

@@ -28,6 +28,7 @@
 
 #include "util.h"
 #include "asn1-func.h"
+#include "ber-help.h"
 
 struct {
   const char *name;
@@ -62,6 +63,21 @@ struct {
 { NULL }
 };
 
+
+#define N 0x00
+#define P 0x01
+static unsigned char charclasses[128] = {
+  N, N, N, N, N, N, N, N,  N, N, N, N, N, N, N, N, 
+  N, N, N, N, N, N, N, N,  N, N, N, N, N, N, N, N, 
+  P, N, N, N, N, N, N, P,  P, P, N, P, P, P, P, P, 
+  P, P, P, P, P, P, P, P,  P, P, P, N, N, P, N, P, 
+  N, P, P, P, P, P, P, P,  P, P, P, P, P, P, P, P, 
+  P, P, P, P, P, P, P, P,  P, P, P, N, N, N, N, N, 
+  N, P, P, P, P, P, P, P,  P, P, P, P, P, P, P, P, 
+  P, P, P, P, P, P, P, P,  P, P, P, N, N, N, N, N
+};
+#undef N
+#undef P
 
 struct stringbuf {
   size_t len;
@@ -530,15 +546,394 @@ _ksba_dn_to_str (const unsigned char *image, AsnNode node, char **r_string)
   return err;
 }
 
+
+/*
+   Convert a string back to DN 
+*/
 
-KsbaError
-_ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
+/* Count the number of bytes in a quoted string, return a pointer to
+   the character after the string or NULL in case of an paring error.
+   The number of bytes needed to store the string verbatim will be
+   return as RESULT.  With V2COMAP true, the string is assumed to be 
+   in v2 quoting (but w/o the leading quote character)
+ */
+static const char *
+count_quoted_string (const char *string, size_t *result,
+                     int v2compat, int *stringtype)
 {
-  return KSBA_Not_Implemented;  /* FIXME*/
+  const unsigned char *s;
+  int nbytes = 0;
+  int highbit = 0;
+  int nonprint = 0;
+
+  *stringtype = 0;
+  for (s=string; *s; s++)
+    {
+      if (*s == '\\')
+        { /* pair */
+          s++;
+          if (*s == ',' || *s == '=' || *s == '+'
+              || *s == '<' || *s == '>' || *s == '#' || *s == ';' 
+              || *s == '\\' || *s == '\"' || *s == ' ')
+            {
+              if (!charclasses[*s])
+                nonprint = 1;
+              nbytes++;
+            }
+          else if (hexdigitp (s) && hexdigitp (s+1))
+            {
+              int c = xtoi_2 (s);
+              if ((c & 0x80))
+                highbit = 1;
+              else if (!charclasses[*s])
+                nonprint = 1;
+
+              s++;
+              nbytes++;
+            }
+          else
+            return NULL; /* invalid escape sequence */
+        }
+      else if (*s == '\"')
+        {
+          if (v2compat)
+            break;
+          return NULL; /* invalid encoding */
+        }
+      else if (!v2compat
+               && (*s == ',' || *s == '=' || *s == '+'
+                   || *s == '<' || *s == '>' || *s == '#' || *s == ';') )
+        {
+          break; 
+        }
+      else
+        {
+          nbytes++;
+          if ((*s & 0x80))
+            highbit = 1;
+          else if (!charclasses[*s])
+            nonprint = 1;
+        }
+    }
+
+  /* Fixme: Should be remove spaces or white spces from the end unless
+     they are not escaped or we are in v2compat mode?  See TODO */
+
+  if (highbit || nonprint)
+    *stringtype = TYPE_UTF8_STRING;
+  else 
+    *stringtype = TYPE_PRINTABLE_STRING;
+
+  *result = nbytes;
+  return s;
+}
+
+
+/* Write out the data to W and do the required escaping.  Note that
+   NBYTES is the number of bytes actually to be written, i.e. it is
+   the result from count_quoted_string */
+static KsbaError
+write_escaped (KsbaWriter w, const unsigned char *buffer, size_t nbytes)
+{
+  const unsigned char *s;
+  KsbaError err;
+
+  for (s=buffer; nbytes; s++)
+    {
+      if (*s == '\\')
+        { 
+          s++;
+          if (hexdigitp (s) && hexdigitp (s+1))
+            {
+              unsigned char buf = xtoi_2 (s);
+              err = ksba_writer_write (w, &buf, 1);
+              if (err)
+                return err;
+              s++;
+              nbytes--;
+            }
+          else
+            {
+              err = ksba_writer_write (w, s, 1);
+              if (err)
+                return err;
+              nbytes--;
+            }
+        }
+      else
+        {
+          err = ksba_writer_write (w, s, 1);
+          if (err)
+            return err;
+          nbytes--;
+        }
+    }
+
+  return 0;
+}
+
+
+/* Parse one RDN, and write it to WRITER.  Returns a pointer to the
+   next RDN part where the comma as alrady been skipped or NULL in
+   case of an error */
+static KsbaError
+parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
+{
+  const unsigned char *s, *s1;
+  size_t n, n1;
+  int i;
+  unsigned char *p;
+  char *oidbuf = NULL;
+  unsigned char *valuebuf = NULL;
+  const unsigned char *oid = NULL;
+  int oidlen;
+  const unsigned char *value = NULL;
+  int valuelen;
+  int valuetype;
+  int need_escaping = 0;
+  KsbaError err = 0;
+  
+
+  if (!string)
+    return KSBA_Invalid_Value;
+  while (*string == ' ')
+    string++;
+  if (!*string)
+    return KSBA_Syntax_Error; /* empty elements are not allowed */
+  s = string;
+
+  if ( ((*s == 'o' && s[1] == 'i' && s[2] == 'd')
+        ||(*s == 'O' && s[1] == 'I' && s[2] == 'D'))
+       && s[3] == '.' && digitp (s+4))
+    s += 3; /* skip a prefixed oid */
+
+  /* parse attributeType */
+  string = s;
+  if (digitp (s))
+    { /* oid */
+      for (s++; digitp (s) || (*s == '.' && s[1] != '.'); s++)
+        ;
+      n = s - string;
+      while (*s == ' ')
+        s++;
+      if (*s != '=')
+        return KSBA_Syntax_Error;
+      
+      p = xtrymalloc (n+1);
+      if (!p)
+        return KSBA_Out_Of_Core;
+      memcpy (p, string, n);
+      p[n] = 0;
+      err = ksba_oid_from_str (p, &oidbuf, &oidlen);
+      xfree (p);
+      if (err)
+        return err;
+      oid = oidbuf;
+    }
+  else if ((*s >= 'A' && *s <= 'Z') || (*s >= 'a' && *s <= 'z') )
+    { /* name */
+      for (s++; ((*s >= 'A' && *s <= 'Z') || (*s >= 'a' && *s <= 'z')
+                 || digitp (s) || *s == '-'); s++)
+        ;
+      n = s - string;
+      while (*s == ' ')
+        s++;
+      if (*s != '=')
+        return KSBA_Syntax_Error; 
+      
+      for (i=0; oid_name_tbl[i].name; i++)
+        {
+          if ( n == strlen (oid_name_tbl[i].name)
+               && !memcmp (string, oid_name_tbl[i].name, n))
+            break;
+        }
+      if (!oid_name_tbl[i].name)
+        return KSBA_Unknown_Name;
+      oid = oid_name_tbl[i].oid;
+      oidlen = oid_name_tbl[i].oidlen;
+    }
+  s++;
+  while (*s == ' ')
+    s++;
+  string = s;
+
+  /* parse attributeValue */
+  if (!*s)
+    {
+      err = KSBA_Syntax_Error; /* missing value */
+      goto leave;
+    }
+  if (*s == '#')
+    { /* hexstring */
+      int need_utf8 = 0;
+
+      string = s+1;
+      for (; hexdigitp (s); s++)
+        s++;
+      n = s - string;
+      if (!n || (n & 1))
+        {
+          err = KSBA_Syntax_Error; /* no hex digits or odd number */
+          goto leave;
+        }
+      while (*s == ' ')
+        s++;
+      n /= 2;
+      valuelen = n;
+      valuebuf = xtrymalloc (valuelen);
+      if (!valuebuf)
+        {
+          err = KSBA_Out_Of_Core;
+          goto leave;
+        }
+      for (p=valuebuf, s1=string; n; p++, s1 += 2, n--)
+        {
+          *p = xtoi_2 (s1);
+          if ((*p & 0x80) || !charclasses[*p])
+            need_utf8 = 1;
+        }
+      valuetype = need_utf8? TYPE_UTF8_STRING : TYPE_PRINTABLE_STRING;
+    }
+  else if (*s == '\"')
+    { /* old style quotation */
+      string = s+1;
+      s = count_quoted_string (string, &n, 1, &valuetype);
+      if (!s || *s != '\"')
+        {
+          err = KSBA_Syntax_Error; /* error or quote not closed */
+          goto leave;
+        }
+      s++;
+      while (*s == ' ')
+        s++;
+      value = string;
+      valuelen = n;
+      need_escaping = 1;
+    }
+  else
+    { /* regular v3 quoted string */
+      s = count_quoted_string (string, &n, 0, &valuetype);
+      if (!s)
+        {
+          err = KSBA_Syntax_Error; /* error */
+          goto leave;
+        }
+      while (*s == ' ')
+        s++;
+      value = string;
+      valuelen = n;
+      need_escaping = 1;
+    }
+
+  if ( *s && *s != ',' && *s != ';' && *s != '+')
+    {
+      err =  KSBA_Syntax_Error; /* invalid delimiter */
+      goto leave;
+    }
+  if (*s == '+') /* fixme: implement this */
+    {
+      err = KSBA_Not_Implemented; 
+      goto leave;
+    }
+  *endp = *s? (s+1):s;
+  
+  /* write out the data */
+
+  /* need to calculate the length in advance */
+  n1  = _ksba_ber_count_tl (TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, oidlen);
+  n1 += oidlen;
+  n1 += _ksba_ber_count_tl (valuetype, CLASS_UNIVERSAL, 0, valuelen);
+  n1 += valuelen;
+
+  /* The SET tag */
+  n  = _ksba_ber_count_tl (TYPE_SET, CLASS_UNIVERSAL, 1, n);
+  n += n1;
+  err = _ksba_ber_write_tl (writer, TYPE_SET, CLASS_UNIVERSAL, 1, n);
+
+  /* The sequence tag */
+  n = n1;
+  err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
+
+  /* the OBJECT ID */
+  err = _ksba_ber_write_tl (writer, TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0,oidlen);
+  if (!err)
+    err = ksba_writer_write (writer, oid, oidlen);
+  if (err)
+    goto leave;
+
+  /* the value.  Note that we don't need any conversion to the target
+     characters set because the input is expected to be utf8 and the
+     target type is either utf8 or printable string where the latter
+     is a subset of utf8 */
+  err = _ksba_ber_write_tl (writer, valuetype,
+                            CLASS_UNIVERSAL, 0, valuelen);
+  if (!err)
+    err = need_escaping? write_escaped (writer, value, valuelen)
+                       : ksba_writer_write (writer, value, valuelen);
+    
+ leave:
+  xfree (oidbuf);
+  xfree (valuebuf);
+  return err;
 }
 
 
 
+KsbaError
+_ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
+{
+  KsbaError err;
+  KsbaWriter writer;
+  const char *endp;
+  void *buf = NULL;
+  size_t buflen;
 
+  *rbuf = NULL; *rlength = 0;
+  /* We are going to build the object using a writer object */
+  if (!(writer = ksba_writer_new ()))
+    err = KSBA_Out_Of_Core;
+  else
+    err = ksba_writer_set_mem (writer, 1024);
+  if (err)
+    return err;
 
+  while ( !(err = parse_rdn (string, &endp, writer)) && *endp )
+    string = endp;
+  if (err)
+    goto leave;
 
+  /* Now get the memory */
+  buf = ksba_writer_snatch_mem (writer, &buflen);
+  if (!buf)
+    {
+      err = KSBA_Out_Of_Core;
+      goto leave;
+    }
+  /* reinitialize the buffer to create the outer sequence*/
+  err = ksba_writer_set_mem (writer, buflen + 10);
+  if (err)
+    goto leave;
+  
+  /* write the outer sequence */
+  err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE,
+                            CLASS_UNIVERSAL, 1, buflen);
+  if (err)
+    goto leave;
+  /* write the collected sets */
+  err = ksba_writer_write (writer, buf, buflen);
+  if (err)
+    goto leave;
+
+  /* and get the result */
+  *rbuf = ksba_writer_snatch_mem (writer, rlength);
+  if (!*rbuf)
+    {
+      err = KSBA_Out_Of_Core;
+      goto leave;
+    }
+  
+ leave:
+  ksba_writer_release (writer);
+  xfree (buf);
+  return err;
+}

@@ -80,6 +80,7 @@ typedef enum {
   KSBA_Buffer_Too_Short = 45,
   KSBA_Invalid_CRL_Object = 46,
   KSBA_Unsupported_CRL_Version = 47,
+  KSBA_Unknown_Name = 48
 } KsbaError;
 
 
@@ -252,15 +253,16 @@ KsbaSexp  ksba_crl_get_sig_val (KsbaCRL crl);
 KsbaError ksba_crl_parse (KsbaCRL crl, KsbaStopReason *r_stopreason);
 
 /*-- cetreq.c --*/
-KsbaCRL   ksba_crl_new (void);
-void      ksba_crl_release (KsbaCRL crl);
+KsbaCertreq ksba_certreq_new (void);
+void      ksba_certreq_release (KsbaCertreq cr);
 KsbaError ksba_certreq_set_writer (KsbaCertreq cr, KsbaWriter w);
 void      ksba_certreq_set_hash_function (KsbaCertreq cr,
                                void (*hash_fnc)(void *, const void *, size_t),
                                void *hash_fnc_arg);
+KsbaError ksba_certreq_set_subject (KsbaCertreq cr, const char *name);
+KsbaError ksba_certreq_set_public_key (KsbaCertreq cr, KsbaConstSexp key);
 KsbaError ksba_certreq_set_sig_val (KsbaCertreq cr, KsbaConstSexp sigval);
-
-
+KsbaError ksba_certreq_build (KsbaCertreq cr, KsbaStopReason *r_stopreason);
 
 
 /*-- reader.c --*/
@@ -293,6 +295,7 @@ KsbaError ksba_writer_set_cb (KsbaWriter w,
                               void *cb_value);
 KsbaError ksba_writer_set_mem (KsbaWriter w, size_t initial_size);
 const void *ksba_writer_get_mem (KsbaWriter w, size_t *nbytes);
+void *      ksba_writer_snatch_mem (KsbaWriter w, size_t *nbytes);
 KsbaError 
 ksba_writer_set_filter (KsbaWriter w, 
                         KsbaError (*filter)(void*,

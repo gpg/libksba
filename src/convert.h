@@ -29,6 +29,7 @@ time_t _ksba_asntime_to_epoch (const char *buffer, size_t length);
 /*-- dn.c --*/
 KsbaError _ksba_dn_to_str (const unsigned char *image, AsnNode node,
                            char **r_string);
+KsbaError _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength);
 
 /*-- oid.c --*/
 char *_ksba_oid_node_to_str (const unsigned char *image, AsnNode node);
