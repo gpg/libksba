@@ -1,3 +1,6 @@
+2003-08-20  Marcus Brinkmann  <marcus@g10code.de>
+ 
+	* ber-decoder.c (new_decoder_state): Initialize DS->cur.in_any.
 2003-03-17  Werner Koch  <wk@gnupg.org>
 
 	* dn.c (count_quoted_string): Fixed detection of nonprintable
