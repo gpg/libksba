@@ -1,5 +1,5 @@
 # Makefile.am - for the KSBA ASN.1 and X.509 library
-#       Copyright (C) 2001 g10 Code GmbH
+#       Copyright (C) 2001, 2002 g10 Code GmbH
 # 	
 # This file is part of KSBA.
 # 
@@ -46,6 +46,7 @@ libksba_la_SOURCES = \
 	cert.c cert.h \
 	cms.c cms.h \
 	cms-parser.c \
+	crl.c crl.h \
 	keyinfo.c keyinfo.h \
 	oid.c dn.c time.c convert.h \
 	util.c util.h shared.h errors.c	\

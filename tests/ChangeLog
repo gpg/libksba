@@ -1,3 +1,7 @@
+2002-01-05  Werner Koch  <wk@gnupg.org>
+
+	* t-crl-parser.c: New.
+
 2001-12-18  Werner Koch  <wk@gnupg.org>
 
 	* cert-basic.c (main): Depend tests on $srcdir.
@@ -8,7 +12,7 @@
 	(print_sexp): this and changed all callers.
 	
 
- Copyright 2001 g10 Code GmbH
+ Copyright 2001, 2002 g10 Code GmbH
 
  This file is free software; as a special exception the author gives
  unlimited permission to copy and/or distribute it, with or without

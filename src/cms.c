@@ -70,7 +70,7 @@ static char oid_signingTime[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x05";
 
 
 /* copy all the bytes from the reader to the writer and hash them if a
-   a hash fucntion has been set.  The writer may be NUNN to just do
+   a hash fucntion has been set.  The writer may be NULL to just do
    the hashing */
 static KsbaError
 read_and_hash_cont (KsbaCMS cms)

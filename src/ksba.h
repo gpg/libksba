@@ -1,5 +1,5 @@
 /* ksba.h - X509 library for the Aegypten project
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2002 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -78,6 +78,8 @@ typedef enum {
   KSBA_Invalid_Time = 43,
   KSBA_User_Error = 44,        /* may be used by callbacks */
   KSBA_Buffer_Too_Short = 45,
+  KSBA_Invalid_CRL_Object = 46,
+  KSBA_Unsupported_CRL_Version = 47,
 } KsbaError;
 
 
@@ -101,7 +103,10 @@ typedef enum {
   KSBA_SR_END_DATA = 5,
   KSBA_SR_READY = 6,
   KSBA_SR_NEED_SIG = 7,
-  KSBA_SR_DETACHED_DATA = 8
+  KSBA_SR_DETACHED_DATA = 8,
+  KSBA_SR_BEGIN_ITEMS = 9,
+  KSBA_SR_GOT_ITEM = 10,
+  KSBA_SR_END_ITEMS = 11,
 } KsbaStopReason;
 
 
@@ -115,6 +120,11 @@ typedef struct ksba_cert_s *KsbaCert;
    ksba_cms_new() creates it */
 struct ksba_cms_s;
 typedef struct ksba_cms_s *KsbaCMS;
+
+/* CRL objects are controlled by this object.
+   ksba_crl_new() creates it */
+struct ksba_crl_s;
+typedef struct ksba_crl_s *KsbaCRL;
 
 /* This is a reader object vor various purposes
    see ksba_reader_new et al. */
@@ -211,6 +221,15 @@ KsbaError ksba_cms_set_content_enc_algo (KsbaCMS cms,
 KsbaError ksba_cms_add_recipient (KsbaCMS cms, KsbaCert cert);
 KsbaError ksba_cms_set_enc_val (KsbaCMS cms, int idx, KsbaConstSexp encval);
 
+
+/*-- crl.c --*/
+KsbaCRL   ksba_crl_new (void);
+void      ksba_crl_release (KsbaCRL crl);
+KsbaError ksba_crl_set_reader (KsbaCRL crl, KsbaReader r);
+const char *ksba_crl_get_digest_algo (KsbaCRL crl);
+KsbaError ksba_crl_get_issuer (KsbaCRL crl, char **r_issuer);
+KsbaSexp  ksba_crl_get_sig_val (KsbaCRL crl);
+KsbaError ksba_crl_parse (KsbaCRL crl, KsbaStopReason *r_stopreason);
 
 
 

@@ -29,7 +29,7 @@
 #include "convert.h"
 
 
-/* Converts an UTCTime or GeneralizedTime to epoc.  Returns (time_t)-1
+/* Converts an UTCTime or GeneralizedTime to epoch.  Returns (time_t)-1
    on error. The function figures automagically the right format.
    fixme: Currently we only zupport Zulu time and no timezone */
 time_t 

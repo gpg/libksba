@@ -290,6 +290,7 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
      this should be invalid algorithm identifier */
   *r_oid = NULL;
   *r_nread = 0;
+  off2 = len2 = 0;
   err = get_algorithm (0, der, derlen, &nread, &off, &len, &is_bitstr,
                        &off2, &len2);
   if (err)
@@ -300,15 +301,23 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
     return KSBA_Out_Of_Core;
   if (r_parm && r_parmlen)
     {
-      *r_parm = xtrymalloc (len2);
-      if (!*r_parm)
+      if (off2 && len2)
         {
-          xfree (*r_oid); 
-          *r_oid = NULL;
-          return KSBA_Out_Of_Core;
+          *r_parm = xtrymalloc (len2);
+          if (!*r_parm)
+            {
+              xfree (*r_oid); 
+              *r_oid = NULL;
+              return KSBA_Out_Of_Core;
+            }
+          memcpy (*r_parm, der+off2, len2);
+          *r_parmlen = len2;
         }
-      memcpy (*r_parm, der+off2, len2);
-      *r_parmlen = len2;
+      else
+        {
+          *r_parm = NULL;
+          *r_parmlen = 0;
+        }
     }
   return 0;
 }

@@ -31,6 +31,10 @@
 #include "util.h"
 
 
+static AsnNode
+resolve_identifier (AsnNode root, AsnNode node, int nestlevel);
+
+
 static AsnNode 
 add_node (node_type_t type)
 {
@@ -269,8 +273,8 @@ _ksba_asn_remove_node (AsnNode  node)
 
 /* find the node with the given name.  A name part of "?LAST" matches
    the last element of a set of */
-AsnNode 
-_ksba_asn_find_node (AsnNode root, const char *name)
+static AsnNode 
+find_node (AsnNode root, const char *name, int resolve)
 {
   AsnNode p;
   const char *s;
@@ -320,12 +324,32 @@ _ksba_asn_find_node (AsnNode root, const char *name)
 	}
       else
 	{
-          for (; p && (!p->name || strcmp (p->name, buf)); p = p->right)
-            ;
+          for (; p ; p = p->right)
+            {
+              if (p->name && !strcmp (p->name, buf))
+                break;
+              if (resolve && p->name && p->type == TYPE_IDENTIFIER)
+                {
+                  AsnNode p2;
+                  
+                  p2 = resolve_identifier (root, p, 0);
+                  if (p2 && p2->name && !strcmp (p2->name, buf))
+                    break;
+                }
+            }
+          
+          if (resolve && p && p->type == TYPE_IDENTIFIER)
+            p = resolve_identifier (root, p, 0);
 	}
     }
   
   return p;
+}
+
+AsnNode 
+_ksba_asn_find_node (AsnNode root, const char *name)
+{
+  return find_node (root, name, 0);
 }
 
 
@@ -1128,13 +1152,13 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
    of).  This expanded tree is also an requirement for doing the DER
    decoding as the resolving of identifiers leads to a lot of
    problems.  We use more memory of course, but this is negligible
-   because the entire code wioll be simpler and faster */
+   because the entire code will be simpler and faster */
 AsnNode
 _ksba_asn_expand_tree (AsnNode parse_tree, const char *name)
 {
   AsnNode root;
 
-  root = name? _ksba_asn_find_node (parse_tree, name) : parse_tree;
+  root = name? find_node (parse_tree, name, 1) : parse_tree;
   return do_expand_tree (parse_tree, root, 0);
 }
 

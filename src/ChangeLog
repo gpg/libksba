@@ -1,3 +1,15 @@
+2002-01-05  Werner Koch  <wk@gnupg.org>
+
+	* asn1-func.c (_ksba_asn_find_node): Moved code to ..
+	(find_node): new function which allows resolving of identifiers.
+	(_ksba_asn_expand_tree): Use the resolving find_node here.
+
+	* keyinfo.c (_ksba_parse_algorithm_identifier2): Reset len2 so
+	that a given r_parm returns correct values.
+
+	* ksba.h (KsbaCRL): New typedef and prototypes for the CRL functions.
+	* crl.c, crl.h: New but not yet complete.
+
 2001-12-20  Werner Koch  <wk@gnupg.org>
 
 	* cms.c (read_and_hash_cont): New.
@@ -35,7 +47,7 @@
 	(ksba_cert_get_subject): Ditto.
 	
 
- Copyright 2001 g10 Code GmbH
+ Copyright 2001, 2002 g10 Code GmbH
 
  This file is free software; as a special exception the author gives
  unlimited permission to copy and/or distribute it, with or without
