@@ -19,6 +19,8 @@
 
 ## Process this file with automake to produce Makefile.in
 
-#info_TEXINFOS = ksba.texi
-#ksba_TEXINFOS = gpl.texi fdl.texi
+DISTCLEANFILES = ksba.cps
+
+info_TEXINFOS = ksba.texi
+ksba_TEXINFOS = gpl.texi fdl.texi
 

@@ -1,4 +1,15 @@
+2002-11-13  Werner Koch  <wk@gnupg.org>
 
+	* ksba.texi: Sanitized the wording of fixmes and added pointers to
+	example code.
+
+2002-06-19  Werner Koch  <wk@gnupg.org>
+
+	* ksba.texi: Fixed the direntry.  Noted by Thomas Koester.
+
+2002-04-15  Werner Koch  <wk@gnupg.org>
+
+	* ksba.texi: Add new functions.
 
  Copyright 2002 g10 Code GmbH
 
