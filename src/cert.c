@@ -1,5 +1,5 @@
 /* cert.c - main function for the certificate handling
- *      Copyright (C) 2001, 2002 g10 Code GmbH
+ *      Copyright (C) 2001, 2002, 2003 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -352,6 +352,52 @@ ksba_cert_get_serial (ksba_cert_t cert)
 }
 
 
+/* Return a pointer to the DER encoding of the serial number in CERT in
+   PTR and the length of that field in LENGTH.  */
+gpg_error_t
+_ksba_cert_get_serial_ptr (ksba_cert_t cert,
+                           unsigned char const **ptr, size_t *length)
+{
+  asn_node_t n;
+
+  if (!cert || !cert->initialized || !ptr || !length)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  n = _ksba_asn_find_node (cert->root,
+                           "Certificate.tbsCertificate.serialNumber");
+  if (!n || n->off == -1)
+    return gpg_error (GPG_ERR_NO_VALUE);
+
+  *ptr = cert->image + n->off + n->nhdr;
+  *length = n->len;
+  return 0;
+}
+
+
+
+/* Return a pointer to the DER encoding of the issuer's DN in CERT in
+   PTR and the length of that object in LENGTH.  */
+gpg_error_t
+_ksba_cert_get_issuer_dn_ptr (ksba_cert_t cert,
+                              unsigned char const **ptr, size_t *length)
+{
+  asn_node_t n;
+
+  if (!cert || !cert->initialized || !ptr || !length)
+    return gpg_error (GPG_ERR_INV_VALUE);
+
+  n = _ksba_asn_find_node (cert->root, "Certificate.tbsCertificate.issuer");
+  if (!n || !n->down)
+    return gpg_error (GPG_ERR_NO_VALUE); /* oops - should be there */
+  n = n->down; /* dereference the choice node */
+  if (n->off == -1)
+    return gpg_error (GPG_ERR_NO_VALUE);
+  *ptr = cert->image + n->off;
+  *length = n->nhdr + n->len;
+  return 0;
+}
+
+
+
 /* Worker function for get_isssuer and get_subject. */
 static gpg_error_t
 get_name (ksba_cert_t cert, int idx, int use_subject, char **result)
@@ -605,6 +651,40 @@ ksba_cert_get_public_key (ksba_cert_t cert)
 
   return string;
 }
+
+/* Return a pointer to the DER encoding of the actual public key
+   (i.e. the bit string) in PTR and the length of that object in
+   LENGTH.  */
+gpg_error_t
+_ksba_cert_get_public_key_ptr (ksba_cert_t cert,
+                               unsigned char const **ptr, size_t *length)
+{
+  asn_node_t n;
+
+  if (!cert || !cert->initialized || !ptr || !length)
+    return gpg_error (GPG_ERR_INV_VALUE);
+
+  n = _ksba_asn_find_node (cert->root, 
+                           "Certificate.tbsCertificate.subjectPublicKeyInfo");
+  if (!n || !n->down || !n->down->right)
+    return gpg_error (GPG_ERR_NO_VALUE); /* oops - should be there */
+  n = n->down->right;
+  if (n->off == -1)
+    return gpg_error (GPG_ERR_NO_VALUE);
+  *ptr = cert->image + n->off + n->nhdr;
+  *length = n->len;
+  /* Somehow we end up at the preceding NULL value, and not at a
+     sequence, we hack it way here. */
+  if (*length && !**ptr)
+    {
+      (*length)--;
+      (*ptr)++;
+    }
+
+  return 0;
+}
+
+
 
 ksba_sexp_t
 ksba_cert_get_sig_val (ksba_cert_t cert)

@@ -29,6 +29,12 @@
 static void *(*alloc_func)(size_t n) = malloc;
 static void *(*realloc_func)(void *p, size_t n) = realloc;
 static void (*free_func)(void*) = free;
+static gpg_error_t (*hash_buffer_fnc)(void *arg, const char *oid,
+                                      const void *buffer, size_t length,
+                                      size_t resultsize,
+                                      unsigned char *result, size_t *resultlen);
+static void *hash_buffer_fnc_arg;
+
 
 
 void
@@ -41,6 +47,62 @@ ksba_set_malloc_hooks ( void *(*new_alloc_func)(size_t n),
   free_func	    = new_free_func;
 }
 
+
+/* Register a has function for general use by libksba.  This is
+   required to avoid dependencies to specific low-level
+   crypolibraries.  The function should be used right at the startup
+   of the main program, similar to ksba_set_malloc_hooks. 
+
+   The function provided should behave like this:
+
+   gpg_error_t hash_buffer (void *arg, const char *oid,
+                            const void *buffer, size_t length,
+                            size_t resultsize,
+                            unsigned char *result,
+                            size_t *resultlen);
+
+   Where ARG is the same pointer as set along with the fucntion, OID
+   is an OID string telling the hash algorithm to be used - SHA-1
+   shall be used if OID is NULL.  The text to hash is expected in
+   BUFFER of LENGTH and the result will be palce in the provided
+   buffer RESULT which has been allocated by the caller with at LEAST
+   RESULTSIZE bytes; the actual length of the result is put into
+   RESULTLEN. 
+
+   The function shall return 0 on success or any other appropriate
+   gpg-error.
+*/ 
+void
+ksba_set_hash_buffer_function ( gpg_error_t (*fnc)
+                                (void *arg, const char *oid,
+                                 const void *buffer, size_t length,
+                                 size_t resultsize,
+                                 unsigned char *result,
+                                 size_t *resultlen),
+                                void *fnc_arg)
+{
+  hash_buffer_fnc = fnc;
+  hash_buffer_fnc_arg = fnc_arg;
+}
+
+/* Hash BUFFER of LENGTH bytes using the algorithjm denoted by OID,
+   where OID may be NULL to demand the use od SHA-1.  The resulting
+   digest will be placed in the provided buffer RESULT which must have
+   been allocated by the caller with at LEAST RESULTSIZE bytes; the
+   actual length of the result is put into RESULTLEN.
+
+   The function shall return 0 on success or any other appropriate
+   gpg-error.
+*/
+gpg_error_t
+_ksba_hash_buffer (const char *oid, const void *buffer, size_t length,
+                   size_t resultsize, unsigned char *result, size_t *resultlen)
+{
+  if (!hash_buffer_fnc)
+    return gpg_error (GPG_ERR_CONFIGURATION);
+  return hash_buffer_fnc (hash_buffer_fnc_arg, oid, buffer, length,
+                          resultsize, result, resultlen);
+}
 
 
 /* Wrapper for the common memory allocation functions.  These are here

@@ -32,6 +32,7 @@
 #include "keyinfo.h"
 #include "der-encoder.h"
 #include "ber-help.h"
+#include "sexp-parse.h"
 #include "cert.h" /* need to access cert->root and cert->image */
 
 static gpg_error_t ct_parse_data (ksba_cms_t cms);
@@ -947,7 +948,7 @@ ksba_cms_get_sigattr_oids (ksba_cms_t cms, int idx,
   gpg_error_t err;
   AsnNode nsiginfo, n;
   struct signer_info_s *si;
-  char *reqoidbuf;
+  unsigned char *reqoidbuf;
   size_t reqoidlen;
   char *retstr = NULL;
   int i;
@@ -1444,7 +1445,7 @@ ksba_cms_set_signing_time (ksba_cms_t cms, int idx, const ksba_isotime_t sigtime
 gpg_error_t
 ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
 {
-  const char *s, *endp;
+  const unsigned char *s;
   unsigned long n;
   struct sig_val_s *sv, **sv_tail;
   int i;
@@ -1464,24 +1465,17 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
   if (i != idx)
     return gpg_error (GPG_ERR_INV_INDEX); 
 
-  n = strtoul (s, (char**)&endp, 10);
-  s = endp;
-  if (!n || *s!=':')
-    return gpg_error (GPG_ERR_INV_SEXP); /* we don't allow empty lengths */
-  s++;
-  if (n != 7 || memcmp (s, "sig-val", 7))
+  if (!(n = snext (&s)))
+    return gpg_error (GPG_ERR_INV_SEXP); 
+  if (!smatch (&s, 7, "sig-val"))
     return gpg_error (GPG_ERR_UNKNOWN_SEXP);
-  s += 7;
   if (*s != '(')
     return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
   s++;
-
-  /* break out the algorithm ID */
-  n = strtoul (s, (char**)&endp, 10);
-  s = endp;
-  if (!n || *s != ':')
-    return gpg_error (GPG_ERR_INV_SEXP); /* we don't allow empty lengths */
-  s++;
+ 
+  /* Break out the algorithm ID. */
+  if (!(n = snext (&s)))
+    return gpg_error (GPG_ERR_INV_SEXP); 
 
   sv = xtrycalloc (1, sizeof *sv);
   if (!sv)
@@ -1513,15 +1507,13 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
   if (*s != '(')
     return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
   s++;
-  n = strtoul (s, (char**)&endp, 10);
-  s = endp;
-  if (!n || *s != ':')
+
+  if (!(n = snext (&s)))
     {
       xfree (sv->algo);
       xfree (sv);
       return gpg_error (GPG_ERR_INV_SEXP); 
     }
-  s++;
   s += n; /* ignore the name of the parameter */
   
   if (!digitp(s))
@@ -1530,15 +1522,14 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
       xfree (sv);
       return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
     }
-  n = strtoul (s, (char**)&endp, 10);
-  s = endp;
-  if (!n || *s != ':')
+
+  if (!(n - snext (&s)))
     {
       xfree (sv->algo);
       xfree (sv);
       return gpg_error (GPG_ERR_INV_SEXP); 
     }
-  s++;
+
   if (n > 1 && !*s)
     { /* We might have a leading zero due to the way we encode 
          MPIs - this zero should not go into the OCTECT STRING.  */
@@ -1938,7 +1929,7 @@ static gpg_error_t
 build_signed_data_header (ksba_cms_t cms)
 {
   gpg_error_t err;
-  char *buf;
+  unsigned char *buf;
   const char *s;
   size_t len;
   int i;
@@ -2578,7 +2569,7 @@ build_enveloped_data_header (ksba_cms_t cms)
   int recpno;
   ksba_asn_tree_t cms_tree;
   struct certlist_s *certlist;
-  char *buf;
+  unsigned char *buf;
   const char *s;
   size_t len;
   ksba_writer_t tmpwrt = NULL;

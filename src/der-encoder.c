@@ -133,7 +133,7 @@ _ksba_der_write_algorithm_identifier (ksba_writer_t w, const char *oid,
                                       const void *parm, size_t parmlen)
 {
   gpg_error_t err;
-  char *buf;
+  unsigned char *buf;
   size_t len;
 
   err = ksba_oid_from_str (oid, &buf, &len);
@@ -326,7 +326,7 @@ _ksba_der_store_oid (AsnNode node, const char *oid)
 
   if (node->type == TYPE_OBJECT_ID)
     {
-      char *buf;
+      unsigned char *buf;
       size_t len;
 
       err = ksba_oid_from_str (oid, &buf, &len);

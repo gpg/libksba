@@ -156,7 +156,7 @@ make_flagged_int (unsigned long value, char *buf, size_t buflen)
  * Return value: 0 on success or an error value
  **/
 gpg_error_t
-ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength)
+ksba_oid_from_str (const char *string, unsigned char **rbuf, size_t *rlength)
 {
   unsigned char *buf;
   size_t buflen;

@@ -1,3 +1,27 @@
+2003-11-25  Werner Koch  <wk@gnupg.org>
+
+	* ksba.h: Added a few more CRL reason codes.
+
+2003-11-21  Werner Koch  <wk@gnupg.org>
+
+	* oid.c (ksba_oid_from_str): Changed RBUF to unsigned char* and
+	changed all callers to avoid incompatible pointer warnings.
+
+2003-11-20  Werner Koch  <wk@gnupg.org>
+
+	* cert.c (_ksba_cert_get_issuer_dn_ptr): New.
+	(_ksba_cert_get_public_key_ptr): New.
+	(_ksba_cert_get_serial_ptr): New.
+
+	* util.c (_ksba_hash_buffer): New.
+	(ksba_set_hash_buffer_function): New.
+
+	* cms.c: Include sexp-parse.h.
+	(ksba_cms_set_sig_val): Use snext and smatch instead of open
+	coding it.
+
+	* sexp-parse.h: New. Taken from GnuPG 1.9.
+
 2003-11-18  Werner Koch  <wk@gnupg.org>
 
 	* reader.c (ksba_reader_read): Return GPG_ERR_EOF and not -1.

@@ -23,6 +23,12 @@
 
 #include "ksba.h"  /* ksba_malloc() etc. */
 
+gpg_error_t _ksba_hash_buffer (const char *oid,
+                               const void *buffer, size_t length,
+                               size_t resultsize,
+                               unsigned char *result, size_t *resultlen);
+
+
 void *_ksba_xmalloc (size_t n );
 void *_ksba_xcalloc (size_t n, size_t m );
 void *_ksba_xrealloc (void *p, size_t n);

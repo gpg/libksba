@@ -300,7 +300,7 @@ build_extensions (ksba_certreq_t cr, void **r_der, size_t *r_derlen)
   struct extn_list_s *e;
   unsigned char *value = NULL;
   size_t valuelen;
-  char *p;
+  unsigned char *p;
   size_t n;
 
   *r_der = NULL;

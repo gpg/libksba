@@ -130,6 +130,7 @@ union asn_value_u {
 /******************************************************/
 #ifndef HAVE_TYPEDEFD_ASNNODE
 typedef struct asn_node_struct *AsnNode; 
+typedef struct asn_node_struct *asn_node_t; 
 #define HAVE_TYPEDEFD_ASNNODE
 #endif
 struct asn_node_struct {

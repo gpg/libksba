@@ -50,9 +50,11 @@ libksba_la_SOURCES = \
 	cms.c cms.h cms-parser.c \
 	crl.c crl.h \
 	certreq.c certreq.h \
+	ocsp.c ocsp.h \
 	keyinfo.c keyinfo.h \
 	oid.c name.c dn.c time.c convert.h \
 	version.c util.c util.h shared.h \
+	sexp-parse.h \
 	asn1-tables.c
 
 asn1_gentables_SOURCES = asn1-gentables.c 

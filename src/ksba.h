@@ -140,7 +140,10 @@ typedef enum {
   KSBA_CRLREASON_SUPERSEDED = 16,
   KSBA_CRLREASON_CESSATION_OF_OPERATION = 32,
   KSBA_CRLREASON_CERTIFICATE_HOLD = 64,
-  KSBA_CRLREASON_REMOVE_FROM_CRL = 256
+  KSBA_CRLREASON_REMOVE_FROM_CRL = 256,
+  KSBA_CRLREASON_PRIVILEGE_WITHDRAWN = 512,
+  KSBA_CRLREASON_AA_COMPROMISE = 1024,
+  KSBA_CRLREASON_OTHER = 32768
 } ksba_crl_reason_t;
 typedef ksba_crl_reason_t KsbaCRLReason _KSBA_DEPRECATED;
 
@@ -410,7 +413,8 @@ gpg_error_t ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result)
 
 /*-- oid.c --*/
 char *ksba_oid_to_str (const char *buffer, size_t length);
-gpg_error_t ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength);
+gpg_error_t ksba_oid_from_str (const char *string,
+                               unsigned char **rbuf, size_t *rlength);
 
 
 /*-- name.c --*/

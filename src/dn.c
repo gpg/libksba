@@ -844,7 +844,7 @@ parse_rdn (const unsigned char *string, const char **endp, ksba_writer_t writer)
   size_t n, n1;
   int i;
   unsigned char *p;
-  char *oidbuf = NULL;
+  unsigned char *oidbuf = NULL;
   unsigned char *valuebuf = NULL;
   const unsigned char *oid = NULL;
   size_t oidlen;

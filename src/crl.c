@@ -380,7 +380,7 @@ create_and_run_decoder (ksba_reader_t reader, const char *elem_name,
 
 
 /* Parse the fixed block at the beginning.  We use a custom parser
-   here becuase out BEr-decoder is not yet able to stop at certain
+   here because our BER decoder is not yet able to stop at certain
    points */
 static gpg_error_t
 parse_to_next_update (ksba_crl_t crl)
@@ -637,7 +637,7 @@ parse_crl_entry (ksba_crl_t crl, int *got_entry)
   char numbuf[22];
   int numbuflen;
 
-  /* check the length to see whether we are at the end of the seq but do
+  /* Check the length to see whether we are at the end of the seq but do
      this only when we know that we have this optional seq of seq. */
   if (!crl->state.have_seqseq)
     return 0; /* ready (no entries at all) */
