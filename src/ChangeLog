@@ -1,6 +1,13 @@
 2002-03-13  Werner Koch  <wk@gnupg.org>
 
 	* cms.h (value_tree_s): New and use it for recp_info.
+	(enc_val_s): New, use it in certlist and remove it from the
+	ksba_cms_s and change all users.
+	* cms.c (ksba_cms_set_enc_val): Allow multiple recipients.
+	(ksba_cms_add_signer): Keep ordering of signers so that they can
+	be implictly counted by an index.
+	(build_enveloped_data_header): Fixed the creation of the RID.
+
 	* cms.c (release_value_tree): New.
 	(ksba_cms_release): And use it here.
 	(ksba_cms_get_issuer_serial): Use the new recp_list structure and

@@ -38,6 +38,13 @@ struct value_tree_s {
 };
 
 
+struct enc_val_s {
+  char *algo;
+  unsigned char *value;
+  size_t valuelen;
+};
+
+
 struct oidlist_s {
   struct oidlist_s *next;
   char *oid;
@@ -52,7 +59,8 @@ struct certlist_s {
   struct {
     AsnNode root;
     unsigned char *image;
-  } sa; 
+  } sa;
+  struct enc_val_s enc_val; /* used for creating enveloped data */
 };
 
 
@@ -113,12 +121,7 @@ struct ksba_cms_s {
     size_t valuelen;
   } sig_val;
 
-  struct {
-    char *algo;
-    unsigned char *value;
-    size_t valuelen;
-  } enc_val;
-
+  struct enc_val_s *enc_val;
 };
 
 
