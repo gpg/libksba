@@ -1,3 +1,8 @@
+2004-12-18  Werner Koch  <wk@g10code.com>
+
+	* configure.ac: Print a hint about failed corss compilations.
+	* autogen.sh: Add --build-w32 option.
+
 2004-12-03  Werner Koch  <wk@g10code.com>
 
 	Released 0.9.10.

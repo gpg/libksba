@@ -21,13 +21,17 @@
 
 asn1_modules = tmttv2.asn cms.asn
 
-EXTRA_DIST = ksba-config.in $(asn1_modules) ksba.m4 libksba.vers
+EXTRA_DIST = ksba-config.in $(asn1_modules) ksba.m4 libksba.vers \
+	     asn1-parse.c asn1-tables.c
 BUILT_SOURCES = asn1-parse.c asn1-tables.c
-DISTCLEANFILES = asn1-tables.c
 bin_SCRIPTS = ksba-config
 include_HEADERS = ksba.h
 lib_LTLIBRARIES = libksba.la
+
+if ! CROSS_COMPILING
 noinst_PROGRAMS = asn1-gentables ber-dump
+endif
+
 m4datadir = $(datadir)/aclocal
 m4data_DATA = ksba.m4
 
@@ -77,10 +81,11 @@ ber_dump_LDADD = ber-decoder.o ber-help.o reader.o writer.o asn1-parse.o \
 
 asn1-parse.c : asn1-func.h
 
+if ! CROSS_COMPILING
 asn1-tables.c : asn1-gentables $(asn1_modules)
 	@set -e; list=""; \
 	  for file in $(asn1_modules); do list="$$list $(srcdir)/$$file";done;\
 	  ./asn1-gentables $$list > asn1-tables.c	
-
+endif
 
 

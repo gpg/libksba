@@ -1,3 +1,14 @@
+2004-12-18  Werner Koch  <wk@g10code.com>
+
+	* Makefile.am (noinst_PROGRAMS): Don't generate them when cross
+	compiling.
+	(EXTRA_DIST): Include asn1-parse.c asn1-tables.c.
+	(DISTCLEAN): Removed. 
+
+2004-12-15  Werner Koch  <wk@g10code.com>
+
+	* ksba.m4: Use proper quoting for use with automake 1.9.
+
 2004-11-29  Werner Koch  <wk@g10code.com>
 
 	* cms.c (read_and_hash_cont): Added more code for the unusual

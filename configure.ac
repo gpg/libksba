@@ -75,7 +75,6 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 #AC_ARG_PROGRAM
 AC_PROG_YACC
-
 AC_C_INLINE
 
 AM_PROG_LIBTOOL
@@ -144,3 +143,19 @@ tests/Makefile
 doc/Makefile
 ])
 AC_OUTPUT
+
+
+echo "
+        Libksba v${VERSION} has been configured as follows:
+        
+        Platform:  $host
+
+"
+if test x$cross_compiling = xyes; then
+echo "Hint: If you encounter make problems like
+  \"No rule to make target 'asn1-tables.c'\"
+you should first do a native build without installing
+the software, then a \"make distclean\" and then
+run the cross compilation again.
+"
+fi
