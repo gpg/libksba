@@ -392,7 +392,11 @@ static int
 cmp_tag (AsnNode node, const struct tag_info *ti)
 {
   if (node->flags.class != ti->class)
-    return 0;
+    {
+      if (node->flags.class == CLASS_UNIVERSAL && node->type == TYPE_ANY)
+        return ti->is_constructed? 2:1; 
+      return 0;
+    }
   if (node->type == TYPE_TAG)
     {
       return_val_if_fail (node->valuetype == VALTYPE_ULONG, 0);

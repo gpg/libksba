@@ -6,6 +6,8 @@ Noteworthy changes in version 0.4.6 (unreleased)
 
  * The content-type signed attribute is created.
 
+ * Fixed a parser bug with a id-aa-encrypKeyPref attribute.
+
  * Interface changes relative to the 0.4.3 release:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ksba_cms_get_sigattr_oids        NEW
