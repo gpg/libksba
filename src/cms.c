@@ -1417,6 +1417,9 @@ ksba_cms_add_smime_capability (ksba_cms_t cms, const char *oid,
   if (!cms || !oid)
     return gpg_error (GPG_ERR_INV_VALUE);
 
+  if (!der)
+    derlen = 0;
+
   opl = xtrymalloc (sizeof *opl + derlen - 1);
   if (!opl)
     return gpg_error_from_errno (errno);
@@ -1428,6 +1431,9 @@ ksba_cms_add_smime_capability (ksba_cms_t cms, const char *oid,
       xfree (opl);
       return err;
     }
+  opl->parmlen = derlen;
+  if (der)
+    memcpy (opl->parm, der, derlen);
 
   /* Append it to maintain the desired order. */
   if (!cms->capability_list)

@@ -270,7 +270,7 @@ do_writer_write (ksba_writer_t w, const void *buffer, size_t length)
 
       if (w->nwritten + length > w->u.mem.size)
         {
-          size_t newsize = w->u.mem.size;
+          size_t newsize = w->nwritten + length;
           char *p;
 
           newsize = ((newsize + 4095)/4096)*4096;
@@ -282,7 +282,7 @@ do_writer_write (ksba_writer_t w, const void *buffer, size_t length)
           p = xtryrealloc (w->u.mem.buffer, newsize);
           if (!p)
             {
-              /* keep an error flag so that the user does not need to
+              /* Keep an error flag so that the user does not need to
                  check the return code of a write but instead use
                  ksba_writer_error() to check for it or even figure
                  this state out when using ksba_writer_get_mem() */
@@ -291,6 +291,9 @@ do_writer_write (ksba_writer_t w, const void *buffer, size_t length)
             }
           w->u.mem.buffer = p;
           w->u.mem.size = newsize;
+          /* Better check again in case of an overwrap. */
+          if (w->nwritten + length > w->u.mem.size)
+            return gpg_error (GPG_ERR_ENOMEM); 
         }
       memcpy (w->u.mem.buffer + w->nwritten, buffer, length);
       w->nwritten += length;

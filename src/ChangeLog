@@ -1,3 +1,10 @@
+2004-04-06  Werner Koch  <wk@gnupg.org>
+
+	* cms.c (ksba_cms_add_smime_capability): Oops, we forgot to store
+	the parameters.
+	* writer.c (do_writer_write): Fixed memory allocation and added an
+	extra check.
+
 2004-03-24  Werner Koch  <wk@gnupg.org>
 
 	* cms.c (ksba_cms_add_smime_capability): New.
