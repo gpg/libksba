@@ -27,6 +27,8 @@
 #include "../src/ksba.h"
 #include "../src/keyinfo.h"
 
+#include "oidtranstbl.h"
+
 #define digitp(p)   (*(p) >= '0' && *(p) <= '9')
 
 #define fail_if_err(a) do { if(a) {                                       \
@@ -149,6 +151,21 @@ print_names (int indent, ksba_name_t name)
 }
 
 
+/* Return the description for OID; if no description is available 
+   NULL is returned. */
+static const char *
+get_oid_desc (const char *oid)
+{
+  int i;
+
+  if (oid)
+    for (i=0; oidtranstbl[i].oid; i++)
+      if (!strcmp (oidtranstbl[i].oid, oid))
+        return oidtranstbl[i].desc;
+  return NULL;
+}
+
+
 static void
 list_extensions (ksba_cert_t cert)
 {
@@ -164,8 +181,10 @@ list_extensions (ksba_cert_t cert)
   for (idx=0; !(err=ksba_cert_get_extension (cert, idx,
                                              &oid, &crit, &off, &len));idx++)
     {
-      printf ("Extn: %s at %d with length %d %s\n",
-              oid, (int)off, (int)len, crit? "(critical)":"");
+      const char *s = get_oid_desc (oid);
+      printf ("Extn: %s%s%s%s at %d with length %d %s\n",
+              oid, s?" (":"", s?s:"", s?")":"",
+              (int)off, (int)len, crit? "(critical)":"");
     }
   if (err && gpg_err_code (err) != GPG_ERR_EOF )
     {
@@ -335,6 +354,7 @@ one_file (const char *fname)
   ksba_isotime_t t;
   int idx;
   ksba_sexp_t sexp;
+  const char *oid, *s;
 
   fp = fopen (fname, "r");
   if (!fp)
@@ -390,7 +410,9 @@ one_file (const char *fname)
   print_time (t);
   putchar ('\n');
 
-  printf ("  hash algo.: %s\n", ksba_cert_get_digest_algo (cert));
+  oid = ksba_cert_get_digest_algo (cert);
+  s = get_oid_desc (oid);
+  printf ("  hash algo.: %s%s%s%s\n", oid, s?" (":"",s?s:"",s?")":"");
 
   /* check that the sexp to keyinfo conversion works */
   {

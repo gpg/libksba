@@ -35,6 +35,9 @@ test_keys = samples/ov-server.p12  samples/ov-userrev.p12 \
 
 EXTRA_DIST = $(test_certs) samples/README
 
+BUILT_SOURCES = oidtranstbl.h
+CLEANFILES = oidtranstbl.h
+
 TESTS = cert-basic t-crl-parser
 
 AM_CFLAGS = @GPG_ERROR_CFLAGS@
@@ -42,5 +45,16 @@ AM_CFLAGS = @GPG_ERROR_CFLAGS@
 noinst_HEADERS = t-common.h
 noinst_PROGRAMS = $(TESTS) t-cms-parser t-crl-parser t-dnparser t-ocsp
 LDADD = ../src/libksba.la @GPG_ERROR_LIBS@ -lgcrypt
+
+
+# Build the OID table: Note that the binary includes data from an
+# other rpogram and we may not be allowed to sdistribute this.  This
+# ain't no problem as the programs using this generated data are not
+# installed and thus not distributed.
+oidtranstbl.h: Makefile mkoidtbl.awk 
+	set -e; f="/dev/null"; \
+        for i in /usr/local/bin /usr/local/share /usr/bin /usr/share; do \
+          if test -f $$i/dumpasn1.cfg; then f=$$i/dumpasn1.cfg; break; fi; \
+        done; $(AWK) -f $(srcdir)/mkoidtbl.awk $$f >$@
 
 

@@ -1,3 +1,10 @@
+2004-03-16  Werner Koch  <wk@gnupg.org>
+
+	* cert-basic.c (one_file, get_oid_desc, list_extensions): Print a
+	description of the OIDs when possible.
+	* Makefile.am: Build oidtranstbl.h
+	* mkoidtbl.awk: New.
+
 2004-02-20  Werner Koch  <wk@gnupg.org>
 
 	* cert-basic.c (list_extensions): Print extKeyUsages.
