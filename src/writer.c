@@ -376,26 +376,44 @@ ksba_writer_write (KsbaWriter w, const void *buffer, size_t length)
 } 
 
 /* Write LENGTH bytes of BUFFER to W while encoding it as an BER
-   encoded octet string.  With FLUSH set to 1 the octect strema will
-   be terminated.  This may be used along with a BUFFER set to NULL to
-   just write an end tag.  If the entire octet string is available in
-   BUFFER it is a good idea to set FLUS to 1 so that the function does
-   not need to encode the string partially. */
+   encoded octet string.  With FLUSH set to 1 the octet stream will be
+   terminated.  If the entire octet string is available in BUFFER it
+   is a good idea to set FLUSH to 1 so that the function does not need
+   to encode the string partially. */
 KsbaError
 ksba_writer_write_octet_string (KsbaWriter w,
                                 const void *buffer, size_t length, int flush)
 {
   KsbaError err = 0;
 
+  if (!w)
+    return KSBA_Invalid_Value;
+
   if (buffer && length)
     {
+      if (!w->ndef_is_open && !flush)
+        {
+          err = _ksba_ber_write_tl (w, TYPE_OCTET_STRING,
+                                    CLASS_UNIVERSAL, 1, 0);
+          if (err)
+            return err;
+          w->ndef_is_open = 1;
+        }
+
       err = _ksba_ber_write_tl (w, TYPE_OCTET_STRING,
                                 CLASS_UNIVERSAL, 0, length);
       if (!err)
         err = ksba_writer_write (w, buffer, length);
     }
 
-  if (!err && flush) /* write an end tag */
+  if (!err && flush && w->ndef_is_open) /* write an end tag */
       err = _ksba_ber_write_tl (w, 0, 0, 0, 0);
+
+  if (flush) /* Reset it even in case of an error. */
+    w->ndef_is_open = 1;
+
   return err;
 }
+
+
+

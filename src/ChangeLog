@@ -1,3 +1,12 @@
+2002-06-13  Werner Koch  <wk@gnupg.org>
+
+	* writer.c (ksba_writer_write_octet_string): Correctly write
+	undefined length octet strings.
+	* cms.c (ct_build_signed_data): Write an end tag for non-detached
+	sigs.
+	(build_enveloped_data_header): Fix doc; it is an explicit octect
+	string.
+
 2002-06-12  Werner Koch  <wk@gnupg.org>
 
 	* writer.c (ksba_writer_write_octet_string): New.

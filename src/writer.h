@@ -36,6 +36,7 @@ struct ksba_writer_s {
   int error;
   unsigned long nwritten;
   enum writer_type type;
+  int ndef_is_open;
 
   KsbaError (*filter)(void*,
                       const void *,size_t, size_t *,

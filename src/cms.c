@@ -2198,7 +2198,12 @@ ct_build_signed_data (KsbaCMS cms)
       err = build_signed_data_header (cms);
     }
   else if (state == sDATAREADY)
-    err = build_signed_data_attributes (cms);
+    {
+      if (!cms->detached_data)
+        err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
+      if (!err)
+        err = build_signed_data_attributes (cms);
+    }
   else if (state == sGOTSIG)
     err = build_signed_data_rest (cms);
   else
@@ -2441,7 +2446,7 @@ build_enveloped_data_header (KsbaCMS cms)
   if (err)
     return err;
 
-  /* write the tag for the encrypted data, it is an implicit octect
+  /* write the tag for the encrypted data, it is an explicit octect
      string in constructed form and indefinite length */
   err = _ksba_ber_write_tl (cms->writer, 0, CLASS_CONTEXT, 1, 0);
   if (err)
@@ -2492,7 +2497,7 @@ ct_build_enveloped_data (KsbaCMS cms)
     err = write_encrypted_cont (cms);
   else if (state == sREST)
     {
-      /* SPHINX does no allow for unprotectedAttributes */
+      /* SPHINX does not allow for unprotectedAttributes */
 
       /* Write 4 end tags */
       err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
