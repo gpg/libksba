@@ -1,3 +1,11 @@
+2004-04-06  Werner Koch  <wk@gnupg.org>
+
+	Released 0.9.5.
+
+	* configure.ac: Bumped LT versions to C11/A3/R0.
+	* config.guess, config.sub, ltmain.sh: Updated to those from
+	libtools 1.5.4.
+
 2004-03-15  Werner Koch  <wk@gnupg.org>
 
 	* configure.ac: New option --enable-ld-version-script.

@@ -23,18 +23,18 @@ min_automake_version="1.7.6"
 
 # Version number: Remember to change immediately *after* a release.
 #                 Append a "-cvs" for non-released versions.
-AC_INIT(libksba, 0.9.5-cvs, gpa-dev@gnupg.org)
+AC_INIT(libksba, 0.9.5, gpa-dev@gnupg.org)
 # LT Version numbers: Remember to change them just *before* a release.
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
 # Please remember to document interface changes in the NEWS file.
-LIBKSBA_LT_CURRENT=10
-LIBKSBA_LT_AGE=2
+LIBKSBA_LT_CURRENT=11
+LIBKSBA_LT_AGE=3
 LIBKSBA_LT_REVISION=0
 #-------------------
 
-NEED_GPG_ERROR_VERSION=0.6
+NEED_GPG_ERROR_VERSION=0.7
 
 
 PACKAGE=$PACKAGE_NAME

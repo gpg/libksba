@@ -1,6 +1,7 @@
-Noteworthy changes in version 0.9.5
+Noteworthy changes in version 0.9.5 (2004-04-06)
 ------------------------------------------------
 
+ * New APIs to get hands on some more information.
 
  * Interface changes relative to the 0.9.4 release:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
