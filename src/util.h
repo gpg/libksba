@@ -79,7 +79,8 @@ char *_ksba_xstrdup (const char *p);
 
 
 #ifndef HAVE_STPCPY
-char *stpcpy (char *a, const char *b);
+char *_ksba_stpcpy (char *a, const char *b);
+#define stpcpy(a,b) _ksba_stpcpy ((a), (b))
 #endif
 
 /* some macros to replace ctype ones and avoid locale problems */

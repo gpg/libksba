@@ -29,13 +29,18 @@
 
 #include "t-common.h"
 
+void 
+dummy_hash_fnc (void *arg, const void *buffer,size_t length)
+{
+}
+
+
 static void
 one_file (const char *fname)
 {
   gpg_error_t err;
   FILE *fp;
   ksba_reader_t r;
-  ksba_writer_t w;
   ksba_cms_t cms;
   int i;
   const char *algoid;
@@ -73,15 +78,11 @@ one_file (const char *fname)
     }
   printf ("identified as: %s\n", s);
 
-  err = ksba_writer_new (&w);
-  if (err)
-    fail_if_err (err);
-
   err = ksba_cms_new (&cms);
   if (err)
     fail_if_err (err);
 
-  err = ksba_cms_set_reader_writer (cms, r, w);
+  err = ksba_cms_set_reader_writer (cms, r, NULL);
   fail_if_err (err);
 
   err = ksba_cms_parse (cms, &stopreason);
@@ -105,9 +106,16 @@ one_file (const char *fname)
   if (stopreason == KSBA_SR_NEED_HASH)
     printf("Detached signature\n");
 
-  err = ksba_cms_parse (cms, &stopreason);
-  fail_if_err2 (fname, err);
-  printf ("stop reason: %d\n", stopreason);
+  ksba_cms_set_hash_function (cms, dummy_hash_fnc, NULL);
+
+  do 
+    {
+      err = ksba_cms_parse (cms, &stopreason);
+      fail_if_err2 (fname, err);
+      printf ("stop reason: %d\n", stopreason);
+    }
+  while (stopreason != KSBA_SR_READY);   
+
 
   if (ksba_cms_get_content_type (cms, 0) == KSBA_CT_ENVELOPED_DATA)
     {
@@ -160,7 +168,8 @@ one_file (const char *fname)
           ksba_free (dn);
           putchar ('\n');
 
-          err = ksba_cms_get_sigattr_oids (cms, idx, "1.2.840.113549.1.9.3",&dn);
+          err = ksba_cms_get_sigattr_oids (cms, idx,
+                                           "1.2.840.113549.1.9.3",&dn);
           if (err && err != -1)
             fail_if_err2 (fname, err);
           if (err != -1)
@@ -185,7 +194,6 @@ one_file (const char *fname)
 
   ksba_cms_release (cms);
   ksba_reader_release (r);
-  ksba_writer_release (w);
   fclose (fp);
 }
 
@@ -195,7 +203,6 @@ one_file (const char *fname)
 int 
 main (int argc, char **argv)
 {
-
   if (argc > 1)
     one_file (argv[1]);
   else
@@ -205,6 +212,3 @@ main (int argc, char **argv)
 
   return 0;
 }
-
-
-

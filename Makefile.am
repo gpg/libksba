@@ -21,7 +21,14 @@
 
 EXTRA_DIST = README-alpha autogen.sh
 
-SUBDIRS = src tests doc
+if CROSS_COMPILING
+tests =
+else
+tests = tests
+endif
+
+
+SUBDIRS = src ${tests} doc
 
 dist-hook:
 	@set -e; echo "$(VERSION)" > $(distdir)/VERSION

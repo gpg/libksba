@@ -40,11 +40,11 @@ CLEANFILES = oidtranstbl.h
 
 TESTS = cert-basic t-crl-parser
 
-AM_CFLAGS = @GPG_ERROR_CFLAGS@
+AM_CFLAGS = $(GPG_ERROR_CFLAGS)
 
 noinst_HEADERS = t-common.h
 noinst_PROGRAMS = $(TESTS) t-cms-parser t-crl-parser t-dnparser t-ocsp
-LDADD = ../src/libksba.la @GPG_ERROR_LIBS@ -lgcrypt
+LDADD = ../src/libksba.la $(GPG_ERROR_LIBS)
 
 
 # Build the OID table: Note that the binary includes data from an

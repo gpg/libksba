@@ -78,7 +78,34 @@ static char oid_signingTime[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x05";
 static char oidstr_smimeCapabilities[] = "1.2.840.113549.1.9.15";
 
 
-/* copy all the bytes from the reader to the writer and hash them if a
+
+/* Helper for read_and_hash_cont().  */
+static gpg_error_t
+read_hash_block (ksba_cms_t cms, unsigned long nleft)
+{
+  gpg_error_t err;
+  char buffer[4096];
+  size_t n, nread;
+
+  while (nleft)
+    {
+      n = nleft < sizeof (buffer)? nleft : sizeof (buffer);
+      err = ksba_reader_read (cms->reader, buffer, n, &nread);
+      if (err)
+        return err;
+      nleft -= nread;
+      if (cms->hash_fnc)
+        cms->hash_fnc (cms->hash_fnc_arg, buffer, nread); 
+      if (cms->writer)
+        err = ksba_writer_write (cms->writer, buffer, nread);
+      if (err)
+        return err;
+    }
+  return 0;
+}
+
+
+/* Copy all the bytes from the reader to the writer and hash them if a
    a hash function has been set.  The writer may be NULL to just do
    the hashing */
 static gpg_error_t
@@ -86,8 +113,6 @@ read_and_hash_cont (ksba_cms_t cms)
 {
   gpg_error_t err = 0;
   unsigned long nleft;
-  char buffer[4096];
-  size_t n, nread;
   struct tag_info ti;
 
   if (cms->inner_cont_ndef)
@@ -102,20 +127,9 @@ read_and_hash_cont (ksba_cms_t cms)
               && !ti.is_constructed)
             { /* next chunk */
               nleft = ti.length;
-              while (nleft)
-                {
-                  n = nleft < sizeof (buffer)? nleft : sizeof (buffer);
-                  err = ksba_reader_read (cms->reader, buffer, n, &nread);
-                  if (err)
-                    return err;
-                  nleft -= nread;
-                  if (cms->hash_fnc)
-                    cms->hash_fnc (cms->hash_fnc_arg, buffer, nread); 
-                  if (cms->writer)
-                    err = ksba_writer_write (cms->writer, buffer, nread);
-                  if (err)
-                    return err;
-                }
+              err = read_hash_block (cms, nleft);
+              if (err)
+                return err;
             }
           else if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OCTET_STRING
                    && ti.is_constructed)
@@ -130,20 +144,9 @@ read_and_hash_cont (ksba_cms_t cms)
                       && !ti.is_constructed)
                     {
                       nleft = ti.length;
-                      while (nleft)
-                        {
-                          n = nleft < sizeof (buffer)? nleft : sizeof (buffer);
-                          err = ksba_reader_read (cms->reader, buffer, n, &nread);
-                          if (err)
-                            return err;
-                          nleft -= nread;
-                          if (cms->hash_fnc)
-                            cms->hash_fnc (cms->hash_fnc_arg, buffer, nread); 
-                          if (cms->writer)
-                            err = ksba_writer_write (cms->writer, buffer, nread);
-                          if (err)
-                            return err;
-                        }
+                      err = read_hash_block (cms, nleft);
+                      if (err)
+                        return err;
                     }
                   else if (ti.class == CLASS_UNIVERSAL && !ti.tag
                            && !ti.is_constructed)
@@ -161,8 +164,16 @@ read_and_hash_cont (ksba_cms_t cms)
     }
   else
     {
+      /* This is basically the same as above but we allow for
+         arbitrary types.  Not sure whether it is really needed but
+         right in the beginning of gnupg 1.9 we had at least one
+         message with didn't used octet strings.  Not ethat we don't
+         do proper NLEFT checking but well why should we validate
+         these things?  Well, it might be nice to have such a feature
+         but then we should write a more general mechanism to do
+         that.  */
       nleft = cms->inner_cont_len;
-      /* first read the octet string but allow all types here */
+      /* First read the octet string but allow all types here */
       err = _ksba_ber_read_tl (cms->reader, &ti);
       if (err)
         return err;
@@ -170,17 +181,36 @@ read_and_hash_cont (ksba_cms_t cms)
         return gpg_error (GPG_ERR_ENCODING_PROBLEM);
       nleft -= ti.nhdr;
 
-      while (nleft)
+      if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OCTET_STRING
+          && ti.is_constructed)
+        { /* Next chunk is constructed */
+          for (;;)
+            {
+              err = _ksba_ber_read_tl (cms->reader, &ti);
+              if (err)
+                return err;
+              if (ti.class == CLASS_UNIVERSAL
+                  && ti.tag == TYPE_OCTET_STRING
+                  && !ti.is_constructed)
+                {
+                  nleft = ti.length;
+                  err = read_hash_block (cms, nleft);
+                  if (err)
+                    return err;
+                }
+              else if (ti.class == CLASS_UNIVERSAL && !ti.tag
+                       && !ti.is_constructed)
+                break; /* Ready with this chunk */ 
+              else
+                return gpg_error (GPG_ERR_ENCODING_PROBLEM);
+            }
+        }
+      else if (ti.class == CLASS_UNIVERSAL && !ti.tag
+               && !ti.is_constructed)
+        return 0; /* ready */ 
+      else
         {
-          n = nleft < sizeof (buffer)? nleft : sizeof (buffer);
-          err = ksba_reader_read (cms->reader, buffer, n, &nread);
-          if (err)
-            return err;
-          nleft -= nread;
-          if (cms->hash_fnc)
-            cms->hash_fnc (cms->hash_fnc_arg, buffer, nread); 
-          if (cms->writer)
-            err = ksba_writer_write (cms->writer, buffer, nread);
+          err = read_hash_block (cms, nleft);
           if (err)
             return err;
         }
@@ -190,7 +220,7 @@ read_and_hash_cont (ksba_cms_t cms)
 
 
 
-/* copy all the encrypted bytes from the reader to the writer.
+/* Copy all the encrypted bytes from the reader to the writer.
    Handles indefinite length encoding */
 static gpg_error_t
 read_encrypted_cont (ksba_cms_t cms)

@@ -1,8 +1,19 @@
+2004-12-03  Werner Koch  <wk@g10code.com>
+
+	Released 0.9.10.
+	
+	* configure.ac: Bumped LT version to C13/A5/R2.
+
+2004-11-25  Werner Koch  <wk@g10code.com>
+
+	* configure.ac: Define CROSS_COMPILING make conditional
+	* Makefile.am (SUBDIRS): Don't run tests when cross compiling.
+
 2004-09-27  Werner Koch  <wk@g10code.com>
 
 	Released 0.9.9.
 
-	* configure.ac: Bumbed LT version to C13/A5/R2.
+	* configure.ac: Bumped LT version to C13/A5/R2.
 	
 	* configure.ac: AC_GNU_SOURCE instead of AH_TOP.
 	* config.guess, config.sub: Updated.
@@ -12,13 +23,13 @@
 
 	Released 0.9.8.
 
-	* configure.ac: Bumbed LT version to C13/A5/R1.
+	* configure.ac: Bumped LT version to C13/A5/R1.
 
 2004-06-08  Werner Koch  <wk@gnupg.org>
 
 	Released 0.9.7.
 	
-	* configure.ac: Bumbed LT version to C13/A5/R0.
+	* configure.ac: Bumped LT version to C13/A5/R0.
 
 2004-04-29  Werner Koch  <wk@gnupg.org>
 

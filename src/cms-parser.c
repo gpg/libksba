@@ -673,7 +673,7 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
           parsing to a - not yet existing - ksba_crl module.  CRLs are
           quite important for other applications too so we should
           provide a nice interface */
-      /* fprintf (stderr,"WARNING: Can't handle CRLs yet\n");*/
+       /* fprintf (stderr,"WARNING: Can't handle CRLs yet\n"); */
 
       if (ti.ndef)
         return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);

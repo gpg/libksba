@@ -1,3 +1,7 @@
+2004-11-28  Werner Koch  <wk@g10code.com>
+
+	* t-cms-parser.c (one_file): Do not use a writer object.
+
 2004-04-28  Werner Koch  <wk@gnupg.org>
 
 	* t-crl-parser.c (print_names): New.

@@ -1,5 +1,7 @@
-Noteworthy changes in version 0.9.10
-------------------------------------------------
+Noteworthy changes in version 0.9.10 (2004-12-03)
+-------------------------------------------------
+
+ * Fixed a CMS parsing bug.
 
 
 Noteworthy changes in version 0.9.9 (2004-09-27)

@@ -1,3 +1,15 @@
+2004-11-29  Werner Koch  <wk@g10code.com>
+
+	* cms.c (read_and_hash_cont): Added more code for the unusual
+	non-NDEF things and factored common code out to ..
+	(read_hash_block): .. new function.
+
+2004-11-26  Werner Koch  <wk@g10code.com>
+
+	* util.c (_ksba_stpcpy): Renamed from stpcpy to avoid duble
+	defines sympols in case libska gets statically linked.
+	* util.h (stpcpy): Redefine it.
+
 2004-08-17  Werner Koch  <wk@g10code.de>
 
 	* cert.c (ksba_cert_get_image): Replaced assert by proper error
