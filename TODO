@@ -34,8 +34,6 @@ However, they are not allowed in Sphinx.
 
 ** split some stuff from cms.c into a new cms-build.c
 
-** allow for multiple signers
-
 ** can't handle CRL infos in certificates
 
    This is not a problem within the Aegypten project as CRL are t be
@@ -71,13 +69,6 @@ later than 2038 on a 32 bit box.
 actual the reader is limited to 100 bytes over the first unread size.
 Easy to fix.
 
-* Other modules
-
-** Do we need p12 stuff?
-
 * General
 ** The ASN.1 parse tree is not released in all places
 ** Some memory is not released in case of errors.
-
-
-
