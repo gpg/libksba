@@ -695,7 +695,9 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
                                 &cms->signer_info.root,
                                 &cms->signer_info.image,
                                 &cms->signer_info.imagelen);
-  if (err)
+  /* The signerInfo might be an empty set in the case of a certs-only
+     signature.  Thus we have to allow for EOF here */
+  if (err && err != -1)
     return err;
 
   return 0;

@@ -95,6 +95,12 @@ static struct algo_table_s sig_algo_table[] = {
     "\x2B\x0E\x03\x02\x1A", 5,
     0, "sha-1", "", "", GCRY_MD_SHA1 },
 
+  { /* As used by telesec cards */
+    "1.3.36.3.3.1.2",  /* rsaSignatureWithripemd160 */
+    "\x2b\x24\x03\x03\x01\x02", 6,
+    1, "rsa", "s", "\x82", GCRY_MD_RMD160 },
+
+
   {NULL}
 };
 

@@ -159,6 +159,12 @@ one_file (const char *fname)
   for (signer=0; signer < 1; signer++)
     {
       err = ksba_cms_get_issuer_serial (cms, signer, &dn, &p);
+      if (err == KSBA_No_Data && !signer)
+        {
+          printf ("this is a certs-only message\n");
+          break;
+        }
+
       fail_if_err2 (fname, err);
       printf ("signer %d - issuer: ", signer);
       print_dn (dn);
@@ -197,7 +203,8 @@ int
 main (int argc, char **argv)
 {
 
-  one_file ("pkcs7-1.ber");
+  one_file ("x.ber");
+  /*one_file ("pkcs7-1.ber");*/
   /*one_file ("root-cert-2.der");  should fail */
 
   return 0;

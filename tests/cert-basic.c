@@ -365,6 +365,14 @@ one_file (const char *fname)
 
   list_extensions (cert);
 
+#if 0
+  sexp = ksba_cert_get_sig_val (cert);
+  fputs ("  sigval....: ", stdout);
+  print_sexp (sexp);
+  ksba_free (sexp);
+  putchar ('\n');
+#endif
+
   ksba_cert_release (cert);
   cert = ksba_cert_new ();
   if (!cert)

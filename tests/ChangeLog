@@ -1,3 +1,7 @@
+2002-03-12  Werner Koch  <wk@gnupg.org>
+
+	* t-cms-parser.c (one_file): Detect certs-only messages.
+
 2002-02-19  Werner Koch  <wk@gnupg.org>
 
 	* cert-basic.c (list_extensions): Print certificatePolicies.

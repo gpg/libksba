@@ -1,3 +1,16 @@
+2002-03-12  Werner Koch  <wk@gnupg.org>
+
+	* cms-parser.c (_ksba_cms_parse_signed_data_part_2): Allow an
+	empty set of signer infos.
+
+2002-03-11  Werner Koch  <wk@gnupg.org>
+
+	* keyinfo.c: Fixed last change; forgot to set the length.
+
+2002-03-09  Werner Koch  <wk@gnupg.org>
+
+	* keyinfo.c: Add algo for Telesec NetKey cards.
+
 2002-02-19  Werner Koch  <wk@gnupg.org>
 
 	* cert.c (ksba_cert_get_cert_policies): New.
