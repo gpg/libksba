@@ -1,3 +1,8 @@
+2003-12-01  Werner Koch  <wk@gnupg.org>
+
+	* ksba.texi: Cahnged license to GPL.
+	* fdl.texi: Removed
+
 2002-11-13  Werner Koch  <wk@gnupg.org>
 
 	* ksba.texi: Sanitized the wording of fixmes and added pointers to
