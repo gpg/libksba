@@ -1,6 +1,7 @@
-Noteworthy changes in version CVS-HEAD
+Noteworthy changes in version 0.4.2 (2002-06-04)
 ------------------------------------------------
 
+ * Some bug fixes and a new function.
 
  * Interface changes relative to the 0.4.1 release:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -31,7 +31,7 @@
 
 2002-03-22  Werner Koch  <wk@gnupg.org>
 
-	* cert.c (get_name): Fixed enumering of alternate names.
+	* cert.c (get_name): Fixed enumerating of alternate names.
 
 	* name.c: New.
 	* ksba.h (KsbaName): New.  Added defintions for the name functions.
