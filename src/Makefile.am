@@ -28,6 +28,8 @@ bin_SCRIPTS = ksba-config
 include_HEADERS = ksba.h
 lib_LTLIBRARIES = libksba.la
 noinst_PROGRAMS = asn1-gentables ber-dump
+m4datadir = $(datadir)/aclocal
+m4data_DATA = ksba.m4
 
 
 libksba_la_LDFLAGS = -version-info \
