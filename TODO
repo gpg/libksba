@@ -25,6 +25,13 @@
   * rework the datastructures so that we can cope with multiple
     recipients and signers.
 
+* src/time.c
+
+  * the usual problems with time_t; we need at least a custom mktime
+    function capable of converting times later than 2038 on a 32 bit
+    box. 
+
+
 * Other modules
 
   * We need a p15 implemention

@@ -1,3 +1,7 @@
+2002-01-11  Werner Koch  <wk@gnupg.org>
+
+	* configure.ac (AC_C_INLINE): New.
+
 2001-12-17  Werner Koch  <wk@gnupg.org>
 
 	* configure.ac (KSBA_LIBS,KSBA_CFLAGS): Set them.
