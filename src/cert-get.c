@@ -48,8 +48,10 @@ ksba_cert_get_string_attr (KsbaCert cert, KsbaAttr what, int idx,
 }
 
 
+/* FIXME: This function is not yet used or published. */
 KsbaError
-ksba_cert_get_time_attr (KsbaCert cert, KsbaAttr what, int idx, time_t *ret)
+ksba_cert_get_time_attr (KsbaCert cert, KsbaAttr what, int idx,
+                         ksba_isotime_t ret)
 {
   *ret = 0; /* set a default value */
   if (!cert || idx < 0 )

@@ -884,18 +884,17 @@ ksba_cms_get_message_digest (KsbaCMS cms, int idx,
 }
 
 
-/* 
-   Return the extension attribute signing time, which may be 0 for no
-   signing time */
+/* Return the extension attribute signing time, which may be empty for no
+   signing time available. */
 KsbaError
-ksba_cms_get_signing_time (KsbaCMS cms, int idx, time_t *r_sigtime)
+ksba_cms_get_signing_time (KsbaCMS cms, int idx, ksba_isotime_t r_sigtime)
 { 
   AsnNode nsiginfo, n;
-  time_t t;
   struct signer_info_s *si;
 
-  if (!cms || !r_sigtime)
+  if (!cms)
     return KSBA_Invalid_Value;
+  *r_sigtime = 0;
   if (!cms->signer_info)
     return KSBA_No_Data;
   if (idx < 0)
@@ -909,12 +908,12 @@ ksba_cms_get_signing_time (KsbaCMS cms, int idx, time_t *r_sigtime)
   *r_sigtime = 0;
   nsiginfo = _ksba_asn_find_node (si->root, "SignerInfo.signedAttrs");
   if (!nsiginfo)
-    return 0; /* this is okay, because signedAttribs are optional */
+    return 0; /* This is okay because signedAttribs are optional. */
 
   n = _ksba_asn_find_type_value (si->image, nsiginfo, 0,
                                  oid_signingTime, DIM(oid_signingTime));
   if (!n)
-    return 0; /* signing time is optional */
+    return 0; /* This is okay because signing time is optional. */
 
   /* check that there is only one */
   if (_ksba_asn_find_type_value (si->image, nsiginfo, 1,
@@ -932,17 +931,8 @@ ksba_cms_get_signing_time (KsbaCMS cms, int idx, time_t *r_sigtime)
   if (n->off == -1)
     return KSBA_Bug;
 
-  t = _ksba_asntime_to_epoch (si->image + n->off + n->nhdr, n->len);
-  if (t == (time_t)-1)
-    return KSBA_Invalid_Time;
-  /* Because we use 0 as no signing time, we return an error if this
-     is used as a real value.  If the GCHQ folks would have even
-     invented by coincidence the X.509 format and used it on
-     1970-01-01 we can't do much about it.*/
-  if (!t)
-    return KSBA_Invalid_Time;
-  *r_sigtime = t;
-  return 0;
+  return _ksba_asntime_to_iso (si->image + n->off + n->nhdr, n->len,
+                               r_sigtime);
 }
 
 
@@ -1408,7 +1398,7 @@ ksba_cms_set_message_digest (KsbaCMS cms, int idx,
  * ksba_cms_set_signing_time:
  * @cms: A CMS object
  * @idx: The index of the signer
- * @sigtime: a time or 0 to use the current time
+ * @sigtime: a time or an emty value to use the current time
  * 
  * Set a signing time into the signedAttributes of the signer with
  * the index IDX.  The index of a signer is determined by the sequence
@@ -1417,7 +1407,7 @@ ksba_cms_set_message_digest (KsbaCMS cms, int idx,
  * Return value: 0 on success or an error code
  **/
 KsbaError
-ksba_cms_set_signing_time (KsbaCMS cms, int idx, time_t sigtime)
+ksba_cms_set_signing_time (KsbaCMS cms, int idx, const ksba_isotime_t sigtime)
 { 
   struct certlist_s *cl;
 
@@ -1431,10 +1421,12 @@ ksba_cms_set_signing_time (KsbaCMS cms, int idx, time_t sigtime)
   if (!cl)
     return KSBA_Invalid_Index; /* no certificate to store it */
   
-  if (!sigtime)
-    sigtime = time (NULL);
-
-  cl->signing_time = sigtime;
+  /* Fixme: We might want to check the validity of the pased time
+     string. */
+  if (!*sigtime)
+    _ksba_current_time (cl->signing_time);
+  else
+    _ksba_copy_time (cl->signing_time, sigtime); 
   return 0;
 }
 

@@ -1,3 +1,22 @@
+2003-10-31  Werner Koch  <wk@gnupg.org>
+
+	Changed the representation of time.
+	
+	* ksba.h (ksba_isotime_t): New.
+	* convert.h, cms.h, crl.h: Changed all data structure to use that
+	new time object.
+	* time.c (_ksba_asntime_to_epoch): Renamed to ..
+	(_ksba_asntime_to_iso): .. this and rewrote for the new time format.
+	(_ksba_asntime_from_epoch): Removed.  Was never used.
+	(_ksba_assert_time_format, _ksba_copy_time, _ksba_cmp_time)
+	(_ksab_current_time): New.
+	* cert.c (ksba_cert_get_validity): Changed for new time data type.
+	* der-encoder.c (_ksba_der_store_time): Ditto.
+	* crl.c (ksba_crl_get_update_times, ksba_crl_get_item) 
+	(parse_to_next_update, parse_crl_entry): Ditto.
+	* cms.c (ksba_cms_get_signing_time, ksba_cms_set_signing_time):
+	Ditto.
+
 2003-10-21  Werner Koch  <wk@gnupg.org>
 
 	* dn.c (oid_name_tbl): Changed OIDLEN to size_t.
@@ -8,6 +27,7 @@
 2003-08-20  Marcus Brinkmann  <marcus@g10code.de>
  
 	* ber-decoder.c (new_decoder_state): Initialize DS->cur.in_any.
+
 2003-03-17  Werner Koch  <wk@gnupg.org>
 
 	* dn.c (count_quoted_string): Fixed detection of nonprintable

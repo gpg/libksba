@@ -29,7 +29,7 @@
 #include "asn1-func.h"
 #include "ber-help.h"
 #include "der-encoder.h"
-
+#include "convert.h"
 
 struct der_encoder_s {
   AsnNode module;    /* the ASN.1 structure */
@@ -235,17 +235,23 @@ _ksba_der_copy_tree (AsnNode dst_root,
 
 
 KsbaError
-_ksba_der_store_time (AsnNode node, time_t atime)
+_ksba_der_store_time (AsnNode node, const ksba_isotime_t atime)
 {
   char buf[50], *p;
-  struct tm *tp;
   int need_gen;
+  KsbaError err;
 
-  tp = gmtime (&atime);
-  sprintf (buf, "%04d%02d%02d%02d%02d%02dZ",
-           1900+tp->tm_year, tp->tm_mon+1, tp->tm_mday,
-           tp->tm_hour, tp->tm_min, tp->tm_sec);
-  need_gen = tp->tm_year >= 150;
+  /* First check that ATIME is inddeed as formatted as expected. */
+  err = _ksba_assert_time_format (atime);
+  if (err)
+    return err;
+
+  memcpy (buf, atime, 8);
+  memcpy (buf+8, atime+9, 6);
+  strcpy (buf+14, "Z");
+
+  /* We need to use generalized time beginning with the year 2050. */
+  need_gen = (_ksba_cmp_time (atime, "20500101T000000") >= 0);
 
   if (node->type == TYPE_ANY)
     node->type = need_gen? TYPE_GENERALIZED_TIME : TYPE_UTC_TIME;

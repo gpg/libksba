@@ -55,13 +55,13 @@ struct ksba_crl_s {
     unsigned char *image;
     size_t imagelen;
   } issuer;
-  time_t this_update;
-  time_t next_update;
+  ksba_isotime_t this_update;
+  ksba_isotime_t next_update;
 
   struct {
     KsbaSexp serial;
-    time_t revocation_date;
     KsbaCRLReason reason;
+    ksba_isotime_t revocation_date;
   } item;
 
   KsbaSexp sigval;

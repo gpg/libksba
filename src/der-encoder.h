@@ -44,7 +44,7 @@ KsbaError _ksba_der_copy_tree (AsnNode dst,
 
 
 
-KsbaError _ksba_der_store_time (AsnNode node, time_t atime);
+KsbaError _ksba_der_store_time (AsnNode node, const ksba_isotime_t atime);
 KsbaError _ksba_der_store_string (AsnNode node, const char *string);
 KsbaError _ksba_der_store_integer (AsnNode node, const unsigned char *value);
 KsbaError _ksba_der_store_oid (AsnNode node, const char *oid);

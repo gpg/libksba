@@ -30,6 +30,23 @@ extern "C" {
 #endif
 #endif
 
+
+/* Check for compiler features.  */
+#ifdef __GNUC__
+#define _KSBA_GCC_VERSION (__GNUC__ * 10000 \
+                            + __GNUC_MINOR__ * 100 \
+                            + __GNUC_PATCHLEVEL__)
+/* #if _KSBA_GCC_VERSION > 30100 */
+/* #define _KSBA_DEPRECATED	__attribute__ ((__deprecated__)) */
+/* #endif */
+#endif /*__GNUC__*/
+
+#ifndef _KSBA_DEPRECATED
+#define _KSBA_DEPRECATED
+#endif
+
+
+
 typedef enum {
   KSBA_EOF = -1,
   KSBA_No_Error = 0,
@@ -93,7 +110,9 @@ typedef enum {
   KSBA_CT_DIGESTED_DATA = 4,
   KSBA_CT_ENCRYPTED_DATA = 5,
   KSBA_CT_AUTH_DATA = 6
-} KsbaContentType;
+} ksba_content_type_t;
+typedef ksba_content_type_t KsbaContentType _KSBA_DEPRECATED;
+
 
 
 typedef enum {
@@ -109,7 +128,8 @@ typedef enum {
   KSBA_SR_BEGIN_ITEMS = 9,
   KSBA_SR_GOT_ITEM = 10,
   KSBA_SR_END_ITEMS = 11,
-} KsbaStopReason;
+} ksba_stop_reason_t;
+typedef ksba_stop_reason_t KsbaStopReason _KSBA_DEPRECATED;
 
 typedef enum {
   KSBA_CRLREASON_UNSPECIFIED = 1,
@@ -120,7 +140,8 @@ typedef enum {
   KSBA_CRLREASON_CESSATION_OF_OPERATION = 32,
   KSBA_CRLREASON_CERTIFICATE_HOLD = 64,
   KSBA_CRLREASON_REMOVE_FROM_CRL = 256
-} KsbaCRLReason;
+} ksba_crl_reason_t;
+typedef ksba_crl_reason_t KsbaCRLReason _KSBA_DEPRECATED;
 
 typedef enum {
   KSBA_KEYUSAGE_DIGITAL_SIGNATURE =  1,
@@ -132,230 +153,258 @@ typedef enum {
   KSBA_KEYUSAGE_CRL_SIGN          = 64,
   KSBA_KEYUSAGE_ENCIPHER_ONLY    = 128,
   KSBA_KEYUSAGE_DECIPHER_ONLY    = 256
-} KsbaKeyUsage;
+} ksba_key_usage_t;
+typedef ksba_key_usage_t KsbaKeyUsage _KSBA_DEPRECATED;
+
+
+/* ISO format, e.g. "19610711T172059", assumed to be UTC. */
+typedef char ksba_isotime_t[16];
+
 
 /* X.509 certificates are represented by this object.
    ksba_cert_new() creates such an object */
 struct ksba_cert_s;
-typedef struct ksba_cert_s *KsbaCert;
+typedef struct ksba_cert_s *ksba_cert_t;
+typedef struct ksba_cert_s *KsbaCert _KSBA_DEPRECATED;
 
 /* CMS objects are controlled by this object.
    ksba_cms_new() creates it */
 struct ksba_cms_s;
-typedef struct ksba_cms_s *KsbaCMS;
+typedef struct ksba_cms_s *ksba_cms_t;
+typedef struct ksba_cms_s *KsbaCMS _KSBA_DEPRECATED;
 
 /* CRL objects are controlled by this object.
    ksba_crl_new() creates it */
 struct ksba_crl_s;
-typedef struct ksba_crl_s *KsbaCRL;
+typedef struct ksba_crl_s *ksba_crl_t;
+typedef struct ksba_crl_s *KsbaCRL _KSBA_DEPRECATED;
 
 /* PKCS-10 creation is controlled by this object.
    ksba_certreq_new() creates it */
 struct ksba_certreq_s;
-typedef struct ksba_certreq_s *KsbaCertreq;
+typedef struct ksba_certreq_s *ksba_certreq_t;
+typedef struct ksba_certreq_s *KsbaCertreq _KSBA_DEPRECATED;
 
 /* This is a reader object vor various purposes
    see ksba_reader_new et al. */
 struct ksba_reader_s;
-typedef struct ksba_reader_s *KsbaReader;
+typedef struct ksba_reader_s *ksba_reader_t;
+typedef struct ksba_reader_s *KsbaReader _KSBA_DEPRECATED;
 
 /* This is a writer object vor various purposes
    see ksba_writer_new et al. */
 struct ksba_writer_s;
-typedef struct ksba_writer_s *KsbaWriter;
+typedef struct ksba_writer_s *ksba_writer_t;
+typedef struct ksba_writer_s *KsbaWriter _KSBA_DEPRECATED;
 
 /* This is an object to store an ASN.1 parse tree as
    create by ksba_asn_parse_file() */
 struct ksba_asn_tree_s;
-typedef struct ksba_asn_tree_s *KsbaAsnTree;
+typedef struct ksba_asn_tree_s *ksba_asn_tree_t;
+typedef struct ksba_asn_tree_s *KsbaAsnTree _KSBA_DEPRECATED;
 
 /* This is an object to reference an General Name.  Such an object is
    returned by several functions. */
 struct ksba_name_s;
-typedef struct ksba_name_s *KsbaName;
+typedef struct ksba_name_s *ksba_name_t;
+typedef struct ksba_name_s *KsbaName _KSBA_DEPRECATED;
 
 /* KsbaSexp is just an unsigned char * which should be used for
    documentation purpose.  The S-expressions returned by libksba are
    always in canonical representation with an extra 0 byte at the end,
    so that one can print the values in the debugger and at least see
    the first bytes */
-typedef unsigned char *KsbaSexp;
-typedef const unsigned char *KsbaConstSexp;
+typedef unsigned char *ksba_sexp_t;
+typedef unsigned char *KsbaSexp _KSBA_DEPRECATED;
+typedef const unsigned char *ksba_const_sexp_t;
+typedef const unsigned char *KsbaConstSexp _KSBA_DEPRECATED;
    
 
 /*-- cert.c --*/
-KsbaCert ksba_cert_new (void);
-void ksba_cert_ref (KsbaCert cert);
-void     ksba_cert_release (KsbaCert cert);
-KsbaError ksba_cert_read_der (KsbaCert cert, KsbaReader reader);
-KsbaError ksba_cert_init_from_mem (KsbaCert cert,
-                                   const void *buffer, size_t length);
-const unsigned char *ksba_cert_get_image (KsbaCert cert, size_t *r_length);
-KsbaError ksba_cert_hash (KsbaCert cert, int what,
+ksba_cert_t ksba_cert_new (void);
+void        ksba_cert_ref (ksba_cert_t cert);
+void        ksba_cert_release (ksba_cert_t cert);
+KsbaError   ksba_cert_read_der (ksba_cert_t cert, ksba_reader_t reader);
+KsbaError   ksba_cert_init_from_mem (ksba_cert_t cert,
+                                     const void *buffer, size_t length);
+const unsigned char *ksba_cert_get_image (ksba_cert_t cert, size_t *r_length);
+KsbaError ksba_cert_hash (ksba_cert_t cert, int what,
                           void (*hasher)(void *,
                                          const void *,
                                          size_t length), 
                           void *hasher_arg);
-const char *ksba_cert_get_digest_algo (KsbaCert cert);
-KsbaSexp ksba_cert_get_serial (KsbaCert cert);
-char *ksba_cert_get_issuer (KsbaCert cert, int idx);
-time_t ksba_cert_get_validity (KsbaCert cert, int what);
-char *ksba_cert_get_subject (KsbaCert cert, int idx);
-KsbaSexp ksba_cert_get_public_key (KsbaCert cert);
-KsbaSexp ksba_cert_get_sig_val (KsbaCert cert);
+const char *ksba_cert_get_digest_algo (ksba_cert_t cert);
+ksba_sexp_t ksba_cert_get_serial (ksba_cert_t cert);
+char       *ksba_cert_get_issuer (ksba_cert_t cert, int idx);
+KsbaError   ksba_cert_get_validity (ksba_cert_t cert, int what,
+                                    ksba_isotime_t r_time);
+char       *ksba_cert_get_subject (ksba_cert_t cert, int idx);
+KsbaSexp    ksba_cert_get_public_key (ksba_cert_t cert);
+KsbaSexp    ksba_cert_get_sig_val (ksba_cert_t cert);
 
-KsbaError ksba_cert_get_extension (KsbaCert cert, int idx,
+KsbaError ksba_cert_get_extension (ksba_cert_t cert, int idx,
                                    char const **r_oid, int *r_crit,
                                    size_t *r_deroff, size_t *r_derlen);
 
-KsbaError ksba_cert_is_ca (KsbaCert cert, int *r_ca, int *r_pathlen);
-KsbaError ksba_cert_get_key_usage (KsbaCert cert, unsigned int *r_flags);
-KsbaError ksba_cert_get_cert_policies (KsbaCert cert, char **r_policies);
-KsbaError ksba_cert_get_crl_dist_point (KsbaCert cert, int idx,
-                                        KsbaName *r_distpoint,
-                                        KsbaName *r_issuer,
-                                        KsbaCRLReason *r_reason);
-KsbaError ksba_cert_get_auth_key_id (KsbaCert cert,
-                                     KsbaSexp *r_keyid,
-                                     KsbaName *r_name,
-                                     KsbaSexp *r_serial);
+KsbaError ksba_cert_is_ca (ksba_cert_t cert, int *r_ca, int *r_pathlen);
+KsbaError ksba_cert_get_key_usage (ksba_cert_t cert, unsigned int *r_flags);
+KsbaError ksba_cert_get_cert_policies (ksba_cert_t cert, char **r_policies);
+KsbaError ksba_cert_get_crl_dist_point (ksba_cert_t cert, int idx,
+                                        ksba_name_t *r_distpoint,
+                                        ksba_name_t *r_issuer,
+                                        ksba_crl_reason_t *r_reason);
+KsbaError ksba_cert_get_auth_key_id (ksba_cert_t cert,
+                                     ksba_sexp_t *r_keyid,
+                                     ksba_name_t *r_name,
+                                     ksba_sexp_t *r_serial);
 
 
 /*-- cms.c --*/
-KsbaContentType ksba_cms_identify (KsbaReader reader);
+KsbaContentType ksba_cms_identify (ksba_reader_t reader);
 
 KsbaCMS ksba_cms_new (void);
-void    ksba_cms_release (KsbaCMS cms);
-KsbaError ksba_cms_set_reader_writer (KsbaCMS cms, KsbaReader r, KsbaWriter w);
+void    ksba_cms_release (ksba_cms_t cms);
+KsbaError ksba_cms_set_reader_writer (ksba_cms_t cms, KsbaReader r, KsbaWriter w);
 
-KsbaError ksba_cms_parse (KsbaCMS cms, KsbaStopReason *r_stopreason);
-KsbaError ksba_cms_build (KsbaCMS cms, KsbaStopReason *r_stopreason);
+KsbaError ksba_cms_parse (ksba_cms_t cms, KsbaStopReason *r_stopreason);
+KsbaError ksba_cms_build (ksba_cms_t cms, KsbaStopReason *r_stopreason);
 
-KsbaContentType ksba_cms_get_content_type (KsbaCMS cms, int what);
-const char *ksba_cms_get_content_oid (KsbaCMS cms, int what);
-KsbaError ksba_cms_get_content_enc_iv (KsbaCMS cms, unsigned char *iv,
+KsbaContentType ksba_cms_get_content_type (ksba_cms_t cms, int what);
+const char *ksba_cms_get_content_oid (ksba_cms_t cms, int what);
+KsbaError ksba_cms_get_content_enc_iv (ksba_cms_t cms, unsigned char *iv,
                                        size_t maxivlen, size_t *ivlen);
-const char *ksba_cms_get_digest_algo_list (KsbaCMS cms, int idx);
-KsbaError ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
+const char *ksba_cms_get_digest_algo_list (ksba_cms_t cms, int idx);
+KsbaError ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
                                       char **r_issuer,
-                                      KsbaSexp *r_serial);
-const char *ksba_cms_get_digest_algo (KsbaCMS cms, int idx);
-KsbaCert ksba_cms_get_cert (KsbaCMS cms, int idx);
-KsbaError ksba_cms_get_message_digest (KsbaCMS cms, int idx,
+                                      ksba_sexp_t *r_serial);
+const char *ksba_cms_get_digest_algo (ksba_cms_t cms, int idx);
+ksba_cert_t ksba_cms_get_cert (ksba_cms_t cms, int idx);
+KsbaError ksba_cms_get_message_digest (ksba_cms_t cms, int idx,
                                        char **r_digest, size_t *r_digest_len);
-KsbaError ksba_cms_get_signing_time (KsbaCMS cms, int idx, time_t *r_sigtime);
-KsbaError ksba_cms_get_sigattr_oids (KsbaCMS cms, int idx,
+KsbaError ksba_cms_get_signing_time (ksba_cms_t cms, int idx,
+                                     ksba_isotime_t r_sigtime);
+KsbaError ksba_cms_get_sigattr_oids (ksba_cms_t cms, int idx,
                                      const char *reqoid, char **r_value);
-KsbaSexp ksba_cms_get_sig_val (KsbaCMS cms, int idx);
-KsbaSexp ksba_cms_get_enc_val (KsbaCMS cms, int idx);
+KsbaSexp ksba_cms_get_sig_val (ksba_cms_t cms, int idx);
+KsbaSexp ksba_cms_get_enc_val (ksba_cms_t cms, int idx);
 
 void
-ksba_cms_set_hash_function (KsbaCMS cms,
+ksba_cms_set_hash_function (ksba_cms_t cms,
                             void (*hash_fnc)(void *, const void *, size_t),
                             void *hash_fnc_arg);
 
-KsbaError ksba_cms_hash_signed_attrs (KsbaCMS cms, int idx);
+KsbaError ksba_cms_hash_signed_attrs (ksba_cms_t cms, int idx);
 
 
-KsbaError ksba_cms_set_content_type (KsbaCMS cms, int what,
-                                     KsbaContentType type);
-KsbaError ksba_cms_add_digest_algo (KsbaCMS cms, const char *oid);
-KsbaError ksba_cms_add_signer (KsbaCMS cms, KsbaCert cert);
-KsbaError ksba_cms_add_cert (KsbaCMS cms, KsbaCert cert);
-KsbaError ksba_cms_set_message_digest (KsbaCMS cms, int idx,
+KsbaError ksba_cms_set_content_type (ksba_cms_t cms, int what,
+                                     ksba_content_type_t type);
+KsbaError ksba_cms_add_digest_algo (ksba_cms_t cms, const char *oid);
+KsbaError ksba_cms_add_signer (ksba_cms_t cms, ksba_cert_t cert);
+KsbaError ksba_cms_add_cert (ksba_cms_t cms, ksba_cert_t cert);
+KsbaError ksba_cms_set_message_digest (ksba_cms_t cms, int idx,
                                        const char *digest,
                                        size_t digest_len);
-KsbaError ksba_cms_set_signing_time (KsbaCMS cms, int idx, time_t sigtime);
-KsbaError ksba_cms_set_sig_val (KsbaCMS cms, int idx, KsbaConstSexp sigval);
+KsbaError ksba_cms_set_signing_time (ksba_cms_t cms, int idx,
+                                     const ksba_isotime_t sigtime);
+KsbaError ksba_cms_set_sig_val (ksba_cms_t cms,
+                                int idx, ksba_const_sexp_t sigval);
 
-KsbaError ksba_cms_set_content_enc_algo (KsbaCMS cms,
+KsbaError ksba_cms_set_content_enc_algo (ksba_cms_t cms,
                                          const char *oid,
                                          const unsigned char *iv,
                                          size_t ivlen);
-KsbaError ksba_cms_add_recipient (KsbaCMS cms, KsbaCert cert);
-KsbaError ksba_cms_set_enc_val (KsbaCMS cms, int idx, KsbaConstSexp encval);
+KsbaError ksba_cms_add_recipient (ksba_cms_t cms, ksba_cert_t cert);
+KsbaError ksba_cms_set_enc_val (ksba_cms_t cms,
+                                int idx, ksba_const_sexp_t encval);
 
 
 /*-- crl.c --*/
-KsbaCRL   ksba_crl_new (void);
-void      ksba_crl_release (KsbaCRL crl);
-KsbaError ksba_crl_set_reader (KsbaCRL crl, KsbaReader r);
-void      ksba_crl_set_hash_function (KsbaCRL crl,
+ksba_crl_t   ksba_crl_new (void);
+void      ksba_crl_release (ksba_crl_t crl);
+KsbaError ksba_crl_set_reader (ksba_crl_t crl, KsbaReader r);
+void      ksba_crl_set_hash_function (ksba_crl_t crl,
                             void (*hash_fnc)(void *, const void *, size_t),
                             void *hash_fnc_arg);
-const char *ksba_crl_get_digest_algo (KsbaCRL crl);
-KsbaError ksba_crl_get_issuer (KsbaCRL crl, char **r_issuer);
-KsbaError ksba_crl_get_update_times (KsbaCRL crl, time_t *this, time_t *next);
-KsbaError ksba_crl_get_item (KsbaCRL crl,
-                             KsbaSexp *r_serial,
-                             time_t *r_revocation_date,
-                             KsbaCRLReason *r_reason);
-KsbaSexp  ksba_crl_get_sig_val (KsbaCRL crl);
-KsbaError ksba_crl_parse (KsbaCRL crl, KsbaStopReason *r_stopreason);
+const char *ksba_crl_get_digest_algo (ksba_crl_t crl);
+KsbaError ksba_crl_get_issuer (ksba_crl_t crl, char **r_issuer);
+KsbaError ksba_crl_get_update_times (ksba_crl_t crl,
+                                     ksba_isotime_t this,
+                                     ksba_isotime_t next);
+KsbaError ksba_crl_get_item (ksba_crl_t crl,
+                             ksba_sexp_t *r_serial,
+                             ksba_isotime_t r_revocation_date,
+                             ksba_crl_reason_t *r_reason);
+KsbaSexp  ksba_crl_get_sig_val (ksba_crl_t crl);
+KsbaError ksba_crl_parse (ksba_crl_t crl, ksba_stop_reason_t *r_stopreason);
 
 /*-- certreq.c --*/
-KsbaCertreq ksba_certreq_new (void);
-void      ksba_certreq_release (KsbaCertreq cr);
-KsbaError ksba_certreq_set_writer (KsbaCertreq cr, KsbaWriter w);
-void      ksba_certreq_set_hash_function (KsbaCertreq cr,
+ksba_certreq_t ksba_certreq_new (void);
+void      ksba_certreq_release (ksba_certreq_t cr);
+KsbaError ksba_certreq_set_writer (ksba_certreq_t cr, KsbaWriter w);
+void      ksba_certreq_set_hash_function (
+                               ksba_certreq_t cr,
                                void (*hash_fnc)(void *, const void *, size_t),
                                void *hash_fnc_arg);
-KsbaError ksba_certreq_add_subject (KsbaCertreq cr, const char *name);
-KsbaError ksba_certreq_set_public_key (KsbaCertreq cr, KsbaConstSexp key);
-KsbaError ksba_certreq_set_sig_val (KsbaCertreq cr, KsbaConstSexp sigval);
-KsbaError ksba_certreq_build (KsbaCertreq cr, KsbaStopReason *r_stopreason);
+KsbaError ksba_certreq_add_subject (ksba_certreq_t cr, const char *name);
+KsbaError ksba_certreq_set_public_key (ksba_certreq_t cr,
+                                       ksba_const_sexp_t key);
+KsbaError ksba_certreq_set_sig_val (ksba_certreq_t cr,
+                                    ksba_const_sexp_t sigval);
+KsbaError ksba_certreq_build (ksba_certreq_t cr,
+                              ksba_stop_reason_t *r_stopreason);
 
 
 /*-- reader.c --*/
-KsbaReader ksba_reader_new (void);
-void       ksba_reader_release (KsbaReader r);
-int        ksba_reader_error (KsbaReader r);
+ksba_reader_t ksba_reader_new (void);
+void       ksba_reader_release (ksba_reader_t r);
+int        ksba_reader_error (ksba_reader_t r);
 
-KsbaError ksba_reader_set_mem (KsbaReader r,
+KsbaError ksba_reader_set_mem (ksba_reader_t r,
                                const void *buffer, size_t length);
-KsbaError ksba_reader_set_fd (KsbaReader r, int fd);
-KsbaError ksba_reader_set_file (KsbaReader r, FILE *fp);
-KsbaError ksba_reader_set_cb (KsbaReader r, 
+KsbaError ksba_reader_set_fd (ksba_reader_t r, int fd);
+KsbaError ksba_reader_set_file (ksba_reader_t r, FILE *fp);
+KsbaError ksba_reader_set_cb (ksba_reader_t r, 
                               int (*cb)(void*,char *,size_t,size_t*),
                               void *cb_value );
 
-KsbaError ksba_reader_read (KsbaReader r,
+KsbaError ksba_reader_read (ksba_reader_t r,
                             char *buffer, size_t length, size_t *nread);
-KsbaError ksba_reader_unread (KsbaReader r, const void *buffer, size_t count);
-unsigned long ksba_reader_tell (KsbaReader r);
+KsbaError ksba_reader_unread (ksba_reader_t r, const void *buffer, size_t count);
+unsigned long ksba_reader_tell (ksba_reader_t r);
 
 /*-- writer.c --*/
-KsbaWriter ksba_writer_new (void);
-void       ksba_writer_release (KsbaWriter r);
-int ksba_writer_error (KsbaWriter w);
-unsigned long ksba_writer_tell (KsbaWriter w);
-KsbaError ksba_writer_set_fd (KsbaWriter w, int fd);
-KsbaError ksba_writer_set_file (KsbaWriter w, FILE *fp);
-KsbaError ksba_writer_set_cb (KsbaWriter w, 
+ksba_writer_t ksba_writer_new (void);
+void       ksba_writer_release (ksba_writer_t r);
+int ksba_writer_error (ksba_writer_t w);
+unsigned long ksba_writer_tell (ksba_writer_t w);
+KsbaError ksba_writer_set_fd (ksba_writer_t w, int fd);
+KsbaError ksba_writer_set_file (ksba_writer_t w, FILE *fp);
+KsbaError ksba_writer_set_cb (ksba_writer_t w, 
                               int (*cb)(void*,const void *,size_t),
                               void *cb_value);
-KsbaError ksba_writer_set_mem (KsbaWriter w, size_t initial_size);
-const void *ksba_writer_get_mem (KsbaWriter w, size_t *nbytes);
-void *      ksba_writer_snatch_mem (KsbaWriter w, size_t *nbytes);
+KsbaError ksba_writer_set_mem (ksba_writer_t w, size_t initial_size);
+const void *ksba_writer_get_mem (ksba_writer_t w, size_t *nbytes);
+void *      ksba_writer_snatch_mem (ksba_writer_t w, size_t *nbytes);
 KsbaError 
-ksba_writer_set_filter (KsbaWriter w, 
+ksba_writer_set_filter (ksba_writer_t w, 
                         KsbaError (*filter)(void*,
                                             const void *,size_t, size_t *,
                                             void *, size_t, size_t *),
                         void *filter_arg);
 
-KsbaError ksba_writer_write (KsbaWriter w, const void *buffer, size_t length);
-KsbaError ksba_writer_write_octet_string (KsbaWriter w,
+KsbaError ksba_writer_write (ksba_writer_t w, const void *buffer, size_t length);
+KsbaError ksba_writer_write_octet_string (ksba_writer_t w,
                                           const void *buffer, size_t length,
                                           int flush);
 
 /*-- asn1-parse.y --*/
-int ksba_asn_parse_file (const char *filename, KsbaAsnTree *result, int debug);
-void ksba_asn_tree_release (KsbaAsnTree tree);
+int ksba_asn_parse_file (const char *filename, ksba_asn_tree_t *result,
+                         int debug);
+void ksba_asn_tree_release (ksba_asn_tree_t tree);
 
 /*-- asn1-func.c --*/
-void ksba_asn_tree_dump (KsbaAsnTree tree, const char *name, FILE *fp);
-KsbaError ksba_asn_create_tree (const char *mod_name, KsbaAsnTree *result);
+void ksba_asn_tree_dump (ksba_asn_tree_t tree, const char *name, FILE *fp);
+KsbaError ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result);
 
 /*-- oid.c --*/
 char *ksba_oid_to_str (const char *buffer, size_t length);
@@ -363,11 +412,11 @@ int ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength);
 
 
 /*-- name.c --*/
-KsbaName ksba_name_new (void);
-void ksba_name_ref (KsbaName name);
-void ksba_name_release (KsbaName name);
-const char *ksba_name_enum (KsbaName name, int idx);
-char *ksba_name_get_uri (KsbaName name, int idx);
+ksba_name_t ksba_name_new (void);
+void ksba_name_ref (ksba_name_t name);
+void ksba_name_release (ksba_name_t name);
+const char *ksba_name_enum (ksba_name_t name, int idx);
+char *ksba_name_get_uri (ksba_name_t name, int idx);
 
 
 /*-- util.c --*/

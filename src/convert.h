@@ -24,7 +24,13 @@
 #include "asn1-func.h"
 
 /*-- time.c --*/
-time_t _ksba_asntime_to_epoch (const char *buffer, size_t length);
+KsbaError _ksba_asntime_to_iso (const char *buffer, size_t length,
+                                ksba_isotime_t timebuf);
+KsbaError _ksba_assert_time_format (const ksba_isotime_t atime);
+void _ksba_copy_time (ksba_isotime_t d, const ksba_isotime_t s);
+int _ksba_cmp_time (const ksba_isotime_t a, const ksba_isotime_t b);
+void _ksba_current_time (ksba_isotime_t timebuf);
+
 
 /*-- dn.c --*/
 KsbaError _ksba_dn_to_str (const unsigned char *image, AsnNode node,

@@ -1,5 +1,31 @@
-Noteworthy changes in version 0.4.8 (unreleased)
+Noteworthy changes in version 0.9.0 (unreleased)
 ------------------------------------------------
+
+ * The time is not any longer described by time_t but through the new
+   type ksba_isotime_t which is string of excactly 15 characters in
+   ISO 8601 format (e.g. "19611107T152010") and always stored as
+   UTC. This is to allow representation of dates beyond the year 2038.
+   Comparing is a mere strcmp.
+
+ * All type names are nom conforming to the GNU coding standards, tghe
+   old names are still available as aliases but flagged as deprecated.       
+
+ * Interface changes relative to the 0.4.7 release:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ksba_isotime_t             NEW.
+ksba_cert_get_validity     CHANGED: Uses ksba_isotime_t instead of time_t.
+ksba_crl_get_update_times  CHANGED: Uses ksba_isotime_t instead of time_t.
+ksba_crl_get_item          CHANGED: Uses ksba_isotime_t instead of time_t.
+ksba_cms_get_signing_time  CHANGED: Uses ksba_isotime_t instead of time_t.
+ksba_cms_set_signing_time  CHANGED: Uses ksba_isotime_t instead of time_t.
+ksba_cert_t                NEW: Should be used instead of KsbaCert.
+ksba_certreq_t             NEW: Should be used instead of KsbaCertreq.
+ksba_cms_t                 NEW: Should be used instead of KsbaCMS.
+ksba_crl_t                 NEW: Should be used instead of KsbaCRL.
+ksba_name_t                NEW: Should be used instead of KsbaName.
+ksba_sexp_t                NEW: Should be used instead of KsbaSexp.
+ksba_reader_t              NEW: Should be used instead of KsbaReader.
+ksba_writer_t              NEW: Should be used instead of KsbaWriter.
 
 
 Noteworthy changes in version 0.4.7 (2003-03-17)

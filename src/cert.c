@@ -527,8 +527,9 @@ ksba_cert_get_subject (KsbaCert cert, int idx)
 
 /**
  * ksba_cert_get_valididy:
- * @cert: cetificate object
+ * @cert: certificate object
  * @what: 0 for notBefore, 1 for notAfter
+ * @timebuf: Returns the time.
  * 
  * Return the validity object from the certificate.  If no value is
  * available 0 is returned because we can safely assume that this is
@@ -536,16 +537,16 @@ ksba_cert_get_subject (KsbaCert cert, int idx)
  * 
  * Return value: seconds since epoch, 0 for no value or (time)-1 for error.
  **/
-time_t
-ksba_cert_get_validity (KsbaCert cert, int what)
+KsbaError
+ksba_cert_get_validity (KsbaCert cert, int what, ksba_isotime_t timebuf)
 {
   AsnNode n, n2;
-  time_t t;
 
   if (!cert || what < 0 || what > 1)
-    return (time_t)(-1);
+    return KSBA_Invalid_Value;
+  *timebuf = 0;
   if (!cert->initialized)
-    return (time_t)(-1);
+    return KSBA_No_Data;
   
   n = _ksba_asn_find_node (cert->root,
         what == 0? "Certificate.tbsCertificate.validity.notBefore"
@@ -564,12 +565,10 @@ ksba_cert_get_validity (KsbaCert cert, int what)
   if (!n)
     return 0; /* no value available */
 
-  return_val_if_fail (n->off != -1, (time_t)(-1));
+  return_val_if_fail (n->off != -1, KSBA_Bug);
 
-  t = _ksba_asntime_to_epoch (cert->image + n->off + n->nhdr, n->len);
-  if (!t) /* we consider this an error */
-    t = (time_t)(-1);
-  return t;
+  return _ksba_asntime_to_iso (cert->image + n->off + n->nhdr, n->len,
+                               timebuf);
 }
 
 

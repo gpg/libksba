@@ -204,19 +204,26 @@ ksba_crl_get_issuer (KsbaCRL crl, char **r_issuer)
  * @this: Returns the thisUpdate value
  * @next: Returns the nextUpdate value.
  * 
+ * THIS and NEXT may be given as NULL if the value is not required.
  * Return value: 0 on success or an error code
  **/
 KsbaError
-ksba_crl_get_update_times (KsbaCRL crl, time_t *this, time_t *next)
+ksba_crl_get_update_times (KsbaCRL crl,
+                           ksba_isotime_t this,
+                           ksba_isotime_t next)
 {
+  if (this)
+    *this = 0;
+  if (next)
+    *next = 0;
   if (!crl)
     return KSBA_Invalid_Value;
-  if (crl->this_update == (time_t)(-1) || crl->next_update == (time_t)(-1))
+  if (!*crl->this_update || !*crl->next_update)
     return KSBA_Invalid_Time;
   if (this)
-    *this = crl->this_update;
+    _ksba_copy_time (this, crl->this_update);
   if (next)
-    *next = crl->next_update;
+    _ksba_copy_time (next, crl->next_update);
   return 0;
 }
 
@@ -238,8 +245,12 @@ ksba_crl_get_update_times (KsbaCRL crl, time_t *this, time_t *next)
  **/
 KsbaError
 ksba_crl_get_item (KsbaCRL crl, KsbaSexp *r_serial,
-                   time_t *r_revocation_date, KsbaCRLReason *r_reason)
+                   ksba_isotime_t r_revocation_date,
+                   KsbaCRLReason *r_reason)
 { 
+  if (r_revocation_date)
+    *r_revocation_date = 0;
+
   if (!crl)
     return KSBA_Invalid_Value;
 
@@ -250,8 +261,8 @@ ksba_crl_get_item (KsbaCRL crl, KsbaSexp *r_serial,
       *r_serial = crl->item.serial;
       crl->item.serial = NULL;
     }
-  if (r_revocation_date)
-    *r_revocation_date = crl->item.revocation_date;
+   if (r_revocation_date)
+    _ksba_copy_time (r_revocation_date, crl->item.revocation_date);
   if (r_reason)
     *r_reason = crl->item.reason;
   return 0;
@@ -540,7 +551,7 @@ parse_to_next_update (KsbaCRL crl)
   if (err)
     return err;
   HASH (tmpbuf, ti.nhdr+ti.length);
-  crl->this_update = _ksba_asntime_to_epoch (tmpbuf+ti.nhdr, ti.length);
+  _ksba_asntime_to_iso (tmpbuf+ti.nhdr, ti.length, crl->this_update);
 
   /* read the optional nextUpdate time */
   err = _ksba_ber_read_tl (crl->reader, &ti);
@@ -566,7 +577,7 @@ parse_to_next_update (KsbaCRL crl)
       if (err)
         return err;
       HASH (tmpbuf, ti.nhdr+ti.length);
-      crl->next_update = _ksba_asntime_to_epoch (tmpbuf+ti.nhdr, ti.length);
+      _ksba_asntime_to_iso (tmpbuf+ti.nhdr, ti.length, crl->next_update);
       err = _ksba_ber_read_tl (crl->reader, &ti);
       if (err)
         return err;
@@ -708,8 +719,9 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
   if (err)
     return err;
   HASH (tmpbuf, ti.nhdr+ti.length);
-  crl->item.revocation_date =
-    _ksba_asntime_to_epoch (tmpbuf+ti.nhdr, ti.length);
+  
+  _ksba_asntime_to_iso (tmpbuf+ti.nhdr, ti.length,
+                        crl->item.revocation_date);
 
   /* if there is still space we must parse the optional entryExtensions */
   if (ndef)

@@ -1,5 +1,5 @@
 /* time.c - UTCTime and GeneralizedTime helper
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2003 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -29,86 +29,111 @@
 #include "convert.h"
 
 
-/* Converts an UTCTime or GeneralizedTime to epoch.  Returns (time_t)-1
-   on error. The function figures automagically the right format.
-   fixme: Currently we only zupport Zulu time and no timezone */
-time_t 
-_ksba_asntime_to_epoch (const char *buffer, size_t length)
+/* Converts an UTCTime or GeneralizedTime to ISO format.  Sets the
+   returns string to empty on error and returns the error code. The
+   function figures automagically the right format.  fixme: Currently
+   we only zupport Zulu time and no timezone */
+KsbaError
+_ksba_asntime_to_iso (const char *buffer, size_t length,
+                      ksba_isotime_t timebuf)
 { 
   const char *s;
   size_t n;
-  struct tm buf;
   int year;
-
-  memset (&buf, 0, sizeof buf);
+  
+  *timebuf = 0;
   for (s=buffer, n=0; n < length && digitp (s); n++, s++)
     ;
   if ((n != 12 && n != 14) || *s != 'Z')
-    return (time_t)(-1);
+    return KSBA_Invalid_Time;
   
   s = buffer;
   if (n==12)
     {
       year = atoi_2 (s);
-      s += 2;
-      year += year < 50? 2000:1900;
+      timebuf[0] = year < 50? '2': '1';
+      timebuf[1] = year < 50? '0': '9';
+      memcpy (timebuf+2, s, 6);
+      s += 6;
     }
   else
     {
-      year = atoi_4 (s);
-      s += 4;
+      memcpy (timebuf, s, 8);
+      s += 8;
     }
-  if (year < 1900)
-    return (time_t)(-1);
+  timebuf[8] = 'T';
+  memcpy (timebuf+9, s, 6);
+  timebuf[15] = 0;
 
-  /* FIXME: we should use a configure test to see whether the 
-     mktime works */
-  if (sizeof (time_t) <= 4 && year >= 2038)
-    return (time_t)2145914603; /* 2037-12-31 23:23:23 */
-
-  buf.tm_year = year - 1900;
-  buf.tm_mon = atoi_2 (s) - 1; 
-  s += 2;
-  buf.tm_mday = atoi_2 (s);
-  s += 2;
-  buf.tm_hour = atoi_2 (s);
-  s += 2;
-  buf.tm_min = atoi_2 (s);
-  s += 2;
-  buf.tm_sec = atoi_2 (s);
-  s += 2;
-
-
-#ifdef HAVE_TIMEGM
-  return timegm (&buf);
-#else
-  {
-#warning We should reset TZ if we cannot use timegm()
-    time_t tim;
-
-    putenv ("TZ=UTC");
-    tim = mktime (&buf);
-    return tim;
-  }
-#endif
+  return 0;
 }
 
 
-/* convert an epoch time T into Generalized Time and return that in 
-   rbuf and rlength.  Caller must free the returned buffer */
-int
-_ksba_asntime_from_epoch (time_t t, char **rbuf, size_t *rlength)
+/* Return 0 if ATIME has the proper format (e.g. "19660205T131415"). */
+KsbaError
+_ksba_assert_time_format (const ksba_isotime_t atime)
 {
-  *rbuf = NULL;
-  *rlength = 0;
+  int i;
+  const char *s;
 
-
-
-  return -1; /* error */
+  if (!*atime)
+    return KSBA_No_Value;
+  
+  for (s=atime, i=0; i < 8; i++, s++)
+    if (!digitp (s))
+      return KSBA_Bug;
+  if (*s != 'T')
+      return KSBA_Bug;
+  for (s++, i=9; i < 15; i++, s++)
+    if (!digitp (s))
+      return KSBA_Bug;
+  if (*s)
+      return KSBA_Bug;
+  return 0;
 }
 
 
+/* Copy ISO time S to D.  This is a function so that we can detect
+   faulty time formats. */
+void
+_ksba_copy_time (ksba_isotime_t d, const ksba_isotime_t s)
+{
+  if (!*s)
+    memset (d, 16, 0);
+  else if ( _ksba_assert_time_format (s) )
+    {
+      fprintf (stderr, "BUG: invalid isotime buffer\n");
+      abort ();
+    }
+  else  
+    strcpy (d, s);
+}
 
 
+/* Compare the time strings A and B. Return 0 if they show the very
+   same time, return 1 if A is newer than B and -1 if A is older than
+   B. */
+int 
+_ksba_cmp_time (const ksba_isotime_t a, const ksba_isotime_t b) 
+{
+  return strcmp (a, b);
+}
 
+/* Fill the TIMEBUF with the current time (UTC of course). */
+void
+_ksba_current_time (ksba_isotime_t timebuf)
+{
+  time_t epoch = time (NULL);
+  struct tm *tp;
+#ifdef HAVE_GMTIME_R
+  struct tm tmbuf;
+    
+  tp = gmtime_r ( &epoch, &tmbuf);
+#else
+  tp = gmtime ( &epoch );
+#endif
+  sprintf (timebuf,"%04d%02d%02dT%02d%02d%02d",
+           1900 + tp->tm_year, tp->tm_mon+1, tp->tm_mday,
+           tp->tm_hour, tp->tm_min, tp->tm_sec);
+}
 
