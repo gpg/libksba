@@ -15,7 +15,18 @@
   
   * Cleanup the used data structures and remove unneeded functions.
 
-  * Make use of pre-generated tables and remove hardwired filenames.
+  * Think about a public API to the Asn functions.
 
+* src/cms*
 
+  * split some stuff from cms.c into a new cms-build.c
+
+  * rework the datastructures so that we can cope with multiple
+    recipients and signers.
+
+* Other modules
+
+  * We need a p15 implemention
+  
+  * Do we need p12 stuff?
 
