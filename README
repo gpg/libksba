@@ -2,3 +2,7 @@ KSBA = rot13(digit_to_letter(x509)) to be pronounced as Kasbah
 
 See ksba-overview.txt in the aegypten-specs module for a brief
 overview of the problem domain.  A reference manual is included.
+
+
+The ocsp feature has not yet been documented.  See the comments in
+src/ocsp.c and the example tests/t-ocsp.c

@@ -138,7 +138,7 @@ one_request (const char *cert_fname, const char *issuer_cert_fname)
   err = ksba_ocsp_new (&ocsp);
   fail_if_err (err);
   
-  err = ksba_ocsp_add_certs (ocsp, cert, issuer_cert);
+  err = ksba_ocsp_add_target (ocsp, cert, issuer_cert);
   fail_if_err (err);
   ksba_cert_release (cert);
   ksba_cert_release (issuer_cert);
@@ -180,7 +180,7 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
 
   /* We need to build a request, so that the context is properly
      prepared for the response. */
-  err = ksba_ocsp_add_certs (ocsp, cert, issuer_cert);
+  err = ksba_ocsp_add_target (ocsp, cert, issuer_cert);
   fail_if_err (err);
   ksba_cert_release (issuer_cert);
 

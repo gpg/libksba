@@ -56,7 +56,6 @@ struct ocsp_certlist_s {
 
 /* A structure used as context for the ocsp subsystem. */
 struct ksba_ocsp_s {
-
   char *digest_oid;        /* The OID of the digest algorithm to be
                               used for a request. */
 
@@ -66,6 +65,8 @@ struct ksba_ocsp_s {
   unsigned char nonce[16];  /* The random nonce we sent; actual length
                                is NONCELEN. */
 
+  unsigned char *request_buffer; /* Internal buffer to build the request. */
+  size_t request_buflen;
 
   size_t hash_offset;      /* What area of the response is to be */
   size_t hash_length;      /* hashed. */

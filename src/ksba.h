@@ -161,12 +161,14 @@ typedef enum
   } 
 ksba_ocsp_response_status_t;
 
-typedef enum {
-  KSBA_STATUS_NONE = 0,
-  KSBA_STATUS_UNKNOWN = 1,
-  KSBA_STATUS_GOOD = 2,
-  KSBA_STATUS_REVOKED = 4
-} ksba_status_t;
+typedef enum
+  {
+    KSBA_STATUS_NONE = 0,
+    KSBA_STATUS_UNKNOWN = 1,
+    KSBA_STATUS_GOOD = 2,
+    KSBA_STATUS_REVOKED = 4
+  }
+ksba_status_t;
 
 
 typedef enum {
@@ -375,13 +377,24 @@ gpg_error_t ksba_crl_parse (ksba_crl_t crl, ksba_stop_reason_t *r_stopreason);
 gpg_error_t ksba_ocsp_new (ksba_ocsp_t *r_oscp);
 void ksba_ocsp_release (ksba_ocsp_t ocsp);
 gpg_error_t ksba_ocsp_set_digest_algo (ksba_ocsp_t ocsp, const char *oid);
-gpg_error_t ksba_ocsp_add_certs (ksba_ocsp_t ocsp,
-                                 ksba_cert_t cert, ksba_cert_t issuer_cert);
+gpg_error_t ksba_ocsp_set_requestor (ksba_ocsp_t ocsp, ksba_cert_t cert);
+gpg_error_t ksba_ocsp_add_target (ksba_ocsp_t ocsp,
+                                  ksba_cert_t cert, ksba_cert_t issuer_cert);
 size_t ksba_ocsp_set_nonce (ksba_ocsp_t ocsp,
                             unsigned char *nonce, size_t noncelen);
+
+gpg_error_t ksba_ocsp_prepare_request (ksba_ocsp_t ocsp);
+gpg_error_t ksba_ocsp_hash_request (ksba_ocsp_t ocsp,
+                                    void (*hasher)(void *, const void *,
+                                                   size_t length), 
+                                    void *hasher_arg);
+gpg_error_t ksba_ocsp_set_sig_val (ksba_ocsp_t ocsp,
+                                   ksba_const_sexp_t sigval);
+gpg_error_t ksba_ocsp_add_cert (ksba_ocsp_t ocsp, ksba_cert_t cert);
 gpg_error_t ksba_ocsp_build_request (ksba_ocsp_t ocsp,
                                      unsigned char **r_buffer,
                                      size_t *r_buflen);
+
 gpg_error_t ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
                                       const unsigned char *msg, size_t msglen,
                                       ksba_ocsp_response_status_t *resp_status);

@@ -1,6 +1,38 @@
 Noteworthy changes in version 0.9.1 (unreleased)
 ------------------------------------------------
 
+ * Support for OCSP (rfc2560).
+
+ * The new function ksba_set_hash_buffer_function may be used during
+   intialization to register a simple hash fucntion for internal use
+   by libksba.
+
+ * Changed the license of the manual to GPL.
+
+ * Interface changes relative to the 0.9.0 release:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ksba_status_t                 NEW.
+ksba_ocsp_t                   NEW.
+ksba_ocsp_response_status_t   NEW.
+ksba_ocsp_new                 NEW.
+void ksba_ocsp_release        NEW.
+ksba_ocsp_set_digest_algo     NEW.
+ksba_ocsp_set_requestor       NEW.
+ksba_ocsp_add_target          NEW.
+ksba_ocsp_set_nonce           NEW.
+ksba_ocsp_prepare_request     NEW.
+ksba_ocsp_hash_request        NEW.
+ksba_ocsp_set_sig_val         NEW.
+ksba_ocsp_add_cert            NEW.
+ksba_ocsp_build_request       NEW.
+ksba_ocsp_parse_response      NEW.
+ksba_ocsp_get_digest_algo     NEW.
+ksba_ocsp_hash_respons        NEW.
+ksba_ocsp_get_sig_val         NEW.
+ksba_ocsp_get_status          NEW.
+ksba_set_hash_buffer_function NEW.
+
+
 Noteworthy changes in version 0.9.0 (2003-11-17)
 ------------------------------------------------
 

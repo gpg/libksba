@@ -246,6 +246,7 @@ ksba_ocsp_release (ksba_ocsp_t ocsp)
   if (!ocsp)
     return;
   xfree (ocsp->digest_oid);
+  xfree (ocsp->request_buffer);
   for (; (ri=ocsp->requestlist); ri = ocsp->requestlist )
     {
       ocsp->requestlist = ri->next;
@@ -277,14 +278,20 @@ ksba_ocsp_set_digest_algo (ksba_ocsp_t ocsp, const char *oid)
 }
 
 
-/* Associate the certificate CERT for which the status is to be
-   requested and its issuer certificate ISSUER_CERT with the OCSP
-   context.  This function may be called multiple time to create a
-   list of certificate requests to get combined into one actual
-   request. */
 gpg_error_t
-ksba_ocsp_add_certs (ksba_ocsp_t ocsp,
-                     ksba_cert_t cert, ksba_cert_t issuer_cert)
+ksba_ocsp_set_requestor (ksba_ocsp_t ocsp, ksba_cert_t cert)
+{
+  return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
+}
+
+
+/* Add the certificate CERT for which the status is to be requested
+   and it's issuer certificate ISSUER_CERT to the context.  This
+   function may be called multiple time to create a list of targets to
+   get combined into one actual request. */
+gpg_error_t
+ksba_ocsp_add_target (ksba_ocsp_t ocsp,
+                      ksba_cert_t cert, ksba_cert_t issuer_cert)
 {
   struct ocsp_reqitem_s *ri;
 
@@ -370,12 +377,13 @@ issuer_key_hash (ksba_cert_t cert, unsigned char *sha1_buffer)
 
 
 /* Build a request from the current context.  The function checks that
-   all necessary information have been set and then returns an
-   allocated buffer with the resulting request.
+   all necessary information have been set and stores the prepared
+   request in the context.  A subsequent ksba_ocsp_build_request may
+   then be used to retrieve this request.  Optional the requestmay be
+   signed beofre calling ksba_ocsp_build_request.
  */
 gpg_error_t
-ksba_ocsp_build_request (ksba_ocsp_t ocsp,
-                         unsigned char **r_buffer, size_t *r_buflen)
+ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
 {
   gpg_error_t err;
   struct ocsp_reqitem_s *ri;
@@ -387,10 +395,12 @@ ksba_ocsp_build_request (ksba_ocsp_t ocsp,
   ksba_writer_t w3 = NULL;
   ksba_writer_t w4, w5, w6, w7; /* Used as aliases. */
 
-  if (!ocsp || !r_buffer || !r_buflen)
+  if (!ocsp)
     return gpg_error (GPG_ERR_INV_VALUE);
-  *r_buffer = NULL;
-  *r_buflen = 0;
+
+  xfree (ocsp->request_buffer);
+  ocsp->request_buffer = NULL;
+  ocsp->request_buflen = 0;
 
   if (!ocsp->requestlist)
     return gpg_error (GPG_ERR_MISSING_ACTION);
@@ -593,8 +603,8 @@ ksba_ocsp_build_request (ksba_ocsp_t ocsp,
       err = ksba_writer_error (w6);
       goto leave;
     }
-  *r_buffer = p;
-  *r_buflen = derlen;
+  ocsp->request_buffer = p;
+  ocsp->request_buflen = derlen;
   /* Ready. */
 
  leave:
@@ -604,6 +614,64 @@ ksba_ocsp_build_request (ksba_ocsp_t ocsp,
   return err;
 }
 
+
+gpg_error_t 
+ksba_ocsp_hash_request (ksba_ocsp_t ocsp,
+                        void (*hasher)(void *, const void *,
+                                       size_t length), 
+                        void *hasher_arg)
+{
+  return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
+}
+
+
+gpg_error_t 
+ksba_ocsp_set_sig_val (ksba_ocsp_t ocsp,
+                       ksba_const_sexp_t sigval)
+{
+  return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
+}
+
+
+gpg_error_t 
+ksba_ocsp_add_cert (ksba_ocsp_t ocsp, ksba_cert_t cert)
+{
+  return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
+}
+
+
+
+/* Build a request from the current context.  The function checks that
+   all necessary information have been set and then returns an
+   allocated buffer with the resulting request.
+ */
+gpg_error_t
+ksba_ocsp_build_request (ksba_ocsp_t ocsp,
+                         unsigned char **r_buffer, size_t *r_buflen)
+{
+  gpg_error_t err;
+
+  if (!ocsp || !r_buffer || !r_buflen)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  *r_buffer = NULL;
+  *r_buflen = 0;
+
+  if (!ocsp->requestlist)
+    return gpg_error (GPG_ERR_MISSING_ACTION);
+  if (!ocsp->request_buffer)
+    {
+      /* No prepare done, do it now. */
+      err = ksba_ocsp_prepare_request (ocsp);
+      if (err)
+        return err;
+      assert (ocsp->request_buffer);
+    }
+  *r_buffer = ocsp->request_buffer;
+  *r_buflen = ocsp->request_buflen;
+  ocsp->request_buffer = NULL;
+  ocsp->request_buflen = 0;
+  return 0;
+}
 
 
 
