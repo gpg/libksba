@@ -108,6 +108,41 @@ read_and_hash_cont (KsbaCMS cms)
                     return err;
                 }
             }
+          else if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OCTET_STRING
+                   && ti.is_constructed)
+            { /* next chunk is constructed */
+              for (;;)
+                {
+                  err = _ksba_ber_read_tl (cms->reader, &ti);
+                  if (err)
+                    return err;
+                  if (ti.class == CLASS_UNIVERSAL
+                      && ti.tag == TYPE_OCTET_STRING
+                      && !ti.is_constructed)
+                    {
+                      nleft = ti.length;
+                      while (nleft)
+                        {
+                          n = nleft < sizeof (buffer)? nleft : sizeof (buffer);
+                          err = ksba_reader_read (cms->reader, buffer, n, &nread);
+                          if (err)
+                            return err;
+                          nleft -= nread;
+                          if (cms->hash_fnc)
+                            cms->hash_fnc (cms->hash_fnc_arg, buffer, nread); 
+                          if (cms->writer)
+                            err = ksba_writer_write (cms->writer, buffer, nread);
+                          if (err)
+                            return err;
+                        }
+                    }
+                  else if (ti.class == CLASS_UNIVERSAL && !ti.tag
+                           && !ti.is_constructed)
+                    break; /* ready with this chunk */ 
+                  else
+                    return KSBA_Encoding_Error;
+                }
+            }
           else if (ti.class == CLASS_UNIVERSAL && !ti.tag
                    && !ti.is_constructed)
             return 0; /* ready */ 

@@ -602,6 +602,17 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
   err = _ksba_ber_read_tl (cms->reader, &ti);
   if (err)
     return err;
+  if (ti.class == CLASS_UNIVERSAL && !ti.tag && !ti.is_constructed)
+    {
+      /* well, there might be still an end tag pending; eat it -
+         fixme: we should keep track of this to catch invalid
+         encodings */
+      err = _ksba_ber_read_tl (cms->reader, &ti);
+      if (err)
+        return err;
+    }
+
+
 
   if (ti.class == CLASS_CONTEXT && ti.tag == 0 && ti.is_constructed)
     {  /* implicit SET OF certificateSet with elements of CHOICE, but
