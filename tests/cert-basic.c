@@ -76,6 +76,16 @@ print_time (time_t t)
 }
 
 static void
+print_dn (char *p)
+{
+
+  if (!p)
+    fputs ("error", stdout);
+  else
+    printf ("`%s'", p);
+}
+
+static void
 one_file (const char *fname)
 {
   KsbaError err;
@@ -83,6 +93,7 @@ one_file (const char *fname)
   KsbaReader r;
   KsbaCert cert;
   unsigned char *p;
+  char *dn;
   time_t t;
 
   fp = fopen (fname, "r");
@@ -122,6 +133,20 @@ one_file (const char *fname)
   fputs ("notAfter: ", stdout);
   print_time (t);
   putchar ('\n');
+
+  dn = ksba_cert_get_issuer (cert);
+  fputs ("issuer: ", stdout);
+  print_dn (dn);
+  ksba_free (dn);
+  putchar ('\n');
+
+  dn = ksba_cert_get_subject (cert);
+  fputs ("subject: ", stdout);
+  print_dn (dn);
+  ksba_free (dn);
+  putchar ('\n');
+
+  printf ("hash algo: %d\n", ksba_cert_get_digest_algo (cert));
 
   ksba_cert_hash (cert, NULL, NULL);
 

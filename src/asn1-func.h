@@ -153,6 +153,7 @@ struct asn_node_struct {
   int off;                       /* offset of this TLV */
   int nhdr;                      /* length of the header */
   int len;                       /* length part of the TLV */
+  node_type_t actual_type;       /* ugly helper to overcome TYPE_ANY probs*/
 
   AsnNode down;                  /* Pointer to the son node */
   AsnNode right;                 /* Pointer to the brother node */
@@ -194,6 +195,7 @@ int _ksba_asn_expand_object_id(AsnNode node);
 void _ksba_asn_set_default_tag (AsnNode node);
 void _ksba_asn_type_set_config (AsnNode node);
 AsnNode _ksba_asn_expand_tree (AsnNode src_root);
+AsnNode _ksba_asn_insert_copy (AsnNode node);
 
 
 /*-- asn1-func.c --*/

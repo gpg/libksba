@@ -55,6 +55,7 @@ typedef enum {
   KSBA_Unexpected_Tag = 20,
   KSBA_Not_DER_Encoded = 21,
   KSBA_Unknown_Algorithm = 22,
+  KSBA_Unsupported_Algorithm = 23,
 } KsbaError;
 
 typedef enum {
@@ -85,10 +86,19 @@ typedef struct ksba_asn_tree_s *KsbaAsnTree;
 KsbaCert ksba_cert_new (void);
 void     ksba_cert_release (KsbaCert cert);
 KsbaError ksba_cert_read_der (KsbaCert cert, KsbaReader reader);
+KsbaError ksba_cert_hash (KsbaCert cert,
+                          void (*hasher)(void *,
+                                         const unsigned char *,
+                                         size_t length), 
+                          void *hasher_arg);
+int  ksba_cert_get_digest_algo (KsbaCert cert);
 unsigned char *ksba_cert_get_serial (KsbaCert cert);
 char *ksba_cert_get_issuer (KsbaCert cert);
 time_t ksba_cert_get_validity (KsbaCert cert, int what);
 char *ksba_cert_get_subject (KsbaCert cert);
+char *ksba_cert_get_public_key (KsbaCert cert);
+char *ksba_cert_get_sig_val (KsbaCert cert);
+
 
 
 /*-- reader.c --*/

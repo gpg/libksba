@@ -82,6 +82,7 @@ struct ber_decoder_s {
     int primitive;  /* current value is a primitive one */
     int length;     /* length of the primitive one */
     int nhdr;       /* length of the header */
+    int tag; 
     AsnNode node;   /* NULL or matching node */
   } val; 
 };
@@ -296,6 +297,29 @@ clear_help_flags (AsnNode node)
       p->flags.skip_this = 0;
     }
   
+}
+
+static void
+prepare_copied_tree (AsnNode node)
+{
+  AsnNode p;
+
+  clear_help_flags (node);
+  for (p=node; p; p = _ksba_asn_walk_tree (node, p))
+    p->off = -1;
+  
+}
+
+static void
+fixup_type_any (AsnNode node)
+{
+  AsnNode p;
+
+  for (p=node; p; p = _ksba_asn_walk_tree (node, p))
+    {
+      if (p->type == TYPE_ANY && p->off != -1)
+        p->type = p->actual_type;
+    }
 }
 
 
@@ -603,6 +627,9 @@ match_der (AsnNode root, const struct tag_info *ti,
         {
           if (debug)
             puts ("  Reiterating");
+          node = _ksba_asn_insert_copy (node);
+          if (node)
+            prepare_copied_tree (node);
         }
       else
         node = node->down;
@@ -627,6 +654,9 @@ match_der (AsnNode root, const struct tag_info *ti,
         {
           if (debug)
             puts ("  Reiterating this");
+          node = _ksba_asn_insert_copy (node);
+          if (node)
+            prepare_copied_tree (node);
         }
       else if (ds->cur.went_up || ds->cur.next_tag)
         {
@@ -913,6 +943,7 @@ decoder_next (BerDecoder d)
   d->val.primitive = !ti.is_constructed;
   d->val.length = ti.length;
   d->val.nhdr = ti.nhdr;
+  d->val.tag  = ti.tag; /* kludge to fix TYPE_ANY probs */
   d->val.node = d->bypass? NULL : node;
   if (debug)
     dump_decoder_state (ds);
@@ -1091,6 +1122,8 @@ _ksba_ber_decoder_decode (BerDecoder d, AsnNode *r_root,
           node->off = ksba_reader_tell (d->reader) - d->val.nhdr;
           node->nhdr = d->val.nhdr;
           node->len = d->val.length;
+          if (node->type == TYPE_ANY)
+            node->actual_type = d->val.tag;
           if (d->image.used + d->val.length > d->image.length)
             err = set_error(d, NULL, "TLV length too large");
           else if (d->val.primitive)
@@ -1145,11 +1178,15 @@ _ksba_ber_decoder_decode (BerDecoder d, AsnNode *r_root,
 
   if (r_root && !err)
     {
+      fixup_type_any (d->root);
       *r_root = d->root;
       d->root = NULL;
       *r_image = d->image.buf;
       d->image.buf = NULL;
       *r_imagelen = d->image.used;
+/*        fputs ("Value Tree:\n", stdout); */
+/*        _ksba_asn_node_dump_all (*r_root, stdout); */
+
     }
 
   decoder_deinit (d);

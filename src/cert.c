@@ -27,6 +27,7 @@
 #include "util.h"
 #include "ber-decoder.h"
 #include "convert.h"
+#include "keyinfo.h"
 #include "cert.h"
 
 
@@ -135,7 +136,7 @@ ksba_cert_hash (KsbaCert cert,
     return KSBA_No_Data;
 
   n = _ksba_asn_find_node (cert->root,
-                           "TMTTv2.Certificate.tbsCertificate.subjectPublicKeyInfo");
+                           "TMTTv2.Certificate.signatureAlgorithm");
   if (!n)
     return KSBA_No_Value; /* oops - should be there */
   if (n->off == -1)
@@ -145,10 +146,70 @@ ksba_cert_hash (KsbaCert cert,
       return KSBA_No_Value;
     }
 
-  _ksba_keyinfo_to_sexp (cert->image + n->off, n->nhdr + n->len);
+  {  
+    KsbaError err;
+    char *string;
+    AsnNode n2;
+#if 0
+    err = _ksba_keyinfo_to_sexp (cert->image + n->off, n->nhdr + n->len,
+                                 &string);
+    if (err)
+      return err;
+    printf ("KEY = `%s'\n", string);
+#endif
+    n2 = n->right;
+    
+    err = _ksba_sigval_to_sexp (cert->image + n->off,
+                                n->nhdr + n->len
+                                + ((!n2||n2->off == -1)? 0:(n2->nhdr+n2->len)),
+                                &string);
+    if (err)
+      return err;
+    printf ("SIG = `%s'\n", string);
+  }
 
   return 0;
 }
+
+
+/**
+ * ksba_cert_get_digest_algo:
+ * @cert: Initialized certificate object
+ * 
+ * Figure out the the digest algorithm used for the signature and
+ * return it as a number suitable to be used to identify a digest
+ * algorithm in Libgcrypt.
+ *
+ * This function is intended as a helper for the ksba_cert_hash().
+ * 
+ * Return value: 0 for error or unknown algoritm, otherwise a
+ * GCRY_MD_xxx constant.
+ **/
+int
+ksba_cert_get_digest_algo (KsbaCert cert)
+{
+  AsnNode n;
+  int algo;
+
+  if (!cert)
+    return KSBA_Invalid_Value;
+  if (!cert->initialized)
+    return KSBA_No_Data;
+
+  n = _ksba_asn_find_node (cert->root,
+                           "TMTTv2.Certificate.signatureAlgorithm.algorithm");
+  algo = _ksba_map_oid_to_digest_algo (cert->image, n);
+  if (!algo)
+    cert->last_error = KSBA_Unknown_Algorithm;
+  else if (algo == -1)
+    {
+      cert->last_error = KSBA_No_Value;
+      algo = 0;
+    }
+
+  return algo;
+}
+
 
 
 
@@ -216,7 +277,32 @@ ksba_cert_get_serial (KsbaCert cert)
 char *
 ksba_cert_get_issuer (KsbaCert cert)
 {
-  return NULL;
+  KsbaError err;
+  AsnNode n;
+  char *p;
+
+  if (!cert || !cert->initialized)
+    return NULL;
+  
+  n = _ksba_asn_find_node (cert->root,
+                           "TMTTv2.Certificate.tbsCertificate.issuer");
+  if (!n || !n->down)
+    return NULL; /* oops - should be there */
+  n = n->down; /* dereference the choice node */
+
+  if (n->off == -1)
+    {
+      fputs ("get_issuer problem at node:\n", stderr);
+      _ksba_asn_node_dump_all (n, stderr);
+      return NULL;
+    }
+  err = _ksba_dn_to_str (cert->image, n, &p);
+  if (err)
+    {
+      cert->last_error = err;
+      return NULL;
+    }
+  return p;
 }
 
 
@@ -273,7 +359,99 @@ ksba_cert_get_validity (KsbaCert cert, int what)
 char *
 ksba_cert_get_subject (KsbaCert cert)
 {
-  return NULL;
+  KsbaError err;
+  AsnNode n;
+  char *p;
+
+  if (!cert || !cert->initialized)
+    return NULL;
+  
+  n = _ksba_asn_find_node (cert->root,
+                           "TMTTv2.Certificate.tbsCertificate.subject");
+  if (!n || !n->down)
+    return NULL; /* oops - should be there */
+  n = n->down; /* dereference the choice node */
+
+  if (n->off == -1)
+    {
+      fputs ("get_issuer problem at node:\n", stderr);
+      _ksba_asn_node_dump_all (n, stderr);
+      return NULL;
+    }
+  err = _ksba_dn_to_str (cert->image, n, &p);
+  if (err)
+    {
+      cert->last_error = err;
+      return NULL;
+    }
+  return p;
+}
+
+
+char *
+ksba_cert_get_public_key (KsbaCert cert)
+{
+  AsnNode n;
+  KsbaError err;
+  char *string;
+
+  if (!cert)
+    return NULL;
+  if (!cert->initialized)
+    return NULL;
+
+  n = _ksba_asn_find_node (cert->root,
+                           "TMTTv2.Certificate"
+                           ".tbsCertificate.subjectPublicKeyInfo");
+  if (!n)
+    {
+      cert->last_error = KSBA_No_Value;
+      return NULL;
+    }
+
+  err = _ksba_keyinfo_to_sexp (cert->image + n->off, n->nhdr + n->len,
+                               &string);
+  if (err)
+    {
+      cert->last_error = err;
+      return NULL;
+    }
+
+  return string;
+}
+
+char *
+ksba_cert_get_sig_val (KsbaCert cert)
+{
+  AsnNode n, n2;
+  KsbaError err;
+  char *string;
+
+  if (!cert)
+    return NULL;
+  if (!cert->initialized)
+    return NULL;
+
+  n = _ksba_asn_find_node (cert->root,
+                           "TMTTv2.Certificate.algorithmIdentifier");
+  if (!n)
+    {
+      cert->last_error = KSBA_No_Value;
+      return NULL;
+    }
+
+  n2 = n->right;
+  err = _ksba_sigval_to_sexp (cert->image + n->off,
+                              n->nhdr + n->len
+                              + ((!n2||n2->off == -1)? 0:(n2->nhdr+n2->len)),
+                              &string);
+  if (err)
+    {
+      cert->last_error = err;
+      return NULL;
+    }
+
+  return string;
 }
 
 

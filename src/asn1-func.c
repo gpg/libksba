@@ -185,6 +185,9 @@ copy_value (AsnNode d, const AsnNode s)
       return_if_fail (0);
     }
   _ksba_asn_set_value (d, s->valuetype, buf, len);
+  d->off = s->off;
+  d->nhdr = s->nhdr;
+  d->len = s->len;
 }
 
 static AsnNode 
@@ -1743,6 +1746,50 @@ _ksba_asn_type_set_config (AsnNode node)
     }
 }
 
+/* Create a copy the tree at SRC_ROOT. s is a helper which should be
+   set to SRC_ROOT by the caller */
+static AsnNode
+copy_tree (AsnNode src_root, AsnNode s)
+{
+  AsnNode first=NULL, dprev=NULL, d, down, tmp;
+
+  for (; s; s=s->right )
+    {
+      down = s->down;
+      d = copy_node (s);
+
+      if (!first)
+        first = d;
+      else
+        {
+          dprev->right = d;
+          d->left = dprev;
+        }
+      dprev = d;
+      if (down)
+        {
+          tmp = copy_tree (src_root, down);
+          if (d->down && tmp)
+            { /* Need to merge it with the existing down */
+              AsnNode x;
+
+              for (x=d->down; x->right; x = x->right)
+                ;
+              x->right = tmp;
+              tmp->left = x;
+            }
+          else 
+            {
+              d->down = tmp;
+              if (d->down)
+                d->down->left = d;
+            }
+        }
+    }
+  return first;
+}
+
+
 
 static AsnNode
 resolve_identifier (AsnNode root, AsnNode node)
@@ -1853,3 +1900,25 @@ _ksba_asn_expand_tree (AsnNode src_root)
   /* FIXME: add a too deep recursion check */
   return do_expand_tree (src_root, src_root);
 }
+
+
+/* Insert a copy of the entire tree at NODE as the sibling of itself
+   and return the copy */
+AsnNode
+_ksba_asn_insert_copy (AsnNode node)
+{
+  AsnNode n;
+
+  n = copy_tree (node, node);
+  if (!n)
+    return NULL; /* out of core */
+  return_null_if_fail (n->right == node->right);
+  node->right = n;
+  n->left = node;
+  
+  return n;
+}
+
+
+
+

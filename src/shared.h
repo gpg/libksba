@@ -1,4 +1,4 @@
-/* keyinfo.h - Parse and build a keyInfo structure
+/* shared.h - values shared with other software 
  *      Copyright (C) 2001 g10 Code GmbH
  *
  * This file is part of KSBA.
@@ -18,19 +18,26 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#ifndef KEYINFO_H
-#define KEYINFO_H
+#ifndef SHARED_H
+#define SHARED_H
 
-KsbaError _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
-                                 char **r_string);
-KsbaError _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
-                                char **r_string);
+#ifdef GCRYPT_VERSION 
+/* It is pretty useless to use this file if we would link this library
+   to Libgcrypt anyway */
+#error please make shure that gcrypt.h is not included
+#endif
 
-int _ksba_map_oid_to_digest_algo (const unsigned char *image, AsnNode node);
+enum gcry_md_algos {
+    GCRY_MD_NONE    = 0,
+    GCRY_MD_MD5     = 1,
+    GCRY_MD_SHA1    = 2,
+    GCRY_MD_RMD160  = 3,
+    GCRY_MD_TIGER   = 6
+};
 
 
 
-#endif /*KEYINFO_H*/
+#endif /*SHARED_H*/
 
 
 

@@ -1,2 +1,21 @@
+                                                              -*- outline -*-
 
-* 
+* src/dn.c:
+
+  * Implement utf8 conversion. 
+
+* src/der-decoder.c:  
+
+  * should work on a stripped down parse tree
+
+  * Allow to specify the desired top element.  Or a list so that it
+    can detect the needed tree itself
+
+* src/asn1-*
+  
+  * Cleanup the used data structures and remove unneeded functions.
+
+  * Make use of pre-generated tables and remove hardwired filenames.
+
+
+

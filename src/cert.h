@@ -29,6 +29,7 @@ struct ksba_cert_s {
   AsnNode root;  /* root of the tree with the values */
   unsigned char *image;
   size_t imagelen;
+  KsbaError last_error;
 };
 
 

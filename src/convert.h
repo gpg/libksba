@@ -21,9 +21,14 @@
 #ifndef CONVERT_H
 #define CONVERT_H
 
+#include "asn1-func.h"
+
 /*-- time.c --*/
 time_t _ksba_asntime_to_epoch (const char *buffer, size_t length);
 
+/*-- dn.c --*/
+KsbaError _ksba_dn_to_str (const unsigned char *image, AsnNode node,
+                           char **r_string);
 
 
 #endif /*CONVERT_H*/
