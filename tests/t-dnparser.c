@@ -46,6 +46,7 @@
 
 #define xfree(a)  ksba_free (a)
 
+#if 0
 static void *
 xmalloc (size_t n)
 {
@@ -57,6 +58,7 @@ xmalloc (size_t n)
     }
   return p;
 }
+#endif
 
 
 int 
