@@ -1098,3 +1098,11 @@ ksba_cert_get_cert_policies (KsbaCert cert, char **r_policies)
   return err;
 }
 
+#if 0
+
+KsbaError
+ksba_cert_get_
+#endif
+
+
+

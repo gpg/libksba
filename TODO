@@ -1,5 +1,9 @@
                                                               -*- outline -*-
 
+* src/cert.c:
+** retrieve CRL distribution point
+
+
 * src/dn.c:
 
 ** Check that error handling of bad utf-8 encoding is correct

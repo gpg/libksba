@@ -1,5 +1,5 @@
 # configure.ac - for libksba
-#       Copyright (C) 2001 g10 Code GmbH
+#       Copyright (C) 2001, 2002 g10 Code GmbH
 # 
 # This file is part of KSBA
 # 
@@ -23,9 +23,9 @@
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
-AC_INIT(libksba, 0.2.1-cvs, bug-$PACKAGE@g10code.com)
-LIBKSBA_LT_CURRENT=1
-LIBKSBA_LT_AGE=1
+AC_INIT(libksba, 0.2.1, bug-$PACKAGE@g10code.com)
+LIBKSBA_LT_CURRENT=2
+LIBKSBA_LT_AGE=2
 LIBKSBA_LT_REVISION=0
 #-------------------
 
