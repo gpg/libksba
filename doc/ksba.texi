@@ -185,7 +185,7 @@ Right Thing.  Support for new versions will be added over time.
 @node Overview
 @section Overview
 
-Blurb
+@c [Needs more stuff]
 
 The `KSBA' library is thread-safe.
 
