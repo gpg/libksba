@@ -70,6 +70,7 @@ typedef enum {
   KSBA_Missing_Action = 35,
   KSBA_File_Error = 36,
   KSBA_Module_Not_Found = 37,
+  KSBA_Encoding_Error = 38,
 } KsbaError;
 
 

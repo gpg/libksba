@@ -189,6 +189,7 @@ void _ksba_asn_release_nodes (AsnNode node);
 
 
 /*-- asn1-func.c --*/
+AsnNode _ksba_asn_new_node (node_type_t type);
 void _ksba_asn_node_dump (AsnNode p, FILE *fp);
 void _ksba_asn_node_dump_all (AsnNode root, FILE *fp);
 
@@ -197,13 +198,15 @@ AsnNode _ksba_asn_find_type_value (const unsigned char *image,
                                    const void *oidbuf, size_t oidlen);
 
 
-
 int ksba_asn_create_structure (AsnNode root, char *source_name,
                                AsnNode*pointer , char *dest_name);
 int ksba_asn_delete_structure (AsnNode root);
 int ksba_asn1_create_tree (const static_asn *root,AsnNode*pointer);
 int ksba_asn_read_value(AsnNode root,const char *name,unsigned char *value,int *len);
 int ksba_asn_write_value(AsnNode root,char *name,unsigned char *value,int len);
+
+/*-- asn2-func.c --*/
+
 
 /*-- asn1-tables.c (generated) --*/
 const static_asn *_ksba_asn_lookup_table (const char *name);

@@ -514,6 +514,78 @@ ksba_cms_hash_signed_attrs (KsbaCMS cms, int idx)
   return 0;
 }
 
+
+/* 
+  Code to create CMS structures
+*/
+
+
+/* Add another issuer/serial to the sid list */
+static KsbaError
+add_issuer_serial (KsbaCMS cms,
+                   const char *issuer, const unsigned char *serial)
+{
+  KsbaError err;
+  AsnNode n;
+
+  if (!cms)
+    return KSBA_Invalid_Value;
+  if (!cms->signer_info.root)
+    return KSBA_Conflict;
+#if 0  
+  if (r_issuer)
+    {
+      n = _ksba_asn_find_node (cms->signer_info.root,
+                               "SignerInfos..sid.issuerAndSerialNumber.issuer");
+      if (!n || !n->down)
+        return KSBA_No_Value; 
+      n = n->down; /* dereference the choice node */
+      
+      if (n->off == -1)
+        {
+          fputs ("get_issuer problem at node:\n", stderr);
+          _ksba_asn_node_dump_all (n, stderr);
+          return KSBA_General_Error;
+        }
+      err = _ksba_dn_to_str (cms->signer_info.image, n, r_issuer);
+      if (err)
+        return err;
+    }
+
+  if (r_serial)
+    {
+      unsigned char *p;
+
+      /* fixme: we do not release the r_issuer stuff on error */
+      n = _ksba_asn_find_node (cms->signer_info.root,
+                      "SignerInfos..sid.issuerAndSerialNumber.serialNumber");
+      if (!n)
+        return KSBA_No_Value; 
+      
+      if (n->off == -1)
+        {
+          fputs ("get_serial problem at node:\n", stderr);
+          _ksba_asn_node_dump_all (n, stderr);
+          return KSBA_General_Error;
+        }
+
+      p = xtrymalloc (n->len + 4);
+      if (!p)
+        return KSBA_Out_Of_Core;
+
+      p[0] = n->len >> 24;
+      p[1] = n->len >> 16;
+      p[2] = n->len >> 8;
+      p[3] = n->len;
+      memcpy (p+4, cms->signer_info.image + n->off + n->nhdr, n->len);
+      *r_serial = p;
+    }
+#endif
+  return 0;
+}
+
+
+
 
 
 
