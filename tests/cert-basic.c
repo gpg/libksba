@@ -167,7 +167,7 @@ list_extensions (ksba_cert_t cert)
       printf ("Extn: %s at %d with length %d %s\n",
               oid, (int)off, (int)len, crit? "(critical)":"");
     }
-  if (err && err != -1 )
+  if (err && gpg_err_code (err) != GPG_ERR_EOF )
     {
       fprintf (stderr,
                "%s:%d: enumerating extensions failed: %s\n", 
@@ -293,7 +293,7 @@ list_extensions (ksba_cert_t cert)
       ksba_name_release (name1);
       ksba_name_release (name2);
     }
-  if (err && err != -1)
+  if (err && gpg_err_code (err) != GPG_ERR_EOF)
     { 
       fprintf (stderr, "%s:%d: ksba_cert_get_crl_dist_point failed: %s\n", 
                __FILE__, __LINE__, gpg_strerror (err));
@@ -450,7 +450,7 @@ one_file (const char *fname)
     fail_if_err (err);
 
   err = ksba_cert_read_der (cert, r);
-  if (err != -1)
+  if (gpg_err_code (err) != GPG_ERR_EOF)
     {
       fprintf (stderr, "%s:%d: expected EOF but got: %s\n", 
                __FILE__, __LINE__, gpg_strerror (err));

@@ -458,7 +458,7 @@ get_name (ksba_cert_t cert, int idx, int use_subject, char **result)
       derlen -= ti.length;
     }
   
-  return -1;     
+  return gpg_error (GPG_ERR_EOF);     
 }
 
 
@@ -536,7 +536,7 @@ ksba_cert_get_subject (ksba_cert_t cert, int idx)
  * available 0 is returned because we can safely assume that this is
  * not a valid date.
  * 
- * Return value: seconds since epoch, 0 for no value or (time)-1 for error.
+ * Return value: The time value an 0 or an error code.
  **/
 gpg_error_t
 ksba_cert_get_validity (ksba_cert_t cert, int what, ksba_isotime_t timebuf)
@@ -735,7 +735,7 @@ ksba_cert_get_extension (ksba_cert_t cert, int idx,
     }
 
   if (idx == cert->cache.n_extns)
-    return -1; /* mo more extensions */
+    return gpg_error (GPG_ERR_EOF); /* No more extensions. */
 
   if (idx < 0 || idx >= cert->cache.n_extns)
     return gpg_error (GPG_ERR_INV_INDEX);

@@ -1,3 +1,9 @@
+2003-11-17  Werner Koch  <wk@gnupg.org>
+
+	* cert.c (get_name, ksba_cert_get_extension): Return GPG_ERR_EOF
+	and not just -1.
+	* ber-decoder.c (_ksba_ber_decoder_decode): Ditto.
+
 2003-11-14  Werner Koch  <wk@gnupg.org>
 
 	* cms.c (write_encrypted_cont): Fixed test on EOF.

@@ -1,3 +1,8 @@
+2003-11-17  Werner Koch  <wk@gnupg.org>
+
+	* cert-basic.c (list_extensions): Fixed test on EOF.
+	(list_extensions, one_file): Ditto.
+
 2003-11-12  Werner Koch  <wk@gnupg.org>
 
 	Adjusted everything for the new API. 

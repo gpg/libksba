@@ -346,6 +346,7 @@ _ksba_ber_decoder_set_reader (BerDecoder d, ksba_reader_t r)
  ***********  decoding machinery  *************
  **********************************************/
 
+/* Read one byte, return that byte or -1 on error or EOF. */
 static int
 read_byte (ksba_reader_t reader)
 {
@@ -359,8 +360,8 @@ read_byte (ksba_reader_t reader)
   return rc? -1: buf;
 }
 
-/* read COUNT bytes into buffer.  buffer may be NULL to skip over
-   COUNT bytes.  Return 0 on success */
+/* Read COUNT bytes into buffer.  BUFFER may be NULL to skip over
+   COUNT bytes.  Return 0 on success or -1 on error. */
 static int 
 read_buffer (ksba_reader_t reader, char *buffer, size_t count)
 {
@@ -989,7 +990,7 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
           for (n=0; !err && n < d->val.length; n++)
             {
               if ( (c=read_byte (d->reader)) == -1)
-                err =  eof_or_error (d, 1);
+                err = eof_or_error (d, 1);
               buf[n] = c;
             }
           if (err)
@@ -1134,7 +1135,7 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
         { /* Not even the first node available - return eof */
           /* Fixme: release d->root */
           d->root = NULL;
-          err = -1;
+          err = gpg_error (GPG_ERR_EOF);
         }
       
       fixup_type_any (d->root);
