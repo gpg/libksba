@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <time.h>
 #include <errno.h>
 
 #include "../src/ksba.h"
@@ -111,23 +110,12 @@ print_sexp (KsbaConstSexp p)
 }
 
 static void
-print_time (time_t t)
+print_time (ksba_isotime_t t)
 {
-
-  if (!t)
+  if (!t || !*t)
     fputs ("none", stdout);
-  else if ( t == (time_t)(-1) )
-    fputs ("error", stdout);
   else
-    {
-      struct tm *tp;
-
-      tp = gmtime (&t);
-      printf ("%04d-%02d-%02d %02d:%02d:%02d",
-              1900+tp->tm_year, tp->tm_mon+1, tp->tm_mday,
-              tp->tm_hour, tp->tm_min, tp->tm_sec);
-      assert (!tp->tm_isdst);
-    }
+    printf ("%.4s-%.2s-%.2s %.2s:%.2s:%s", t, t+4, t+6, t+9, t+11, t+13);
 }
 
 static void
@@ -323,7 +311,7 @@ one_file (const char *fname)
   KsbaReader r;
   KsbaCert cert;
   char *dn;
-  time_t t;
+  ksba_isotime_t t;
   int idx;
   KsbaSexp sexp;
 
@@ -372,11 +360,11 @@ one_file (const char *fname)
       putchar ('\n');
     }
 
-  t = ksba_cert_get_validity (cert, 0);
+  ksba_cert_get_validity (cert, 0, t);
   fputs ("  notBefore.: ", stdout);
   print_time (t);
   putchar ('\n');
-  t = ksba_cert_get_validity (cert, 1);
+  ksba_cert_get_validity (cert, 1, t);
   fputs ("  notAfter..: ", stdout);
   print_time (t);
   putchar ('\n');

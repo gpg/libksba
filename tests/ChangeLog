@@ -1,3 +1,8 @@
+2003-10-31  Werner Koch  <wk@gnupg.org>
+
+	* cert-basic.c (print_time, one_file): Now uses ksba_isotime_t.
+	* t-crl-parser.c (print_time, one_file): Ditto.
+
 2002-11-25  Werner Koch  <wk@gnupg.org>
 
 	* t-cms-parser.c (one_file): Print the content-type attribute.

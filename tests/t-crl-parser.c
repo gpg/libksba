@@ -125,24 +125,14 @@ print_dn (char *p)
     printf ("`%s'", p);
 }
 
+
 static void
-print_time (time_t t)
+print_time (ksba_isotime_t t)
 {
-
-  if (!t)
+  if (!t || !*t)
     fputs ("none", stdout);
-  else if ( t == (time_t)(-1) )
-    fputs ("error", stdout);
   else
-    {
-      struct tm *tp;
-
-      tp = gmtime (&t);
-      printf ("%04d-%02d-%02d %02d:%02d:%02d",
-              1900+tp->tm_year, tp->tm_mon+1, tp->tm_mday,
-              tp->tm_hour, tp->tm_min, tp->tm_sec);
-      assert (!tp->tm_isdst);
-    }
+    printf ("%.4s-%.2s-%.2s %.2s:%.2s:%s", t, t+4, t+6, t+9, t+11, t+13);
 }
 
 
@@ -220,7 +210,7 @@ one_file (const char *fname)
           {
             const char *algoid;
             char *issuer;
-            time_t this, next;
+            ksba_isotime_t this, next;
 
             algoid = ksba_crl_get_digest_algo (crl);
             printf ("digest algo: %s\n", algoid? algoid : "[none]");
@@ -231,7 +221,7 @@ one_file (const char *fname)
             print_dn (issuer);
             xfree (issuer);
             putchar ('\n');
-            err = ksba_crl_get_update_times (crl, &this, &next);
+            err = ksba_crl_get_update_times (crl, this, next);
             if (err != KSBA_Invalid_Time)
               fail_if_err2 (fname, err);
             printf ("thisUpdate: ");
@@ -246,10 +236,10 @@ one_file (const char *fname)
         case KSBA_SR_GOT_ITEM:
           {
             KsbaSexp serial;
-            time_t rdate;
+            ksba_isotime_t rdate;
             KsbaCRLReason reason;
 
-            err = ksba_crl_get_item (crl, &serial, &rdate, &reason);
+            err = ksba_crl_get_item (crl, &serial, rdate, &reason);
             fail_if_err2 (fname, err);
             printf ("CRL entry %d: s=", ++count);
             print_sexp (serial);
