@@ -1,3 +1,8 @@
+2002-02-07  Werner Koch  <wk@gnupg.org>
+
+	* crl_testpki_testpca.der: New.
+	* t-crl-parser.c (main): Changed the default test CRL.
+
 2002-01-23  Werner Koch  <wk@gnupg.org>
 
 	* cert-basic.c (one_file): Print key usage restrictions

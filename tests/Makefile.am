@@ -22,7 +22,7 @@
 TESTS_ENVIRONMENT = 
 
 test_certs = cert_dfn_pca01.der cert_dfn_pca15.der \
-	     cert_g10code_test1.der
+	     cert_g10code_test1.der crl_testpki_testpca.der
 
 EXTRA_DIST = $(test_certs)
 
@@ -30,9 +30,5 @@ TESTS = cert-basic t-crl-parser
 
 noinst_PROGRAMS = $(TESTS) t-cms-parser t-crl-parser t-dnparser
 LDADD = ../src/libksba.la
-
-
-
-
 
 

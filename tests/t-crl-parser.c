@@ -313,7 +313,7 @@ main (int argc, char **argv)
   else
     {
       const char *files[] = {
-        "testcrl.ber",
+        "crl_testpki_testpca.der",
         NULL 
       };
       int idx;
