@@ -1,6 +1,6 @@
 2002-01-14  Werner Koch  <wk@gnupg.org>
 
-	* dn.c: Fixmed oid table according to rfc2253.
+	* dn.c: Fixed oid table according to rfc2253.
 	(append_atv): Do only use the allowed names.
 
 2002-01-11  Werner Koch  <wk@gnupg.org>

@@ -56,7 +56,7 @@ struct {
 {"POSTALCODE" , 0, "PostalCode",   3, "\x55\x04\x11"}, /* 2.5.4.17 */
 {"GIVENNAME"  , 0, "GivenName",    3, "\x55\x04\x2a"}, /* 2.5.4.42 */
 {"DC", 1, "domainComponent",      10, 
-       "\x09\x92\x26\x89\x93\xF2\x2C\x64\x01\x09"},
+       "\x09\x92\x26\x89\x93\xF2\x2C\x64\x01\x19"},
                             /* 0.9.2342.19200300.100.1.25 */
 {"UID", 1, "userid",              10,
        "\x09\x92\x26\x89\x93\xF2\x2C\x64\x01\x01"},
