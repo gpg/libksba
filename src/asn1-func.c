@@ -353,7 +353,7 @@ _ksba_asn_find_node (AsnNode root, const char *name)
 }
 
 
-AsnNode 
+static AsnNode 
 _asn1_find_left (AsnNode  node)
 {
   if ((node == NULL) || (node->left == NULL) || (node->left->down == node))

@@ -827,7 +827,9 @@ write_escaped (KsbaWriter w, const unsigned char *buffer, size_t nbytes)
 
 /* Parse one RDN, and write it to WRITER.  Returns a pointer to the
    next RDN part where the comma has alrady been skipped or NULL in
-   case of an error */
+   case of an error.  When NULL is passed as WRITER, the fucntion does
+   not allocate any memory but just parses the string and returns the
+   ENDP. */
 static KsbaError
 parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
 {
@@ -844,7 +846,6 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
   int valuetype;
   int need_escaping = 0;
   KsbaError err = 0;
-  
 
   if (!string)
     return KSBA_Invalid_Value;
@@ -870,17 +871,20 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
         s++;
       if (*s != '=')
         return KSBA_Syntax_Error;
-      
-      p = xtrymalloc (n+1);
-      if (!p)
-        return KSBA_Out_Of_Core;
-      memcpy (p, string, n);
-      p[n] = 0;
-      err = ksba_oid_from_str (p, &oidbuf, &oidlen);
-      xfree (p);
-      if (err)
-        return err;
-      oid = oidbuf;
+
+      if (writer)
+        {
+          p = xtrymalloc (n+1);
+          if (!p)
+            return KSBA_Out_Of_Core;
+          memcpy (p, string, n);
+          p[n] = 0;
+          err = ksba_oid_from_str (p, &oidbuf, &oidlen);
+          xfree (p);
+          if (err)
+            return err;
+          oid = oidbuf;
+        }
     }
   else if ((*s >= 'A' && *s <= 'Z') || (*s >= 'a' && *s <= 'z') )
     { /* name */
@@ -933,17 +937,31 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
         s++;
       n /= 2;
       valuelen = n;
-      valuebuf = xtrymalloc (valuelen);
-      if (!valuebuf)
+      if (writer)
         {
-          err = KSBA_Out_Of_Core;
-          goto leave;
+          valuebuf = xtrymalloc (valuelen);
+          if (!valuebuf)
+            {
+              err = KSBA_Out_Of_Core;
+              goto leave;
+            }
+          for (p=valuebuf, s1=string; n; p++, s1 += 2, n--)
+            {
+              *p = xtoi_2 (s1);
+              if ((*p & 0x80) || !charclasses[*p])
+                need_utf8 = 1;
+            }
         }
-      for (p=valuebuf, s1=string; n; p++, s1 += 2, n--)
+      else
         {
-          *p = xtoi_2 (s1);
-          if ((*p & 0x80) || !charclasses[*p])
-            need_utf8 = 1;
+          for (s1=string; n; s1 += 2, n--)
+            {
+              unsigned int c;
+
+              c = xtoi_2 (s1);
+              if ((c & 0x80) || !charclasses[c])
+                need_utf8 = 1;
+            }
         }
       valuetype = need_utf8? TYPE_UTF8_STRING : TYPE_PRINTABLE_STRING;
     }
@@ -995,40 +1013,43 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
     }
   *endp = *s? (s+1):s;
   
-  /* write out the data */
+  if (writer)
+    { /* write out the data */
 
-  /* need to calculate the length in advance */
-  n1  = _ksba_ber_count_tl (TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, oidlen);
-  n1 += oidlen;
-  n1 += _ksba_ber_count_tl (valuetype, CLASS_UNIVERSAL, 0, valuelen);
-  n1 += valuelen;
-
-  /* The SET tag */
-  n  = _ksba_ber_count_tl (TYPE_SET, CLASS_UNIVERSAL, 1, n);
-  n += n1;
-  err = _ksba_ber_write_tl (writer, TYPE_SET, CLASS_UNIVERSAL, 1, n);
-
-  /* The sequence tag */
-  n = n1;
-  err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
-
-  /* the OBJECT ID */
-  err = _ksba_ber_write_tl (writer, TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0,oidlen);
-  if (!err)
-    err = ksba_writer_write (writer, oid, oidlen);
-  if (err)
-    goto leave;
-
-  /* the value.  Note that we don't need any conversion to the target
-     characters set because the input is expected to be utf8 and the
-     target type is either utf8 or printable string where the latter
-     is a subset of utf8 */
-  err = _ksba_ber_write_tl (writer, valuetype,
-                            CLASS_UNIVERSAL, 0, valuelen);
-  if (!err)
-    err = need_escaping? write_escaped (writer, value, valuelen)
-                       : ksba_writer_write (writer, value, valuelen);
-    
+      /* need to calculate the length in advance */
+      n1  = _ksba_ber_count_tl (TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, oidlen);
+      n1 += oidlen;
+      n1 += _ksba_ber_count_tl (valuetype, CLASS_UNIVERSAL, 0, valuelen);
+      n1 += valuelen;
+      
+      /* The SET tag */
+      n  = _ksba_ber_count_tl (TYPE_SET, CLASS_UNIVERSAL, 1, n);
+      n += n1;
+      err = _ksba_ber_write_tl (writer, TYPE_SET, CLASS_UNIVERSAL, 1, n);
+      
+      /* The sequence tag */
+      n = n1;
+      err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
+      
+      /* the OBJECT ID */
+      err = _ksba_ber_write_tl (writer, TYPE_OBJECT_ID, CLASS_UNIVERSAL,
+                                0, oidlen);
+      if (!err)
+        err = ksba_writer_write (writer, oid, oidlen);
+      if (err)
+        goto leave;
+      
+      /* the value.  Note that we don't need any conversion to the target
+         characters set because the input is expected to be utf8 and the
+         target type is either utf8 or printable string where the latter
+         is a subset of utf8 */
+      err = _ksba_ber_write_tl (writer, valuetype,
+                                CLASS_UNIVERSAL, 0, valuelen);
+      if (!err)
+        err = need_escaping? write_escaped (writer, value, valuelen)
+          : ksba_writer_write (writer, value, valuelen);
+    }
+  
  leave:
   xfree (oidbuf);
   xfree (valuebuf);
@@ -1042,9 +1063,11 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
 {
   KsbaError err;
   KsbaWriter writer;
-  const char *endp;
+  const char *s, *endp;
   void *buf = NULL;
   size_t buflen;
+  char const **part_array = NULL;
+  int part_array_size, nparts;
 
   *rbuf = NULL; *rlength = 0;
   /* We are going to build the object using a writer object */
@@ -1055,10 +1078,43 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
   if (err)
     return err;
 
-  while ( !(err = parse_rdn (string, &endp, writer)) && *endp )
-    string = endp;
-  if (err)
-    goto leave;
+  /* We must assign it in reverese order so we do it in 2 passes */
+  part_array_size = 0;
+  for (nparts=0, s=string; s && *s;)
+    {
+      err = parse_rdn (s, &endp, NULL);
+      if (err)
+        goto leave;
+      if (nparts >= part_array_size)
+        {
+          char const **tmp;
+
+          part_array_size += 2;
+          tmp = part_array_size? xtryrealloc (part_array,
+                                              part_array_size * sizeof *tmp)
+                                : xtrymalloc (part_array_size * sizeof *tmp);
+          if (!tmp)
+            {
+              err = KSBA_Out_Of_Core;
+              goto leave;
+            }
+          part_array = tmp;
+        }
+      part_array[nparts++] = s;
+      s = endp;
+    }
+  if (!nparts)
+    {
+      err = KSBA_Syntax_Error;
+      goto leave;
+    }
+
+  while (--nparts >= 0)
+    {
+      err = parse_rdn (part_array[nparts], &endp, writer);
+      if (err)
+        goto leave;
+    }
 
   /* Now get the memory */
   buf = ksba_writer_snatch_mem (writer, &buflen);
@@ -1091,7 +1147,10 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
     }
   
  leave:
+  xfree (part_array);
   ksba_writer_release (writer);
   xfree (buf);
   return err;
 }
+
+

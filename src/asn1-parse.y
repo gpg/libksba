@@ -41,6 +41,10 @@
 #include "asn1-parse.h"
 #include "asn1-func.h"
 
+/* It would be better to make yyparse static but there is no way to do
+   this.  Let's hope that this macros works. */
+#define yyparse _ksba_asn1_yyparse
+
 /*#define YYDEBUG 1*/
 #define YYERROR_VERBOSE = 1
 #define MAX_STRING_LENGTH 129

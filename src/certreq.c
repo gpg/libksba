@@ -112,7 +112,7 @@ ksba_certreq_set_hash_function (KsbaCertreq cr,
    calls add subjectAltNames.
    
    NAME must be a valid RFC-2253 encoded DN name for the first one or an
-   emal address encolosed in angle brackets for all further calls.
+   email address enclosed in angle brackets for all further calls.
  */
 KsbaError
 ksba_certreq_add_subject (KsbaCertreq cr, const char *name)
@@ -128,7 +128,7 @@ ksba_certreq_add_subject (KsbaCertreq cr, const char *name)
     return _ksba_dn_from_str (name, &cr->subject.der, &cr->subject.derlen);
   /* this is assumed to be an subjectAltName */
 
-  /* We only support email addresses for now, do soem very basic
+  /* We only support email addresses for now, do some very basic
      checks.  Note that the way we pass the name should match waht
      ksba_cert_get_subject() returns */
   namelen = strlen (name);
