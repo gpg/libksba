@@ -1,3 +1,7 @@
+2002-12-12  Werner Koch  <wk@gnupg.org>
+
+	* keyinfo.c (sig_algo_table): Added sha-1WithRSAEncryption. 
+
 2002-12-03  Werner Koch  <wk@gnupg.org>
 
 	* ber-decoder.c (cmp_tag): Handle ANY tag even when the classes

@@ -1,5 +1,5 @@
 /* keyinfo.c - Parse and build a keyInfo structure
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2002 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -100,6 +100,10 @@ static struct algo_table_s sig_algo_table[] = {
     "\x2b\x24\x03\x03\x01\x02", 6,
     1, "rsa", "s", "\x82", GCRY_MD_RMD160 },
 
+  { /* from NIST's OIW - used by TU Darmstadt */
+    "1.3.14.3.2.29",  /* sha-1WithRSAEncryption */
+    "\x2B\x0E\x03\x02\x1D", 5,
+    1, "rsa", "s", "\x82", GCRY_MD_SHA1 },
 
   {NULL}
 };
