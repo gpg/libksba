@@ -295,12 +295,13 @@ write_encrypted_cont (KsbaCMS cms)
   while (!(err = ksba_reader_read (cms->reader, buffer,
                                    sizeof buffer, &nread)) )
     {
-      err = ksba_writer_write_octet_string (cms->writer, buffer, nread, 0);
-      if (err)
-        return err;
+      err = _ksba_ber_write_tl (cms->writer, TYPE_OCTET_STRING,
+                                CLASS_UNIVERSAL, 0, nread);
+      if (!err)
+        err = ksba_writer_write (cms->writer, buffer, nread);
     }
   if (err == -1) /* write the end tag */
-      err = ksba_writer_write_octet_string (cms->writer, NULL, 0, 1);
+      err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
 
   return err;
 }
@@ -2482,7 +2483,7 @@ build_enveloped_data_header (KsbaCMS cms)
   if (err)
     return err;
 
-  /* write the tag for the encrypted data, it is an explicit octect
+  /* write the tag for the encrypted data, it is an implicit octect
      string in constructed form and indefinite length */
   err = _ksba_ber_write_tl (cms->writer, 0, CLASS_CONTEXT, 1, 0);
   if (err)
@@ -2537,8 +2538,6 @@ ct_build_enveloped_data (KsbaCMS cms)
 
       /* Write 5 end tags */
       err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
-      if (!err)
-        err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
       if (!err)
         err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
       if (!err)
