@@ -18,6 +18,7 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
 
 # Process this file with autoconf to produce a configure script.
+AC_PREREQ(2.57)
 
 # Version number: Remember to change immediately *after* a release.
 #                 Append a "-cvs" for non-released versions.
