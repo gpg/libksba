@@ -22,5 +22,5 @@
 DISTCLEANFILES = ksba.cps
 
 info_TEXINFOS = ksba.texi
-ksba_TEXINFOS = gpl.texi fdl.texi
+ksba_TEXINFOS = gpl.texi 
 

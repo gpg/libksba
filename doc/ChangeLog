@@ -1,3 +1,7 @@
+2003-12-08  Werner Koch  <wk@gnupg.org>
+
+	* Makefile.am (ksba_TEXINFOS): Removed fdl.texi.
+
 2003-12-01  Werner Koch  <wk@gnupg.org>
 
 	* ksba.texi: Changed license to GPL.
