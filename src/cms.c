@@ -2296,7 +2296,7 @@ build_signed_data_attributes (ksba_cms_t cms)
 
       /* Arggh.  That silly ASN.1 DER encoding rules: We need to sort
          the SET values. */
-      qsort (attrarray, attridx+1, sizeof (struct attrarray_s),
+      qsort (attrarray, attridx, sizeof (struct attrarray_s),
              compare_attrarray);
 
       /* Now copy them to an SignerInfo tree.  This tree is not

@@ -1,3 +1,9 @@
+2004-01-29  Werner Koch  <wk@gnupg.org>
+
+	* cms.c (build_signed_data_attributes): Arggg; noticed that severe
+	bug shortly after the last release.  Fixed wrong array size passed
+	to qsort.
+
 2004-01-28  Werner Koch  <wk@gnupg.org>
 
 	* dn.c: Updated the table and changed a few names only used for
