@@ -114,7 +114,7 @@ _ksba_oid_node_to_str (const unsigned char *image, AsnNode node)
 
 /**
  * ksba_oid_from_str:
- * @string: A string with the OID in doitted decimal form
+ * @string: A string with the OID in dotted decimal form
  * @rbuf:   Returns the DER encoded OID
  * @rlength: and its length
  * 

@@ -1,4 +1,4 @@
-/* ber-decoder.c - Basic Encoding Rules Decoder
+/* der-decoder.c - Distinguished Encoding Rules Encoder
  *      Copyright (C) 2001 g10 Code GmbH
  *
  * This file is part of KSBA.
@@ -27,299 +27,51 @@
 
 #include "ksba.h"
 #include "asn1-func.h"
-#include "ber-decoder.h"
 #include "ber-help.h"
+#include "der-encoder.h"
 
 
-struct decoder_state_item_s {
-  AsnNode node;
-  int went_up;
-  int in_seq_of;
-  int in_any;    /* actually in a constructed any */
-  int again;
-  int next_tag;
-  int length;  /* length of the value */
-  int ndef_length; /* the length is of indefinite length */
-  int nread;   /* number of value bytes processed */
-};
-typedef struct decoder_state_item_s DECODER_STATE_ITEM;
-
-struct decoder_state_s {
-  DECODER_STATE_ITEM cur;     /* current state */
-  int stacksize;
-  int idx;
-  DECODER_STATE_ITEM stack[1];
-};
-typedef struct decoder_state_s *DECODER_STATE;
-
-
-struct ber_decoder_s {
+struct der_encoder_s {
   AsnNode module;    /* the ASN.1 structure */
-  KsbaReader reader;
+  KsbaWriter writer;
   const char *last_errdesc; /* string with the error description */
-  int non_der;    /* set if the encoding is not DER conform */
   AsnNode root;   /* of the expanded parse tree */
-  DECODER_STATE ds;
-  int bypass;
-  int honor_module_end; 
   int debug;
-  int use_image;
-  struct {
-    unsigned char *buf;
-    size_t used;
-    size_t length;
-  } image;
-  struct {
-    int primitive;  /* current value is a primitive one */
-    int length;     /* length of the primitive one */
-    int nhdr;       /* length of the header */
-    int tag; 
-    int is_endtag;
-    AsnNode node;   /* NULL or matching node */
-  } val; 
 };
 
-
-
-
-static DECODER_STATE
-new_decoder_state (void)
-{
-  DECODER_STATE ds;
-
-  ds = xmalloc (sizeof (*ds) + 99*sizeof(DECODER_STATE_ITEM));
-  ds->stacksize = 100;
-  ds->idx = 0;
-  ds->cur.node = NULL;
-  ds->cur.in_seq_of = 0;
-  ds->cur.again = 0;
-  ds->cur.next_tag = 0;
-  ds->cur.went_up = 0;
-  ds->cur.length = 0;
-  ds->cur.ndef_length = 1;
-  ds->cur.nread = 0;
-  return ds;
-}
-       
-static void        
-release_decoder_state (DECODER_STATE ds)
-{
-  xfree (ds);
-}
-
-static void
-dump_decoder_state (DECODER_STATE ds)
-{
-  int i;
-
-  for (i=0; i < ds->idx; i++)
-    {
-      fprintf (stdout,"  ds stack[%d] (", i);
-      if (ds->stack[i].node)
-        _ksba_asn_node_dump (ds->stack[i].node, stdout);
-      else
-        printf ("Null");
-      fprintf (stdout,") %s%d (%d)%s\n",
-               ds->stack[i].ndef_length? "ndef ":"",
-               ds->stack[i].length,
-               ds->stack[i].nread,
-               ds->stack[i].in_seq_of? " in_seq_of":"");
-    }
-}
-
-/* Push ITEM onto the stack */
-static void
-push_decoder_state (DECODER_STATE ds)
-{
-  if (ds->idx >= ds->stacksize)
-    {
-      fprintf (stderr, "ERROR: decoder stack overflow!\n");
-      abort ();
-    }
-  ds->stack[ds->idx++] = ds->cur;
-}
-
-static void
-pop_decoder_state (DECODER_STATE ds)
-{
-  if (!ds->idx)
-    {
-      fprintf (stderr, "ERROR: decoder stack underflow!\n");
-      abort ();
-    }
-  ds->cur = ds->stack[--ds->idx];
-}
-
-
-
+#if 0
 static int
-set_error (BerDecoder d, AsnNode node, const char *text)
+set_error (DerEncoder d, AsnNode node, const char *text)
 {
-  fprintf (stderr,"ber-decoder: node `%s': %s\n", 
+  fprintf (stderr,"der-encoder: node `%s': %s\n", 
            node? node->name:"?", text);
   d->last_errdesc = text;
-  return KSBA_BER_Error;
+  return KSBA_Encoding_Error;
 }
+#endif
 
-
-static int
-eof_or_error (BerDecoder d, int premature)
+/* To be useful for the DER encoder we store all data direct as the
+   binary image, so we use the VALTYPE_MEM */
+static KsbaError
+store_value (AsnNode node, const void *buffer, size_t length)
 {
-  if (ksba_reader_error (d->reader))
-    {
-      set_error (d, NULL, "read error");
-      return KSBA_Read_Error;
-    }
-  if (premature)
-    return set_error (d, NULL, "premature EOF");
-  return -1;
-}
-
-static int
-is_primitive_type (node_type_t type)
-{
-  switch (type)
-    {
-    case TYPE_BOOLEAN:                               
-    case TYPE_INTEGER:                               
-    case TYPE_BIT_STRING:                            
-    case TYPE_OCTET_STRING:                          
-    case TYPE_NULL:                                  
-    case TYPE_OBJECT_ID:                             
-    case TYPE_OBJECT_DESCRIPTOR:                     
-    case TYPE_REAL:                                  
-    case TYPE_ENUMERATED:                            
-    case TYPE_UTF8_STRING:                           
-    case TYPE_REALTIVE_OID:                          
-    case TYPE_NUMERIC_STRING:                        
-    case TYPE_PRINTABLE_STRING:                      
-    case TYPE_TELETEX_STRING:                        
-    case TYPE_VIDEOTEX_STRING:                       
-    case TYPE_IA5_STRING:                            
-    case TYPE_UTC_TIME:                              
-    case TYPE_GENERALIZED_TIME:                      
-    case TYPE_GRAPHIC_STRING:                        
-    case TYPE_VISIBLE_STRING:                        
-    case TYPE_GENERAL_STRING:                        
-    case TYPE_UNIVERSAL_STRING:                      
-    case TYPE_CHARACTER_STRING:                      
-    case TYPE_BMP_STRING:                            
-      return 1;
-    default:
-      return 0;
-    }
-}
-
-static const char *
-universal_tag_name (unsigned long no)
-{
-  static const char *names[31] = {
-    "[End Tag]",
-    "BOOLEAN",
-    "INTEGER",
-    "BIT STRING",
-    "OCTECT STRING",
-    "NULL",
-    "OBJECT IDENTIFIER",
-    "ObjectDescriptor",
-    "EXTERNAL",
-    "REAL",
-    "ENUMERATED",
-    "EMBEDDED PDV",
-    "UTF8String",
-    "RELATIVE-OID",
-    "[UNIVERSAL 14]",
-    "[UNIVERSAL 15]",
-    "SEQUENCE",
-    "SET",
-    "NumericString",
-    "PrintableString",
-    "TeletexString",
-    "VideotexString",
-    "IA5String",
-    "UTCTime",
-    "GeneralizedTime",
-    "GraphicString",
-    "VisibleString",
-    "GeneralString",
-    "UniversalString",
-    "CHARACTER STRING",
-    "BMPString"
-  };
-
-  return no < DIM(names)? names[no]:NULL;
-}
-
-
-static void
-dump_tlv (const struct tag_info *ti, FILE *fp)
-{
-  const char *tagname = NULL;
-
-  if (ti->class == CLASS_UNIVERSAL)
-    tagname = universal_tag_name (ti->tag);
-
-  if (tagname)
-    fputs (tagname, fp);
-  else
-    fprintf (fp, "[%s %lu]", 
-             ti->class == CLASS_UNIVERSAL? "UNIVERSAL" :
-             ti->class == CLASS_APPLICATION? "APPLICATION" :
-             ti->class == CLASS_CONTEXT? "CONTEXT-SPECIFIC" : "PRIVATE",
-             ti->tag);
-  fprintf (fp, " %c hdr=%u len=", ti->is_constructed? 'c':'p', ti->nhdr);
-  if (ti->ndef)
-    fputs ("ndef", fp);
-  else
-    fprintf (fp, "%lu", ti->length);
-}
-
-
-static void
-clear_help_flags (AsnNode node)
-{
-  AsnNode p;
-
-  for (p=node; p; p = _ksba_asn_walk_tree (node, p))
-    {
-      if (p->type == TYPE_TAG)
-        {
-          p->flags.tag_seen = 0;
-        }
-      p->flags.skip_this = 0;
-    }
-  
+  _ksba_asn_set_value (node, VALTYPE_MEM, buffer, length);
+  return 0;
 }
 
 static void
-prepare_copied_tree (AsnNode node)
+clear_value (AsnNode node)
 {
-  AsnNode p;
-
-  clear_help_flags (node);
-  for (p=node; p; p = _ksba_asn_walk_tree (node, p))
-    p->off = -1;
-  
+  _ksba_asn_set_value (node, VALTYPE_NULL, NULL, 0);
 }
 
-static void
-fixup_type_any (AsnNode node)
-{
-  AsnNode p;
-
-  for (p=node; p; p = _ksba_asn_walk_tree (node, p))
-    {
-      if (p->type == TYPE_ANY && p->off != -1)
-        p->type = p->actual_type;
-    }
-}
 
 
 
-BerDecoder
-_ksba_ber_decoder_new (void)
+DerEncoder
+_ksba_der_encoder_new (void)
 {
-  BerDecoder d;
+  DerEncoder d;
 
   d = xtrycalloc (1, sizeof *d);
   if (!d)
@@ -329,13 +81,14 @@ _ksba_ber_decoder_new (void)
 }
 
 void
-_ksba_ber_decoder_release (BerDecoder d)
+_ksba_der_encoder_release (DerEncoder d)
 {
   xfree (d);
 }
 
+
 /**
- * _ksba_ber_decoder_set_module:
+ * _ksba_der_encoder_set_module:
  * @d: Decoder object 
  * @module: ASN.1 Parse tree
  * 
@@ -346,7 +99,7 @@ _ksba_ber_decoder_release (BerDecoder d)
  * Return value: 0 on success or an error code
  **/
 KsbaError
-_ksba_ber_decoder_set_module (BerDecoder d, KsbaAsnTree module)
+_ksba_der_encoder_set_module (DerEncoder d, KsbaAsnTree module)
 {
   if (!d || !module)
     return KSBA_Invalid_Value;
@@ -359,33 +112,29 @@ _ksba_ber_decoder_set_module (BerDecoder d, KsbaAsnTree module)
 
 
 KsbaError
-_ksba_ber_decoder_set_reader (BerDecoder d, KsbaReader r)
+_ksba_der_encoder_set_writer (DerEncoder d, KsbaWriter w)
 {
-  if (!d || !r)
+  if (!d || !w)
     return KSBA_Invalid_Value;
-  if (d->reader)
+  if (d->writer)
     return KSBA_Conflict; /* reader already set */
   
-  d->reader = r;
+  d->writer = w;
   return 0;
 }
 
 
 /**********************************************
- ***********  decoding machinery  *************
+ ***********  encoding machinery  *************
  **********************************************/
-
+#if 0
 static int
-read_byte (KsbaReader reader)
+write_byte (KsbaWriter writer, int c)
 {
   unsigned char buf;
-  size_t nread;
-  int rc;
 
-  do
-    rc = ksba_reader_read (reader, &buf, 1, &nread);
-  while (!rc && !nread);
-  return rc? -1: buf;
+  buf = c;
+  return ksba_writer_write (writer, &buf, 1);
 }
 
 /* read COUNT bytes into buffer.  buffer may be NULL to skip over
@@ -730,7 +479,7 @@ match_der (AsnNode root, const struct tag_info *ti,
 
 
 static KsbaError 
-decoder_init (BerDecoder d, const char *start_name)
+decoder_init (DerEncoder d, const char *start_name)
 {
   d->ds = new_decoder_state ();
 
@@ -743,7 +492,7 @@ decoder_init (BerDecoder d, const char *start_name)
 }
 
 static void
-decoder_deinit (BerDecoder d)
+decoder_deinit (DerEncoder d)
 {
   release_decoder_state (d->ds);
   d->ds = NULL;
@@ -754,7 +503,7 @@ decoder_deinit (BerDecoder d)
 
 
 static KsbaError
-decoder_next (BerDecoder d)
+decoder_next (DerEncoder d)
 {
   struct tag_info ti;
   AsnNode node;
@@ -925,7 +674,7 @@ decoder_next (BerDecoder d)
 }
 
 static KsbaError
-decoder_skip (BerDecoder d)
+decoder_skip (DerEncoder d)
 {
   if (d->val.primitive)
     { 
@@ -956,7 +705,7 @@ distance (AsnNode root, AsnNode node)
 
 
 /**
- * _ksba_ber_decoder_dump:
+ * _ksba_der_encoder_dump:
  * @d: Decoder object
  * 
  * Dump a textual representation of the encoding to the given stream.
@@ -964,7 +713,7 @@ distance (AsnNode root, AsnNode node)
  * Return value: 
  **/
 KsbaError
-_ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
+_ksba_der_encoder_dump (DerEncoder d, FILE *fp)
 {
   KsbaError err;
   int depth = 0;
@@ -975,7 +724,7 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
   if (!d)
     return KSBA_Invalid_Value;
 
-  d->debug = !!getenv("DEBUG_BER_DECODER");
+  d->debug = !!getenv("DEBUG_DER_ENCODER");
   d->use_image = 0;
   d->image.buf = NULL;
   err = decoder_init (d, NULL);
@@ -1061,7 +810,7 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
 
 
 KsbaError
-_ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
+_ksba_der_encoder_encode (DerEncoder d, const char *start_name,
                           AsnNode *r_root,
                           unsigned char **r_image, size_t *r_imagelen)
 {
@@ -1077,10 +826,9 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
   if (r_root)
     *r_root = NULL;
 
-  d->debug = !!getenv("DEBUG_BER_DECODER");
+  d->debug = !!getenv("DEBUG_DER_ENCODER");
   d->honor_module_end = 1;
-  d->use_image = 1; /* FIXME: remove the old cruft as we are only
-                       using the image method. */
+  d->use_image = 1;
   d->image.buf = NULL;
 
   startoff = ksba_reader_tell (d->reader);
@@ -1180,4 +928,143 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
   return err;
 }
 
+#endif
 
+
+/*
+  Helpers to construct and write out objects
+*/
+
+
+/* Create and write a
+
+  AlgorithmIdentifier ::= SEQUENCE {
+      algorithm    OBJECT IDENTIFIER,
+      parameters   ANY DEFINED BY algorithm OPTIONAL 
+  }
+
+  where parameters is NULL */
+KsbaError
+_ksba_der_write_algorithm_identifier (KsbaWriter w, const char *oid)
+{
+  KsbaError err;
+  char *buf;
+  size_t len;
+
+  err = ksba_oid_from_str (oid, &buf, &len);
+  if (err)
+    return err;
+
+  /* write the sequence which is 4 octects longer than the OID */
+  err = _ksba_ber_write_tl (w, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, len+4);
+  if (err)
+    goto leave;
+
+  /* the OBJECT ID header and the value */
+  err = _ksba_ber_write_tl (w, TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, len);
+  if (!err)
+    err = ksba_writer_write (w, buf, len);
+  if (err)
+    goto leave;
+
+  /* The NULL tag as parameter */
+  err = _ksba_ber_write_tl (w, TYPE_NULL, CLASS_UNIVERSAL, 0, 0);
+
+ leave:
+  xfree (buf);
+  return err;
+}
+
+
+
+
+
+/*************************************************
+ ***  Copy data from a tree image to the tree  ***
+ *************************************************/
+
+/* Copy all values from the tree SRC (with values store in SRCIMAGE)
+   to the tree DST */
+KsbaError
+_ksba_der_copy_tree (AsnNode dst_root,
+                     AsnNode src_root, const unsigned char *src_image)
+{
+  AsnNode s, d;
+
+  for (s = src_root, d = dst_root;
+       s && d && s->type == d->type;
+       s = _ksba_asn_walk_tree (src_root, s),
+       d = _ksba_asn_walk_tree (dst_root, d)   )
+    {
+      if (s->type == TYPE_CHOICE)
+        ; /* just skip it */
+      else if (s->type == TYPE_TAG)
+        ; /* does not make sense */
+      else if (s->off == -1)
+        clear_value (d);
+      else
+        store_value (d, src_image + s->off + s->nhdr, s->len);
+    }
+
+  if (s || d)
+    {
+      fputs ("ksba_der_copy_tree: trees don't match\nSOURCE TREE:\n", stderr);
+      _ksba_asn_node_dump_all (src_root, stderr);
+      fputs ("DESTINATION TREE:\n", stderr);
+      _ksba_asn_node_dump_all (dst_root, stderr);
+      return KSBA_Encoding_Error;
+    }
+  return 0;
+}
+
+
+
+/*********************************************
+ ********** Store data in a tree *************
+ *********************************************/
+
+
+KsbaError
+_ksba_der_store_time (AsnNode node, time_t atime)
+{
+
+  if (node->type == TYPE_CHOICE)
+    {
+      /* find a suitable choice to store the value */
+    }
+
+
+  if (node->type == TYPE_GENERALIZED_TIME
+      || node->type == TYPE_UTC_TIME)
+    {
+      char buf[50], *p;
+      struct tm *tp;
+
+      tp = gmtime (&atime);
+      sprintf (buf, "%04d%02d%02d%02d%02d%02dZ",
+               1900+tp->tm_year, tp->tm_mon+1, tp->tm_mday,
+               tp->tm_hour, tp->tm_min, tp->tm_sec);
+      p = node->type == TYPE_UTC_TIME? (buf+2):buf;
+      return store_value (node, p, strlen (p));
+    }
+  else
+    return KSBA_Invalid_Value;
+}
+
+/* Store the utf-8 STRING in NODE. */
+KsbaError
+_ksba_der_store_string (AsnNode node, const char *string)
+{
+  if (node->type == TYPE_CHOICE)
+    {
+      /* find a suitable choice to store the value */
+    }
+
+
+  if (node->type == TYPE_PRINTABLE_STRING)
+    {
+      return store_value (node, string, strlen (string));
+    }
+  else
+    return KSBA_Invalid_Value;
+}

@@ -28,23 +28,35 @@
 #include "cms.h"
 #include "convert.h"
 #include "keyinfo.h"
+#include "der-encoder.h"
+#include "ber-help.h"
+#include "cert.h" /* need to access cert->root and cert->image */
 
-static KsbaError ct_signed_data (KsbaCMS cms);
-static KsbaError ct_enveloped_data (KsbaCMS cms);
-static KsbaError ct_digested_data (KsbaCMS cms);
-static KsbaError ct_encrypted_data (KsbaCMS cms);
+static KsbaError ct_parse_signed_data (KsbaCMS cms);
+static KsbaError ct_parse_enveloped_data (KsbaCMS cms);
+static KsbaError ct_parse_digested_data (KsbaCMS cms);
+static KsbaError ct_parse_encrypted_data (KsbaCMS cms);
+static KsbaError ct_build_signed_data (KsbaCMS cms);
+static KsbaError ct_build_enveloped_data (KsbaCMS cms);
+static KsbaError ct_build_digested_data (KsbaCMS cms);
+static KsbaError ct_build_encrypted_data (KsbaCMS cms);
 
 static struct { 
   const char *oid;
   KsbaContentType ct;
-  KsbaError (*handler)(KsbaCMS);
+  KsbaError (*parse_handler)(KsbaCMS);
+  KsbaError (*build_handler)(KsbaCMS);
 } content_handlers[] = {
-  {  "1.2.840.113549.1.7.1", /* data*/              },
-  {  "1.2.840.113549.1.7.2", KSBA_CT_SIGNED_DATA,    ct_signed_data    },
-  {  "1.2.840.113549.1.7.3", KSBA_CT_ENVELOPED_DATA, ct_enveloped_data },
-  {  "1.2.840.113549.1.7.5", KSBA_CT_DIGESTED_DATA,  ct_digested_data  },
-  {  "1.2.840.113549.1.7.6", KSBA_CT_ENCRYPTED_DATA, ct_encrypted_data }, 
-  {  "1.2.840.113549.1.9.16.1.2", /*authData*/    },
+  {  "1.2.840.113549.1.7.1", KSBA_CT_DATA             },
+  {  "1.2.840.113549.1.7.2", KSBA_CT_SIGNED_DATA,
+     ct_parse_signed_data   , ct_build_signed_data    },
+  {  "1.2.840.113549.1.7.3", KSBA_CT_ENVELOPED_DATA,
+     ct_parse_enveloped_data, ct_build_enveloped_data },
+  {  "1.2.840.113549.1.7.5", KSBA_CT_DIGESTED_DATA, 
+     ct_parse_digested_data , ct_build_digested_data  },
+  {  "1.2.840.113549.1.7.6", KSBA_CT_ENCRYPTED_DATA, 
+     ct_parse_encrypted_data, ct_build_encrypted_data },
+  {  "1.2.840.113549.1.9.16.1.2", KSBA_CT_AUTH_DATA   },
   { NULL }
 };
 
@@ -110,9 +122,9 @@ ksba_cms_release (KsbaCMS cms)
 KsbaError
 ksba_cms_set_reader_writer (KsbaCMS cms, KsbaReader r, KsbaWriter w)
 {
-  if (!cms || !r || !w)
+  if (!cms || !(r || w))
     return KSBA_Invalid_Value;
-  if (cms->reader || cms->writer )
+  if ((r && cms->reader) || (w && cms->writer) )
     return KSBA_Conflict; /* already set */
   
   cms->reader = r;
@@ -144,10 +156,42 @@ ksba_cms_parse (KsbaCMS cms, KsbaStopReason *r_stopreason)
         }
       if (!content_handlers[i].oid)
         return KSBA_Unknown_CMS_Object;
-      if (!content_handlers[i].handler)
+      if (!content_handlers[i].parse_handler)
         return KSBA_Unsupported_CMS_Object;
       cms->content.ct      = content_handlers[i].ct;
-      cms->content.handler = content_handlers[i].handler;
+      cms->content.handler = content_handlers[i].parse_handler;
+      cms->stop_reason = KSBA_SR_GOT_CONTENT;
+    }
+  else if (cms->content.handler)
+    {
+      err = cms->content.handler (cms);
+      if (err)
+        return err;
+    }
+  else
+    return KSBA_Unsupported_CMS_Object;
+  
+  *r_stopreason = cms->stop_reason;
+  return 0;
+}
+
+KsbaError
+ksba_cms_build (KsbaCMS cms, KsbaStopReason *r_stopreason)
+{
+  KsbaError err;
+
+  if (!cms || !r_stopreason)
+    return KSBA_Invalid_Value;
+
+  *r_stopreason = KSBA_SR_RUNNING;
+  if (!cms->stop_reason)
+    { /* Initial state: check that the content handler is known */
+      if (!cms->writer)
+        return KSBA_Missing_Action;
+      if (!cms->content.handler)
+        return KSBA_Missing_Action;
+      if (!cms->encap_cont_type)
+        return KSBA_Missing_Action;
       cms->stop_reason = KSBA_SR_GOT_CONTENT;
     }
   else if (cms->content.handler)
@@ -520,67 +564,189 @@ ksba_cms_hash_signed_attrs (KsbaCMS cms, int idx)
 */
 
 
-/* Add another issuer/serial to the sid list */
+/**
+ * ksba_cms_set_content_type:
+ * @cms: A CMS object
+ * @what: 0 for content type, 1 for inner content type
+ * @type: Tyep constant
+ * 
+ * Set the content type used for build operations.  This should be the
+ * first operation before starting to create a CMS message.
+ * 
+ * Return value: 0 on success or an error code
+ **/
+KsbaError
+ksba_cms_set_content_type (KsbaCMS cms, int what, KsbaContentType type)
+{
+  int i;
+  char *oid;
+
+  if (!cms || what < 0 || what > 1 )
+    return KSBA_Invalid_Value;
+
+  for (i=0; content_handlers[i].oid; i++)
+    {
+      if (content_handlers[i].ct == type)
+        break;
+    }
+  if (!content_handlers[i].oid)
+    return KSBA_Unknown_CMS_Object;
+  if (!content_handlers[i].build_handler)
+    return KSBA_Unsupported_CMS_Object;
+  oid = xtrystrdup (content_handlers[i].oid);
+  if (!oid)
+    return KSBA_Out_Of_Core;
+
+  if (!what)
+    {
+      cms->content.oid     = oid;
+      cms->content.ct      = content_handlers[i].ct;
+      cms->content.handler = content_handlers[i].build_handler;
+    }
+  else
+    {
+      cms->encap_cont_type = oid;
+    }
+
+  return 0;
+}
+
+
+/**
+ * ksba_cms_add_digest_algo:
+ * @cms:  A CMS object 
+ * @oid: A stringified object OID describing the hash algorithm
+ * 
+ * Set the algorithm to be used for crerating the hash. Note, that we
+ * currently can't do a per-signer hash.
+ * 
+ * Return value: o on success or an error code
+ **/
+KsbaError
+ksba_cms_add_digest_algo (KsbaCMS cms, const char *oid)
+{
+  struct oidlist_s *ol;
+
+  if (!cms || !oid)
+    return KSBA_Invalid_Value;
+
+  ol = xtrymalloc (sizeof *ol);
+  if (!ol)
+    return KSBA_Out_Of_Core;
+  
+  ol->oid = xtrystrdup (oid);
+  if (!ol->oid)
+    {
+      xfree (ol);
+      return KSBA_Out_Of_Core;
+    }
+  ol->next = cms->digest_algos;
+  cms->digest_algos = ol;
+  return 0;
+}
+
+
+/**
+ * ksba_cms_add_signer:
+ * @cms: A CMS object
+ * @cert: A certificate used to describe the signer.
+ * 
+ * This functions starts assembly of a new signed data content or adds
+ * another signer to the list of signers.
+ *
+ * Note: after successful completion of this function ownership of
+ * @cert is transferred to @cms.  The caller should not continue to
+ * use cert.  Fixme:  We  should use reference counting instead.
+ * 
+ * Return value: 0 on success or an error code.
+ **/
+KsbaError
+ksba_cms_add_signer (KsbaCMS cms, KsbaCert cert)
+{
+  struct certlist_s *cl;
+
+  if (!cms)
+    return KSBA_Invalid_Value;
+  
+  cl = xtrycalloc (1,sizeof *cl);
+  if (!cl)
+      return KSBA_Out_Of_Core;
+
+  cl->cert = cert;
+  cl->next = cms->cert_list;
+  cms->cert_list = cl;
+  return 0;
+}
+
+
+/* Add the issuer/serial from the cert to the sid list */
 static KsbaError
-add_issuer_serial (KsbaCMS cms,
-                   const char *issuer, const unsigned char *serial)
+add_issuer_serial (KsbaCMS cms, KsbaCert cert)
 {
   KsbaError err;
-  AsnNode n;
+  AsnNode dst, src;
 
   if (!cms)
     return KSBA_Invalid_Value;
   if (!cms->signer_info.root)
     return KSBA_Conflict;
-#if 0  
-  if (r_issuer)
-    {
-      n = _ksba_asn_find_node (cms->signer_info.root,
-                               "SignerInfos..sid.issuerAndSerialNumber.issuer");
-      if (!n || !n->down)
-        return KSBA_No_Value; 
-      n = n->down; /* dereference the choice node */
-      
-      if (n->off == -1)
-        {
-          fputs ("get_issuer problem at node:\n", stderr);
-          _ksba_asn_node_dump_all (n, stderr);
-          return KSBA_General_Error;
-        }
-      err = _ksba_dn_to_str (cms->signer_info.image, n, r_issuer);
-      if (err)
-        return err;
-    }
 
-  if (r_serial)
-    {
-      unsigned char *p;
-
-      /* fixme: we do not release the r_issuer stuff on error */
-      n = _ksba_asn_find_node (cms->signer_info.root,
+  src = _ksba_asn_find_node (cert->root,
+                             "Certificate.tbsCertificate.serialNumber");
+  dst = _ksba_asn_find_node (cms->signer_info.root,
                       "SignerInfos..sid.issuerAndSerialNumber.serialNumber");
-      if (!n)
-        return KSBA_No_Value; 
-      
-      if (n->off == -1)
-        {
-          fputs ("get_serial problem at node:\n", stderr);
-          _ksba_asn_node_dump_all (n, stderr);
-          return KSBA_General_Error;
-        }
+  err = _ksba_der_copy_tree (dst, src, cert->image);
+  if (err)
+    return err;
 
-      p = xtrymalloc (n->len + 4);
-      if (!p)
-        return KSBA_Out_Of_Core;
+  src = _ksba_asn_find_node (cert->root,
+                             "Certificate.tbsCertificate.issuer");
+  dst = _ksba_asn_find_node (cms->signer_info.root,
+                      "SignerInfos..sid.issuerAndSerialNumber.issuer");
+  err = _ksba_der_copy_tree (dst, src, cert->image);
+  if (err)
+    return err;
 
-      p[0] = n->len >> 24;
-      p[1] = n->len >> 16;
-      p[2] = n->len >> 8;
-      p[3] = n->len;
-      memcpy (p+4, cms->signer_info.image + n->off + n->nhdr, n->len);
-      *r_serial = p;
-    }
-#endif
+
+  return 0;
+}
+
+
+/**
+ * ksba_cms_set_message_digest:
+ * @cms: A CMS object
+ * @idx: The index of the signer
+ * @digest: a message digest
+ * @digest_len: the length of the message digest
+ * 
+ * Set a message digest into the signedAttributes of the signer with
+ * the index IDX.  The index of a signer is determined by the sequence
+ * of ksba_cms_add_signer() calls; the first signer has the index 0.
+ * This function is to be used when the hash value of the data has
+ * been calculated and before the create function requests the sign
+ * operation.
+ * 
+ * Return value: 0 on success or an error code
+ **/
+KsbaError
+ksba_cms_set_message_digest (KsbaCMS cms, int idx,
+                             const char *digest, size_t digest_len)
+{ 
+  struct certlist_s *cl;
+
+  if (!cms || !digest)
+    return KSBA_Invalid_Value;
+  if (!digest_len || digest_len > DIM(cl->msg_digest))
+    return KSBA_Invalid_Value;
+  if (idx < 0)
+    return KSBA_Invalid_Index;
+
+  for (cl=cms->cert_list; cl && idx; cl = cl->next, idx--)
+    ;
+  if (!cl)
+    return KSBA_Invalid_Index; /* no certificate to store it */
+  cl->msg_digest_len = digest_len;
+  memcpy (cl->msg_digest, digest, digest_len);
   return 0;
 }
 
@@ -590,10 +756,11 @@ add_issuer_serial (KsbaCMS cms,
 
 
 /*
-   Content handler 
+   Content handler for parsing messages
 */
+
 static KsbaError 
-ct_signed_data (KsbaCMS cms)
+ct_parse_signed_data (KsbaCMS cms)
 {
   enum { 
     sSTART,
@@ -641,6 +808,8 @@ ct_signed_data (KsbaCMS cms)
     err = _ksba_cms_parse_signed_data_part_2 (cms);
   else if (state == sIN_DATA)
     ; /* start a parser part which does the hash job */
+  else
+    err = KSBA_Invalid_State;
 
   if (err)
     return err;
@@ -671,21 +840,203 @@ ct_signed_data (KsbaCMS cms)
 
 
 static KsbaError 
-ct_enveloped_data (KsbaCMS cms)
+ct_parse_enveloped_data (KsbaCMS cms)
 {
   return KSBA_Not_Implemented;
 }
 
 
 static KsbaError 
-ct_digested_data (KsbaCMS cms)
+ct_parse_digested_data (KsbaCMS cms)
 {
   return KSBA_Not_Implemented;
 }
 
 
 static KsbaError 
-ct_encrypted_data (KsbaCMS cms)
+ct_parse_encrypted_data (KsbaCMS cms)
+{
+  return KSBA_Not_Implemented;
+}
+
+
+
+/*
+   Content handlers for building messages
+*/
+
+
+/* write everything up to the encapsulated data content type */
+static KsbaError
+build_signed_data_header (KsbaCMS cms)
+{
+  KsbaError err;
+  char *buf;
+  const char *s;
+  size_t len;
+  int i;
+
+  /* Write the outer contentInfo */
+  err = _ksba_ber_write_tl (cms->writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, 0);
+  if (err)
+    return err;
+  err = ksba_oid_from_str (cms->content.oid, &buf, &len);
+  if (err)
+    return err;
+  err = _ksba_ber_write_tl (cms->writer,
+                            TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, len);
+  if (!err)
+    err = ksba_writer_write (cms->writer, buf, len);
+  xfree (buf);
+  if (err)
+    return err;
+  
+  err = _ksba_ber_write_tl (cms->writer, 0, CLASS_CONTEXT, 1, 0);
+  if (err)
+    return err;
+  
+
+  /* figure out the CMSVersion to be used */
+  if (1 /* fixme: have_attribute_certificates 
+           || encapsulated_content != data
+           || any_signer_info_is_version_3*/ )
+    s = "\x03";
+  else
+    s = "\x01";
+  err = _ksba_ber_write_tl (cms->writer, TYPE_INTEGER, CLASS_UNIVERSAL, 0, 1);
+  if (err)
+    return err;
+  err = ksba_writer_write (cms->writer, s, 1);
+  if (err)
+    return err;
+  
+  /* SET OF DigestAlgorithmIdentifier */
+  for (i=0; (s = ksba_cms_get_digest_algo_list (cms, i)); i++)
+    {
+      err = _ksba_der_write_algorithm_identifier (cms->writer, s);
+      if (err)
+        return err;
+    }
+
+  /* Write the (inner) encapsulatedContentInfo */
+  err = _ksba_ber_write_tl (cms->writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, 0);
+  if (err)
+    return err;
+  err = ksba_oid_from_str (cms->encap_cont_type, &buf, &len);
+  if (err)
+    return err;
+  err = _ksba_ber_write_tl (cms->writer,
+                            TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, len);
+  if (!err)
+    err = ksba_writer_write (cms->writer, buf, len);
+  xfree (buf);
+  if (err)
+    return err;
+  err = _ksba_ber_write_tl (cms->writer, 0, CLASS_CONTEXT, 1, 0);
+  if (err)
+    return err;
+  
+  return err;
+}
+
+/* Write the END of data NULL tag and everything we can write before
+   the user can calculate the signature */
+static KsbaError
+build_signed_data_attributes (KsbaCMS cms) 
+{
+  KsbaError err;
+
+
+  /* The NULL tag to end the data */
+  err = _ksba_ber_write_tl (cms->writer, TYPE_NULL, CLASS_UNIVERSAL, 0, 0);
+  if (err)
+    return err;
+
+  /* FIXME: Write optional certificates */
+
+  /* FIXME: Write the optional CRLs */
+
+  /* Now we have to prepare the signer info */
+
+
+
+
+  return 0;
+}
+
+
+static KsbaError 
+ct_build_signed_data (KsbaCMS cms)
+{
+  enum { 
+    sSTART,
+    sDATAREADY,
+    sERROR
+  } state = sERROR;
+  KsbaStopReason stop_reason = cms->stop_reason;
+  KsbaError err = 0;
+
+  cms->stop_reason = KSBA_SR_RUNNING;
+
+  /* Calculate state from last reason and do some checks */
+  if (stop_reason == KSBA_SR_GOT_CONTENT)
+    {
+      state = sSTART;
+    }
+  else if (stop_reason == KSBA_SR_BEGIN_DATA)
+    {
+      /* fixme: check that the message digest has been set */
+      state = sDATAREADY;
+    }
+  else if (stop_reason == KSBA_SR_RUNNING)
+    err = KSBA_Invalid_State;
+  else if (stop_reason)
+    err = KSBA_Bug;
+  
+  if (err)
+    return err;
+
+  /* Do the action */
+  if (state == sSTART)
+    err = build_signed_data_header (cms);
+  else if (state == sDATAREADY)
+    err = build_signed_data_attributes (cms);
+  else
+    err = KSBA_Invalid_State;
+
+  if (err)
+    return err;
+
+  /* Calculate new stop reason */
+  if (state == sSTART)
+    {
+      /* user should write the data */
+      stop_reason = KSBA_SR_BEGIN_DATA;
+    }
+  else if (state == sDATAREADY)
+    stop_reason = KSBA_SR_NEED_SIG;
+    
+  cms->stop_reason = stop_reason;
+  return 0;
+}
+
+
+static KsbaError 
+ct_build_enveloped_data (KsbaCMS cms)
+{
+  return KSBA_Not_Implemented;
+}
+
+
+static KsbaError 
+ct_build_digested_data (KsbaCMS cms)
+{
+  return KSBA_Not_Implemented;
+}
+
+
+static KsbaError 
+ct_build_encrypted_data (KsbaCMS cms)
 {
   return KSBA_Not_Implemented;
 }

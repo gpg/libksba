@@ -79,11 +79,11 @@ _ksba_asntime_to_epoch (const char *buffer, size_t length)
   s += 2;
   buf.tm_isdst = 0;
 
-#warning We should reset TZ if we cannot use timegm()
 #ifdef HAVE_TIMEGM
   return timegm (&buf);
 #else
   {
+#warning We should reset TZ if we cannot use timegm()
     time_t tim;
 
     putenv ("TZ=UTC");

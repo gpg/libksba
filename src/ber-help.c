@@ -160,3 +160,59 @@ _ksba_ber_read_tl (KsbaReader reader, struct tag_info *ti)
   return 0;
 }
 
+
+/* Write TAG of CLASS to WRITER.  constructed is a flag telling
+   whether the value is a constructed one.  length gives the length of
+   the value, if it is 0 undefinite length is assumed.  length is
+   ignored for the NULL tag. */
+KsbaError
+_ksba_ber_write_tl (KsbaWriter writer, 
+                    unsigned long tag,
+                    enum tag_class class,
+                    int constructed,
+                    unsigned long length)
+{
+  unsigned char buf[50];
+  int buflen = 0;
+
+  if (tag < 0x1f)
+    {
+      *buf = (class << 6) | tag;
+      if (constructed)
+        *buf |= 0x20;
+      buflen++;
+    }
+  else
+    {
+      return KSBA_Not_Implemented;
+    }
+
+  if (!tag && !class)
+    buf[buflen++] = 0; /* NULL tag */
+  else if (!length)
+    buf[buflen++] = 0x80; /* indefinite length */
+  else if (length < 128)
+    buf[buflen++] = length; 
+  else 
+    {
+      int i;
+
+      /* fixme: if we know the sizeof an ulong we could support larger
+         objetcs - however this is pretty ridiculous */
+      i = (length <= 0xff ? 1:
+           length <= 0xffff ? 2: 
+           length <= 0xffffff ? 3: 4);
+      
+      buf[buflen++] = (0x80 | i);
+      if (i > 3)
+        buf[buflen++] = length >> 24;
+      if (i > 2)
+        buf[buflen++] = length >> 16;
+      if (i > 1)
+        buf[buflen++] = length >> 8;
+      buf[buflen++] = length;
+    }        
+
+  return ksba_writer_write (writer, buf, buflen);
+}
+

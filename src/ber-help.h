@@ -36,6 +36,11 @@ struct tag_info {
 
 
 KsbaError _ksba_ber_read_tl (KsbaReader reader, struct tag_info *ti);
+KsbaError _ksba_ber_write_tl (KsbaWriter writer, 
+                              unsigned long tag,
+                              enum tag_class class,
+                              int constructed,
+                              unsigned long length);
 
 
 #endif /*BER_HELP_H*/

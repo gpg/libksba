@@ -1,0 +1,54 @@
+/* der-encoder.h - Definitions for the Distinguished Encoding Rules Encoder
+ *      Copyright (C) 2001 g10 Code GmbH
+ *
+ * This file is part of KSBA.
+ *
+ * KSBA is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * KSBA is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
+ */
+
+#ifndef DER_ENCODER_H
+#define DER_ENCODER_H 1
+
+#include "asn1-func.h"
+
+struct der_encoder_s;
+typedef struct der_encoder_s *DerEncoder;
+
+DerEncoder _ksba_der_encoder_new (void);
+void       _ksba_der_encoder_release (DerEncoder d);
+
+KsbaError _ksba_der_encoder_set_module (DerEncoder d, KsbaAsnTree module);
+KsbaError _ksba_der_encoder_set_writer (DerEncoder d, KsbaWriter w);
+
+KsbaError _ksba_der_encoder_encode (DerEncoder d, const char *start_name);
+
+
+KsbaError _ksba_der_write_algorithm_identifier (KsbaWriter w, const char *oid);
+
+
+
+KsbaError _ksba_der_copy_tree (AsnNode dst,
+                               AsnNode src, const unsigned char *srcimage);
+
+
+
+KsbaError _ksba_der_store_time (AsnNode node, time_t atime);
+KsbaError _ksba_der_store_string (AsnNode node, const char *string);
+
+
+
+#endif /*DER_ENCODER_H*/
+
+

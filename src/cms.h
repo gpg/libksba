@@ -37,6 +37,8 @@ struct oidlist_s {
 struct certlist_s {
   struct certlist_s *next;
   KsbaCert cert;
+  int  msg_digest_len;  /* used length of .. */
+  char msg_digest[32];  /* enough space to store a SHA-256 hash */
 };
 
 

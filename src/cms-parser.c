@@ -138,37 +138,42 @@ parse_content_info (KsbaReader reader,
   oid = ksba_oid_to_str (oidbuf, i);
   if (!oid)
     return KSBA_Out_Of_Core;
-  
-  /* now read the explicit tag 0 */
-  err = _ksba_ber_read_tl (reader, &ti);
-  if (err)
-    {
-      xfree (oid);
-      return err;
-    }
 
-  if ( ti.class == CLASS_CONTEXT && ti.tag == 0 && ti.is_constructed )
-    {
-      *has_content = 1;
+  if (!content_ndef && !content_len)
+    { /* no data */
+      *has_content = 0;
     }
-  else if ( ti.class == CLASS_UNIVERSAL && ti.tag == 0 && !ti.is_constructed )
-    {
-      *has_content = 0; /* this is optional - allow NUL tag */
-    }
-  else /* neither [0] nor NULL */
-    {
-      xfree (oid);
-      return KSBA_Invalid_CMS_Object; 
-    }
-  if (!content_ndef)
-    {
-      if (content_len < ti.nhdr)
-        return KSBA_BER_Error; /* triplet header larger that sequence */
-      content_len -= ti.nhdr;
-      if (!ti.ndef && content_len < ti.length)
-        return KSBA_BER_Error; /* triplet larger that sequence */
-    }
+  else
+    { /* now read the explicit tag 0 which is optional */
+      err = _ksba_ber_read_tl (reader, &ti);
+      if (err)
+        {
+          xfree (oid);
+          return err;
+        }
 
+      if ( ti.class == CLASS_CONTEXT && ti.tag == 0 && ti.is_constructed )
+        {
+          *has_content = 1;
+        }
+      else if ( ti.class == CLASS_UNIVERSAL && ti.tag == 0 && !ti.is_constructed )
+        {
+          *has_content = 0; /* this is optional - allow NUL tag */
+        }
+      else /* neither [0] nor NULL */
+        {
+          xfree (oid);
+          return KSBA_Invalid_CMS_Object; 
+        }
+      if (!content_ndef)
+        {
+          if (content_len < ti.nhdr)
+            return KSBA_BER_Error; /* triplet header larger that sequence */
+          content_len -= ti.nhdr;
+          if (!ti.ndef && content_len < ti.length)
+            return KSBA_BER_Error; /* triplet larger that sequence */
+        }
+    }
   *r_len = content_len;
   *r_ndef = content_ndef;
   *r_oid = oid;
@@ -424,7 +429,7 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
               ksba_cert_release (cert);
               return err;
             }
-          cl = xtrymalloc (sizeof *cl);
+          cl = xtrycalloc (1, sizeof *cl);
           if (!cl)
             {
               ksba_cert_release (cert);

@@ -41,6 +41,7 @@ libksba_la_SOURCES = \
 	asn1-func.c asn1-func2.c asn1-func.h \
 	ber-help.c ber-help.h \
 	ber-decoder.c ber-decoder.h \
+	der-encoder.c der-encoder.h \
 	cert.c cert.h \
 	cms.c cms.h \
 	cms-parser.c \
@@ -55,7 +56,7 @@ asn1_gentables_SOURCES = \
 	asn1-func.c asn1-func.h \
 	oid.c \
 	util.c util.h
- 
+
 ber_dump_SOURCES = \
 	ber-dump.c \
 	ksba.h \
@@ -67,7 +68,7 @@ ber_dump_SOURCES = \
 	asn1-func.c asn1-func.h \
 	oid.c \
 	util.c util.h 
- 
+
 asn1-parse.c : asn1-func.h
 
 errors.c : ksba.h mkerrors

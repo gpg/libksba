@@ -71,15 +71,18 @@ typedef enum {
   KSBA_File_Error = 36,
   KSBA_Module_Not_Found = 37,
   KSBA_Encoding_Error = 38,
+  KSBA_Invalid_Index = 39,
 } KsbaError;
 
 
 typedef enum {
   KSBA_CT_NONE = 0,
-  KSBA_CT_SIGNED_DATA = 1,
-  KSBA_CT_ENVELOPED_DATA = 2,
-  KSBA_CT_DIGESTED_DATA = 3,
-  KSBA_CT_ENCRYPTED_DATA = 4
+  KSBA_CT_DATA = 1,
+  KSBA_CT_SIGNED_DATA = 2,
+  KSBA_CT_ENVELOPED_DATA = 3,
+  KSBA_CT_DIGESTED_DATA = 4,
+  KSBA_CT_ENCRYPTED_DATA = 5,
+  KSBA_CT_AUTH_DATA = 6
 } KsbaContentType;
 
 
@@ -91,7 +94,7 @@ typedef enum {
   KSBA_SR_BEGIN_DATA = 4,
   KSBA_SR_END_DATA = 5,
   KSBA_SR_READY = 6,
-
+  KSBA_SR_NEED_SIG = 7
 } KsbaStopReason;
 
 
@@ -171,6 +174,17 @@ ksba_cms_set_hash_function (KsbaCMS cms,
 KsbaError ksba_cms_hash_signed_attrs (KsbaCMS cms, int idx);
 
 
+KsbaError ksba_cms_set_content_type (KsbaCMS cms, int what,
+                                     KsbaContentType type);
+KsbaError ksba_cms_add_digest_algo (KsbaCMS cms, const char *oid);
+KsbaError ksba_cms_add_signer (KsbaCMS cms, KsbaCert cert);
+KsbaError ksba_cms_set_message_digest (KsbaCMS cms, int idx,
+                                       const char *digest,
+                                       size_t digest_len);
+
+
+
+
 /*-- reader.c --*/
 KsbaReader ksba_reader_new (void);
 void       ksba_reader_release (KsbaReader r);
@@ -199,7 +213,7 @@ KsbaError ksba_writer_set_file (KsbaWriter w, FILE *fp);
 KsbaError ksba_writer_set_cb (KsbaWriter w, 
                               int (*cb)(void*,const void *,size_t),
                               void *cb_value);
-
+KsbaError ksba_writer_write (KsbaWriter w, const void *buffer, size_t length);
 
 
 
