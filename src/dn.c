@@ -826,7 +826,7 @@ write_escaped (KsbaWriter w, const unsigned char *buffer, size_t nbytes)
 
 
 /* Parse one RDN, and write it to WRITER.  Returns a pointer to the
-   next RDN part where the comma as alrady been skipped or NULL in
+   next RDN part where the comma has alrady been skipped or NULL in
    case of an error */
 static KsbaError
 parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
@@ -915,6 +915,7 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
       err = KSBA_Syntax_Error; /* missing value */
       goto leave;
     }
+
   if (*s == '#')
     { /* hexstring */
       int need_utf8 = 0;
@@ -977,9 +978,14 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
       need_escaping = 1;
     }
 
+  if (!valuelen)
+    {
+      err = KSBA_Syntax_Error; /* empty elements are not allowed */
+      goto leave;
+    }
   if ( *s && *s != ',' && *s != ';' && *s != '+')
     {
-      err =  KSBA_Syntax_Error; /* invalid delimiter */
+      err = KSBA_Syntax_Error; /* invalid delimiter */
       goto leave;
     }
   if (*s == '+') /* fixme: implement this */

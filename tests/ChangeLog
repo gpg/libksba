@@ -1,3 +1,7 @@
+2002-05-04  Werner Koch  <wk@gnupg.org>
+
+	* t-dnparser.c (test_1): Add test on empty elements.
+
 2002-03-22  Werner Koch  <wk@gnupg.org>
 
 	* cert-basic.c (print_names): New.

@@ -61,6 +61,37 @@ xmalloc (size_t n)
 #endif
 
 
+static void
+test_1 (void)
+{
+  static char *empty_elements[] = {
+    "C=de,O=foo,OU=,CN=joe",
+    "C=de,O=foo,OU= ,CN=joe",
+    "C=de,O=foo,OU=\"\" ,CN=joe",
+    "C=de,O=foo,OU=",
+    "C=de,O=foo,OU= ",
+    "C=,O=foo,OU=bar ",
+    "C = ,O=foo,OU=bar ",
+    "C=",
+    NULL
+  };
+  KsbaError err;
+  int i;
+  char *buf;
+  size_t len;
+
+  for (i=0; empty_elements[i]; i++)
+    {
+      err = _ksba_dn_from_str (empty_elements[i], &buf, &len);
+      if (err != KSBA_Syntax_Error)
+        fail ("empty element not detected");
+      xfree (buf);
+    }
+
+}
+
+
+
 int 
 main (int argc, char **argv)
 {
@@ -91,7 +122,7 @@ main (int argc, char **argv)
     }
   else if (argc == 1)
     {
-      fail ("no regular tests yet");
+      test_1 ();
     }
   else
     {
