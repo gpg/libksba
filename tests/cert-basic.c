@@ -181,9 +181,8 @@ main (int argc, char **argv)
     }
   else
     {
-      one_file ("root-cert-1.der"); 
-      one_file ("root-cert-2.der"); 
-      one_file ("pers-cert-1.der");
+      one_file ("cert_dfn_pca01.der"); 
+      one_file ("cert_dfn_pca15.der"); 
       one_file ("cert_g10code_test1.der");
     }
 
