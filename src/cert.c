@@ -272,7 +272,8 @@ ksba_cert_get_digest_algo (KsbaCert cert)
  * @cert: certificate object 
  * 
  * This function returnes the serial number of the certificate.  The
- * serial number is an integer returned as an concocal exnoded S-expression.
+ * serial number is an integer returned as an cancnical encoded
+ * S-expression with just one element.
  * 
  * Return value: An allocated S-Exp or NULL for no value.
  **/
@@ -281,7 +282,7 @@ ksba_cert_get_serial (KsbaCert cert)
 {
   AsnNode n;
   char *p;
-  char numbuf[21];
+  char numbuf[22];
   int numbuflen;
 
   if (!cert || !cert->initialized)
@@ -299,14 +300,15 @@ ksba_cert_get_serial (KsbaCert cert)
       return NULL;
     }
   
-  sprintf (numbuf,"%u:", (unsigned int)n->len);
+  sprintf (numbuf,"(%u:", (unsigned int)n->len);
   numbuflen = strlen (numbuf);
-  p = xtrymalloc (numbuflen + n->len + 1);
+  p = xtrymalloc (numbuflen + n->len + 2);
   if (!p)
     return NULL;
   strcpy (p, numbuf);
   memcpy (p+numbuflen, cert->image + n->off + n->nhdr, n->len);
-  p[numbuflen + n->len] = 0;
+  p[numbuflen + n->len] = ')';
+  p[numbuflen + n->len + 1] = 0;
   return p;
 }
 

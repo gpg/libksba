@@ -470,7 +470,7 @@ ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
 
   if (r_serial)
     {
-      char numbuf[21];
+      char numbuf[22];
       int numbuflen;
       unsigned char *p;
 
@@ -486,14 +486,15 @@ ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
           return KSBA_General_Error;
         }
 
-      sprintf (numbuf,"%u:", (unsigned int)n->len);
+      sprintf (numbuf,"(%u:", (unsigned int)n->len);
       numbuflen = strlen (numbuf);
-      p = xtrymalloc (numbuflen + n->len + 1);
+      p = xtrymalloc (numbuflen + n->len + 2);
       if (!p)
         return KSBA_Out_Of_Core;
       strcpy (p, numbuf);
       memcpy (p+numbuflen, image + n->off + n->nhdr, n->len);
-      p[numbuflen + n->len] = 0;
+      p[numbuflen + n->len] = ')';
+      p[numbuflen + n->len + 1] = 0;
       *r_serial = p;
     }
 

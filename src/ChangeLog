@@ -1,3 +1,9 @@
+2001-12-20  Werner Koch  <wk@gnupg.org>
+
+	* cert.c (ksba_cert_set_serial): Changed to return an entire S-Exp
+	and not just an octet string.
+	* cms.c (ksba_cms_get_issuer_serial): Ditto.
+
 2001-12-18  Werner Koch  <wk@gnupg.org>
 
 	* Makefile.am (DISTCLEANFILES): Add asn1-tables.c
