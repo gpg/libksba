@@ -1132,8 +1132,9 @@ ksba_cms_set_signing_time (KsbaCMS cms, int idx, time_t sigtime)
  *		...
  *		(<param_namen> <mpi>)
  *	      ))
- * The sexp must be in canocial form 
-*/
+ * The sexp must be in canocial form.
+ * Note the <algo> must be given as a stringified OID or the special
+ * string "rsa" */
 KsbaError
 ksba_cms_set_sig_val (KsbaCMS cms, int idx, KsbaConstSexp sigval)
 {
@@ -1169,11 +1170,20 @@ ksba_cms_set_sig_val (KsbaCMS cms, int idx, KsbaConstSexp sigval)
     return KSBA_Invalid_Sexp; /* we don't allow empty lengths */
   s++;
   xfree (cms->sig_val.algo);
-  cms->sig_val.algo = xtrymalloc (n+1);
-  if (!cms->sig_val.algo)
-    return KSBA_Out_Of_Core;
-  memcpy (cms->sig_val.algo, s, n);
-  cms->sig_val.algo[n] = 0;
+  if (n==3 && s[0] == 'r' && s[1] == 's' && s[2] == 'a')
+    { /* kludge to allow "rsa" to be passed as algorithm name */
+      cms->sig_val.algo = xtrystrdup ("1.2.840.113549.1.1.1");
+      if (!cms->sig_val.algo)
+        return KSBA_Out_Of_Core;
+    }
+  else
+    {
+      cms->sig_val.algo = xtrymalloc (n+1);
+      if (!cms->sig_val.algo)
+        return KSBA_Out_Of_Core;
+      memcpy (cms->sig_val.algo, s, n);
+      cms->sig_val.algo[n] = 0;
+    }
   s += n;
 
   /* And now the values - FIXME: For now we only support one */

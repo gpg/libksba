@@ -1,3 +1,8 @@
+2002-02-01  Werner Koch  <wk@gnupg.org>
+
+	* cms.c (ksba_cms_set_sig_val): Add kludge to allow "rsa" instead
+	of an OID.
+
 2002-01-28  Werner Koch  <wk@gnupg.org>
 
 	* oid.c (ksba_oid_from_str): Fixed docs and return type.
