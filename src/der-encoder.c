@@ -943,9 +943,11 @@ _ksba_der_encoder_encode (DerEncoder d, const char *start_name,
       parameters   ANY DEFINED BY algorithm OPTIONAL 
   }
 
-  where parameters is NULL */
+  where parameters will be set to NULL if parm is NULL or to an octet
+  string conating the given parm */
 KsbaError
-_ksba_der_write_algorithm_identifier (KsbaWriter w, const char *oid)
+_ksba_der_write_algorithm_identifier (KsbaWriter w, const char *oid,
+                                      const void *parm, size_t parmlen)
 {
   KsbaError err;
   char *buf;
@@ -955,8 +957,12 @@ _ksba_der_write_algorithm_identifier (KsbaWriter w, const char *oid)
   if (err)
     return err;
 
-  /* write the sequence which is 4 octects longer than the OID */
-  err = _ksba_ber_write_tl (w, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, len+4);
+  /* write the sequence */
+  /* fixme: the the length to encode the TLV values are actually not
+     just 2 bute each but doe penden on the length of the values - for
+     our purposes the static values to work */
+  err = _ksba_ber_write_tl (w, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1,
+                            4 + len + (parm? parmlen:0));
   if (err)
     goto leave;
 
@@ -967,8 +973,18 @@ _ksba_der_write_algorithm_identifier (KsbaWriter w, const char *oid)
   if (err)
     goto leave;
 
-  /* The NULL tag as parameter */
-  err = _ksba_ber_write_tl (w, TYPE_NULL, CLASS_UNIVERSAL, 0, 0);
+  /* Write the parameter */
+  if (parm)
+    {
+      err = _ksba_ber_write_tl (w, TYPE_OCTET_STRING, CLASS_UNIVERSAL,
+                                0, parmlen);
+      if (!err)
+        err = ksba_writer_write (w, parm, parmlen);
+    }
+  else
+    {
+      err = _ksba_ber_write_tl (w, TYPE_NULL, CLASS_UNIVERSAL, 0, 0);
+    }
 
  leave:
   xfree (buf);

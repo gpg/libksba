@@ -195,6 +195,13 @@ KsbaError ksba_cms_set_message_digest (KsbaCMS cms, int idx,
 KsbaError ksba_cms_set_signing_time (KsbaCMS cms, int idx, time_t sigtime);
 KsbaError ksba_cms_set_sig_val (KsbaCMS cms, int idx, const char *sigval);
 
+KsbaError ksba_cms_set_content_enc_algo (KsbaCMS cms,
+                                         const char *oid,
+                                         const unsigned char *iv,
+                                         size_t ivlen);
+KsbaError ksba_cms_add_recipient (KsbaCMS cms, KsbaCert cert);
+KsbaError ksba_cms_set_enc_val (KsbaCMS cms, int idx, const char *encval);
+
 
 
 

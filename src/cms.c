@@ -5,7 +5,7 @@
  *
  * KSBA is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Fountion; either version 2 of the License, or
  * (at your option) any later version.
  *
  * KSBA is distributed in the hope that it will be useful,
@@ -74,7 +74,7 @@ static char oid_signingTime[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x05";
 /* copy all the encrypted bytes from the reader to the writer.
    Handles indefinite length encoding */
 static KsbaError
-copy_encrypted_cont (KsbaCMS cms)
+read_encrypted_cont (KsbaCMS cms)
 {
   KsbaError err = 0;
   unsigned long nleft;
@@ -82,21 +82,87 @@ copy_encrypted_cont (KsbaCMS cms)
   size_t n, nread;
 
   if (cms->inner_cont_ndef)
-    return KSBA_Unsupported_Encoding;
-  nleft = cms->inner_cont_len;
-  while (nleft)
     {
-      n = nleft < sizeof (buffer)? nleft : sizeof (buffer);
-      err = ksba_reader_read (cms->reader, buffer, n, &nread);
-      if (err)
-        return err;
-      nleft -= nread;
-      err = ksba_writer_write (cms->writer, buffer, nread);
-      if (err)
-        return err;
+      struct tag_info ti;
+
+      for (;;)
+        {
+          err = _ksba_ber_read_tl (cms->reader, &ti);
+          if (err)
+            return err;
+          
+          if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OCTET_STRING
+              && !ti.is_constructed)
+            { /* next chunk */
+              nleft = ti.length;
+              while (nleft)
+                {
+                  n = nleft < sizeof (buffer)? nleft : sizeof (buffer);
+                  err = ksba_reader_read (cms->reader, buffer, n, &nread);
+                  if (err)
+                    return err;
+                  nleft -= nread;
+                  err = ksba_writer_write (cms->writer, buffer, nread);
+                  if (err)
+                    return err;
+                }
+            }
+          else if (ti.class == CLASS_UNIVERSAL && !ti.tag
+                   && !ti.is_constructed)
+            return 0; /* ready */ 
+          else
+            return KSBA_Encoding_Error;
+        }
+    }
+  else
+    {
+      nleft = cms->inner_cont_len;
+      while (nleft)
+        {
+          n = nleft < sizeof (buffer)? nleft : sizeof (buffer);
+          err = ksba_reader_read (cms->reader, buffer, n, &nread);
+          if (err)
+            return err;
+          nleft -= nread;
+          err = ksba_writer_write (cms->writer, buffer, nread);
+          if (err)
+            return err;
+        }
     }
   return 0;
 }
+
+/* copy data from reader to writer.  Assume that it is an octet string
+   and insert undefinite length headers where needed */
+static KsbaError
+write_encrypted_cont (KsbaCMS cms)
+{
+  KsbaError err = 0;
+  char buffer[4096];
+  size_t nread;
+
+  /* we do it the simple way: the parts are made up from the chunks we
+     got from the read function.
+
+     Fixme: We should write the tag here, and rite a definite length
+     header if everything fits into out local buffer. actually pretty
+     simple to do, but I am too lazy right now. */
+  while (!(err = ksba_reader_read (cms->reader, buffer,
+                                   sizeof buffer, &nread)) )
+    {
+      err = _ksba_ber_write_tl (cms->writer, TYPE_OCTET_STRING,
+                                CLASS_UNIVERSAL, 0, nread);
+      if (!err)
+        err = ksba_writer_write (cms->writer, buffer, nread);
+      if (err)
+        return err;
+    }
+  if (err == -1) /* write the end tag */
+      err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
+
+  return err;
+}
+
 
 
 
@@ -158,6 +224,8 @@ ksba_cms_release (KsbaCMS cms)
   xfree (cms->recp_info.image);
   xfree (cms->sig_val.algo);
   xfree (cms->sig_val.value);
+  xfree (cms->enc_val.algo);
+  xfree (cms->enc_val.value);
   xfree (cms);
 }
 
@@ -667,7 +735,7 @@ ksba_cms_get_sig_val (KsbaCMS cms, int idx)
  * @cms: CMS object
  * @idx: index of recipient info
  * 
- * Return the sencrypted val (the session key) of recipient @idx in a
+ * Return the encrypted value (the session key) of recipient @idx in a
  * format suitable to be used as input to Libgcrypt's verification
  * function.  The caller must free the returned string.
  * 
@@ -1038,6 +1106,162 @@ ksba_cms_set_sig_val (KsbaCMS cms, int idx, const char *sigval)
 }
 
 
+/* Set the conetnt encryption algorithm to OID and optionally set the
+   initialization vector to IV */
+KsbaError
+ksba_cms_set_content_enc_algo (KsbaCMS cms,
+                               const char *oid,
+                               const unsigned char *iv, size_t ivlen)
+{
+  if (!cms || !oid)
+    return KSBA_Invalid_Value;
+
+  xfree (cms->encr_iv);
+  cms->encr_iv = NULL;
+  cms->encr_ivlen = 0;
+
+  cms->encr_algo_oid = xtrystrdup (oid);
+  if (!cms->encr_algo_oid)
+    return KSBA_Out_Of_Core;
+
+  if (iv)
+    {
+      cms->encr_iv = xtrymalloc (ivlen);
+      if (!cms->encr_iv)
+        return KSBA_Out_Of_Core;
+      memcpy (cms->encr_iv, iv, ivlen);
+      cms->encr_ivlen = ivlen;
+    }
+  return 0;
+}
+
+
+/* 
+ * encval is expected to be a canonical encoded  S-Exp of this form:
+ *  (enc-val
+ *	(<algo>
+ *	   (<param_name1> <mpi>)
+ *	    ...
+ *         (<param_namen> <mpi>)
+ *	))
+ *
+ * Note the <algo> must be given as a stringified OID or the special
+ * string "rsa" */
+KsbaError
+ksba_cms_set_enc_val (KsbaCMS cms, int idx, const char *encval)
+{
+  /*FIXME: This shares most code with ...set_sig_val */
+  const char *s, *endp;
+  unsigned long n;
+
+  if (!cms)
+    return KSBA_Invalid_Value;
+  if (idx)
+    return KSBA_Invalid_Index; /* only one signer for now */
+
+  s = encval;
+  if (*s != '(')
+    return KSBA_Invalid_Sexp;
+  s++;
+
+  n = strtoul (s, (char**)&endp, 10);
+  s = endp;
+  if (!n || *s!=':')
+    return KSBA_Invalid_Sexp; /* we don't allow empty lengths */
+  s++;
+  if (n != 7 || memcmp (s, "enc-val", 7))
+    return KSBA_Unknown_Sexp;
+  s += 7;
+  if (*s != '(')
+    return digitp (s)? KSBA_Unknown_Sexp : KSBA_Invalid_Sexp;
+  s++;
+
+  /* break out the algorithm ID */
+  n = strtoul (s, (char**)&endp, 10);
+  s = endp;
+  if (!n || *s != ':')
+    return KSBA_Invalid_Sexp; /* we don't allow empty lengths */
+  s++;
+  xfree (cms->enc_val.algo);
+  if (n==3 && s[0] == 'r' && s[1] == 's' && s[2] == 'a')
+    { /* kludge to allow "rsa" to be passed as algorithm name */
+      cms->enc_val.algo = xtrystrdup ("1.2.840.113549.1.1.1");
+      if (!cms->enc_val.algo)
+        return KSBA_Out_Of_Core;
+    }
+  else
+    {
+      cms->enc_val.algo = xtrymalloc (n+1);
+      if (!cms->enc_val.algo)
+        return KSBA_Out_Of_Core;
+      memcpy (cms->enc_val.algo, s, n);
+      cms->enc_val.algo[n] = 0;
+    }
+  s += n;
+
+  /* And now the values - FIXME: For now we only support one */
+  /* fixme: start loop */
+  if (*s != '(')
+    return digitp (s)? KSBA_Unknown_Sexp : KSBA_Invalid_Sexp;
+  s++;
+  n = strtoul (s, (char**)&endp, 10);
+  s = endp;
+  if (!n || *s != ':')
+    return KSBA_Invalid_Sexp; 
+  s++;
+  s += n; /* ignore the name of the parameter */
+  
+  if (!digitp(s))
+    return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+  n = strtoul (s, (char**)&endp, 10);
+  s = endp;
+  if (!n || *s != ':')
+    return KSBA_Invalid_Sexp; 
+  s++;
+  xfree (cms->enc_val.value);
+  cms->enc_val.value = xtrymalloc (n);
+  if (!cms->enc_val.value)
+    return KSBA_Out_Of_Core;
+  memcpy (cms->enc_val.value, s, n);
+  cms->enc_val.valuelen = n;
+  s += n;
+  if ( *s != ')')
+    return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+  s++;
+  /* fixme: end loop over parameters */
+
+  /* we need 2 closing parenthesis */
+  if ( *s != ')' || s[1] != ')')
+    return KSBA_Invalid_Sexp; 
+
+  return 0;
+}
+
+
+
+
+/**
+ * ksba_cms_add_recipient:
+ * @cms: A CMS object
+ * @cert: A certificate used to describe the recipient.
+ * 
+ * This functions starts assembly of a new enevloped data content or adds
+ * another recipient to the list of recipients.
+ *
+ * Note: after successful completion of this function ownership of
+ * @cert is transferred to @cms.  The caller should not continue to
+ * use cert.  Fixme:  We  should use reference counting instead.
+ * 
+ * Return value: 0 on success or an error code.
+ **/
+KsbaError
+ksba_cms_add_recipient (KsbaCMS cms, KsbaCert cert)
+{
+  /* for now we use the same structure */
+  return ksba_cms_add_signer (cms, cert);
+}
+
+
 
 
 /*
@@ -1176,7 +1400,7 @@ ct_parse_enveloped_data (KsbaCMS cms)
   else if (state == sREST)
     err = _ksba_cms_parse_enveloped_data_part_2 (cms);
   else if (state == sINDATA)
-    err = copy_encrypted_cont (cms);
+    err = read_encrypted_cont (cms);
   else
     err = KSBA_Invalid_State;
 
@@ -1281,7 +1505,7 @@ build_signed_data_header (KsbaCMS cms)
     return err;
   for (i=0; (s = ksba_cms_get_digest_algo_list (cms, i)); i++)
     {
-      err = _ksba_der_write_algorithm_identifier (cms->writer, s);
+      err = _ksba_der_write_algorithm_identifier (cms->writer, s, NULL, 0);
       if (err)
         return err;
     }
@@ -1313,19 +1537,24 @@ build_signed_data_header (KsbaCMS cms)
   return err;
 }
 
-/* Set the issuer/serial from the cert to the node */
+/* Set the issuer/serial from the cert to the node.
+   mode 0: sid 
+   mode 1: rid
+ */
 static KsbaError
-set_issuer_serial (AsnNode signer_info, KsbaCert cert)
+set_issuer_serial (AsnNode info, KsbaCert cert, int mode)
 {
   KsbaError err;
   AsnNode dst, src;
 
-  if (!signer_info || !cert)
+  if (!info || !cert)
     return KSBA_Invalid_Value;
 
   src = _ksba_asn_find_node (cert->root,
                              "Certificate.tbsCertificate.serialNumber");
-  dst = _ksba_asn_find_node (signer_info,
+  dst = _ksba_asn_find_node (info,
+                             mode?
+                             "rid.issuerAndSerialNumber.serialNumber":
                              "sid.issuerAndSerialNumber.serialNumber");
   err = _ksba_der_copy_tree (dst, src, cert->image);
   if (err)
@@ -1333,16 +1562,16 @@ set_issuer_serial (AsnNode signer_info, KsbaCert cert)
 
   src = _ksba_asn_find_node (cert->root,
                              "Certificate.tbsCertificate.issuer");
-  dst = _ksba_asn_find_node (signer_info,
+  dst = _ksba_asn_find_node (info,
+                             mode?
+                             "rid.issuerAndSerialNumber.issuer":
                              "sid.issuerAndSerialNumber.issuer");
   err = _ksba_der_copy_tree (dst, src, cert->image);
   if (err)
     return err;
 
-
   return 0;
 }
-
 
 
 /* Write the END of data NULL tag and everything we can write before
@@ -1549,7 +1778,7 @@ build_signed_data_rest (KsbaCMS cms)
       if (!n)
         return KSBA_Element_Not_Found;
 
-      err = set_issuer_serial (n, certlist->cert);
+      err = set_issuer_serial (n, certlist->cert, 0);
       if (err)
         return err;
 
@@ -1621,7 +1850,7 @@ build_signed_data_rest (KsbaCMS cms)
       /* fixme: release what we don't need */
     }
 
-
+#if 0
   /* HACK for testing */
   err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
   if (err)
@@ -1629,7 +1858,7 @@ build_signed_data_rest (KsbaCMS cms)
   err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
   if (err)
     return err;
-
+#endif
 
   return 0;
 }
@@ -1716,11 +1945,243 @@ ct_build_signed_data (KsbaCMS cms)
   return 0;
 }
 
+
+/* write everything up to the encryptedContentInfo including the tag */
+static KsbaError
+build_enveloped_data_header (KsbaCMS cms)
+{
+  KsbaError err;
+  int recpno;
+  KsbaAsnTree cms_tree;
+  struct certlist_s *certlist;
+  char *buf;
+  const char *s;
+  size_t len;
+
+  /* Write the outer contentInfo */
+  /* fixme: code is shared with signed_data_header */
+  err = _ksba_ber_write_tl (cms->writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, 0);
+  if (err)
+    return err;
+  err = ksba_oid_from_str (cms->content.oid, &buf, &len);
+  if (err)
+    return err;
+  err = _ksba_ber_write_tl (cms->writer,
+                            TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, len);
+  if (!err)
+    err = ksba_writer_write (cms->writer, buf, len);
+  xfree (buf);
+  if (err)
+    return err;
+  
+  err = _ksba_ber_write_tl (cms->writer, 0, CLASS_CONTEXT, 1, 0);
+  if (err)
+    return err;
+  
+  /* The SEQUENCE */
+  err = _ksba_ber_write_tl (cms->writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, 0);
+  if (err)
+    return err;
+
+  /* figure out the CMSVersion to be used (from rfc2630):
+     version is the syntax version number.  If originatorInfo is
+     present, then version shall be 2.  If any of the RecipientInfo
+     structures included have a version other than 0, then the version
+     shall be 2.  If unprotectedAttrs is present, then version shall
+     be 2.  If originatorInfo is absent, all of the RecipientInfo
+     structures are version 0, and unprotectedAttrs is absent, then
+     version shall be 0. 
+     
+     For SPHINX the version number must be 0.
+  */
+  s = "\x00"; 
+  err = _ksba_ber_write_tl (cms->writer, TYPE_INTEGER, CLASS_UNIVERSAL, 0, 1);
+  if (err)
+    return err;
+  err = ksba_writer_write (cms->writer, s, 1);
+  if (err)
+    return err;
+
+  /* Note: originatorInfo is not yet implemented and must not be used
+     for SPHINX */
+
+  /* Now we write the recipientInfo */
+  err = ksba_asn_create_tree ("cms", &cms_tree);
+  if (err)
+    return err;
+  /* fixme: we must cms_tree on error */
+
+  certlist = cms->cert_list;
+  if (!certlist)
+    return KSBA_Missing_Value; /* oops */
+
+  for (recpno=0; certlist; recpno++, certlist = certlist->next)
+    {
+      AsnNode root, n;
+      unsigned char *image;
+      size_t imagelen;
+
+      if (!certlist->cert)
+        return KSBA_Bug;
+
+      root = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+                                "CryptographicMessageSyntax.RecipientInfos");
+
+      /* We store a version of 0 because we are only allowed to use
+         the issuerAndSerialNumber for SPHINX */
+      n = _ksba_asn_find_node (root, "RecipientInfos..ktri.version");
+      if (!n)
+        return KSBA_Element_Not_Found;
+      err = _ksba_der_store_integer (n, "\x00\x00\x00\x01\x00");
+      if (err)
+        return err;
+
+      /* Store the rid */
+      n = _ksba_asn_find_node (root, "RecipientInfos..ktri.rid");
+      if (!n)
+        return KSBA_Element_Not_Found;
+
+      err = set_issuer_serial (n, certlist->cert, 1);
+      if (err)
+        return err;
+
+      /* store the keyEncryptionAlgorithm */
+      if (!cms->enc_val.algo || !cms->enc_val.value)
+        return KSBA_Missing_Value;
+      n = _ksba_asn_find_node (root, 
+                  "RecipientInfos..ktri.keyEncryptionAlgorithm.algorithm");
+      if (!n)
+        return KSBA_Element_Not_Found;
+      err = _ksba_der_store_oid (n, cms->enc_val.algo);
+      if (err)
+        return err;
+      n = _ksba_asn_find_node (root, 
+                  "RecipientInfos..ktri.keyEncryptionAlgorithm.parameters");
+      if (!n)
+        return KSBA_Element_Not_Found;
+      err = _ksba_der_store_null (n); 
+      if (err)
+        return err;
+
+      /* store the encryptedKey  */
+      if (!cms->enc_val.value)
+        return KSBA_Missing_Value;
+      n = _ksba_asn_find_node (root, "RecipientInfos..ktri.encryptedKey");
+      if (!n)
+        return KSBA_Element_Not_Found;
+      err = _ksba_der_store_octet_string (n,
+                                          cms->enc_val.value,
+                                          cms->enc_val.valuelen);
+      if (err)
+        return err;
+
+
+      /* Make the DER encoding and write it out */
+      err = _ksba_der_encode_tree (root, &image, &imagelen);
+      if (err)
+          return err;
+
+      err = ksba_writer_write (cms->writer, image, imagelen);
+      if (err )
+        return err;
+      /* fixme: release what we don't need */
+    }
+
+  
+  /* Write the (inner) encryptedContentInfo */
+  err = _ksba_ber_write_tl (cms->writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, 0);
+  if (err)
+    return err;
+  err = ksba_oid_from_str (cms->inner_cont_oid, &buf, &len);
+  if (err)
+    return err;
+  err = _ksba_ber_write_tl (cms->writer,
+                            TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, len);
+  if (!err)
+    err = ksba_writer_write (cms->writer, buf, len);
+  xfree (buf);
+  if (err)
+    return err;
+
+  /* and the encryptionAlgorithm */
+  err = _ksba_der_write_algorithm_identifier (cms->writer, 
+                                              cms->encr_algo_oid,
+                                              cms->encr_iv,
+                                              cms->encr_ivlen);
+  if (err)
+    return err;
+
+  /* write the tag for the encrypted data, it is an implicit octect
+     string in constructed form and indefinite length */
+  err = _ksba_ber_write_tl (cms->writer, 0, CLASS_CONTEXT, 1, 0);
+  if (err)
+    return err;
+
+  /* Now the encrypted data should be written */
+
+  return 0;
+}
+
 
 static KsbaError 
 ct_build_enveloped_data (KsbaCMS cms)
 {
-  return KSBA_Not_Implemented;
+  enum { 
+    sSTART,
+    sINDATA,
+    sREST,
+    sERROR
+  } state = sERROR;
+  KsbaStopReason stop_reason;
+  KsbaError err = 0;
+
+  stop_reason = cms->stop_reason;
+  cms->stop_reason = KSBA_SR_RUNNING;
+
+  /* Calculate state from last reason and do some checks */
+  if (stop_reason == KSBA_SR_GOT_CONTENT)
+    state = sSTART;
+  else if (stop_reason == KSBA_SR_BEGIN_DATA)
+    state = sINDATA;
+  else if (stop_reason == KSBA_SR_END_DATA)
+    state = sREST;
+  else if (stop_reason == KSBA_SR_RUNNING)
+    err = KSBA_Invalid_State;
+  else if (stop_reason)
+    err = KSBA_Bug;
+  
+  if (err)
+    return err;
+
+  /* Do the action */
+  if (state == sSTART)
+    err = build_enveloped_data_header (cms);
+  else if (state == sINDATA)
+    err = write_encrypted_cont (cms);
+  else if (state == sREST)
+    err = 0; /* SPHINX does no allow for unprotectedAttributes */
+  else
+    err = KSBA_Invalid_State;
+
+  if (err)
+    return err;
+
+  /* Calculate new stop reason */
+  if (state == sSTART)
+    { /* user should now write the encrypted data */
+      stop_reason = KSBA_SR_BEGIN_DATA;
+    }
+  else if (state == sINDATA)
+    { /* tell the user that we wrote everything */
+      stop_reason = KSBA_SR_END_DATA;
+    }
+  else if (state == sREST)
+    {
+      stop_reason = KSBA_SR_READY;
+    }
+
+  cms->stop_reason = stop_reason;
+  return 0;
 }
 
 

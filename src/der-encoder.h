@@ -34,9 +34,10 @@ KsbaError _ksba_der_encoder_set_writer (DerEncoder d, KsbaWriter w);
 
 KsbaError _ksba_der_encoder_encode (DerEncoder d, const char *start_name);
 
-
-KsbaError _ksba_der_write_algorithm_identifier (KsbaWriter w, const char *oid);
-
+KsbaError 
+_ksba_der_write_algorithm_identifier (KsbaWriter w,
+                                      const char *oid,
+                                      const void *parm, size_t parmlen);
 
 
 KsbaError _ksba_der_copy_tree (AsnNode dst,

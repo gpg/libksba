@@ -105,6 +105,12 @@ struct ksba_cms_s {
     size_t valuelen;
   } sig_val;
 
+  struct {
+    char *algo;
+    unsigned char *value;
+    size_t valuelen;
+  } enc_val;
+
 };
 
 

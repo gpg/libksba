@@ -336,7 +336,10 @@ parse_encrypted_content_info (KsbaReader reader,
           return err;
         }
 
-      if ( ti.class == CLASS_CONTEXT && ti.tag == 0 && !ti.is_constructed )
+      /* Note: the tag may eithe denote a constructed or a primitve
+         object.  Actually this should match the use of NDEF header
+         but we don't ceck that */
+      if ( ti.class == CLASS_CONTEXT && ti.tag == 0 )
         {
           *has_content = 1;
           if (!content_ndef)
