@@ -1,3 +1,9 @@
+2004-06-06  Werner Koch  <wk@gnupg.org>
+
+	* ksba.h: Comment cleanups.
+
+	* certreq.c (ksba_certreq_add_extension): New.
+
 2004-04-28  Werner Koch  <wk@gnupg.org>
 
 	* libksba.vers: Add new functions.

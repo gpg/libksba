@@ -41,6 +41,7 @@ KSBA_0.9 {
     ksba_certreq_release; ksba_certreq_set_hash_function; 
     ksba_certreq_set_public_key; ksba_certreq_set_sig_val;
     ksba_certreq_set_writer; 
+    ksba_certreq_add_extension;
 
     ksba_cms_add_cert; ksba_cms_add_digest_algo; ksba_cms_add_recipient; 
     ksba_cms_add_signer; ksba_cms_build; ksba_cms_get_cert;

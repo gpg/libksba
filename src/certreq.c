@@ -126,7 +126,7 @@ ksba_certreq_add_subject (ksba_certreq_t cr, const char *name)
     return gpg_error (GPG_ERR_INV_VALUE);
   if (!cr->subject.der)
     return _ksba_dn_from_str (name, &cr->subject.der, &cr->subject.derlen);
-  /* this is assumed to be an subjectAltName */
+  /* This is assumed to be an subjectAltName. */
 
   /* We only support email addresses for now, do some very basic
      checks.  Note that the way we pass the name should match what
@@ -179,6 +179,40 @@ ksba_certreq_set_public_key (ksba_certreq_t cr, ksba_const_sexp_t key)
   xfree (cr->key.der);
   cr->key.der = NULL;
   return _ksba_keyinfo_from_sexp (key, &cr->key.der, &cr->key.derlen);
+}
+
+
+/* Generic function to add an extension to a certificate request.  The
+   extension must be provided readily encoded in the buffer DER of
+   length DERLEN bytes; the OID is to be given in OID and IS_CRIT
+   should be set to true if that extension shall be marked
+   critical. */
+gpg_error_t
+ksba_certreq_add_extension (ksba_certreq_t cr,
+                            const char *oid, int is_crit,
+                            const unsigned char *der, size_t derlen)
+{
+  unsigned long namelen;
+  size_t oidlen;
+  struct extn_list_s *e;
+
+  if (!cr || !oid|| !*oid || !der || !derlen)
+    return gpg_error (GPG_ERR_INV_VALUE);
+
+  oidlen = strlen (oid);
+  e = xtrymalloc (sizeof *e + derlen + oidlen);
+  if (!e)
+    return gpg_error_from_errno (errno);
+  e->critical = is_crit;
+  e->derlen = derlen;
+  memcpy (e->der, der, derlen);
+  strcpy (e->der+derlen, oid);
+  e->oid = e->der + derlen;
+
+  e->next = cr->extn_list;
+  cr->extn_list = e;
+
+  return 0;
 }
 
 

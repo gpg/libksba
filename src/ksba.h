@@ -46,61 +46,6 @@ extern "C" {
 #endif
 
 
-/* For documentation: Mapping of the old error codes to the GPG codes.
-   Don't use this mapping; you have to use the gpg_error and
-   gpg_err_code functions anyway. */
-/* #define   KSBA_EOF          GPG_ERR_EOF */
-/* #define   KSBA_No_Error     GPG_ERR_NO_ERROR */
-/* #define   KSBA_General_Error GPG_ERR_GENERAL */
-/* #define   KSBA_Out_Of_Core   GPG_ERR_ENOMEM */
-/* #define   KSBA_Invalid_Value  GPG_ERR_INV_VALUE */
-/* #define   KSBA_Not_Implemented GPG_ERR_NOT_IMPLEMENTED */
-/* #define   KSBA_Conflict        GPG_ERR_CONFLICT */
-/* #define   KSBA_Read_Error      GPG_ERR_READ_ERROR   */
-/* #define   KSBA_Write_Error     GPG_ERR_WRITE_ERROR  */
-/* #define   KSBA_Invalid_Attr  GPG_ERR_INV_ATTR, */
-/* #define   KSBA_No_Data       GPG_ERR_NO_DATA */
-/* #define   KSBA_No_Value      GPG_ERR_NO_VALUE */
-/* #define   KSBA_Bug           GPG_ERR_BUG */
-/* #define   KSBA_BER_Error     GPG_ERR_BAD_BER */
-/* #define   KSBA_Element_Not_Found GPG_ERR_ELEMENT_NOT_FOUND */
-/* #define   KSBA_Identifier_Not_Found GPG_ERR_IDENTIFIER_NOT_FOUND */
-/* #define   KSBA_Value_Not_Found GPG_ERR_VALUE_NOT_FOUND */
-/* #define   KSBA_Syntax_Error   GPG_ERR_SYNTAX */
-/* #define   KSBA_Invalid_Tag   GPG_ERR_INV_TAG */
-/* #define   KSBA_Invalid_Length GPG_ERR_INV_LENGTH */
-/* #define   KSBA_Invalid_Keyinfo GPG_ERR_INV_KEYINFO */
-/* #define   KSBA_Unexpected_Tag  GPG_ERR_UNEXPECTED_TAG */
-/* #define   KSBA_Not_DER_Encoded GPG_ERR_NOT_DER_ENCODED */
-/* #define   KSBA_Unknown_Algorithm GPG_ERR_UNKNOWN_ALGORITHM */
-/* #define   KSBA_Unsupported_Algorithm GPG_ERR_UNSUPPORTED_ALGORITHM */
-/* #define   KSBA_Object_Too_Large GPG_ERR_TOO_LARGE */
-/* #define   KSBA_Object_Too_Short GPG_ERR_TOO_SHORT */
-/* #define   KSBA_No_CMS_Object  GPG_ERR_NO_CMS_OBJ */
-/* #define   KSBA_Unknown_CMS_Object GPG_ERR_UNKNOWN_CMS_OBJ */
-/* #define   KSBA_Unsupported_CMS_Object GPG_ERR_UNSUPPORTED_CMS_OBJ */
-/* #define   KSBA_Invalid_CMS_Object GPG_ERR_INV_CMS_OBJ */
-/* #define   KSBA_Unsupported_CMS_Version GPG_ERR_UNSUPPORTED_CMS_VERSION */
-/* #define   KSBA_Unsupported_Encoding GPG_ERR_UNSUPPORTED_ENCODING */
-/* #define   KSBA_Missing_Value GPG_ERR_MISSING_VALUE */
-/* #define   KSBA_Invalid_State GPG_ERR_INV_STATE */
-/* #define   KSBA_Duplicate_Value GPG_ERR_DUP_VALUE */
-/* #define   KSBA_Missing_Action GPG_ERR_MISSING_ACTION */
-/* #define   KSBA_File_Error     GPG_ERR_FILE_ERROR  */
-/* #define   KSBA_Module_Not_Found = GPG_ERR_MODULE_NOT_FOUND */
-/* #define   KSBA_Encoding_Error GPG_ERR_ENCODING_PROBLEM */
-/* #define   KSBA_Invalid_Index GPG_ERR_INV_INDEX */
-/* #define   KSBA_Invalid_OID_String GPG_ERR_INV_OID_STRING */
-/* #define   KSBA_Invalid_Sexp GPG_ERR_INV_SEXP */
-/* #define   KSBA_Unknown_Sexp  GPG_ERR_UNKNOWN_SEXP */
-/* #define   KSBA_Invalid_Time  GPG_ERR_INV_TIME */
-/* #define   KSBA_Buffer_Too_Short GPG_ERR_BUFFER_TOO_SHORT */
-/* #define   KSBA_Invalid_CRL_Object GPG_ERR_INV_CRL_OBJ. */
-/* #define   KSBA_Unsupported_CRL_Version GPG_ERR_UNSUPPORTED_CRL_VERSION */
-/* #define   KSBA_Unknown_Name GPG_ERR_UNKNOWN_NAME */
-/* #define   KSBA_Invalid_Cert_Object GPG_ERR_INV_CERT_OBJ */
-
-
 typedef gpg_error_t KsbaError _KSBA_DEPRECATED;
 
 typedef enum {
@@ -118,8 +63,8 @@ typedef ksba_content_type_t KsbaContentType _KSBA_DEPRECATED;
 
 
 typedef enum {
-  KSBA_SR_NONE = 0,     /* never seen by libgcrypt user */
-  KSBA_SR_RUNNING = 1,  /* never seen by libgcrypt user */
+  KSBA_SR_NONE = 0,     /* Never seen by libksba user. */
+  KSBA_SR_RUNNING = 1,  /* Never seen by libksba user. */
   KSBA_SR_GOT_CONTENT = 2,
   KSBA_SR_NEED_HASH = 3,
   KSBA_SR_BEGIN_DATA = 4,
@@ -449,11 +394,15 @@ void         ksba_certreq_set_hash_function (
                                void *hash_fnc_arg);
 gpg_error_t ksba_certreq_add_subject (ksba_certreq_t cr, const char *name);
 gpg_error_t ksba_certreq_set_public_key (ksba_certreq_t cr,
-                                       ksba_const_sexp_t key);
+                                         ksba_const_sexp_t key);
+gpg_error_t ksba_certreq_add_extension (ksba_certreq_t cr,
+                                        const char *oid, int is_crit,
+                                        const unsigned char *der,
+                                        size_t derlen);
 gpg_error_t ksba_certreq_set_sig_val (ksba_certreq_t cr,
-                                    ksba_const_sexp_t sigval);
+                                      ksba_const_sexp_t sigval);
 gpg_error_t ksba_certreq_build (ksba_certreq_t cr,
-                              ksba_stop_reason_t *r_stopreason);
+                                ksba_stop_reason_t *r_stopreason);
 
 
 /*-- reader.c --*/

@@ -1,11 +1,17 @@
 Noteworthy changes in version 0.9.7
 ------------------------------------------------
 
+ * New API function to add arbitrary extensions to pkcs#10 requests.
+
+ * Interface changes relative to the 0.9.6 release:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ksba_certreq_add_extension           NEW.
+
 
 Noteworthy changes in version 0.9.6 (2004-04-29)
 ------------------------------------------------
 
- * New API fucntions to support v2 CRLs.
+ * New API functions to support v2 CRLs.
 
  * Interface changes relative to the 0.9.5 release:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
