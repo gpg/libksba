@@ -91,6 +91,7 @@ This is edition @value{EDITION}, last updated @value{UPDATED}, of
 
 Appendices
 
+* Component Labels::            Labels used in string representations.
 * Copying::                     The GNU General Public License says how you
                                 can copy and share `GnuPG Made Easy'.
 
@@ -909,8 +910,49 @@ value @var{err}.  This string can be used to output a diagnostic
 message to the user.
 @end deftypefun
 
+@node Component Labels
+@appendix Component Labels
 
+RFC-2253 defines the following table with string representions of name
+components:
 
+@multitable {SERIALNUMBER} {organizationalUnit}  {xxx}
+@item Label   @tab  Component           @tab OID
+@item 
+@item C       @tab  countryName         @tab 2.5.4.6 
+@item CN      @tab  commonName          @tab 2.5.4.3 
+@item DC      @tab  domainComponent     @tab 0.9.2342.19200300.100.1.25 
+@item L       @tab  localityName        @tab 2.5.4.7 
+@item O       @tab  organizationName    @tab 2.5.4.10
+@item OU      @tab  organizationalUnit  @tab 2.5.4.11
+@item ST      @tab  stateOrProvince     @tab 2.5.4.8 
+@item STREET  @tab  streetAddress       @tab 2.5.4.9                   
+@item UID     @tab  userid              @tab 0.9.2342.19200300.100.1.1
+
+@end multitable
+
+They are used internally for converting a DN into its string
+representation; components not listed in this table will be
+represented by their OID.
+
+For the other direction, i.e. creating a DN from the string
+representation, Libksba recognizes the follwing extra labels:
+
+@multitable {SERIALNUMBER} {organizationalUnit}  {xxx}
+@item Label        @tab  Component        @tab OID
+@item 
+@item ADDR         @tab  postalAddress    @tab 2.5.4.16
+@item BC           @tab  businessCategory @tab 2.5.4.15
+@item D            @tab  description      @tab 2.5.4.13
+@item EMAIL        @tab  emailAddress     @tab 1.2.840.113549.1.9.1           
+@item GN           @tab  givenName        @tab 2.5.4.42
+@item POSTALCODE   @tab  postalCode       @tab 2.5.4.17
+@item PSEUDO       @tab  pseudonym        @tab 2.5.4.65
+@item SERIALNUMBER @tab  serialNumber     @tab 2.5.4.5 
+@item SN           @tab  surname          @tab 2.5.4.4 
+@item T            @tab  title            @tab 2.5.4.12
+
+@end multitable
 
 
 @include gpl.texi

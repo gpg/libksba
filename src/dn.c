@@ -33,35 +33,44 @@
 
 struct {
   const char *name;
-  int allowed_by_rfc2253;
+  int source; /* 0 = unknown
+                 1 = rfc2253
+                 2 = David Chadwick, July 2003
+                 <draft-ietf-pkix-dnstrings-02.txt> 
+                 3 = Peter Gutmann
+              */
   const char *description;
   size_t      oidlen;
   const unsigned char *oid;
-} oid_name_tbl[] = { /* see rfc2256 for a list of them */
+} oid_name_tbl[] = { 
 {"CN", 1, "CommonName",            3, "\x55\x04\x03"}, /* 2.5.4.3 */
-{"SN", 0, "SurName",               3, "\x55\x04\x04"}, /* 2.5.4.4 */
-{"SERIALNUMBER", 0, "SerialNumber",3, "\x55\x04\x05"}, /* 2.5.4.5 */
+{"SN", 2, "Surname",               3, "\x55\x04\x04"}, /* 2.5.4.4 */
+{"SERIALNUMBER", 2, "SerialNumber",3, "\x55\x04\x05"}, /* 2.5.4.5 */
 {"C",  1, "CountryName",           3, "\x55\x04\x06"}, /* 2.5.4.6 */
 {"L" , 1, "LocalityName",          3, "\x55\x04\x07"}, /* 2.5.4.7 */
 {"ST", 1, "StateOrProvince",       3, "\x55\x04\x08"}, /* 2.5.4.8 */
 {"STREET", 1, "StreetAddress",     3, "\x55\x04\x09"}, /* 2.5.4.9 */
 {"O",  1, "OrganizationName",      3, "\x55\x04\x0a"}, /* 2.5.4.10 */
 {"OU", 1, "OrganizationalUnit",    3, "\x55\x04\x0b"}, /* 2.5.4.11 */
-{"TITLE",0, "Title",               3, "\x55\x04\x0c"}, /* 2.5.4.12 */
-{"DESCRIPTION",
-       0, "Description",           3, "\x55\x04\x0d"}, /* 2.5.4.13 */
-{"BUSINESSCATEGORY",
-       0, "BusinessCategory",      3, "\x55\x04\x0f"}, /* 2.5.4.15 */
-{"POSTALADDRESS",
-       0, "PostalAddress",         3, "\x55\x04\x11"}, /* 2.5.4.16 */
+{"T",  2, "Title",                 3, "\x55\x04\x0c"}, /* 2.5.4.12 */
+{"D",
+       3, "Description",           3, "\x55\x04\x0d"}, /* 2.5.4.13 */
+{"BC",
+       3, "BusinessCategory",      3, "\x55\x04\x0f"}, /* 2.5.4.15 */
+{"ADDR",
+       2, "PostalAddress",         3, "\x55\x04\x11"}, /* 2.5.4.16 */
 {"POSTALCODE" , 0, "PostalCode",   3, "\x55\x04\x11"}, /* 2.5.4.17 */
-{"GIVENNAME"  , 0, "GivenName",    3, "\x55\x04\x2a"}, /* 2.5.4.42 */
+{"GN", 2, "GivenName",             3, "\x55\x04\x2a"}, /* 2.5.4.42 */
+{"PSEUDO", 2, "Pseudonym",         3, "\x55\x04\x41"}, /* 2.5.4.65 */
 {"DC", 1, "domainComponent",      10, 
        "\x09\x92\x26\x89\x93\xF2\x2C\x64\x01\x19"},
                             /* 0.9.2342.19200300.100.1.25 */
 {"UID", 1, "userid",              10,
        "\x09\x92\x26\x89\x93\xF2\x2C\x64\x01\x01"},
                             /* 0.9.2342.19200300.100.1.1  */
+
+{"EMAIL", 3, "emailAddress",               9,
+       "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x01" },  /* 1.2.840.113549.1.9.1 */
 
 { NULL }
 };
@@ -492,7 +501,7 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
   name = NULL;
   for (i=0; oid_name_tbl[i].name; i++)
     {
-      if (oid_name_tbl[i].allowed_by_rfc2253
+      if (oid_name_tbl[i].source == 1
           && node->len == oid_name_tbl[i].oidlen
           && !memcmp (image+node->off+node->nhdr,
                       oid_name_tbl[i].oid, node->len))

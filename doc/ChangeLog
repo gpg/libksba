@@ -1,3 +1,7 @@
+2004-01-28  Werner Koch  <wk@gnupg.org>
+
+	* ksba.info (components): Add a table of used labels.
+
 2003-12-08  Werner Koch  <wk@gnupg.org>
 
 	* Makefile.am (ksba_TEXINFOS): Removed fdl.texi.
