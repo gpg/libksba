@@ -1,0 +1,33 @@
+
+
+Certificates downloaded from http://www.magmacom.com/~mbartel/iso/\
+certificates/samples/sample_certificates.html on 2003-11-20:
+
+ authority.crt   A root certificate
+ betsy.crt       An "everyday" certificate.
+ bull.crt        Same but includes a BMPString.
+
+   Note, that these certs use MD2.
+
+
+Certificates downloaded from 
+http://www.openvalidation.org/download/downloadrootcertsCA1.htm and
+on 2003-11-20 and prefixed with "ov-":
+
+ ov-root-ca-cert.crt   Root certificate
+ ov-ocsp-server.crt    The certificate of the OCSP responder
+ ov-user.crt           User certificate
+ ov-userrev.crt        A user certificate revoked by OCSP
+ ov-server.crt         A server (SSL) certificate
+ ov-serverrev.crt      A server certificate revoked by OCSP
+
+ ov-user.p12           Private keys for the above certificates,
+ ov-userrev.p12        passphrase is "start".
+ ov-server.p12
+ ov-serverrev.p12
+
+ ov-test-crl.crl      The current CRL
+
+   The responder adress is http://ocsp.openvalidation.org
+
+
