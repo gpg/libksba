@@ -21,7 +21,7 @@
 
 asn1_modules = tmttv2.asn cms.asn
 
-EXTRA_DIST = ksba-config.in $(asn1_modules) ksba.m4
+EXTRA_DIST = ksba-config.in $(asn1_modules) ksba.m4 libksba.vers
 BUILT_SOURCES = asn1-parse.c asn1-tables.c
 DISTCLEANFILES = asn1-tables.c
 bin_SCRIPTS = ksba-config
