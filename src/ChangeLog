@@ -1,3 +1,17 @@
+2002-01-22  Werner Koch  <wk@gnupg.org>
+
+	* cert.c (ksba_cert_is_ca): New.
+
+	* ber-help.c (premature_eof): New.
+	(eof_or_error): Use it here.
+	(_ksba_ber_parse_tl): New.
+
+2002-01-21  Werner Koch  <wk@gnupg.org>
+
+	* cert.c (ksba_cert_get_extension): New.
+	(read_extensions): New.
+	(ksba_cert_release): Release the cached extension info.
+
 2002-01-14  Werner Koch  <wk@gnupg.org>
 
 	* dn.c: Fixed oid table according to rfc2253.

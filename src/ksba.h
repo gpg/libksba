@@ -80,7 +80,8 @@ typedef enum {
   KSBA_Buffer_Too_Short = 45,
   KSBA_Invalid_CRL_Object = 46,
   KSBA_Unsupported_CRL_Version = 47,
-  KSBA_Unknown_Name = 48
+  KSBA_Unknown_Name = 48,
+  KSBA_Invalid_Cert_Object =49
 } KsbaError;
 
 
@@ -186,6 +187,12 @@ time_t ksba_cert_get_validity (KsbaCert cert, int what);
 char *ksba_cert_get_subject (KsbaCert cert, int idx);
 KsbaSexp ksba_cert_get_public_key (KsbaCert cert);
 KsbaSexp ksba_cert_get_sig_val (KsbaCert cert);
+
+KsbaError ksba_cert_get_extension (KsbaCert cert, int idx,
+                                   char const **r_oid, int *r_crit,
+                                   size_t *r_deroff, size_t *r_derlen);
+
+KsbaError ksba_cert_is_ca (KsbaCert cert, int *r_ca, int *r_pathlen);
 
 
 /*-- cms.c --*/

@@ -26,6 +26,7 @@
 
 #include "util.h"
 #include "ber-decoder.h"
+#include "ber-help.h"
 #include "convert.h"
 #include "keyinfo.h"
 #include "cert.h"
@@ -55,7 +56,7 @@ void
 ksba_cert_ref (KsbaCert cert)
 {
   if (!cert)
-      fprintf (stderr, "BUG: ksba_cert_ref for NULL\n");
+    fprintf (stderr, "BUG: ksba_cert_ref for NULL\n");
   else
     ++cert->ref_count;
 }
@@ -69,6 +70,8 @@ ksba_cert_ref (KsbaCert cert)
 void
 ksba_cert_release (KsbaCert cert)
 {
+  int i;
+
   if (!cert)
     return;
   if (cert->ref_count < 1)
@@ -80,6 +83,13 @@ ksba_cert_release (KsbaCert cert)
     return;
 
   xfree (cert->cache.digest_algo);
+  if (cert->cache.extns_valid)
+    {
+      for (i=0; i < cert->cache.n_extns; i++)
+        xfree (cert->cache.extns[i].oid);
+      xfree (cert->cache.extns);
+    }
+
   /* FIXME: release cert->root, ->asn_tree */
   xfree (cert);
 }
@@ -383,7 +393,7 @@ ksba_cert_get_issuer (KsbaCert cert, int idx)
  * @what: 0 for notBefore, 1 for notAfter
  * 
  * Return the validity object from the certificate.  If no value is
- * available 0 is returned becuase we can safely assume that this is
+ * available 0 is returned because we can safely assume that this is
  * not a valid date.
  * 
  * Return value: seconds since epoch, 0 for no value or (time)-1 for error.
@@ -533,7 +543,216 @@ ksba_cert_get_sig_val (KsbaCert cert)
   return string;
 }
 
+
+/* Read all extensions into the cache */
+static KsbaError
+read_extensions (KsbaCert cert) 
+{
+  AsnNode start, n;
+  int count;
+
+  assert (!cert->cache.extns_valid);
+  assert (!cert->cache.extns);
+
+  start = _ksba_asn_find_node (cert->root,
+                               "Certificate.tbsCertificate.extensions..");
+  for (count=0, n=start; n; n = n->right)
+    count++;
+  if (!count)
+    {
+      cert->cache.n_extns = 0;
+      cert->cache.extns_valid = 1;
+      return 0; /* no extensions at all */
+    }
+  cert->cache.extns = xtrycalloc (count, sizeof *cert->cache.extns);
+  if (!cert->cache.extns)
+    return KSBA_Out_Of_Core;
+  cert->cache.n_extns = count;
+
+  {
+    for (count=0; start; start = start->right, count++)
+      {
+        n = start->down;
+        if (!n || n->type != TYPE_OBJECT_ID)
+          goto no_value;
+        
+        cert->cache.extns[count].oid = _ksba_oid_node_to_str (cert->image, n);
+        if (!cert->cache.extns[count].oid)
+          goto no_value;
+        
+        n = n->right;
+        if (n && n->type == TYPE_BOOLEAN)
+          {
+            if (n->off != -1 && n->len && cert->image[n->off + n->nhdr])
+              cert->cache.extns[count].crit = 1;
+            n = n->right;
+          }
+        
+        if (!n || n->type != TYPE_OCTET_STRING || n->off == -1)
+          goto no_value;
+        
+        cert->cache.extns[count].off = n->off + n->nhdr;
+        cert->cache.extns[count].len = n->len;
+      }
+    
+    assert (count == cert->cache.n_extns);
+    cert->cache.extns_valid = 1;
+    return 0;
+    
+  no_value:
+    for (count=0; count < cert->cache.n_extns; count++)
+      xfree (cert->cache.extns[count].oid);
+    xfree (cert->cache.extns);
+    cert->cache.extns = NULL;
+    return KSBA_No_Value;
+  }
+}
 
 
+/* Return information about the IDX nth extension */
+KsbaError
+ksba_cert_get_extension (KsbaCert cert, int idx,
+                         char const **r_oid, int *r_crit,
+                         size_t *r_deroff, size_t *r_derlen)
+{
+  KsbaError err;
 
+  if (!cert)
+    return KSBA_Invalid_Value;
+  if (!cert->initialized)
+    return KSBA_No_Data;
+
+  if (!cert->cache.extns_valid)
+    {
+      err = read_extensions (cert);
+      if (err)
+        return err;
+      assert (cert->cache.extns_valid);
+    }
+
+  if (idx == cert->cache.n_extns)
+    return -1; /* mo more extensions */
+
+  if (idx < 0 || idx >= cert->cache.n_extns)
+    return KSBA_Invalid_Index;
+  
+  if (r_oid)
+    *r_oid = cert->cache.extns[idx].oid;
+  if (r_crit)
+    *r_crit = cert->cache.extns[idx].crit;
+  if (r_deroff)
+    *r_deroff = cert->cache.extns[idx].off;
+  if (r_derlen)
+    *r_derlen = cert->cache.extns[idx].len;
+  return 0;
+}
+
+
+
+/* Return information on the basicConstraint (2.5.19.19) of CERT.
+   R_CA receives true if this is a CA and only in that case R_PATHLEN
+   is set to the maximim certification path length or -1 if there is
+   nosuch limitation */
+KsbaError
+ksba_cert_is_ca (KsbaCert cert, int *r_ca, int *r_pathlen)
+{
+  KsbaError err;
+  const char *oid;
+  int idx, crit;
+  size_t off, derlen, seqlen;
+  const unsigned char *der;
+  struct tag_info ti;
+  unsigned long value;
+
+  /* set default values */
+  if (r_ca)
+    *r_ca = 0;
+  if (r_pathlen)
+    *r_pathlen = -1;
+  for (idx=0; !(err=ksba_cert_get_extension (cert, idx, &oid, &crit,
+                                             &off, &derlen)); idx++)
+    {
+      if (!strcmp (oid, "2.5.29.19"))
+        break;
+    }
+  if (err == -1)
+      return 0; /* no such constraint */
+  if (err)
+    return err;
+    
+  /* check that there is only one */
+  for (idx++; !(err=ksba_cert_get_extension (cert, idx, &oid, NULL,
+                                             NULL, NULL)); idx++)
+    {
+      if (!strcmp (oid, "2.5.29.19"))
+        return KSBA_Duplicate_Value; 
+    }
+  
+  der = cert->image + off;
+ 
+  err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+  if (err)
+    return err;
+  if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+         && ti.is_constructed) )
+    return KSBA_Invalid_Cert_Object;
+  if (ti.ndef)
+    return KSBA_Not_DER_Encoded;
+  seqlen = ti.length;
+  if (seqlen > derlen)
+    return KSBA_BER_Error;
+  if (!seqlen)
+    return 0; /* an empty sequence is allowed because both elements
+                 are optional */
+
+  err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+  if (err)
+    return err;
+  if (seqlen < ti.nhdr)
+    return KSBA_BER_Error;
+  seqlen -= ti.nhdr;
+  if (seqlen < ti.length)
+    return KSBA_BER_Error; 
+  seqlen -= ti.length;
+
+  if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_BOOLEAN)
+    { 
+      if (ti.length != 1)
+        return KSBA_Encoding_Error;
+      if (r_ca)
+        *r_ca = !!*der;
+      der++; derlen--;
+      if (!seqlen)
+        return 0; /* ready (no pathlength) */
+
+      err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+      if (err)
+        return err;
+      if (seqlen < ti.nhdr)
+        return KSBA_BER_Error;
+      seqlen -= ti.nhdr;
+      if (seqlen < ti.length)
+        return KSBA_BER_Error;
+      seqlen -= ti.length;
+    }
+
+  if (!(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_INTEGER))
+    return KSBA_Invalid_Cert_Object;
+  
+  for (value=0; ti.length; ti.length--)
+    {
+      value <<= 8;
+      value |= (*der++) & 0xff; 
+      derlen--;
+    }
+  if (r_pathlen)
+    *r_pathlen = value;
+
+  /* if the extension is marked as critical and any stuff is still
+     left we better return an error */
+  if (crit && seqlen)
+    return KSBA_Invalid_Cert_Object;
+
+  return 0;
+}
 

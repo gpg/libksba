@@ -23,6 +23,14 @@
 
 #include "asn1-func.h"
 
+
+struct cert_extn_info {
+  char *oid;
+  int crit;
+  int off, len;
+};
+
+
 struct ksba_cert_s {
   int initialized;
   int ref_count;
@@ -33,9 +41,11 @@ struct ksba_cert_s {
   KsbaError last_error;
   struct {
     char *digest_algo;
+    int  extns_valid;
+    int  n_extns;
+    struct cert_extn_info *extns;
   } cache;
 };
-
 
 
 

@@ -42,6 +42,16 @@ read_byte (KsbaReader reader)
   return rc? -1: buf;
 }
 
+
+static int
+premature_eof (struct tag_info *ti)
+{
+  ti->err_string = "premature EOF";
+  return KSBA_BER_Error;
+}
+
+
+
 static int
 eof_or_error (KsbaReader reader, struct tag_info *ti, int premature)
 {
@@ -51,10 +61,8 @@ eof_or_error (KsbaReader reader, struct tag_info *ti, int premature)
       return KSBA_Read_Error;
     }
   if (premature)
-    {
-      ti->err_string = "premature EOF";
-      return KSBA_BER_Error;
-    }
+    return premature_eof (ti);
+
   return -1;
 }
 
@@ -157,6 +165,112 @@ _ksba_ber_read_tl (KsbaReader reader, struct tag_info *ti)
   if (ti->class == CLASS_UNIVERSAL && !ti->tag)
     ti->length = 0;
   
+  return 0;
+}
+
+/*
+   Parse the buffer at the address BUFFER which of SIZE and return
+   the tag and the length part from the TLV triplet.  Update BUFFER
+   and SIZE on success. */
+KsbaError
+_ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
+                    struct tag_info *ti)
+{
+  int c;
+  unsigned long tag;
+  const unsigned char *buf = *buffer;
+  size_t length = *size;
+
+  ti->length = 0;
+  ti->ndef = 0;
+  ti->nhdr = 0;
+  ti->err_string = NULL;
+  ti->non_der = 0;
+
+  /* Get the tag */
+  if (!length)
+    return premature_eof (ti);
+  c = *buf++; length--;
+
+  ti->buf[ti->nhdr++] = c;
+  ti->class = (c & 0xc0) >> 6;
+  ti->is_constructed = !!(c & 0x20);
+  tag = c & 0x1f;
+
+  if (tag == 0x1f)
+    {
+      tag = 0;
+      do
+        {
+          /* fixme: check for overflow of our datatype */
+          tag <<= 7;
+          if (!length)
+            return premature_eof (ti);
+          c = *buf++; length--;
+          if (ti->nhdr >= DIM (ti->buf))
+            {
+              ti->err_string = "tag+length header too large";
+              return KSBA_BER_Error;
+            }
+          ti->buf[ti->nhdr++] = c;
+          tag |= c & 0x7f;
+        }
+      while (c & 0x80);
+    }
+  ti->tag = tag;
+
+  /* Get the length */
+  if (!length)
+    return premature_eof (ti);
+  c = *buf++; length--;
+  if (ti->nhdr >= DIM (ti->buf))
+    {
+      ti->err_string = "tag+length header too large";
+      return KSBA_BER_Error;
+    }
+  ti->buf[ti->nhdr++] = c;
+
+  if ( !(c & 0x80) )
+    ti->length = c;
+  else if (c == 0x80)
+    {
+      ti->ndef = 1;
+      ti->non_der = 1;
+    }
+  else if (c == 0xff)
+    {
+      ti->err_string = "forbidden length value";
+      return KSBA_BER_Error;
+    }
+  else
+    {
+      unsigned long len = 0;
+      int count = c & 0x7f;
+
+      /* fixme: check for overflow of our length type */
+      for (; count; count--)
+        {
+          len <<= 8;
+          if (!length)
+            return premature_eof (ti);
+          c = *buf++; length--;
+          if (ti->nhdr >= DIM (ti->buf))
+            {
+              ti->err_string = "tag+length header too large";
+              return KSBA_BER_Error;
+            }
+          ti->buf[ti->nhdr++] = c;
+          len |= c & 0xff;
+        }
+      ti->length = len;
+    }
+  
+  /* Without this kludge some example certs can't be parsed */
+  if (ti->class == CLASS_UNIVERSAL && !ti->tag)
+    ti->length = 0;
+  
+  *buffer = buf;
+  *size = length;
   return 0;
 }
 

@@ -104,7 +104,7 @@ ksba_oid_to_str (const char *buffer, size_t length)
 }
 
 
-/* Take the OID at the given and return it in string format */
+/* Take the OID at NODE and return it in string format */
 char *
 _ksba_oid_node_to_str (const unsigned char *image, AsnNode node) 
 {
