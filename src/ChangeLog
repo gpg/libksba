@@ -1,3 +1,7 @@
+2002-07-02  Werner Koch  <wk@gnupg.org>
+
+	* certreq.c (ksba_certreq_set_sig_val): Don't store a leanding zero.
+
 2002-06-27  Werner Koch  <wk@gnupg.org>
 
 	* cert.c (ksba_cert_get_auth_key_id): Skip keyIdentifier tag.

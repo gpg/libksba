@@ -264,6 +264,12 @@ ksba_certreq_set_sig_val (KsbaCertreq cr, KsbaConstSexp sigval)
   if (!n || *s != ':')
     return KSBA_Invalid_Sexp; 
   s++;
+  if (n > 1 && !*s)
+    { /* We might have a leading zero due to the way we encode 
+         MPIs - this zero should not go into the BIT STRING.  */
+      s++;
+      n--;
+    }
   xfree (cr->sig_val.value);
   cr->sig_val.value = xtrymalloc (n);
   if (!cr->sig_val.value)
