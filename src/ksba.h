@@ -72,6 +72,7 @@ typedef enum {
   KSBA_Module_Not_Found = 37,
   KSBA_Encoding_Error = 38,
   KSBA_Invalid_Index = 39,
+  KSBA_Invalid_OID_String = 40,
 } KsbaError;
 
 
@@ -152,6 +153,7 @@ void    ksba_cms_release (KsbaCMS cms);
 KsbaError ksba_cms_set_reader_writer (KsbaCMS cms, KsbaReader r, KsbaWriter w);
 
 KsbaError ksba_cms_parse (KsbaCMS cms, KsbaStopReason *r_stopreason);
+KsbaError ksba_cms_build (KsbaCMS cms, KsbaStopReason *r_stopreason);
 
 KsbaContentType ksba_cms_get_content_type (KsbaCMS cms, int what);
 const char *ksba_cms_get_content_oid (KsbaCMS cms, int what);

@@ -32,10 +32,12 @@
 #include "ber-help.h"
 #include "cert.h" /* need to access cert->root and cert->image */
 
+static KsbaError ct_parse_data (KsbaCMS cms);
 static KsbaError ct_parse_signed_data (KsbaCMS cms);
 static KsbaError ct_parse_enveloped_data (KsbaCMS cms);
 static KsbaError ct_parse_digested_data (KsbaCMS cms);
 static KsbaError ct_parse_encrypted_data (KsbaCMS cms);
+static KsbaError ct_build_data (KsbaCMS cms);
 static KsbaError ct_build_signed_data (KsbaCMS cms);
 static KsbaError ct_build_enveloped_data (KsbaCMS cms);
 static KsbaError ct_build_digested_data (KsbaCMS cms);
@@ -47,7 +49,8 @@ static struct {
   KsbaError (*parse_handler)(KsbaCMS);
   KsbaError (*build_handler)(KsbaCMS);
 } content_handlers[] = {
-  {  "1.2.840.113549.1.7.1", KSBA_CT_DATA             },
+  {  "1.2.840.113549.1.7.1", KSBA_CT_DATA,
+     ct_parse_data   , ct_build_data                  },
   {  "1.2.840.113549.1.7.2", KSBA_CT_SIGNED_DATA,
      ct_parse_signed_data   , ct_build_signed_data    },
   {  "1.2.840.113549.1.7.3", KSBA_CT_ENVELOPED_DATA,
@@ -60,7 +63,7 @@ static struct {
   { NULL }
 };
 
-/* 1.2.840.113549.1.9.4 */
+static char oidstr_messageDigest[] = "1.2.840.113549.1.9.4";
 static char oid_messageDigest[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x04";
 
 
@@ -107,6 +110,8 @@ ksba_cms_release (KsbaCMS cms)
     {
       struct certlist_s *cl = cms->cert_list->next;
       ksba_cert_release (cms->cert_list->cert);
+      _ksba_asn_release_nodes (cms->cert_list->attr.root);
+      xfree (cms->cert_list->attr.image);
       xfree (cms->cert_list);
       cms->cert_list = cl;
     }
@@ -617,7 +622,7 @@ ksba_cms_set_content_type (KsbaCMS cms, int what, KsbaContentType type)
  * @cms:  A CMS object 
  * @oid: A stringified object OID describing the hash algorithm
  * 
- * Set the algorithm to be used for crerating the hash. Note, that we
+ * Set the algorithm to be used for creating the hash. Note, that we
  * currently can't do a per-signer hash.
  * 
  * Return value: o on success or an error code
@@ -679,38 +684,6 @@ ksba_cms_add_signer (KsbaCMS cms, KsbaCert cert)
 }
 
 
-/* Add the issuer/serial from the cert to the sid list */
-static KsbaError
-add_issuer_serial (KsbaCMS cms, KsbaCert cert)
-{
-  KsbaError err;
-  AsnNode dst, src;
-
-  if (!cms)
-    return KSBA_Invalid_Value;
-  if (!cms->signer_info.root)
-    return KSBA_Conflict;
-
-  src = _ksba_asn_find_node (cert->root,
-                             "Certificate.tbsCertificate.serialNumber");
-  dst = _ksba_asn_find_node (cms->signer_info.root,
-                      "SignerInfos..sid.issuerAndSerialNumber.serialNumber");
-  err = _ksba_der_copy_tree (dst, src, cert->image);
-  if (err)
-    return err;
-
-  src = _ksba_asn_find_node (cert->root,
-                             "Certificate.tbsCertificate.issuer");
-  dst = _ksba_asn_find_node (cms->signer_info.root,
-                      "SignerInfos..sid.issuerAndSerialNumber.issuer");
-  err = _ksba_der_copy_tree (dst, src, cert->image);
-  if (err)
-    return err;
-
-
-  return 0;
-}
-
 
 /**
  * ksba_cms_set_message_digest:
@@ -729,7 +702,7 @@ add_issuer_serial (KsbaCMS cms, KsbaCert cert)
  * Return value: 0 on success or an error code
  **/
 KsbaError
-ksba_cms_set_message_digest (KsbaCMS cms, int idx,
+ksba_cms_set_message_digest (KsbaCMS cms, int idx, 
                              const char *digest, size_t digest_len)
 { 
   struct certlist_s *cl;
@@ -758,6 +731,13 @@ ksba_cms_set_message_digest (KsbaCMS cms, int idx,
 /*
    Content handler for parsing messages
 */
+
+static KsbaError 
+ct_parse_data (KsbaCMS cms)
+{
+  return KSBA_Not_Implemented;
+}
+
 
 static KsbaError 
 ct_parse_signed_data (KsbaCMS cms)
@@ -865,6 +845,13 @@ ct_parse_encrypted_data (KsbaCMS cms)
    Content handlers for building messages
 */
 
+static KsbaError 
+ct_build_data (KsbaCMS cms)
+{
+  return KSBA_Not_Implemented;
+}
+
+
 
 /* write everything up to the encapsulated data content type */
 static KsbaError
@@ -895,6 +882,10 @@ build_signed_data_header (KsbaCMS cms)
   if (err)
     return err;
   
+  /* The SEQUENCE */
+  err = _ksba_ber_write_tl (cms->writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, 0);
+  if (err)
+    return err;
 
   /* figure out the CMSVersion to be used */
   if (1 /* fixme: have_attribute_certificates 
@@ -911,6 +902,10 @@ build_signed_data_header (KsbaCMS cms)
     return err;
   
   /* SET OF DigestAlgorithmIdentifier */
+  /* FIXME: We write a set with one element and assume a length of 11 !!*/
+  err = _ksba_ber_write_tl (cms->writer, TYPE_SET, CLASS_UNIVERSAL, 1, 11);
+  if (err)
+    return err;
   for (i=0; (s = ksba_cms_get_digest_algo_list (cms, i)); i++)
     {
       err = _ksba_der_write_algorithm_identifier (cms->writer, s);
@@ -919,6 +914,8 @@ build_signed_data_header (KsbaCMS cms)
     }
 
   /* Write the (inner) encapsulatedContentInfo */
+  /* if we have a detached signature we don't need to use undefinite
+     length here - but it doesn't matter either */
   err = _ksba_ber_write_tl (cms->writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, 0);
   if (err)
     return err;
@@ -932,12 +929,48 @@ build_signed_data_header (KsbaCMS cms)
   xfree (buf);
   if (err)
     return err;
-  err = _ksba_ber_write_tl (cms->writer, 0, CLASS_CONTEXT, 1, 0);
-  if (err)
-    return err;
-  
+
+  if ( !cms->detached_signature)
+    { /* write the tag */
+      err = _ksba_ber_write_tl (cms->writer, 0, CLASS_CONTEXT, 1, 0);
+      if (err)
+        return err;
+    }
+
   return err;
 }
+
+/* Set the issuer/serial from the cert to the node */
+static KsbaError
+set_issuer_serial (AsnNode signer_info, KsbaCert cert)
+{
+  KsbaError err;
+  AsnNode dst, src;
+
+  if (!signer_info || !cert)
+    return KSBA_Invalid_Value;
+
+  src = _ksba_asn_find_node (cert->root,
+                             "Certificate.tbsCertificate.serialNumber");
+  dst = _ksba_asn_find_node (signer_info,
+                             "sid.issuerAndSerialNumber.serialNumber");
+  err = _ksba_der_copy_tree (dst, src, cert->image);
+  if (err)
+    return err;
+
+  src = _ksba_asn_find_node (cert->root,
+                             "Certificate.tbsCertificate.issuer");
+  dst = _ksba_asn_find_node (signer_info,
+                             "sid.issuerAndSerialNumber.issuer");
+  err = _ksba_der_copy_tree (dst, src, cert->image);
+  if (err)
+    return err;
+
+
+  return 0;
+}
+
+
 
 /* Write the END of data NULL tag and everything we can write before
    the user can calculate the signature */
@@ -945,10 +978,13 @@ static KsbaError
 build_signed_data_attributes (KsbaCMS cms) 
 {
   KsbaError err;
+  int signer;
+  KsbaAsnTree cms_tree;
+  struct certlist_s *certlist;
+  struct oidlist_s *digestlist;
 
-
-  /* The NULL tag to end the data */
-  err = _ksba_ber_write_tl (cms->writer, TYPE_NULL, CLASS_UNIVERSAL, 0, 0);
+  /* Write the End tag */
+  err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
   if (err)
     return err;
 
@@ -956,13 +992,237 @@ build_signed_data_attributes (KsbaCMS cms)
 
   /* FIXME: Write the optional CRLs */
 
-  /* Now we have to prepare the signer info */
+
+  /* Now we have to prepare the signer info.  For now we will just build the
+     signedAttributes, so that the suer can do the signature calculation */
+  err = ksba_asn_create_tree ("cms", &cms_tree);
+  if (err)
+    return err;
+  /* fixme: we must release root and cms_tree on error */
+
+  certlist = cms->cert_list;
+  if (!certlist)
+    return KSBA_Missing_Value; /* oops */
+  digestlist = cms->digest_algos;
+  if (!digestlist)
+    return KSBA_Missing_Value; /* oops */
+
+  for (signer=0; certlist;
+       signer++, certlist = certlist->next, digestlist = digestlist->next)
+    {
+      AsnNode attr, root;
+      AsnNode n;
+      unsigned char *image;
+
+      if (!digestlist)
+        return KSBA_Missing_Value; /* oops */
+
+      if (!certlist->cert || !digestlist->oid)
+        return KSBA_Bug;
+
+      /* the message digest is pretty important */
+      attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+                                    "CryptographicMessageSyntax.Attribute");
+      if (!attr)
+        return KSBA_Element_Not_Found;
+      n = _ksba_asn_find_node (attr, "Attribute.attrType");
+      if (!n)
+        return KSBA_Element_Not_Found;
+      err = _ksba_der_store_oid (n, oidstr_messageDigest);
+      if (err)
+        return err;
+      n = _ksba_asn_find_node (attr, "Attribute.attrValues");
+      if (!n || !n->down)
+        return KSBA_Element_Not_Found;
+      n = n->down; /* fixme: ugly hack */
+      assert (certlist && certlist->msg_digest_len);
+      err = _ksba_der_store_octet_string (n, certlist->msg_digest,
+                                          certlist->msg_digest_len);
+      if (err)
+        return err;
+      
+      err = _ksba_der_encode_tree (attr, &image, NULL);
+      if (err)
+          return err;
+      /* we will use the attributes again - so save them */
+      certlist->attr.root = attr;
+      certlist->attr.image = image;
+
+      /* now copy them to an SignerInfos tree.  This tree is not
+         complete but suitable for ksba_cms_hash_igned_attributes() */
+      root = _ksba_asn_expand_tree (cms_tree->parse_tree,  
+                                    "CryptographicMessageSyntax.SignerInfos"); 
+      n = _ksba_asn_find_node (root, "SignerInfos..signedAttrs");
+      if (!n || !n->down) 
+        return KSBA_Element_Not_Found; 
+
+      /* This is another ugly hack to move to the element we want */
+      for (n = n->down->down; n && n->type != TYPE_SEQUENCE; n = n->right)
+        ;
+      if (!n) 
+        return KSBA_Element_Not_Found; 
+
+      err = _ksba_der_copy_tree (n, attr, image);
+      if (err)
+        return err;
+      image = NULL;
+
+      err = _ksba_der_encode_tree (root, &image, NULL);
+      if (err)
+          return err;
+
+      /* fixme: the signer_info structure can only save one signerinfo */
+      _ksba_asn_release_nodes (cms->signer_info.root);
+      xfree (cms->signer_info.image);
+      cms->signer_info.root = root;
+      cms->signer_info.image = image;
+    }
+
+  return 0;
+}
 
 
+
+
+/* The user has calculated the signatures and we can therefore write
+   everything left over to do. */
+static KsbaError 
+build_signed_data_rest (KsbaCMS cms) 
+{
+  KsbaError err;
+  int signer;
+  KsbaAsnTree cms_tree;
+  struct certlist_s *certlist;
+  struct oidlist_s *digestlist;
+
+  /* Now we can really write the signer info */
+  err = ksba_asn_create_tree ("cms", &cms_tree);
+  if (err)
+    return err;
+  /* fixme: we must release root and cms_tree on error */
+
+  certlist = cms->cert_list;
+  if (!certlist)
+    return KSBA_Missing_Value; /* oops */
+  digestlist = cms->digest_algos;
+  if (!digestlist)
+    return KSBA_Missing_Value; /* oops */
+
+  for (signer=0; certlist;
+       signer++, certlist = certlist->next, digestlist = digestlist->next)
+    {
+      AsnNode root;
+      AsnNode n;
+      unsigned char *image;
+      size_t imagelen;
+
+      if (!digestlist)
+        return KSBA_Missing_Value; /* oops */
+      if (!certlist->cert || !digestlist->oid)
+        return KSBA_Bug;
+
+      root = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+                                    "CryptographicMessageSyntax.SignerInfos");
+
+      /* We store a version of 1 because we use the issuerAndSerialNumber */
+      n = _ksba_asn_find_node (root, "SignerInfos..version");
+      if (!n)
+        return KSBA_Element_Not_Found;
+      err = _ksba_der_store_integer (n, "\x00\x00\x00\x01\x01");
+      if (err)
+        return err;
+
+      /* Store the sid */
+      n = _ksba_asn_find_node (root, "SignerInfos..sid");
+      if (!n)
+        return KSBA_Element_Not_Found;
+
+      err = set_issuer_serial (n, certlist->cert);
+      if (err)
+        return err;
+
+      /* store the digestAlgorithm */
+      n = _ksba_asn_find_node (root, "SignerInfos..digestAlgorithm.algorithm");
+      if (!n)
+        return KSBA_Element_Not_Found;
+      err = _ksba_der_store_oid (n, digestlist->oid);
+      if (err)
+        return err;
+      n = _ksba_asn_find_node (root, "SignerInfos..digestAlgorithm.parameters");
+      if (!n)
+        return KSBA_Element_Not_Found;
+      err = _ksba_der_store_null (n);
+      if (err)
+        return err;
+
+      /* and the signed attributes */
+      n = _ksba_asn_find_node (root, "SignerInfos..signedAttrs");
+      if (!n || !n->down) 
+        return KSBA_Element_Not_Found; 
+
+      /* This is another ugly hack to move to the element we want */
+      for (n = n->down->down; n && n->type != TYPE_SEQUENCE; n = n->right)
+        ;
+      if (!n) 
+        return KSBA_Element_Not_Found; 
+
+
+      assert (certlist->attr.root);
+      assert (certlist->attr.image);
+      err = _ksba_der_copy_tree (n, certlist->attr.root, certlist->attr.image);
+      if (err)
+        return err;
+      image = NULL;
+
+      /* store the signatureAlgorithm */
+      n = _ksba_asn_find_node (root, "SignerInfos..signatureAlgorithm.algorithm");
+      if (!n)
+        return KSBA_Element_Not_Found;
+      err = _ksba_der_store_oid (n, digestlist->oid); /* fixme */
+      if (err)
+        return err;
+      n = _ksba_asn_find_node (root, "SignerInfos..signatureAlgorithm.parameters");
+      if (!n)
+        return KSBA_Element_Not_Found;
+      err = _ksba_der_store_null (n);
+      if (err)
+        return err;
+
+      /* store the signature  */
+      n = _ksba_asn_find_node (root, "SignerInfos..signature");
+      if (!n)
+        return KSBA_Element_Not_Found;
+      err = _ksba_der_store_octet_string (n, "xxxxx", 5); /* fixme */
+      if (err)
+        return err;
+
+
+      /* Make the DER encoding and write it out */
+      err = _ksba_der_encode_tree (root, &image, &imagelen);
+      if (err)
+          return err;
+      if (!signer && imagelen)
+          *image = 0xa0;  /* this has an implicit tag - change it */
+      err = ksba_writer_write (cms->writer, image, imagelen);
+      if (err )
+        return err;
+      /* fixme: release what we don't need */
+    }
+
+
+  /* HACK for testing */
+  err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
+  if (err)
+    return err;
+  err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
+  if (err)
+    return err;
 
 
   return 0;
 }
+
+
 
 
 static KsbaError 
@@ -971,11 +1231,13 @@ ct_build_signed_data (KsbaCMS cms)
   enum { 
     sSTART,
     sDATAREADY,
+    sGOTSIG,
     sERROR
   } state = sERROR;
-  KsbaStopReason stop_reason = cms->stop_reason;
+  KsbaStopReason stop_reason;
   KsbaError err = 0;
 
+  stop_reason = cms->stop_reason;
   cms->stop_reason = KSBA_SR_RUNNING;
 
   /* Calculate state from last reason and do some checks */
@@ -988,6 +1250,10 @@ ct_build_signed_data (KsbaCMS cms)
       /* fixme: check that the message digest has been set */
       state = sDATAREADY;
     }
+  else if (stop_reason == KSBA_SR_END_DATA)
+    state = sDATAREADY;
+  else if (stop_reason == KSBA_SR_NEED_SIG)
+    state = sGOTSIG;
   else if (stop_reason == KSBA_SR_RUNNING)
     err = KSBA_Invalid_State;
   else if (stop_reason)
@@ -998,9 +1264,19 @@ ct_build_signed_data (KsbaCMS cms)
 
   /* Do the action */
   if (state == sSTART)
-    err = build_signed_data_header (cms);
+    {
+      /* figure out whether a detached signature is requested */
+      if (cms->cert_list && cms->cert_list->msg_digest_len)
+        cms->detached_signature = 1;
+      else
+        cms->detached_signature = 0;
+      /* and start encoding */
+      err = build_signed_data_header (cms);
+    }
   else if (state == sDATAREADY)
     err = build_signed_data_attributes (cms);
+  else if (state == sGOTSIG)
+    err = build_signed_data_rest (cms);
   else
     err = KSBA_Invalid_State;
 
@@ -1010,11 +1286,15 @@ ct_build_signed_data (KsbaCMS cms)
   /* Calculate new stop reason */
   if (state == sSTART)
     {
-      /* user should write the data */
-      stop_reason = KSBA_SR_BEGIN_DATA;
+      /* user should write the data and calculate the hash or do
+         nothing in case of END_DATA */
+      stop_reason = cms->detached_signature? KSBA_SR_END_DATA
+                                           : KSBA_SR_BEGIN_DATA;
     }
   else if (state == sDATAREADY)
     stop_reason = KSBA_SR_NEED_SIG;
+  else if (state == sGOTSIG)
+    stop_reason = KSBA_SR_READY;
     
   cms->stop_reason = stop_reason;
   return 0;

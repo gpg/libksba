@@ -28,6 +28,10 @@
 #include "asn1-func.h"
 #include "convert.h"
 
+#define digitp(p)   (*(p) >= 0 && *(p) <= '9')
+
+
+
 /**
  * ksba_oid_to_str:
  * @buffer: A BER encoded OID
@@ -67,7 +71,7 @@ ksba_oid_to_str (const char *buffer, size_t length)
       return string;
     }
 
-  /* fixme: open code the sprintf so that we can open with arbitrary
+  /* fixme: open code the sprintf so that we can cope with arbitrary
      long integers - at least we should check for overflow of ulong */
 
   if (buf[0] < 40)
@@ -112,6 +116,31 @@ _ksba_oid_node_to_str (const unsigned char *image, AsnNode node)
 }
 
 
+
+static size_t
+make_flagged_int (unsigned long value, char *buf, size_t buflen)
+{
+  int more = 0;
+  int shift;
+
+  /* fixme: figure out the number of bits in an ulong and start with
+     that value as shift (after making it a multiple of 7) a more
+     starigtforward implementation is to do it in reverse order using
+     a temporary buffer - saves a lot of compares */
+  for (more=0, shift=28; shift > 0; shift -= 7)
+    {
+      if (more || value >= (1<<shift))
+        {
+          buf[buflen++] = 0x80 | (value >> shift);
+          value -= (value >> shift) << shift;
+          more = 1;
+        }
+    }
+  buf[buflen++] = value;
+  return buflen;
+}
+
+
 /**
  * ksba_oid_from_str:
  * @string: A string with the OID in dotted decimal form
@@ -132,11 +161,78 @@ _ksba_oid_node_to_str (const unsigned char *image, AsnNode node)
 int
 ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength)
 {
+  unsigned char *buf;
+  size_t buflen;
+  unsigned long val1, val;
+  const char *endp;
+  int arcno;
+
+  if (!string || !rbuf || !rlength || !*string)
+    return KSBA_Invalid_Value;
   *rbuf = NULL;
   *rlength = 0;
+  /* we can safely assume that the encoded OID is shorter than the string */
+  buf = xtrymalloc ( strlen(string) + 2);
+  if (!buf)
+    return KSBA_Out_Of_Core;
+  buflen = 0;
 
-  return -1; /* error */
+  val1 = 0; /* avoid compiler warnings */
+  arcno = 0;
+  do {
+    arcno++;
+    val = strtoul (string, (char**)&endp, 10);
+    if (!digitp (string) || !(*endp == '.' || !*endp))
+      {
+        xfree (buf);
+        return KSBA_Invalid_OID_String;
+      }
+    if (*endp == '.')
+      string = endp+1;
+
+    if (arcno == 1)
+      {
+        if (val > 2)
+          break; /* not allowed, error catched below */
+        val1 = val;
+      }
+    else if (arcno == 2)
+      { /* need to combine the first to arcs in one octet */
+        if (val1 < 2)
+          {
+            if (val > 39)
+              {
+                xfree (buf);
+                return KSBA_Invalid_OID_String;
+              }
+            buf[buflen++] = val1*40 + val;
+          }
+        else
+          {
+            val += 80;
+            buflen = make_flagged_int (val, buf, buflen);
+          }
+      }
+    else
+      {
+        buflen = make_flagged_int (val, buf, buflen);
+      }
+  } while (*endp == '.');
+
+  if (arcno == 1)
+    { /* it is not possible to encode only the first arc */
+      xfree (buf);
+      return KSBA_Invalid_OID_String;
+    }
+
+  *rbuf = buf;
+  *rlength = buflen;
+  return 0; 
 }
+
+
+
+
 
 
 

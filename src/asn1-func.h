@@ -165,7 +165,6 @@ typedef struct static_struct_asn {
 
 
 
-
 /***************************************/
 /*  Functions used by ASN.1 parser     */
 /***************************************/
@@ -189,6 +188,7 @@ void _ksba_asn_release_nodes (AsnNode node);
 
 
 /*-- asn1-func.c --*/
+int _ksba_asn_is_primitive (node_type_t type);
 AsnNode _ksba_asn_new_node (node_type_t type);
 void _ksba_asn_node_dump (AsnNode p, FILE *fp);
 void _ksba_asn_node_dump_all (AsnNode root, FILE *fp);

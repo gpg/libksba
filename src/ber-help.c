@@ -188,6 +188,8 @@ _ksba_ber_write_tl (KsbaWriter writer,
     }
 
   if (!tag && !class)
+    buf[buflen++] = 0; /* end tag */
+  else if (tag == TYPE_NULL && !class)
     buf[buflen++] = 0; /* NULL tag */
   else if (!length)
     buf[buflen++] = 0x80; /* indefinite length */

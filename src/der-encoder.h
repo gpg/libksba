@@ -46,6 +46,15 @@ KsbaError _ksba_der_copy_tree (AsnNode dst,
 
 KsbaError _ksba_der_store_time (AsnNode node, time_t atime);
 KsbaError _ksba_der_store_string (AsnNode node, const char *string);
+KsbaError _ksba_der_store_integer (AsnNode node, const unsigned char *value);
+KsbaError _ksba_der_store_oid (AsnNode node, const char *oid);
+KsbaError _ksba_der_store_octet_string (AsnNode node,
+                                        const char *buf, size_t len);
+KsbaError _ksba_der_store_null (AsnNode node);
+
+
+KsbaError _ksba_der_encode_tree (AsnNode root,
+                                 unsigned char **r_image, size_t *r_imagelen);
 
 
 

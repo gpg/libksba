@@ -991,19 +991,28 @@ _ksba_der_copy_tree (AsnNode dst_root,
 {
   AsnNode s, d;
 
-  for (s = src_root, d = dst_root;
-       s && d && s->type == d->type;
-       s = _ksba_asn_walk_tree (src_root, s),
-       d = _ksba_asn_walk_tree (dst_root, d)   )
+  s = src_root;
+  d = dst_root;
+  while (s && d && (s->type == d->type || d->type == TYPE_ANY))
     {
-      if (s->type == TYPE_CHOICE)
-        ; /* just skip it */
-      else if (s->type == TYPE_TAG)
-        ; /* does not make sense */
+      if (d->type == TYPE_ANY)
+        d->type = s->type;
+
+      if (s->flags.in_array && s->right)
+        {
+          if (!_ksba_asn_insert_copy (d))
+            return KSBA_Out_Of_Core;
+        }
+
+      if ( !_ksba_asn_is_primitive (s->type) )
+        ;
       else if (s->off == -1)
         clear_value (d);
       else
         store_value (d, src_image + s->off + s->nhdr, s->len);
+
+      s = _ksba_asn_walk_tree (src_root, s);
+      d = _ksba_asn_walk_tree (dst_root, d);
     }
 
   if (s || d)
@@ -1068,3 +1077,305 @@ _ksba_der_store_string (AsnNode node, const char *string)
   else
     return KSBA_Invalid_Value;
 }
+
+
+/* Store the integer VALUE in NODE.  VALUE is assumed to be a DER
+   encoded integer prefixed with 4 bytes given its length in network
+   byte order. */
+KsbaError
+_ksba_der_store_integer (AsnNode node, const unsigned char *value)
+{
+  if (node->type == TYPE_INTEGER)
+    {
+      size_t len;
+      
+      len = (value[0] << 24) | (value[1] << 16) | (value[2] << 8) | value[3];
+      return store_value (node, value+4, len);
+    }
+  else
+    return KSBA_Invalid_Value;
+}
+
+KsbaError
+_ksba_der_store_oid (AsnNode node, const char *oid)
+{
+  KsbaError err;
+
+  if (node->type == TYPE_OBJECT_ID)
+    {
+      char *buf;
+      size_t len;
+
+      err = ksba_oid_from_str (oid, &buf, &len);
+      if (err)
+        return err;
+      err = store_value (node, buf, len);
+      xfree (buf);
+      return err;
+    }
+  else
+    return KSBA_Invalid_Value;
+}
+
+
+KsbaError
+_ksba_der_store_octet_string (AsnNode node, const char *buf, size_t len)
+{
+  if (node->type == TYPE_ANY)
+    node->type = TYPE_OCTET_STRING;
+
+  if (node->type == TYPE_OCTET_STRING)
+    {
+      return store_value (node, buf, len);
+    }
+  else
+    return KSBA_Invalid_Value;
+}
+
+KsbaError
+_ksba_der_store_null (AsnNode node)
+{
+  if (node->type == TYPE_ANY)
+    node->type = TYPE_NULL;
+
+  if (node->type == TYPE_NULL)
+    {
+      return store_value (node, "", 0);
+    }
+  else
+    return KSBA_Invalid_Value;
+}
+
+
+/* 
+   Actual DER encoder
+*/
+
+/* We have a value for this node.  Calculate the length of the header
+   and store it in node->nhdr and store the length of the value in
+   node->value. We assume that this is a primitive node and has a
+   value of type VALTYPE_MEM. */
+static void
+set_nhdr_and_len (AsnNode node, unsigned long length)
+{
+  int buflen = 0;
+
+  if (node->type == TYPE_SET_OF || node->type == TYPE_SEQUENCE_OF)
+    buflen++;
+  else if (node->type == TYPE_TAG)
+    buflen++; 
+  else if (node->type < 0x1f)
+    buflen++;
+  else
+    {
+      never_reached ();
+      /* FIXME: tags with values above 31 are not yet implemented */
+    }
+
+  if (!node->type /*&& !class*/)
+    buflen++; /* end tag */
+  else if (node->type == TYPE_NULL /*&& !class*/)
+    buflen++; /* NULL tag */
+  else if (!length)
+    buflen++; /* indefinite length */
+  else if (length < 128)
+    buflen++; 
+  else 
+    {
+      buflen += (length <= 0xff ? 2:
+                 length <= 0xffff ? 3: 
+                 length <= 0xffffff ? 4: 5);
+    }        
+
+  node->len = length;
+  node->nhdr = buflen;
+}
+
+/* Like above but put now put it into buffer.  return the number of
+   bytes copied.  There is no need to do length checking here */
+static size_t
+copy_nhdr_and_len (unsigned char *buffer, AsnNode node)
+{
+  unsigned char *p = buffer;
+  int tag, class;
+  unsigned long length;
+
+  tag = node->type;
+  class = CLASS_UNIVERSAL;
+  length = node->len;
+
+  if (tag == TYPE_SET_OF)
+    tag = TYPE_SET;
+  else if (tag == TYPE_SEQUENCE_OF)
+    tag = TYPE_SEQUENCE;
+  else if (tag == TYPE_TAG)
+    {
+      class = CLASS_CONTEXT;  /* Hmmm: we no way to handle other classes */
+      tag = node->value.v_ulong;
+    }
+  if (tag < 0x1f)
+    {
+      *p = (class << 6) | tag;
+      if (!_ksba_asn_is_primitive (tag))
+        *p |= 0x20;
+      p++;
+    }
+  else
+    {
+      /* fixme: Not_Implemented*/
+    }
+
+  if (!tag && !class)
+    *p++ = 0; /* end tag */
+  else if (tag == TYPE_NULL && !class)
+    *p++ = 0; /* NULL tag */
+  else if (!length)
+    *p++ = 0x80; /* indefinite length - can't happen! */
+  else if (length < 128)
+    *p++ = length; 
+  else 
+    {
+      int i;
+
+      /* fixme: if we know the sizeof an ulong we could support larger
+         objetcs - however this is pretty ridiculous */
+      i = (length <= 0xff ? 1:
+           length <= 0xffff ? 2: 
+           length <= 0xffffff ? 3: 4);
+      
+      *p++ = (0x80 | i);
+      if (i > 3)
+        *p++ = length >> 24;
+      if (i > 2)
+        *p++ = length >> 16;
+      if (i > 1)
+        *p++ = length >> 8;
+      *p++ = length;
+    }        
+
+  return p - buffer;
+}
+
+
+
+static unsigned long
+sum_up_lengths (AsnNode root)
+{
+  AsnNode n;
+  unsigned long len = 0;
+
+  if (!(n=root->down) || _ksba_asn_is_primitive (root->type))
+    len = root->len;
+  else
+    {
+      for (; n; n = n->right)
+        len += sum_up_lengths (n);
+    }
+  if ( !_ksba_asn_is_primitive (root->type)
+       && root->type != TYPE_CHOICE
+       && len)
+    { /* this is a constructed one */
+      set_nhdr_and_len (root, len);
+    }
+
+  return len? (len + root->nhdr):0;
+}
+
+/* Create a DER encoding from the value tree ROOT and return an
+   allocated image of appropriate length in r_imae and r_imagelen.
+   The value tree is modified so that it can be used the same way as a
+   parsed one, i.e the elements off, and len are set to point into
+   image. */
+KsbaError
+_ksba_der_encode_tree (AsnNode root,
+                       unsigned char **r_image, size_t *r_imagelen)
+{
+  KsbaError err;
+  AsnNode n;
+  unsigned char *image, *p;
+  size_t imagelen, len;
+
+  /* clear out all fields */
+  for (n=root; n ; n = _ksba_asn_walk_tree (root, n))
+    {
+      n->off = -1;
+      n->len = 0;
+      n->nhdr = 0;
+    }
+     
+  /* Set default values */
+  /* FIXME */
+
+  /* calculate the length of the headers.  These are the tag and
+     length fields of all primitive elements */
+  for (n=root; n ; n = _ksba_asn_walk_tree (root, n))
+    {
+      if (_ksba_asn_is_primitive (n->type)
+          && n->valuetype == VALTYPE_MEM && n->value.v_mem.len )
+        set_nhdr_and_len (n, n->value.v_mem.len);
+    }
+
+  /* Now calculate the length of all constructed types */
+  imagelen = sum_up_lengths (root);
+
+#if 1
+  /* set off to zero, so that it can be dumped */
+  for (n=root; n ; n = _ksba_asn_walk_tree (root, n))
+      n->off = 0;
+  fputs ("DER encoded value Tree:\n", stderr); 
+  _ksba_asn_node_dump_all (root, stderr); 
+  for (n=root; n ; n = _ksba_asn_walk_tree (root, n))
+      n->off = -1;
+#endif
+  
+  /* now we can create an encoding in image */
+  image = xtrymalloc (imagelen);
+  if (!image)
+    return KSBA_Out_Of_Core;
+  len = 0;
+  for (n=root; n ; n = _ksba_asn_walk_tree (root, n))
+    {
+      size_t nbytes;
+
+      if (!n->nhdr)
+        continue;
+      assert (n->off == -1);
+      assert (len < imagelen);
+      n->off = len;
+      nbytes = copy_nhdr_and_len (image+len, n);
+      len += nbytes;
+      if ( _ksba_asn_is_primitive (n->type)
+           && n->valuetype == VALTYPE_MEM && n->value.v_mem.len )
+        {
+          nbytes = n->value.v_mem.len;
+          assert (len + nbytes <= imagelen);
+          memcpy (image+len, n->value.v_mem.buf, nbytes);
+          len += nbytes;
+        }
+    }
+
+#if 0
+  { 
+    FILE *fp = fopen ("xxx-der.tmp", "w");
+    fwrite (image, 1, imagelen, fp);
+    fclose (fp);
+  }
+#endif
+  assert (len == imagelen);
+
+  *r_image = image;
+  if (r_imagelen)
+    *r_imagelen = imagelen;
+  return 0;
+}
+
+
+
+
+
+
+
+
+
+
+

@@ -175,41 +175,6 @@ eof_or_error (BerDecoder d, int premature)
   return -1;
 }
 
-static int
-is_primitive_type (node_type_t type)
-{
-  switch (type)
-    {
-    case TYPE_BOOLEAN:                               
-    case TYPE_INTEGER:                               
-    case TYPE_BIT_STRING:                            
-    case TYPE_OCTET_STRING:                          
-    case TYPE_NULL:                                  
-    case TYPE_OBJECT_ID:                             
-    case TYPE_OBJECT_DESCRIPTOR:                     
-    case TYPE_REAL:                                  
-    case TYPE_ENUMERATED:                            
-    case TYPE_UTF8_STRING:                           
-    case TYPE_REALTIVE_OID:                          
-    case TYPE_NUMERIC_STRING:                        
-    case TYPE_PRINTABLE_STRING:                      
-    case TYPE_TELETEX_STRING:                        
-    case TYPE_VIDEOTEX_STRING:                       
-    case TYPE_IA5_STRING:                            
-    case TYPE_UTC_TIME:                              
-    case TYPE_GENERALIZED_TIME:                      
-    case TYPE_GRAPHIC_STRING:                        
-    case TYPE_VISIBLE_STRING:                        
-    case TYPE_GENERAL_STRING:                        
-    case TYPE_UNIVERSAL_STRING:                      
-    case TYPE_CHARACTER_STRING:                      
-    case TYPE_BMP_STRING:                            
-      return 1;
-    default:
-      return 0;
-    }
-}
-
 static const char *
 universal_tag_name (unsigned long no)
 {
@@ -442,7 +407,7 @@ cmp_tag (AsnNode node, const struct tag_info *ti)
       if (node->type == TYPE_SET_OF && ti->tag == TYPE_SET)
         return 1;
       if (node->type == TYPE_ANY)
-        return is_primitive_type (ti->tag)? 1:2; 
+        return _ksba_asn_is_primitive (ti->tag)? 1:2; 
     }
 
   return 0;
@@ -510,7 +475,7 @@ match_der (AsnNode root, const struct tag_info *ti,
         puts ("  doing last again");
       ds->cur.again = 0;
     }
-  else if (is_primitive_type (node->type) || node->type == TYPE_ANY
+  else if (_ksba_asn_is_primitive (node->type) || node->type == TYPE_ANY
            || node->type == TYPE_SIZE || node->type == TYPE_DEFAULT )
     {
       if (debug)
