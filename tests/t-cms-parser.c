@@ -225,6 +225,20 @@ one_file (const char *fname)
           ksba_free (dn);
           putchar ('\n');
 
+          err = ksba_cms_get_sigattr_oids (cms, idx, "1.2.840.113549.1.9.3",&dn);
+          if (err && err != -1)
+            fail_if_err2 (fname, err);
+          if (err != -1)
+            {
+              char *tmp;
+              
+              for (tmp=dn; *tmp; tmp++)
+                if (*tmp == '\n')
+                  *tmp = ' ';
+              printf ("signer %d - content-type: %s\n", idx, dn);
+              ksba_free (dn);
+            }
+
           algoid = ksba_cms_get_digest_algo (cms, idx);
           printf ("signer %d - digest algo: %s\n", idx, algoid?algoid:"?");
 

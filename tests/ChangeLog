@@ -1,3 +1,7 @@
+2002-11-25  Werner Koch  <wk@gnupg.org>
+
+	* t-cms-parser.c (one_file): Print the content-type attribute.
+
 2002-05-17  Werner Koch  <wk@gnupg.org>
 
 	* t-cms-parser.c (one_file): Use ksba_cms_identify.
