@@ -1,3 +1,8 @@
+2002-07-04  Werner Koch  <wk@gnupg.org>
+
+	* cms.c (ksba_cms_identify): Make sure to read the full first 20
+	bytes.
+
 2002-07-02  Werner Koch  <wk@gnupg.org>
 
 	* certreq.c (ksba_certreq_set_sig_val): Don't store a leanding zero.

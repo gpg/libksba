@@ -316,7 +316,7 @@ ksba_cms_identify (KsbaReader reader)
   struct tag_info ti;
   unsigned char buffer[20];
   const unsigned char*p;
-  size_t n;
+  size_t n, count;
   char *oid;
   int i;
 
@@ -331,8 +331,12 @@ ksba_cms_identify (KsbaReader reader)
   (2 byte len)
   */
   
-  if (ksba_reader_read (reader, buffer, sizeof buffer, &n))
-    return KSBA_CT_NONE; /* oops */
+  for (count = sizeof buffer; count; count -= n)
+    {
+      if (ksba_reader_read (reader, buffer+sizeof (buffer)-count, count, &n))
+        return KSBA_CT_NONE; /* too short */
+    }
+  n = sizeof buffer;
   if (ksba_reader_unread (reader, buffer, n))
     return KSBA_CT_NONE; /* oops */
   p = buffer;
