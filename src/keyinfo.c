@@ -393,6 +393,10 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
      sequence, so that we don't neen a realloc later */
   init_stringbuf (&sb, 100);
   put_stringbuf (&sb, "(public-key(");
+
+  /* fixme: we can also use the oidstring here and prefix it with
+     "oid." - this way we can pass more information into Libgcrypt or
+     whatever library is used */
   put_stringbuf (&sb, pk_algo_table[algoidx].algo_string);
 
   /* FIXME: We don't release the stringbuf in case of error

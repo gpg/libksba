@@ -73,6 +73,8 @@ typedef enum {
   KSBA_Encoding_Error = 38,
   KSBA_Invalid_Index = 39,
   KSBA_Invalid_OID_String = 40,
+  KSBA_Invalid_Sexp = 41,
+  KSBA_Unknown_Sexp = 42
 } KsbaError;
 
 
@@ -183,6 +185,7 @@ KsbaError ksba_cms_add_signer (KsbaCMS cms, KsbaCert cert);
 KsbaError ksba_cms_set_message_digest (KsbaCMS cms, int idx,
                                        const char *digest,
                                        size_t digest_len);
+KsbaError ksba_cms_set_sig_val (KsbaCMS cms, int idx, const char *sigval);
 
 
 

@@ -167,10 +167,18 @@ ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength)
   const char *endp;
   int arcno;
 
-  if (!string || !rbuf || !rlength || !*string)
+  if (!string || !rbuf || !rlength)
     return KSBA_Invalid_Value;
   *rbuf = NULL;
   *rlength = 0;
+
+  /* we allow the OID to be prefixed with either "oid." or "OID." */
+  if ( !strncmp (string, "oid.", 4) || !strncmp (string, "OID.", 4))
+    string += 4;
+
+  if (!*string)
+    return KSBA_Invalid_Value;
+
   /* we can safely assume that the encoded OID is shorter than the string */
   buf = xtrymalloc ( strlen(string) + 2);
   if (!buf)

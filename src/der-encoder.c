@@ -1273,7 +1273,8 @@ sum_up_lengths (AsnNode root)
     }
   if ( !_ksba_asn_is_primitive (root->type)
        && root->type != TYPE_CHOICE
-       && len)
+       && len
+       && !root->flags.is_implicit)
     { /* this is a constructed one */
       set_nhdr_and_len (root, len);
     }
@@ -1290,9 +1291,8 @@ KsbaError
 _ksba_der_encode_tree (AsnNode root,
                        unsigned char **r_image, size_t *r_imagelen)
 {
-  KsbaError err;
   AsnNode n;
-  unsigned char *image, *p;
+  unsigned char *image;
   size_t imagelen, len;
 
   /* clear out all fields */
@@ -1311,7 +1311,9 @@ _ksba_der_encode_tree (AsnNode root,
   for (n=root; n ; n = _ksba_asn_walk_tree (root, n))
     {
       if (_ksba_asn_is_primitive (n->type)
-          && n->valuetype == VALTYPE_MEM && n->value.v_mem.len )
+          && n->valuetype == VALTYPE_MEM
+          && n->value.v_mem.len 
+          && !n->flags.is_implicit)
         set_nhdr_and_len (n, n->value.v_mem.len);
     }
 
@@ -1345,7 +1347,8 @@ _ksba_der_encode_tree (AsnNode root,
       nbytes = copy_nhdr_and_len (image+len, n);
       len += nbytes;
       if ( _ksba_asn_is_primitive (n->type)
-           && n->valuetype == VALTYPE_MEM && n->value.v_mem.len )
+           && n->valuetype == VALTYPE_MEM
+           && n->value.v_mem.len )
         {
           nbytes = n->value.v_mem.len;
           assert (len + nbytes <= imagelen);
@@ -1354,13 +1357,6 @@ _ksba_der_encode_tree (AsnNode root,
         }
     }
 
-#if 0
-  { 
-    FILE *fp = fopen ("xxx-der.tmp", "w");
-    fwrite (image, 1, imagelen, fp);
-    fclose (fp);
-  }
-#endif
   assert (len == imagelen);
 
   *r_image = image;

@@ -32,6 +32,8 @@
 #include "ber-help.h"
 #include "cert.h" /* need to access cert->root and cert->image */
 
+#define digitp(p)   (*(p) >= 0 && *(p) <= '9')
+
 static KsbaError ct_parse_data (KsbaCMS cms);
 static KsbaError ct_parse_signed_data (KsbaCMS cms);
 static KsbaError ct_parse_enveloped_data (KsbaCMS cms);
@@ -120,6 +122,8 @@ ksba_cms_release (KsbaCMS cms)
   _ksba_asn_release_nodes (cms->signer_info.root);
   xfree (cms->signer_info.image);
   xfree (cms->signer_info.cache.digest_algo);
+  xfree (cms->sig_val.algo);
+  xfree (cms->sig_val.value);
   xfree (cms);
 }
 
@@ -723,7 +727,94 @@ ksba_cms_set_message_digest (KsbaCMS cms, int idx,
   return 0;
 }
 
+/*
+ * r_sig  = (sig-val
+ *	      (<algo>
+ *		(<param_name1> <mpi>)
+ *		...
+ *		(<param_namen> <mpi>)
+ *	      ))
+ * The sexp must be in canocial form 
+*/
+KsbaError
+ksba_cms_set_sig_val (KsbaCMS cms, int idx, const char *sigval)
+{
+  const char *s, *endp;
+  unsigned long n;
 
+  if (!cms)
+    return KSBA_Invalid_Value;
+  if (idx)
+    return KSBA_Invalid_Index; /* only one signer for now */
+
+  s = sigval;
+  if (*s != '(')
+    return KSBA_Invalid_Sexp;
+  s++;
+
+  n = strtoul (s, (char**)&endp, 10);
+  s = endp;
+  if (!n || *s!=':')
+    return KSBA_Invalid_Sexp; /* we don't allow empty lengths */
+  s++;
+  if (n != 7 || memcmp (s, "sig-val", 7))
+    return KSBA_Unknown_Sexp;
+  s += 7;
+  if (*s != '(')
+    return digitp (s)? KSBA_Unknown_Sexp : KSBA_Invalid_Sexp;
+  s++;
+
+  /* break out the algorithm ID */
+  n = strtoul (s, (char**)&endp, 10);
+  s = endp;
+  if (!n || *s != ':')
+    return KSBA_Invalid_Sexp; /* we don't allow empty lengths */
+  s++;
+  xfree (cms->sig_val.algo);
+  cms->sig_val.algo = xtrymalloc (n+1);
+  if (!cms->sig_val.algo)
+    return KSBA_Out_Of_Core;
+  memcpy (cms->sig_val.algo, s, n);
+  cms->sig_val.algo[n] = 0;
+  s += n;
+
+  /* And now the values - FIXME: For now we only support one */
+  /* fixme: start loop */
+  if (*s != '(')
+    return digitp (s)? KSBA_Unknown_Sexp : KSBA_Invalid_Sexp;
+  s++;
+  n = strtoul (s, (char**)&endp, 10);
+  s = endp;
+  if (!n || *s != ':')
+    return KSBA_Invalid_Sexp; 
+  s++;
+  s += n; /* ignore the name of the parameter */
+  
+  if (!digitp(s))
+    return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+  n = strtoul (s, (char**)&endp, 10);
+  s = endp;
+  if (!n || *s != ':')
+    return KSBA_Invalid_Sexp; 
+  s++;
+  xfree (cms->sig_val.value);
+  cms->sig_val.value = xtrymalloc (n);
+  if (!cms->sig_val.value)
+    return KSBA_Out_Of_Core;
+  memcpy (cms->sig_val.value, s, n);
+  cms->sig_val.valuelen = n;
+  s += n;
+  if ( *s != ')')
+    return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+  s++;
+  /* fixme: end loop over parameters */
+
+  /* we need 2 closing parenthesis */
+  if ( *s != ')' || s[1] != ')')
+    return KSBA_Invalid_Sexp; 
+
+  return 0;
+}
 
 
 
@@ -888,7 +979,7 @@ build_signed_data_header (KsbaCMS cms)
     return err;
 
   /* figure out the CMSVersion to be used */
-  if (1 /* fixme: have_attribute_certificates 
+  if (0 /* fixme: have_attribute_certificates 
            || encapsulated_content != data
            || any_signer_info_is_version_3*/ )
     s = "\x03";
@@ -1111,8 +1202,7 @@ build_signed_data_rest (KsbaCMS cms)
   for (signer=0; certlist;
        signer++, certlist = certlist->next, digestlist = digestlist->next)
     {
-      AsnNode root;
-      AsnNode n;
+      AsnNode root, n;
       unsigned char *image;
       size_t imagelen;
 
@@ -1175,10 +1265,12 @@ build_signed_data_rest (KsbaCMS cms)
       image = NULL;
 
       /* store the signatureAlgorithm */
+      if (!cms->sig_val.algo || !cms->sig_val.value)
+        return KSBA_Missing_Value;
       n = _ksba_asn_find_node (root, "SignerInfos..signatureAlgorithm.algorithm");
       if (!n)
         return KSBA_Element_Not_Found;
-      err = _ksba_der_store_oid (n, digestlist->oid); /* fixme */
+      err = _ksba_der_store_oid (n, cms->sig_val.algo);
       if (err)
         return err;
       n = _ksba_asn_find_node (root, "SignerInfos..signatureAlgorithm.parameters");
@@ -1189,10 +1281,13 @@ build_signed_data_rest (KsbaCMS cms)
         return err;
 
       /* store the signature  */
+      if (!cms->sig_val.value)
+        return KSBA_Missing_Value;
       n = _ksba_asn_find_node (root, "SignerInfos..signature");
       if (!n)
         return KSBA_Element_Not_Found;
-      err = _ksba_der_store_octet_string (n, "xxxxx", 5); /* fixme */
+      err = _ksba_der_store_octet_string (n, cms->sig_val.value,
+                                          cms->sig_val.valuelen);
       if (err)
         return err;
 
@@ -1201,8 +1296,7 @@ build_signed_data_rest (KsbaCMS cms)
       err = _ksba_der_encode_tree (root, &image, &imagelen);
       if (err)
           return err;
-      if (!signer && imagelen)
-          *image = 0xa0;  /* this has an implicit tag - change it */
+
       err = ksba_writer_write (cms->writer, image, imagelen);
       if (err )
         return err;
@@ -1253,7 +1347,11 @@ ct_build_signed_data (KsbaCMS cms)
   else if (stop_reason == KSBA_SR_END_DATA)
     state = sDATAREADY;
   else if (stop_reason == KSBA_SR_NEED_SIG)
-    state = sGOTSIG;
+    {
+      if (!cms->sig_val.algo)
+        err = KSBA_Missing_Action; /* No ksba_cms_set_sig_val () called */
+      state = sGOTSIG;
+    }
   else if (stop_reason == KSBA_SR_RUNNING)
     err = KSBA_Invalid_State;
   else if (stop_reason)

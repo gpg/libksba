@@ -86,6 +86,11 @@ struct ksba_cms_s {
     } cache;
   } signer_info;  
 
+  struct {
+    char *algo;
+    unsigned char *value;
+    size_t valuelen;
+  } sig_val;
 
 };
 
