@@ -1,3 +1,12 @@
+2004-02-13  Werner Koch  <wk@gnupg.org>
+
+	* reader.c, ksba.h (ksba_reader_clear): New.
+
+2004-02-12  Werner Koch  <wk@gnupg.org>
+
+	* cms.c (ksba_cms_identify): Detect pkcs#12.
+	* ksba.h: Add KSBA_CT_PCKS12. 
+
 2004-01-29  Werner Koch  <wk@gnupg.org>
 
 	* cms.c (build_signed_data_attributes): Arggg; noticed that severe

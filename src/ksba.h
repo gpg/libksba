@@ -1,5 +1,5 @@
 /* ksba.h - X509 library for the Aegypten project
- *      Copyright (C) 2001, 2002, 2003 g10 Code GmbH
+ *      Copyright (C) 2001, 2002, 2003, 2004 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -110,7 +110,8 @@ typedef enum {
   KSBA_CT_ENVELOPED_DATA = 3,
   KSBA_CT_DIGESTED_DATA = 4,
   KSBA_CT_ENCRYPTED_DATA = 5,
-  KSBA_CT_AUTH_DATA = 6
+  KSBA_CT_AUTH_DATA = 6,
+  KSBA_CT_PKCS12 = 7   
 } ksba_content_type_t;
 typedef ksba_content_type_t KsbaContentType _KSBA_DEPRECATED;
 
@@ -436,6 +437,8 @@ gpg_error_t ksba_certreq_build (ksba_certreq_t cr,
 /*-- reader.c --*/
 gpg_error_t ksba_reader_new (ksba_reader_t *r_r);
 void        ksba_reader_release (ksba_reader_t r);
+gpg_error_t ksba_reader_clear (ksba_reader_t r,
+                               unsigned char **buffer, size_t *buflen);
 gpg_error_t ksba_reader_error (ksba_reader_t r);
 
 gpg_error_t ksba_reader_set_mem (ksba_reader_t r,

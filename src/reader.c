@@ -62,6 +62,46 @@ ksba_reader_release (ksba_reader_t r)
   xfree (r);
 }
 
+
+/* Clear the error and eof indicators for READER, so that it can be
+   continued to use.  Also dicards any unread bytes. This is usually
+   required if the upper layer want to send to send an EOF to indicate
+   the logical end of one part of a file.  If BUFFER and BUFLEN are
+   not NULL, possible unread data is copied to a newly allocated
+   buffer and this buffer is assigned to BUFFER, BUFLEN will be set to
+   the length of the unread bytes. */
+gpg_error_t
+ksba_reader_clear (ksba_reader_t r, unsigned char **buffer, size_t *buflen)
+{
+  size_t n;
+
+  if (!r)
+    return gpg_error (GPG_ERR_INV_VALUE);
+      
+  r->eof = 0;
+  r->error = 0;
+  r->nread = 0;
+  n = r->unread.length;
+  r->unread.length = 0;
+
+  if (buffer && buflen)
+    {
+      *buffer = NULL;
+      *buflen = 0;
+      if (n)
+        {
+          *buffer = xtrymalloc (n);
+          if (!*buffer)
+            return gpg_error_from_errno (errno);
+          memcpy (*buffer, r->unread.buf, n);
+          *buflen = n;
+        }
+    }
+      
+  return 0;
+}
+
+
 gpg_error_t
 ksba_reader_error (ksba_reader_t r)
 {

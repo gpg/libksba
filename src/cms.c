@@ -314,16 +314,20 @@ write_encrypted_cont (ksba_cms_t cms)
 
 /* Figure out whether the data read from READER is a CMS object and
    return its content type.  This function does only peek at the
-   READER and tries to identify the type with besto effort. */
+   READER and tries to identify the type with best effort.  Because of
+   the ubiquity of the stupid and insecure pkcs#12 format, the
+   function will also identify those files and return KSBA_CT_PKCS12;
+   there is and will be no other pkcs#12 support in this library. */
 ksba_content_type_t
 ksba_cms_identify (ksba_reader_t reader) 
 {
   struct tag_info ti;
-  unsigned char buffer[20];
+  unsigned char buffer[24];
   const unsigned char*p;
   size_t n, count;
   char *oid;
   int i;
+  int maybe_p12 = 0;
 
   if (!reader)
     return KSBA_CT_NONE; /* oops */
@@ -331,9 +335,18 @@ ksba_cms_identify (ksba_reader_t reader)
   /* This is a common example of a CMS object - it is obvious that we
      only need to read a few bytes to get to the OID:
   30 82 0B 59 06 09 2A 86 48 86 F7 0D 01 07 02 A0 82 0B 4A 30 82 0B 46 02
-  ----------- ======--------------------------        
-  SEQUENCE          oid(signedData)
+  ----------- ++++++++++++++++++++++++++++++++
+  SEQUENCE    OID (signedData)
   (2 byte len)
+ 
+     For a pkcs12 message we have this:
+
+  30 82 08 59 02 01 03 30 82 08 1F 06 09 2A 86 48 86 F7 0D 01 07 01 A0 82
+  ----------- ++++++++ ----------- ++++++++++++++++++++++++++++++++ 
+  SEQUENCE    INTEGER  SEQUENCE    OID (data)
+  
+    This we need to read at least 22 bytes, we add 2 bytes to cope with 
+    length headers store with 4 bytes.
   */
   
   for (count = sizeof buffer; count; count -= n)
@@ -344,6 +357,7 @@ ksba_cms_identify (ksba_reader_t reader)
   n = sizeof buffer;
   if (ksba_reader_unread (reader, buffer, n))
     return KSBA_CT_NONE; /* oops */
+
   p = buffer;
   if (_ksba_ber_parse_tl (&p, &n, &ti))
     return KSBA_CT_NONE;
@@ -352,6 +366,20 @@ ksba_cms_identify (ksba_reader_t reader)
     return KSBA_CT_NONE;
   if (_ksba_ber_parse_tl (&p, &n, &ti))
     return KSBA_CT_NONE;
+  if ( ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_INTEGER
+       && !ti.is_constructed && ti.length == 1 && n && *p == 3)
+    {
+      maybe_p12 = 1;
+      p++;
+      n--;
+      if (_ksba_ber_parse_tl (&p, &n, &ti))
+        return KSBA_CT_NONE;
+      if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+             && ti.is_constructed) )
+        return KSBA_CT_NONE;
+      if (_ksba_ber_parse_tl (&p, &n, &ti))
+        return KSBA_CT_NONE;
+    }
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OBJECT_ID
          && !ti.is_constructed && ti.length) || ti.length > n)
     return KSBA_CT_NONE;
@@ -365,6 +393,9 @@ ksba_cms_identify (ksba_reader_t reader)
     }
   if (!content_handlers[i].oid)
     return KSBA_CT_NONE; /* unknown */
+  if (maybe_p12 && (content_handlers[i].ct == KSBA_CT_DATA
+                    || content_handlers[i].ct == KSBA_CT_SIGNED_DATA))
+      return KSBA_CT_PKCS12;
   return content_handlers[i].ct;
 }
 
