@@ -147,9 +147,9 @@ KsbaError ksba_cert_hash (KsbaCert cert, int what,
                           void *hasher_arg);
 const char *ksba_cert_get_digest_algo (KsbaCert cert);
 unsigned char *ksba_cert_get_serial (KsbaCert cert);
-char *ksba_cert_get_issuer (KsbaCert cert);
+char *ksba_cert_get_issuer (KsbaCert cert, int idx);
 time_t ksba_cert_get_validity (KsbaCert cert, int what);
-char *ksba_cert_get_subject (KsbaCert cert);
+char *ksba_cert_get_subject (KsbaCert cert, int idx);
 char *ksba_cert_get_public_key (KsbaCert cert);
 char *ksba_cert_get_sig_val (KsbaCert cert);
 

@@ -96,6 +96,7 @@ one_file (const char *fname)
   unsigned char *p;
   char *dn;
   time_t t;
+  int idx;
 
   fp = fopen (fname, "r");
   if (!fp)
@@ -121,33 +122,37 @@ one_file (const char *fname)
   printf ("Certificate in `%s':\n", fname);
 
   p = ksba_cert_get_serial (cert);
-  fputs ("serial: ", stdout);
+  fputs ("  serial....: ", stdout);
   print_integer (p);
   ksba_free (p);
   putchar ('\n');
 
+  for (idx=0;(dn = ksba_cert_get_issuer (cert, idx));idx++) 
+    {
+      fputs (idx?"         aka: ":"  issuer....:", stdout);
+      print_dn (dn);
+      ksba_free (dn);
+      putchar ('\n');
+    }
+
+  for (idx=0;(dn = ksba_cert_get_subject (cert, idx));idx++) 
+    {
+      fputs (idx?"         aka: ":"  subject....: ", stdout);
+      print_dn (dn);
+      ksba_free (dn);
+      putchar ('\n');
+    }
+
   t = ksba_cert_get_validity (cert, 0);
-  fputs ("notBefore: ", stdout);
+  fputs ("  notBefore.: ", stdout);
   print_time (t);
   putchar ('\n');
   t = ksba_cert_get_validity (cert, 1);
-  fputs ("notAfter: ", stdout);
+  fputs ("  notAfter..: ", stdout);
   print_time (t);
   putchar ('\n');
 
-  dn = ksba_cert_get_issuer (cert);
-  fputs ("issuer: ", stdout);
-  print_dn (dn);
-  ksba_free (dn);
-  putchar ('\n');
-
-  dn = ksba_cert_get_subject (cert);
-  fputs ("subject: ", stdout);
-  print_dn (dn);
-  ksba_free (dn);
-  putchar ('\n');
-
-  printf ("hash algo: %s\n", ksba_cert_get_digest_algo (cert));
+  printf ("  hash algo.: %s\n", ksba_cert_get_digest_algo (cert));
 
 
   ksba_cert_release (cert);
@@ -163,6 +168,7 @@ one_file (const char *fname)
       exit (1);
     }
 
+  putchar ('\n');
   ksba_cert_release (cert);
   ksba_reader_release (r);
   fclose (fp);

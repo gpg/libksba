@@ -317,11 +317,26 @@ ksba_cert_get_serial (KsbaCert cert)
  * ksba_cert_get_issuer:
  * @cert: certificate object
  * 
- * Returns the Distinguished Name (DN) of the certificate issuer which
- * in most cases is a CA.  The format of the returned string is in
- * accordance with RFC-2253.  NULL is returned if the DN is not
- * available which is an error and should have been catched by the
- * certificate reading function.
+ * With @idx == 0 this function returns the Distinguished Name (DN) of
+ * the certificate issuer which in most cases is a CA.  The format of
+ * the returned string is in accordance with RFC-2253.  NULL is
+ * returned if the DN is not available which is an error and should
+ * have been catched by the certificate reading function.
+ * 
+ * With @idx > 0 the function may be used to enumerate alternate
+ * issuer names. The function returns NULL if there are no more
+ * alternate names.  The function does only return alternate names
+ * which are recognized by libksba and ignores others.  The format of
+ * the returned name is either a RFC-2253 formated one which can be
+ * detected by checking whether the first character is letter or
+ * digit.  rfc-2822 conform email addresses are returned enclosed in
+ * angle brackets, the opening angle bracket should be used to
+ * indicate this.  Other formats are returned as an S-Expression in
+ * canonical format, so a opening parenthesis may be used to detect
+ * this encoding, the name may include binary null characters, so
+ * strlen may return a legth shorther than actually used, the real
+ * length is implictly given by the structure of the S-Exp, an extra
+ * null is appended to make debugging output easier.
  * 
  * The caller must free the returned string using ksba_free() or the
  * function he has registered as a replacement.
@@ -329,13 +344,15 @@ ksba_cert_get_serial (KsbaCert cert)
  * Return value: An allocated string or NULL for error.
  **/
 char *
-ksba_cert_get_issuer (KsbaCert cert)
+ksba_cert_get_issuer (KsbaCert cert, int idx)
 {
   KsbaError err;
   AsnNode n;
   char *p;
 
   if (!cert || !cert->initialized)
+    return NULL;
+  if (idx)
     return NULL;
   
   n = _ksba_asn_find_node (cert->root,
@@ -411,13 +428,15 @@ ksba_cert_get_validity (KsbaCert cert, int what)
 
 /* See ..get_issuer */
 char *
-ksba_cert_get_subject (KsbaCert cert)
+ksba_cert_get_subject (KsbaCert cert, int idx)
 {
   KsbaError err;
   AsnNode n;
   char *p;
 
   if (!cert || !cert->initialized)
+    return NULL;
+  if (idx)
     return NULL;
   
   n = _ksba_asn_find_node (cert->root,
