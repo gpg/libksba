@@ -166,14 +166,17 @@ set_error (BerDecoder d, AsnNode node, const char *text)
 static int
 eof_or_error (BerDecoder d, int premature)
 {
-  if (ksba_reader_error (d->reader))
+  gpg_error_t err;
+
+  err = ksba_reader_error (d->reader);
+  if (err)
     {
       set_error (d, NULL, "read error");
-      return gpg_error (GPG_ERR_READ_ERROR);
+      return err;
     }
   if (premature)
     return set_error (d, NULL, "premature EOF");
-  return -1;
+  return gpg_error (GPG_ERR_EOF);
 }
 
 static const char *

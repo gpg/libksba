@@ -90,13 +90,9 @@ if test "$echo_exec_prefix" = "yes"; then
 fi
 
 if test "$echo_cflags" = "yes"; then
+    includes=""
     if test "@includedir@" != "/usr/include" ; then
       includes="-I@includedir@"
-      for i in $cflags ; do
-	if test "$i" = "-I@includedir@" ; then
-	  includes=""
-	fi
-      done
     fi
     tmp=""
     for i in $includes $cflags; do
@@ -104,16 +100,13 @@ if test "$echo_cflags" = "yes"; then
            tmp="$tmp $i"
        fi
     done
+    echo $tmp
 fi
 
 if test "$echo_libs" = "yes"; then
+    libdirs=""
     if test "@libdir@" != "/usr/lib" ; then
       libdirs="-L@libdir@"
-      for i in $libs ; do
-	if test "$i" = "-L@libdir@" ; then
-	  libdirs=""
-	fi
-      done
     fi
     tmp=""
     for i in $libdirs $libs; do

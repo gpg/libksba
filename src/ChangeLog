@@ -1,4 +1,21 @@
+2003-11-13  Werner Koch  <wk@gnupg.org>
+
+	* ber-decoder.c (eof_or_error): Replaced READ_ERROR with a system
+	provided error.
+	* crl.c (parse_to_next_update): Ditto.
+	* cms-parser.c (parse_cms_version): Ditto.
+	(_ksba_cms_parse_signed_data_part_1): 
+	* ber-help.c (eof_or_error): Ditto.
+	* reader.c (ksba_reader_error): Changed to return gpg_error_t.
+	* writer.c (ksba_writer_error): Ditto.
+
 2003-11-12  Werner Koch  <wk@gnupg.org>
+
+	* writer.c (do_writer_write): Replaced WRITE_ERROR by one
+	generated from errno.
+
+	* asn1-parse.y (ksba_asn_parse_file): Replaced FILE_ERROR by one
+	generated from errno.
 
 	* cms.c (ksba_cms_new): Changed Interface to return an error code.
 	* name.c (ksba_name_new): Ditto.

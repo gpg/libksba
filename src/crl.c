@@ -452,7 +452,10 @@ parse_to_next_update (ksba_crl_t crl)
       if (ti.length != 1)
         return gpg_error (GPG_ERR_UNSUPPORTED_CRL_VERSION); 
       if ( (c=read_byte (crl->reader)) == -1)
-        return gpg_error (GPG_ERR_READ_ERROR);
+        {
+          err = ksba_reader_error (crl->reader);
+          return err? err : gpg_error (GPG_ERR_GENERAL);
+        }
       if ( !(c == 0 || c == 1) )
         return gpg_error (GPG_ERR_UNSUPPORTED_CRL_VERSION);
       { 

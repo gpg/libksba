@@ -360,7 +360,7 @@ gpg_error_t ksba_certreq_build (ksba_certreq_t cr,
 /*-- reader.c --*/
 gpg_error_t ksba_reader_new (ksba_reader_t *r_r);
 void        ksba_reader_release (ksba_reader_t r);
-int         ksba_reader_error (ksba_reader_t r);
+gpg_error_t ksba_reader_error (ksba_reader_t r);
 
 gpg_error_t ksba_reader_set_mem (ksba_reader_t r,
                                const void *buffer, size_t length);

@@ -34,7 +34,7 @@ enum reader_type {
 
 struct ksba_reader_s {
   int eof;
-  int error;
+  int error;   /* If an error occured, takes the value of errno. */
   unsigned long nread;
   struct {
     unsigned char *buf;

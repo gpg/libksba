@@ -69,7 +69,7 @@ ksba_writer_release (ksba_writer_t w)
 int
 ksba_writer_error (ksba_writer_t w)
 {
-  return w? w->error : -1;
+  return w? gpg_error_from_errno (w->error) : gpg_error (GPG_ERR_INV_VALUE);
 }
 
 unsigned long
@@ -260,8 +260,8 @@ do_writer_write (ksba_writer_t w, const void *buffer, size_t length)
 {
   if (!w->type)
     {
-      w->error = -1;
-      return gpg_error (GPG_ERR_GENERAL);
+      w->error = EINVAL;
+      return gpg_error_from_errno (w->error);
     }
   else if (w->type == WRITER_TYPE_MEM)
     {
@@ -307,7 +307,7 @@ do_writer_write (ksba_writer_t w, const void *buffer, size_t length)
       else
         {
           w->error = errno;
-          return gpg_error (GPG_ERR_WRITE_ERROR);
+          return gpg_error_from_errno (errno);
         }
     }
   else if (w->type == WRITER_TYPE_CB)

@@ -35,6 +35,7 @@
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include "util.h"
 #include "ksba.h"
@@ -984,7 +985,7 @@ set_down (AsnNode node, AsnNode down)
  * Return value: 0 for okay or an ASN_xx error code
  **/
 int 
-ksba_asn_parse_file (const char *file_name, KsbaAsnTree *result, int debug)
+ksba_asn_parse_file (const char *file_name, ksba_asn_tree_t *result, int debug)
 {
   struct parser_control_s parsectl;
      
@@ -992,11 +993,11 @@ ksba_asn_parse_file (const char *file_name, KsbaAsnTree *result, int debug)
   
   parsectl.fp = file_name? fopen (file_name, "r") : NULL;
   if ( !parsectl.fp )
-    return KSBA_File_Error;
+    return gpg_error_from_errno (errno);
 
   parsectl.lineno = 0;
   parsectl.debug = debug;
-  parsectl.result_parse = KSBA_Syntax_Error;
+  parsectl.result_parse = gpg_error (GPG_ERR_SYNTAX);
   parsectl.parse_tree = NULL;
   parsectl.all_nodes = NULL;
   /*yydebug = 1;*/
@@ -1009,7 +1010,7 @@ ksba_asn_parse_file (const char *file_name, KsbaAsnTree *result, int debug)
     }
   else 
     { /* okay */
-      KsbaAsnTree tree;
+      ksba_asn_tree_t tree;
 
       _ksba_asn_change_integer_value (parsectl.parse_tree);
       _ksba_asn_expand_object_id (parsectl.parse_tree);
@@ -1026,7 +1027,7 @@ ksba_asn_parse_file (const char *file_name, KsbaAsnTree *result, int debug)
 }
 
 void
-ksba_asn_tree_release (KsbaAsnTree tree)
+ksba_asn_tree_release (ksba_asn_tree_t tree)
 {
   if (!tree)
     return;

@@ -55,18 +55,21 @@ premature_eof (struct tag_info *ti)
 
 
 
-static int
+static gpg_error_t
 eof_or_error (ksba_reader_t reader, struct tag_info *ti, int premature)
 {
-  if (ksba_reader_error (reader))
+  gpg_error_t err;
+
+  err = ksba_reader_error (reader);
+  if (err)
     {
       ti->err_string = "read error";
-      return gpg_error (GPG_ERR_READ_ERROR);
+      return err;
     }
   if (premature)
     return premature_eof (ti);
 
-  return -1;
+  return gpg_error (GPG_ERR_EOF);
 }
 
 

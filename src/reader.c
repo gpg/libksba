@@ -62,10 +62,10 @@ ksba_reader_release (ksba_reader_t r)
   xfree (r);
 }
 
-int
+gpg_error_t
 ksba_reader_error (ksba_reader_t r)
 {
-  return r? r->error : -1;
+  return r? gpg_error_from_errno (r->error) : gpg_error (GPG_ERR_INV_VALUE);
 }
 
 unsigned long

@@ -458,7 +458,10 @@ parse_cms_version (ksba_reader_t reader, int *r_version,
   if (ti.length != 1)
     return gpg_error (GPG_ERR_UNSUPPORTED_CMS_VERSION); 
   if ( (c=read_byte (reader)) == -1)
-    return gpg_error (GPG_ERR_READ_ERROR);
+    {
+      err = ksba_reader_error (reader);
+      return err? err : gpg_error (GPG_ERR_GENERAL);
+    }
   if ( !(c == 0 || c == 1 || c == 2 || c == 3 || c == 4) )
     return gpg_error (GPG_ERR_UNSUPPORTED_CMS_VERSION);
   *r_version = c;
@@ -536,7 +539,8 @@ _ksba_cms_parse_signed_data_part_1 (ksba_cms_t cms)
   if (read_buffer (cms->reader, buffer, algo_set_len))
     {
       xfree (buffer);
-      return gpg_error (GPG_ERR_READ_ERROR);
+      err = ksba_reader_error (cms->reader);
+      return err? err: gpg_error (GPG_ERR_GENERAL);
     }
   p = buffer;
   while (algo_set_len)
