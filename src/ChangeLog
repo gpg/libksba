@@ -1,3 +1,9 @@
+2003-11-28  Werner Koch  <wk@gnupg.org>
+
+	* ocsp.h, ocsp.c: New.
+	* ksba.h (ksba_status_t, ksba_ocsp_response_status_t): New.
+	(ksba_ocsp_t): New.
+
 2003-11-25  Werner Koch  <wk@gnupg.org>
 
 	* ksba.h: Added a few more CRL reason codes.

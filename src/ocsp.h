@@ -23,19 +23,6 @@
 
 #include "ksba.h"
 
-typedef enum
-  {
-    KSBA_OCSP_RSPSTATUS_SUCCESS = 0,
-    KSBA_OCSP_RSPSTATUS_MALFORMED = 1,
-    KSBA_OCSP_RSPSTATUS_INTERNAL = 2,
-    KSBA_OCSP_RSPSTATUS_TRYLATER = 3,
-    KSBA_OCSP_RSPSTATUS_SIGREQUIRED = 5,
-    KSBA_OCSP_RSPSTATUS_UNAUTHORIZED = 6,
-    KSBA_OCSP_RSPSTATUS_OTHER = 254,
-    KSBA_OCSP_RSPSTATUS_NONE = 255
-  } 
-ksba_ocsp_response_status_t;
-
 
 /* A structure to keep a information about a single status request. */
 struct ocsp_reqitem_s {
@@ -51,14 +38,11 @@ struct ocsp_reqitem_s {
   size_t serialnolen;      /* and its length. */
 
   /* The actual status as parsed from the response. */
-  int got_answer;          /* Set to true if a corresponding response
-                              has been found. */
-  int is_revoked;          /* Set to true if the target certificate
-                              has been revoked. */
   ksba_isotime_t this_update;  /* The thisUpdate value from the response. */
   ksba_isotime_t next_update;  /* The nextUpdate value from the response. */
-  ksba_isotime_t revocation_time; /* The indicated revocation time. */
-
+  ksba_status_t  status;               /* Set to the status of the target. */
+  ksba_isotime_t revocation_time;      /* The indicated revocation time. */
+  ksba_crl_reason_t revocation_reason; /* The reason given for revocation. */
 };
 
 
@@ -76,56 +60,22 @@ struct ksba_ocsp_s {
   char *digest_oid;        /* The OID of the digest algorithm to be
                               used for a request. */
 
-  ksba_reader_t reader;    /* The reader used to parse responses. */
-
-  /* The hash fucntion and its argument to be used by this object. */
-  void (*hash_fnc)(void *, const void *, size_t);
-  void *hash_fnc_arg;
-
   struct ocsp_reqitem_s *requestlist;  /* The list of request items. */
 
-  size_t hash_offset;      /* What area of a response is to be */
+  size_t noncelen;          /* 0 if no nonce was sent. */
+  unsigned char nonce[16];  /* The random nonce we sent; actual length
+                               is NONCELEN. */
+
+
+  size_t hash_offset;      /* What area of the response is to be */
   size_t hash_length;      /* hashed. */
 
   ksba_ocsp_response_status_t response_status; /* Status of the response. */
-  ksba_sexp_t sigval;     /* The signature value. */
+  ksba_sexp_t sigval;          /* The signature value. */
+  ksba_isotime_t produced_at;  /* The time the response was signed. */
   struct ocsp_certlist_s *received_certs; /* Certificates received in
                                              the response. */
-
 };
-
-
-
-
-/* Stuff to be moved into ksba.h */
-
-
-typedef struct ksba_ocsp_s *ksba_ocsp_t;
-
-gpg_error_t ksba_ocsp_new (ksba_ocsp_t *r_oscp);
-void ksba_ocsp_release (ksba_ocsp_t ocsp);
-gpg_error_t ksba_ocsp_add_certs (ksba_ocsp_t ocsp,
-                                 ksba_cert_t cert, ksba_cert_t issuer_cert);
-gpg_error_t ksba_ocsp_set_digest_algo (ksba_ocsp_t ocsp, const char *oid);
-gpg_error_t ksba_ocsp_build_request (ksba_ocsp_t ocsp,
-                                     unsigned char **r_buffer,
-                                     size_t *r_buflen);
-
-
-gpg_error_t ksba_ocsp_parse_response (
-                                 ksba_ocsp_t ocsp,
-                                 const unsigned char *msg, size_t msglen,
-                                 ksba_ocsp_response_status_t *response_status);
-
-const char *ksba_ocsp_get_digest_algo (ksba_ocsp_t ocsp);
-
-gpg_error_t ksba_ocsp_hash_response (ksba_ocsp_t ocsp,
-                                     const unsigned char *msg, size_t msglen,
-                                     void (*hasher)(void *, const void *,
-                                                    size_t length), 
-                                     void *hasher_arg);
-
-ksba_sexp_t ksba_ocsp_get_sig_val (ksba_ocsp_t ocsp);
 
 
 #endif /*OCSP_H*/

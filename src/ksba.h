@@ -147,6 +147,28 @@ typedef enum {
 } ksba_crl_reason_t;
 typedef ksba_crl_reason_t KsbaCRLReason _KSBA_DEPRECATED;
 
+typedef enum
+  {
+    KSBA_OCSP_RSPSTATUS_SUCCESS = 0,
+    KSBA_OCSP_RSPSTATUS_MALFORMED = 1,
+    KSBA_OCSP_RSPSTATUS_INTERNAL = 2,
+    KSBA_OCSP_RSPSTATUS_TRYLATER = 3,
+    KSBA_OCSP_RSPSTATUS_SIGREQUIRED = 5,
+    KSBA_OCSP_RSPSTATUS_UNAUTHORIZED = 6,
+    KSBA_OCSP_RSPSTATUS_REPLAYED = 253,
+    KSBA_OCSP_RSPSTATUS_OTHER = 254,
+    KSBA_OCSP_RSPSTATUS_NONE = 255
+  } 
+ksba_ocsp_response_status_t;
+
+typedef enum {
+  KSBA_STATUS_NONE = 0,
+  KSBA_STATUS_UNKNOWN = 1,
+  KSBA_STATUS_GOOD = 2,
+  KSBA_STATUS_REVOKED = 4
+} ksba_status_t;
+
+
 typedef enum {
   KSBA_KEYUSAGE_DIGITAL_SIGNATURE =  1,
   KSBA_KEYUSAGE_NON_REPUDIATION   =  2,
@@ -159,7 +181,6 @@ typedef enum {
   KSBA_KEYUSAGE_DECIPHER_ONLY    = 256
 } ksba_key_usage_t;
 typedef ksba_key_usage_t KsbaKeyUsage _KSBA_DEPRECATED;
-
 
 /* ISO format, e.g. "19610711T172059", assumed to be UTC. */
 typedef char ksba_isotime_t[16];
@@ -182,6 +203,11 @@ typedef struct ksba_cms_s *KsbaCMS _KSBA_DEPRECATED;
 struct ksba_crl_s;
 typedef struct ksba_crl_s *ksba_crl_t;
 typedef struct ksba_crl_s *KsbaCRL _KSBA_DEPRECATED;
+
+/* OCSP objects are controlled by this object.
+   ksba_ocsp_new() creates it. */
+struct ksba_ocsp_s;
+typedef struct ksba_ocsp_s *ksba_ocsp_t;
 
 /* PKCS-10 creation is controlled by this object.
    ksba_certreq_new() creates it */
@@ -342,6 +368,40 @@ gpg_error_t ksba_crl_get_item (ksba_crl_t crl,
                                ksba_crl_reason_t *r_reason);
 ksba_sexp_t ksba_crl_get_sig_val (ksba_crl_t crl);
 gpg_error_t ksba_crl_parse (ksba_crl_t crl, ksba_stop_reason_t *r_stopreason);
+
+
+
+/*-- ocsp.c --*/
+gpg_error_t ksba_ocsp_new (ksba_ocsp_t *r_oscp);
+void ksba_ocsp_release (ksba_ocsp_t ocsp);
+gpg_error_t ksba_ocsp_set_digest_algo (ksba_ocsp_t ocsp, const char *oid);
+gpg_error_t ksba_ocsp_add_certs (ksba_ocsp_t ocsp,
+                                 ksba_cert_t cert, ksba_cert_t issuer_cert);
+size_t ksba_ocsp_set_nonce (ksba_ocsp_t ocsp,
+                            unsigned char *nonce, size_t noncelen);
+gpg_error_t ksba_ocsp_build_request (ksba_ocsp_t ocsp,
+                                     unsigned char **r_buffer,
+                                     size_t *r_buflen);
+gpg_error_t ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
+                                      const unsigned char *msg, size_t msglen,
+                                      ksba_ocsp_response_status_t *resp_status);
+
+const char *ksba_ocsp_get_digest_algo (ksba_ocsp_t ocsp);
+gpg_error_t ksba_ocsp_hash_response (ksba_ocsp_t ocsp,
+                                     const unsigned char *msg, size_t msglen,
+                                     void (*hasher)(void *, const void *,
+                                                    size_t length), 
+                                     void *hasher_arg);
+ksba_sexp_t ksba_ocsp_get_sig_val (ksba_ocsp_t ocsp,
+                                   ksba_isotime_t produced_at);
+gpg_error_t ksba_ocsp_get_status (ksba_ocsp_t ocsp, ksba_cert_t cert,
+                                  ksba_status_t *r_status,
+                                  ksba_isotime_t r_this_update,
+                                  ksba_isotime_t r_next_update,
+                                  ksba_isotime_t r_revocation_time,
+                                  ksba_crl_reason_t *r_reason);
+
+
 
 /*-- certreq.c --*/
 gpg_error_t ksba_certreq_new (ksba_certreq_t *r_cr);

@@ -35,7 +35,12 @@
 #include "ocsp.h"
 
 
-#if 1
+static const char oidstr_sha1[] = "1.3.14.3.2.26";
+static const char oidstr_ocsp_basic[] = "1.3.6.1.5.5.7.48.1.1";
+static const char oidstr_ocsp_nonce[] = "1.3.6.1.5.5.7.48.1.2";
+
+
+#if 0
 static void
 dump_hex (const unsigned char *p, size_t n)
 {
@@ -48,11 +53,6 @@ dump_hex (const unsigned char *p, size_t n)
     }
 }
 #endif
-
-
-
-static const char oidstr_sha1[] = "1.3.14.3.2.26";
-static const char oidstr_ocspBasic[] = "1.3.6.1.5.5.7.48.1.1";
 
 
 static  void
@@ -259,6 +259,24 @@ ksba_ocsp_release (ksba_ocsp_t ocsp)
 }
 
 
+
+/* Set the hash algorithm to be used for signing the request to OID.
+   Using this function will force the creation of a signed
+   request.  */
+gpg_error_t
+ksba_ocsp_set_digest_algo (ksba_ocsp_t ocsp, const char *oid)
+{
+  if (!ocsp || !oid || !*oid)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  if (ocsp->digest_oid)
+    xfree (ocsp->digest_oid);
+  ocsp->digest_oid = xtrystrdup (oid);
+  if (!ocsp->digest_oid)
+    return gpg_error_from_errno (errno);
+  return 0;
+}
+
+
 /* Associate the certificate CERT for which the status is to be
    requested and its issuer certificate ISSUER_CERT with the OCSP
    context.  This function may be called multiple time to create a
@@ -288,21 +306,25 @@ ksba_ocsp_add_certs (ksba_ocsp_t ocsp,
 }
 
 
-
-/* Set the hash algorithm to be used for signing the request to OID.
-   Using this function will force the creation of a signed
-   request.  */
-gpg_error_t
-ksba_ocsp_set_digest_algo (ksba_ocsp_t ocsp, const char *oid)
+/* Set the nonce to be used for the request to the content of the
+   buffer NONCE of size NONCELEN.  Libksba may have an upper limit of
+   the allowed size of the nonce; if the supplied nonce is larger it
+   will be truncated and the actual used length of the nonce returned.
+   To detect the implementation limit (which should be sonsidred as a
+   good suggestion), the fucntion may be called with NULL for NONCE,
+   in which case the maximal usable noncelength is returned. The
+   function returns the length of the nonce which will be used. */
+size_t
+ksba_ocsp_set_nonce (ksba_ocsp_t ocsp, unsigned char *nonce, size_t noncelen)
 {
-  if (!ocsp || !oid || !*oid)
-    return gpg_error (GPG_ERR_INV_VALUE);
-  if (ocsp->digest_oid)
-    xfree (ocsp->digest_oid);
-  ocsp->digest_oid = xtrystrdup (oid);
-  if (!ocsp->digest_oid)
-    return gpg_error_from_errno (errno);
-  return 0;
+  if (!ocsp)
+    return 0; 
+  if (!nonce)
+    return sizeof ocsp->nonce;
+  if (noncelen > sizeof ocsp->nonce)
+    noncelen = sizeof ocsp->nonce;
+  memcpy (ocsp->nonce, nonce, noncelen);
+  return noncelen;
 }
 
 
@@ -517,6 +539,8 @@ ksba_ocsp_build_request (ksba_ocsp_t ocsp,
 
   /* The requestExtensions would go here. */
 
+  /* FIXME: Implement the nonce stuff. */
+
   /* Reuse writers; for clarity, use new names. */ 
   w6 = w3;
   w7 = w4;
@@ -653,7 +677,7 @@ parse_response_status (ksba_ocsp_t ocsp,
   err = parse_object_id_into_str (data, datalen, &oid);
   if (err)
     return err;
-  if (strcmp (oid, oidstr_ocspBasic))
+  if (strcmp (oid, oidstr_ocsp_basic))
     {
       xfree (oid);
       return gpg_error (GPG_ERR_UNSUPPORTED_PROTOCOL);
@@ -702,7 +726,6 @@ parse_single_response (ksba_ocsp_t ocsp,
   size_t n;
   char *oid;
   ksba_isotime_t this_update, next_update, revocation_time;
-  ksba_crl_reason_t reason = 0;
   int look_for_request;
   const unsigned char *name_hash;
   const unsigned char *key_hash;
@@ -732,7 +755,7 @@ parse_single_response (ksba_ocsp_t ocsp,
   assert (n <= *datalen);
   *data += n;
   *datalen -= n;
-  fprintf (stderr, "algorithmIdentifier is `%s'\n", oid);
+  /*   fprintf (stderr, "algorithmIdentifier is `%s'\n", oid); */
   look_for_request = !strcmp (oid, oidstr_sha1);
   xfree (oid);
 
@@ -740,9 +763,9 @@ parse_single_response (ksba_ocsp_t ocsp,
   if (err)
     return err;
   name_hash = *data;
-  fprintf (stderr, "issuerNameHash="); 
-  dump_hex (*data, ti.length);
-  putc ('\n', stderr);
+/*   fprintf (stderr, "issuerNameHash=");  */
+/*   dump_hex (*data, ti.length); */
+/*   putc ('\n', stderr); */
   if (ti.length != 20)
     look_for_request = 0; /* Can't be a SHA-1 digest. */
   parse_skip (data, datalen, &ti);
@@ -751,9 +774,9 @@ parse_single_response (ksba_ocsp_t ocsp,
   if (err)
     return err;
   key_hash = *data;
-  fprintf (stderr, "issuerKeyHash="); 
-  dump_hex (*data, ti.length);
-  putc ('\n', stderr);
+/*   fprintf (stderr, "issuerKeyHash=");  */
+/*   dump_hex (*data, ti.length); */
+/*   putc ('\n', stderr); */
   if (ti.length != 20)
     look_for_request = 0; /* Can't be a SHA-1 digest. */
   parse_skip (data, datalen, &ti);
@@ -763,9 +786,9 @@ parse_single_response (ksba_ocsp_t ocsp,
     return err;
   serialno = *data;
   serialnolen = ti.length;
-  fprintf (stderr, "serialNumber="); 
-  dump_hex (*data, ti.length);
-  putc ('\n', stderr);
+/*   fprintf (stderr, "serialNumber=");  */
+/*   dump_hex (*data, ti.length); */
+/*   putc ('\n', stderr); */
   parse_skip (data, datalen, &ti);
 
   if (look_for_request)
@@ -803,14 +826,18 @@ parse_single_response (ksba_ocsp_t ocsp,
         }
       else
         return gpg_error (GPG_ERR_INV_OBJ);
+
+      if (request_item)
+        request_item->status = KSBA_STATUS_GOOD;
     }
   else if (ti.class == CLASS_CONTEXT && ti.tag == 1  && ti.is_constructed)
     { /* revoked */
+      ksba_crl_reason_t reason = KSBA_CRLREASON_UNSPECIFIED;
+
       err = parse_asntime_into_isotime (data, datalen, revocation_time);
       if (err)
         return err;
-      fprintf (stderr, "revocationTime=%s\n", revocation_time);
-      
+/*       fprintf (stderr, "revocationTime=%s\n", revocation_time); */
       savedata = *data;
       savedatalen = *datalen;
       err = parse_context_tag (data, datalen, &ti, 0);
@@ -840,7 +867,13 @@ parse_single_response (ksba_ocsp_t ocsp,
             }
           parse_skip (data, datalen, &ti);
         }
-      fprintf (stderr, "revocationReason=%04x\n", reason);
+/*       fprintf (stderr, "revocationReason=%04x\n", reason); */
+      if (request_item)
+        {
+          request_item->status = KSBA_STATUS_REVOKED;
+          _ksba_copy_time (request_item->revocation_time, revocation_time);
+          request_item->revocation_reason = reason;
+        }
     }
   else if (ti.class == CLASS_CONTEXT && ti.tag == 2 && !ti.is_constructed
            && *datalen)
@@ -857,10 +890,13 @@ parse_single_response (ksba_ocsp_t ocsp,
           err = parse_enumerated (data, datalen, &ti, 0);
           if (err)
             return err;
-          fprintf (stderr, "unknownReason with an enum of length %u detected\n",
+          fprintf (stderr, "libksba: unknownReason with an enum of "
+                   "length %u detected\n",
                    (unsigned int)ti.length);
           parse_skip (data, datalen, &ti);
         }
+      if (request_item)
+        request_item->status = KSBA_STATUS_UNKNOWN;
     }
   else
     err = gpg_error (GPG_ERR_INV_OBJ);
@@ -869,8 +905,9 @@ parse_single_response (ksba_ocsp_t ocsp,
   err = parse_asntime_into_isotime (data, datalen, this_update);
   if (err)
     return err;
-  fprintf (stderr, "thisUpdate=%s\n", this_update);
-
+/*   fprintf (stderr, "thisUpdate=%s\n", this_update); */
+  if (request_item)
+      _ksba_copy_time (request_item->this_update, this_update);
 
   /* nextUpdate is optional. */
   if (*data >= endptr)
@@ -886,7 +923,9 @@ parse_single_response (ksba_ocsp_t ocsp,
       err = parse_asntime_into_isotime (data, datalen, next_update);
       if (err)
         return err;
-      fprintf (stderr, "nextUpdate=%s\n", this_update);
+/*       fprintf (stderr, "nextUpdate=%s\n", next_update); */
+      if (request_item)
+        _ksba_copy_time (request_item->next_update, next_update);
     }
   else if (ti.class == CLASS_CONTEXT && ti.tag == 1  && ti.is_constructed)
     { /* Undo that read. */
@@ -938,7 +977,6 @@ parse_response_data (ksba_ocsp_t ocsp,
   const unsigned char *savedata;
   size_t savedatalen;
   size_t responses_length;
-  ksba_isotime_t produced_at;
 
   /* The out er sequence. */
   err = parse_sequence (data, datalen, &ti);
@@ -978,7 +1016,7 @@ parse_response_data (ksba_ocsp_t ocsp,
     err = gpg_error (GPG_ERR_INV_OBJ);
 
   /* The producedAt field. */
-  err = parse_asntime_into_isotime (data, datalen, produced_at);
+  err = parse_asntime_into_isotime (data, datalen, ocsp->produced_at);
   if (err)
     return err;
 
@@ -1003,6 +1041,9 @@ parse_response_data (ksba_ocsp_t ocsp,
   err = parse_context_tag (data, datalen, &ti, 1);
   if (!err)
     {
+      
+
+
       /* FIXME: parse responseExtensions. */
       parse_skip (data, datalen, &ti);
     }
@@ -1038,8 +1079,8 @@ parse_response (ksba_ocsp_t ocsp, const unsigned char *msg, size_t msglen)
   msglen = len; /* We don't care about any extra bytes provided to us. */
   if (ocsp->response_status)
     {
-      fprintf (stderr,"response status found to be %d - stop\n",
-               ocsp->response_status);
+/*       fprintf (stderr,"response status found to be %d - stop\n", */
+/*                ocsp->response_status); */
       return 0;
     }
 
@@ -1157,20 +1198,44 @@ ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
                           ksba_ocsp_response_status_t *response_status)
 {
   gpg_error_t err;
+  struct ocsp_reqitem_s *ri;
 
   if (!ocsp || !msg || !msglen || !response_status)
     return gpg_error (GPG_ERR_INV_VALUE);
+
+  if (!ocsp->requestlist)
+    return gpg_error (GPG_ERR_MISSING_ACTION);
 
   ocsp->response_status = KSBA_OCSP_RSPSTATUS_NONE;
   release_ocsp_certlist (ocsp->received_certs);
   ocsp->received_certs = NULL;
   ocsp->hash_length = 0;
 
+  /* Reset the fields used to track the reponse.  This is so that we
+     can use the parse function a second time for the same
+     request. This is useful in case of a TryLater response status. */
+  for (ri=ocsp->requestlist; ri; ri = ri->next)
+    {
+      ri->status = KSBA_STATUS_NONE;
+      *ri->this_update = 0;
+      *ri->next_update = 0;
+      *ri->revocation_time = 0;
+      ri->revocation_reason = 0;
+    }
+
   err = parse_response (ocsp, msg, msglen);
   *response_status = ocsp->response_status;
 
-  /* FIXME: find duplicates in the requets list and set them to the
+  /* FIXME: find duplicates in the request list and set them to the
      same status. */
+
+  if (*response_status == KSBA_OCSP_RSPSTATUS_SUCCESS
+      && ocsp->noncelen)
+    {
+      /* FIXME: Check that tehre is a rceived nonce and thit it matches. */
+
+    }
+
 
   return err;
 }
@@ -1217,17 +1282,74 @@ ksba_ocsp_hash_response (ksba_ocsp_t ocsp,
    input to Libgcrypt's verification function.  The caller must free
    the returned string and that function may be called only once after
    a successful ksba_ocsp_parse_response. Returns NULL for an invalid
-   handle or if no signature is available. */
+   handle or if no signature is available. If PRODUCED_AT is not NULL,
+   it will receive the time the response was signed. */
 ksba_sexp_t
-ksba_ocsp_get_sig_val (ksba_ocsp_t ocsp)
+ksba_ocsp_get_sig_val (ksba_ocsp_t ocsp, ksba_isotime_t produced_at)
 {
   ksba_sexp_t p;
 
+  if (produced_at)
+    *produced_at = 0;
   if (!ocsp || !ocsp->sigval )
     return NULL;
+
+  if (produced_at)
+    _ksba_copy_time (produced_at, ocsp->produced_at);
 
   p = ocsp->sigval;
   ocsp->sigval = NULL;
   return p;
 }
 
+
+/* Return the status of the certificate CERT for the last response
+   done on the context OCSP.  CERT must be the same certificate as
+   used for the request; only a shallow compare is done (i.e. the
+   pointers are compared).  R_STATUS returns the status value,
+   R_THIS_UPDATE and R_NEXT_UPDATE are the corresponding OCSP response
+   values, R_REVOCATION_TIME is only set to the revocation time if the
+   indicated status is revoked, R_REASON will be set to the reason
+   given for a revocation.  All the R_* arguments may be given as NULL
+   if the value is not required.  The function return 0 on success,
+   GPG_ERR_NOT_FOUND if CERT was not used in the request or any other
+   error code.  Note that the caller should have checked the signature
+   of the entire reponse to be good before using the stati retruned by
+   this function. */
+gpg_error_t
+ksba_ocsp_get_status (ksba_ocsp_t ocsp, ksba_cert_t cert,
+                      ksba_status_t *r_status,
+                      ksba_isotime_t r_this_update,
+                      ksba_isotime_t r_next_update,
+                      ksba_isotime_t r_revocation_time,
+                      ksba_crl_reason_t *r_reason)
+{
+  struct ocsp_reqitem_s *ri;
+
+  if (!ocsp || !cert || !r_status)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  if (!ocsp->requestlist)
+    return gpg_error (GPG_ERR_MISSING_ACTION);
+
+  /* Find the certificate.  We don't care about the issuer certificate
+     and stop at the first match.  The implementation may be optimized
+     by keeping track of the last certificate found to start with the
+     next one the.  Given that a usual request consiost only of a few
+     certificates, this does not make much sense in reality. */
+  for (ri=ocsp->requestlist; ri; ri = ri->next)
+    if (ri->cert == cert)
+      break;
+  if (!ri)
+    return gpg_error (GPG_ERR_NOT_FOUND);
+  if (r_status)
+    *r_status = ri->status;
+  if (r_this_update)
+    _ksba_copy_time (r_this_update, ri->this_update);
+  if (r_next_update)
+    _ksba_copy_time (r_next_update, ri->next_update);
+  if (r_revocation_time)
+    _ksba_copy_time (r_revocation_time, ri->revocation_time);
+  if (r_reason)
+    *r_reason = ri->revocation_reason;
+  return 0;
+}

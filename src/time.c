@@ -99,7 +99,7 @@ void
 _ksba_copy_time (ksba_isotime_t d, const ksba_isotime_t s)
 {
   if (!*s)
-    memset (d, 16, 0);
+    memset (d, 0, 16);
   else if ( _ksba_assert_time_format (s) )
     {
       fprintf (stderr, "BUG: invalid isotime buffer\n");
