@@ -182,7 +182,7 @@ ksba_reader_set_file (ksba_reader_t r, FILE *fp)
  * The callback should return a maximium of @count bytes in @buffer
  * and the number actually read in @nread.  It may return 0 in @nread
  * if there are no bytes currently available.  To indicate EOF the
- * callback should return with an error code of %-1 and set @nread to
+ * callback should return with an error code of GPG_ERR_EOF and set @nread to
  * 0.  The callback may support passing %NULL for @buffer and @nread
  * and %0 for count as an indication to reset its internal read
  * pointer.
@@ -216,7 +216,7 @@ ksba_reader_set_cb (ksba_reader_t r,
  * 
  * Read data from the current read position to the supplied @buffer,
  * max. @length bytes are read and the actual number of bytes read are
- * returned in @nread.  If there are no more bytes available %-1 is
+ * returned in @nread.  If there are no more bytes available %GPG_ERR_EOF is
  * returned and @nread is set to 0.
  *
  * If a @buffer of NULL is specified, the function does only return
@@ -225,7 +225,7 @@ ksba_reader_set_cb (ksba_reader_t r,
  * object is not capable of this it will return the error
  * GPG_ERR_NOT_IMPLEMENTED
  * 
- * Return value: 0 on success, -1 on EOF or an error code
+ * Return value: 0 on success, GPG_ERR_EOF or another error code
  **/
 gpg_error_t
 ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
@@ -243,7 +243,7 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
       *nread = r->u.mem.size - r->u.mem.readpos;
       if (r->unread.buf)
         *nread += r->unread.length - r->unread.readpos;
-      return *nread? 0 :-1;
+      return *nread? 0 : gpg_error (GPG_ERR_EOF);
     }
 
   *nread = 0;
@@ -269,7 +269,7 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
   if (!r->type)
     {
       r->eof = 1;
-      return -1;
+      return gpg_error (GPG_ERR_EOF);
     }
   else if (r->type == READER_TYPE_MEM)
     {
@@ -277,7 +277,7 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
       if (!nbytes)
         {
           r->eof = 1;
-          return -1;
+          return gpg_error (GPG_ERR_EOF);
         }
       
       if (nbytes > length)
@@ -292,7 +292,7 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
       int n;
 
       if (r->eof)
-        return -1;
+        return gpg_error (GPG_ERR_EOF);
       
       if (!length)
         {
@@ -314,19 +314,19 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
               r->error = errno;
           r->eof = 1;
           if (n <= 0)
-            return -1;
+            return gpg_error (GPG_ERR_EOF);
         }
     }
   else if (r->type == READER_TYPE_CB)
     {
       if (r->eof)
-        return -1;
+        return gpg_error (GPG_ERR_EOF);
       
       if (r->u.cb.fnc (r->u.cb.value, buffer, length, nread))
         {
           *nread = 0;
           r->eof = 1;
-          return -1;
+          return gpg_error (GPG_ERR_EOF);
         }
       r->nread += *nread;
     }
