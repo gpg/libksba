@@ -1,3 +1,7 @@
+2001-12-18  Werner Koch  <wk@gnupg.org>
+
+	* Makefile.am (DISTCLEANFILES): Add asn1-tables.c
+
 2001-12-17  Werner Koch  <wk@gnupg.org>
 
 	* cert.c (ksba_cert_get_serial): Does now return a S-expression.
