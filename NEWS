@@ -2,6 +2,12 @@ Noteworthy changes in version 0.9.5
 ------------------------------------------------
 
 
+ * Interface changes relative to the 0.9.4 release:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ksba_ocsp_get_responder_id   NEW.
+ksba_ocsp_get_cert           NEW.
+
+
 Noteworthy changes in version 0.9.4 (2004-02-20)
 ------------------------------------------------
 

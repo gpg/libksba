@@ -63,3 +63,6 @@ Easy to fix.
 * General
 ** The ASN.1 parse tree is not released in all places
 ** Some memory is not released in case of errors.
+
+* src/ocsp.c
+** Implement nonce handling.
