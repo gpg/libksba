@@ -33,7 +33,7 @@ test_crls = samples/ov-test-crl.crl
 test_keys = samples/ov-server.p12  samples/ov-userrev.p12 \
              samples/ov-serverrev.p12  samples/ov-user.p12
 
-EXTRA_DIST = $(test_certs) samples/README
+EXTRA_DIST = $(test_certs) samples/README mkoidtbl.awk
 
 BUILT_SOURCES = oidtranstbl.h
 CLEANFILES = oidtranstbl.h
