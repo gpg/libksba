@@ -180,7 +180,7 @@ one_file (const char *fname)
       printf ("signer %d - digest algo: %s\n", signer, algoid?algoid:"?");
 
       dn = ksba_cms_get_sig_val (cms, signer);
-      printf ("signer %d - signature: `%s'\n", signer, dn? dn: "[ERROR]");
+      printf ("signer %d - signature %s\n", signer, dn? "found": "missing");
       ksba_free (dn);
     }
 
@@ -197,7 +197,6 @@ int
 main (int argc, char **argv)
 {
 
-  one_file ("../scratch/sample-smime-signed-1.ber");
   one_file ("pkcs7-1.ber");
   /*one_file ("root-cert-2.der");  should fail */
 

@@ -1,3 +1,7 @@
+2001-12-18  Werner Koch  <wk@gnupg.org>
+
+	* cert-basic.c (main): Depend tests on $srcdir.
+
 2001-12-17  Werner Koch  <wk@gnupg.org>
 
 	* cert-basic.c, t-cms-parser.c (print_integer): Renamed to

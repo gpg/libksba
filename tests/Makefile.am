@@ -26,9 +26,9 @@ test_certs = cert_dfn_pca01.der cert_dfn_pca15.der \
 
 EXTRA_DIST = $(test_certs)
 
-TESTS = cert-basic t-cms-parser
+TESTS = cert-basic 
 
-noinst_PROGRAMS = $(TESTS)
+noinst_PROGRAMS = $(TESTS) t-cms-parser
 LDADD = ../src/libksba.la
 
 

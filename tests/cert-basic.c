@@ -40,6 +40,21 @@
                             exit (1); }                              \
                            } while(0)
 
+
+static void *
+xmalloc (size_t n)
+{
+  char *p = ksba_malloc (n);
+  if (!p)
+    {
+      fprintf (stderr, "out of core\n");
+      exit (1);
+    }
+  return p;
+}
+
+
+
 static void
 print_sexp (KsbaConstSexp p)
 {
@@ -187,6 +202,11 @@ one_file (const char *fname)
 int 
 main (int argc, char **argv)
 {
+  const char *srcdir = getenv ("srcdir");
+  
+  if (!srcdir)
+    srcdir = ".";
+
   if (argc > 1)
     {
       for (argc--, argv++; argc; argc--, argv++)
@@ -194,9 +214,25 @@ main (int argc, char **argv)
     }
   else
     {
-      one_file ("cert_dfn_pca01.der"); 
-      one_file ("cert_dfn_pca15.der"); 
-      one_file ("cert_g10code_test1.der");
+      const char *files[] = {
+        "cert_dfn_pca01.der",
+        "cert_dfn_pca15.der",
+        "cert_g10code_test1.der",
+        NULL 
+      };
+      int idx;
+      
+      for (idx=0; files[idx]; idx++)
+        {
+          char *fname;
+
+          fname = xmalloc (strlen (srcdir) + 1 + strlen (files[idx]) + 1);
+          strcpy (fname, srcdir);
+          strcat (fname, "/");
+          strcat (fname, files[idx]);
+          one_file (fname);
+          ksba_free (fname);
+        }
     }
 
   return 0;
