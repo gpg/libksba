@@ -51,14 +51,20 @@ print_sexp (KsbaConstSexp p)
     fputs ("none", stdout);
   else
     {
-      n = strtoul (p, (char**)&endp, 10);
-      p = endp;
-      if (*p!=':')
-        fputs ("ERROR - invalid value", stdout);
+      if (*p != '(')
+        fputs ("ERROR - invalid S-exp", stdout);
       else
         {
-          for (p++; n; n--, p++)
-            printf ("%02X", *p);
+          p++;
+          n = strtoul (p, (char**)&endp, 10);
+          p = endp;
+          if (*p!=':')
+            fputs ("ERROR - invalid value", stdout);
+          else
+            {
+              for (p++; n; n--, p++)
+                printf ("%02X", *p);
+            }
         }
     }
 }
@@ -103,7 +109,7 @@ one_file (const char *fname)
   size_t n;
   KsbaSexp p;
   char *dn;
-  int signer;
+  int idx;
 
   printf ("*** checking `%s' ***\n", fname);
   fp = fopen (fname, "r");
@@ -156,38 +162,64 @@ one_file (const char *fname)
   fail_if_err2 (fname, err);
   printf ("stop reason: %d\n", stopreason);
 
-  for (signer=0; signer < 1; signer++)
+  if (ksba_cms_get_content_type (cms, 0) == KSBA_CT_ENVELOPED_DATA)
     {
-      err = ksba_cms_get_issuer_serial (cms, signer, &dn, &p);
-      if (err == KSBA_No_Data && !signer)
+      for (idx=0; ; idx++)
         {
-          printf ("this is a certs-only message\n");
-          break;
-        }
+          err = ksba_cms_get_issuer_serial (cms, idx, &dn, &p);
+          if (err == -1)
+            break; /* ready */
 
-      fail_if_err2 (fname, err);
-      printf ("signer %d - issuer: ", signer);
-      print_dn (dn);
-      ksba_free (dn);
-      putchar ('\n');
-      printf ("signer %d - serial: ", signer);
-      print_sexp (p);
-      ksba_free (p);
-      putchar ('\n');
+          fail_if_err2 (fname, err);
+          printf ("recipient %d - issuer: ", idx);
+          print_dn (dn);
+          ksba_free (dn);
+          putchar ('\n');
+          printf ("recipient %d - serial: ", idx);
+          print_sexp (p);
+          ksba_free (p);
+          putchar ('\n');
   
-      err = ksba_cms_get_message_digest (cms, signer, &dn, &n);
-      fail_if_err2 (fname, err);
-      printf ("signer %d - messageDigest: ", signer);
-      print_hex (dn, n);
-      ksba_free (dn);
-      putchar ('\n');
+          dn = ksba_cms_get_enc_val (cms, idx);
+          printf ("recipient %d - enc_val %s\n", idx, dn? "found": "missing");
+          ksba_free (dn);
+        }
+    }
+  else
+    { 
+      for (idx=0; idx < 1; idx++)
+        {
+          err = ksba_cms_get_issuer_serial (cms, idx, &dn, &p);
+          if (err == KSBA_No_Data && !idx)
+            {
+              printf ("this is a certs-only message\n");
+              break;
+            }
 
-      algoid = ksba_cms_get_digest_algo (cms, signer);
-      printf ("signer %d - digest algo: %s\n", signer, algoid?algoid:"?");
+          fail_if_err2 (fname, err);
+          printf ("signer %d - issuer: ", idx);
+          print_dn (dn);
+          ksba_free (dn);
+          putchar ('\n');
+          printf ("signer %d - serial: ", idx);
+          print_sexp (p);
+          ksba_free (p);
+          putchar ('\n');
+  
+          err = ksba_cms_get_message_digest (cms, idx, &dn, &n);
+          fail_if_err2 (fname, err);
+          printf ("signer %d - messageDigest: ", idx);
+          print_hex (dn, n);
+          ksba_free (dn);
+          putchar ('\n');
 
-      dn = ksba_cms_get_sig_val (cms, signer);
-      printf ("signer %d - signature %s\n", signer, dn? "found": "missing");
-      ksba_free (dn);
+          algoid = ksba_cms_get_digest_algo (cms, idx);
+          printf ("signer %d - digest algo: %s\n", idx, algoid?algoid:"?");
+
+          dn = ksba_cms_get_sig_val (cms, idx);
+          printf ("signer %d - signature %s\n", idx, dn? "found": "missing");
+          ksba_free (dn);
+        }
     }
 
   ksba_cms_release (cms);
@@ -203,7 +235,10 @@ int
 main (int argc, char **argv)
 {
 
-  one_file ("x.ber");
+  if (argc > 1)
+    one_file (argv[1]);
+  else
+    one_file ("x.ber");
   /*one_file ("pkcs7-1.ber");*/
   /*one_file ("root-cert-2.der");  should fail */
 

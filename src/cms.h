@@ -29,6 +29,15 @@ typedef struct asn_node_struct *AsnNode;  /* FIXME: should not go here */
 #endif
 
 
+/* This structure is used to store the results of a BER parser run. */
+struct value_tree_s {
+  struct value_tree_s *next;
+  AsnNode root;  /* root of the tree with the values */
+  unsigned char *image;
+  size_t imagelen;
+};
+
+
 struct oidlist_s {
   struct oidlist_s *next;
   char *oid;
@@ -96,11 +105,7 @@ struct ksba_cms_s {
     } cache;
   } signer_info;  
 
-  struct {
-    AsnNode root;  /* root of the tree with the values */
-    unsigned char *image;
-    size_t imagelen;
-  } recp_info;  
+  struct value_tree_s *recp_info;
 
   struct {
     char *algo;

@@ -262,6 +262,20 @@ ksba_cms_new (void)
   return cms;
 }
 
+/* Release a list of value trees. */
+static void
+release_value_tree (struct value_tree_s *tree)
+{
+  while (tree)
+    {
+      struct value_tree_s *tmp = tree->next;
+      _ksba_asn_release_nodes (tree->root);
+      xfree (tree->image);
+      xfree (tree);
+      tree = tmp;
+    }
+}
+
 /**
  * ksba_cms_release:
  * @cms: A CMS object
@@ -302,8 +316,7 @@ ksba_cms_release (KsbaCMS cms)
   _ksba_asn_release_nodes (cms->signer_info.root);
   xfree (cms->signer_info.image);
   xfree (cms->signer_info.cache.digest_algo);
-  _ksba_asn_release_nodes (cms->recp_info.root);
-  xfree (cms->recp_info.image);
+  release_value_tree (cms->recp_info);
   xfree (cms->sig_val.algo);
   xfree (cms->sig_val.value);
   xfree (cms->enc_val.algo);
@@ -501,7 +514,10 @@ ksba_cms_get_digest_algo_list (KsbaCMS cms, int idx)
  * This functions returns the issuer and serial number either from the
  * sid or the rid elements of a CMS object.
  * 
- * Return value: 0 on success or an error code
+ * Return value: 0 on success or an error code.  An error code of -1
+ * is returned to indicate that there is no issuer with that idx,
+ * KSBA_No_Data is returned to indicate that there is no issuer at
+ * all.
  **/
 KsbaError
 ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
@@ -515,21 +531,29 @@ ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
 
   if (!cms)
     return KSBA_Invalid_Value;
-  if (idx)
+  if (idx<0)
     return KSBA_Invalid_Index;
   if (cms->signer_info.root)
     {
+      if (idx > 0)
+        return -1;  /* fixme: we should support multiple signers */
       issuer_path = "SignerInfos..sid.issuerAndSerialNumber.issuer";
       serial_path = "SignerInfos..sid.issuerAndSerialNumber.serialNumber";
       root = cms->signer_info.root;
       image = cms->signer_info.image;
     }
-  else if (cms->recp_info.root)
+  else if (cms->recp_info)
     {
-      issuer_path = "RecipientInfos..ktri.rid.issuerAndSerialNumber.issuer";
-      serial_path = "RecipientInfos..ktri.rid.issuerAndSerialNumber.serialNumber";
-      root = cms->recp_info.root;
-      image = cms->recp_info.image;
+      struct value_tree_s *tmp;
+
+      issuer_path = "KeyTransRecipientInfo.rid.issuerAndSerialNumber.issuer";
+      serial_path = "KeyTransRecipientInfo.rid.issuerAndSerialNumber.serialNumber";
+      for (tmp=cms->recp_info; tmp && idx; tmp=tmp->next, idx-- )
+        ;
+      if (!tmp)
+        return -1;
+      root = tmp->root;
+      image = tmp->image;
     }
   else
     return KSBA_No_Data;
@@ -829,16 +853,23 @@ ksba_cms_get_enc_val (KsbaCMS cms, int idx)
   AsnNode n, n2;
   KsbaError err;
   KsbaSexp string;
+  struct value_tree_s *vt;
 
   if (!cms)
     return NULL;
-  if (!cms->recp_info.root)
+  if (!cms->recp_info)
     return NULL;
-  if (idx)
+  if (idx < 0)
     return NULL; /* we can only handle one recipient for now */
 
-  n = _ksba_asn_find_node (cms->recp_info.root,
-                           "RecipientInfos..ktri.keyEncryptionAlgorithm");
+  for (vt=cms->recp_info; vt && idx; vt=vt->next, idx--)
+    ;
+  if (!vt)
+    return NULL; /* No value at this IDX */
+
+
+  n = _ksba_asn_find_node (vt->root,
+                           "KeyTransRecipientInfo.keyEncryptionAlgorithm");
   if (!n)
       return NULL;
   if (n->off == -1)
@@ -849,7 +880,7 @@ ksba_cms_get_enc_val (KsbaCMS cms, int idx)
     }
 
   n2 = n->right; /* point to the actual value */
-  err = _ksba_encval_to_sexp (cms->recp_info.image + n->off,
+  err = _ksba_encval_to_sexp (vt->image + n->off,
                               n->nhdr + n->len
                               + ((!n2||n2->off == -1)? 0:(n2->nhdr+n2->len)),
                               &string);
@@ -1205,6 +1236,12 @@ ksba_cms_set_sig_val (KsbaCMS cms, int idx, KsbaConstSexp sigval)
   if (!n || *s != ':')
     return KSBA_Invalid_Sexp; 
   s++;
+  if (n > 1 && !*s)
+    { /* We might have a leading zero due to the way we encode 
+         MPIs - this zero should not go into the OCTECT STRING.  */
+      s++;
+      n--;
+    }
   xfree (cms->sig_val.value);
   cms->sig_val.value = xtrymalloc (n);
   if (!cms->sig_val.value)
@@ -1337,6 +1374,12 @@ ksba_cms_set_enc_val (KsbaCMS cms, int idx, KsbaConstSexp encval)
   if (!n || *s != ':')
     return KSBA_Invalid_Sexp; 
   s++;
+  if (n > 1 && !*s)
+    { /* We might have a leading zero due to the way we encode 
+         MPIs - this zero should not go into the OCTECT STRING.  */
+      s++;
+      n--;
+    }
   xfree (cms->enc_val.value);
   cms->enc_val.value = xtrymalloc (n);
   if (!cms->enc_val.value)
@@ -1994,17 +2037,14 @@ build_signed_data_rest (KsbaCMS cms)
       /* fixme: release what we don't need */
     }
 
-#if 0
-  /* HACK for testing */
+  /* Write 3 end tags */
   err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
-  if (err)
-    return err;
-  err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
-  if (err)
-    return err;
-#endif
+  if (!err)
+    err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
+  if (!err)
+    err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
 
-  return 0;
+  return err;
 }
 
 
@@ -2303,7 +2343,18 @@ ct_build_enveloped_data (KsbaCMS cms)
   else if (state == sINDATA)
     err = write_encrypted_cont (cms);
   else if (state == sREST)
-    err = 0; /* SPHINX does no allow for unprotectedAttributes */
+    {
+      /* SPHINX does no allow for unprotectedAttributes */
+
+      /* Write 4 end tags */
+      err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
+      if (!err)
+        err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
+      if (!err)
+        err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
+      if (!err)
+        err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
+    }
   else
     err = KSBA_Invalid_State;
 

@@ -504,7 +504,7 @@ match_der (AsnNode root, const struct tag_info *ti,
           printf ("  cur: ("); _ksba_asn_node_dump (node, stdout);
           printf (")\n");
           if (ds->cur.node->flags.in_array)
-            puts ("  This is in an arrat!");
+            puts ("  This is in an array!");
           if (ds->cur.went_up)
             puts ("  And we going up!");
         }

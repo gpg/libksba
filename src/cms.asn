@@ -151,10 +151,10 @@ EncryptedContent ::= OCTET STRING
 UnprotectedAttributes ::= SET SIZE (1..MAX) OF Attribute
 
 RecipientInfo ::= CHOICE {
-  ktri KeyTransRecipientInfo,
-  kari [1] KeyAgreeRecipientInfo,
-  kekri [2] KEKRecipientInfo }
-
+   ktri KeyTransRecipientInfo,
+   kari [1] KeyAgreeRecipientInfo,
+   kekri [2] KEKRecipientInfo }
+ 
 EncryptedKey ::= OCTET STRING
 
 KeyTransRecipientInfo ::= SEQUENCE {

@@ -1,3 +1,20 @@
+2002-03-13  Werner Koch  <wk@gnupg.org>
+
+	* cms.h (value_tree_s): New and use it for recp_info.
+	* cms.c (release_value_tree): New.
+	(ksba_cms_release): And use it here.
+	(ksba_cms_get_issuer_serial): Use the new recp_list structure and
+	take the IDX into account.
+	(ksba_cms_get_enc_val): Ditto.
+	(ksba_cms_set_sig_val,ksba_cms_set_enc_val): Don't store a leading
+	zero.
+
+	* cms-parser.c (_ksba_cms_parse_enveloped_data_part_1): Handle
+	multiple recipients.
+
+	* cms.c (build_signed_data_rest): Write 3 end tags.
+	(ct_build_enveloped_data): Write 4 end tags.
+
 2002-03-12  Werner Koch  <wk@gnupg.org>
 
 	* cms-parser.c (_ksba_cms_parse_signed_data_part_2): Allow an

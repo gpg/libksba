@@ -747,6 +747,7 @@ _ksba_cms_parse_enveloped_data_part_1 (KsbaCMS cms)
   char *algo_oid = NULL;
   char *algo_parm = NULL;
   size_t algo_parmlen;
+  struct value_tree_s *vt, **vtend;
 
   /* get the version */
   err = parse_cms_version (cms->reader, &cms->cms_version,
@@ -771,13 +772,31 @@ _ksba_cms_parse_enveloped_data_part_1 (KsbaCMS cms)
          && ti.tag == TYPE_SET && ti.is_constructed))
     return KSBA_Invalid_CMS_Object; 
 
-  err = create_and_run_decoder (cms->reader,
-                                "CryptographicMessageSyntax.RecipientInfos",
-                                &cms->recp_info.root,
-                                &cms->recp_info.image,
-                                &cms->recp_info.imagelen);
-  if (err)
-    return err;
+  vtend = &cms->recp_info;
+  while (ti.length)
+    {
+      size_t off1, off2;
+
+      off1 = ksba_reader_tell (cms->reader);
+      vt = xtrycalloc (1, sizeof *vt);
+      if (!vt)
+        return KSBA_Out_Of_Core;
+
+      err = create_and_run_decoder (cms->reader,
+                                    "CryptographicMessageSyntax.KeyTransRecipientInfo",
+                                    &vt->root, &vt->image, &vt->imagelen);
+      if (err)
+        return err;
+
+      *vtend = vt;
+      vtend = &vt->next;
+
+      off2 = ksba_reader_tell (cms->reader);
+      if ( (off2 - off1) > ti.length )
+        ti.length = 0;
+      else
+        ti.length -= off2 - off1;
+    }
 
   /* Now for the encryptedContentInfo */
   off = ksba_reader_tell (cms->reader);
