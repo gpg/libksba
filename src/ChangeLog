@@ -1,3 +1,11 @@
+2002-01-08  Werner Koch  <wk@gnupg.org>
+
+	* writer.c (ksba_writer_set_mem): New.
+	(do_writer_write): Implemented it here.
+	(ksba_writer_get_mem): New.
+
+	* tmttv2.asn (CertificationRequestInfo): Added.
+
 2002-01-07  Werner Koch  <wk@gnupg.org>
 
 	* ksba.h (KsbaCRLReason): New.

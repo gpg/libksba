@@ -59,6 +59,10 @@ ksba_writer_new (void)
 void
 ksba_writer_release (KsbaWriter w)
 {
+  if (!w)
+    return;
+  if (w->type == WRITER_TYPE_MEM)
+    xfree (w->u.mem.buffer);
   xfree (w);
 }
 
@@ -163,6 +167,52 @@ ksba_writer_set_cb (KsbaWriter w,
 }
 
 
+KsbaError
+ksba_writer_set_mem (KsbaWriter w, size_t initial_size)
+{
+  if (!w)
+    return KSBA_Invalid_Value;
+  if (w->type == WRITER_TYPE_MEM)
+    ; /* Reuse the buffer (we ignore the initial size)*/
+  else
+    {
+      if (w->type)
+        return KSBA_Conflict;
+
+      if (!initial_size)
+        initial_size = 1024;
+      
+      w->u.mem.buffer = xtrymalloc (initial_size);
+      if (!w->u.mem.buffer)
+        return KSBA_Out_Of_Core;
+      w->u.mem.size = initial_size;
+      w->type = WRITER_TYPE_MEM;
+    }
+  w->error = 0;
+  w->nwritten = 0;
+
+  return 0;
+}
+
+/* Return the pointer to the memory and the siez of it.  This pointer
+   is valid as long as the writer object is valid and no write
+   operations takes place (because they might reallocate the buffer).
+   if NBYTES is not NULL, it will receive the number of bytes in this
+   buffer which is the same value ksba_writer_tell() returns.
+   
+   In case of an error NULL is returned.
+  */
+const void *
+ksba_writer_get_mem (KsbaWriter w, size_t *nbytes)
+{
+  if (!w || w->type != WRITER_TYPE_MEM || w->error)
+    return NULL;
+  if (nbytes)
+    *nbytes = w->nwritten;
+  return w->u.mem.buffer;
+}
+
+
 
 KsbaError
 ksba_writer_set_filter (KsbaWriter w, 
@@ -189,6 +239,28 @@ do_writer_write (KsbaWriter w, const void *buffer, size_t length)
     {
       w->error = -1;
       return KSBA_General_Error;
+    }
+  else if (w->type == WRITER_TYPE_MEM)
+    {
+      if (w->nwritten + length > w->u.mem.size)
+        {
+          size_t newsize = w->u.mem.size;
+          char *p;
+
+          newsize = ((newsize + 4095)/4096)*4096;
+          if (newsize < 16384)
+            newsize += 4096;
+          else
+            newsize += 16384;
+          
+          p = xtryrealloc (w->u.mem.buffer, newsize);
+          if (!p)
+              return KSBA_Out_Of_Core;
+          w->u.mem.buffer = p;
+          w->u.mem.size = newsize;
+        }
+      memcpy (w->u.mem.buffer + w->nwritten, buffer, length);
+      w->nwritten += length;
     }
   else if (w->type == WRITER_TYPE_FILE)
     {
@@ -226,7 +298,6 @@ do_writer_write (KsbaWriter w, const void *buffer, size_t length)
  * 
  * Write @length bytes from @buffer.
  *
-
  * Return value: 0 on success or an error code
  **/
 KsbaError

@@ -27,7 +27,8 @@ enum writer_type {
   WRITER_TYPE_NONE = 0,
   WRITER_TYPE_FD,
   WRITER_TYPE_FILE,
-  WRITER_TYPE_CB
+  WRITER_TYPE_CB,
+  WRITER_TYPE_MEM
 };
 
 
@@ -42,17 +43,16 @@ struct ksba_writer_s {
   void *filter_arg;
 
   union {
-    struct {
-      unsigned char *buffer;
-      size_t size;
-      size_t readpos;
-    } mem;   /* for WRITER_TYPE_MEM */
     int fd;  /* for WRITER_TYPE_FD */
     FILE *file; /* for WRITER_TYPE_FILE */
     struct {
       int (*fnc)(void*,const void *,size_t);
       void *value;
     } cb;   /* for WRITER_TYPE_CB */
+    struct {
+      unsigned char *buffer;
+      size_t size;
+    } mem;   /* for WRITER_TYPE_MEM */
   } u;
 };
 

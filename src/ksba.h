@@ -136,6 +136,11 @@ typedef struct ksba_cms_s *KsbaCMS;
 struct ksba_crl_s;
 typedef struct ksba_crl_s *KsbaCRL;
 
+/* PKCS-10 creation is controlled by this object.
+   ksba_certreq_new() creates it */
+struct ksba_certreq_s;
+typedef struct ksba_certreq_s *KsbaCertreq;
+
 /* This is a reader object vor various purposes
    see ksba_reader_new et al. */
 struct ksba_reader_s;
@@ -246,6 +251,16 @@ KsbaError ksba_crl_get_item (KsbaCRL crl,
 KsbaSexp  ksba_crl_get_sig_val (KsbaCRL crl);
 KsbaError ksba_crl_parse (KsbaCRL crl, KsbaStopReason *r_stopreason);
 
+/*-- cetreq.c --*/
+KsbaCRL   ksba_crl_new (void);
+void      ksba_crl_release (KsbaCRL crl);
+KsbaError ksba_certreq_set_writer (KsbaCertreq cr, KsbaWriter w);
+void      ksba_certreq_set_hash_function (KsbaCertreq cr,
+                               void (*hash_fnc)(void *, const void *, size_t),
+                               void *hash_fnc_arg);
+KsbaError ksba_certreq_set_sig_val (KsbaCertreq cr, KsbaConstSexp sigval);
+
+
 
 
 /*-- reader.c --*/
@@ -276,6 +291,8 @@ KsbaError ksba_writer_set_file (KsbaWriter w, FILE *fp);
 KsbaError ksba_writer_set_cb (KsbaWriter w, 
                               int (*cb)(void*,const void *,size_t),
                               void *cb_value);
+KsbaError ksba_writer_set_mem (KsbaWriter w, size_t initial_size);
+const void *ksba_writer_get_mem (KsbaWriter w, size_t *nbytes);
 KsbaError 
 ksba_writer_set_filter (KsbaWriter w, 
                         KsbaError (*filter)(void*,

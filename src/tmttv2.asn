@@ -79,10 +79,12 @@ RelativeDistinguishedName ::= SET OF AttributeTypeAndValue
 -- pkix defines a SIZE (1 .. MAX), we use a maximum of 1 to avoid
 -- problems with some LDAP implementations.
 
-Attribute ::= SEQUENCE {  -- not specified bt TMTT
+Attribute ::= SEQUENCE {  -- not specified by TMTT
   type    AttributeType,
   values  SET OF AttributeValue
 }
+
+Attributes ::= SET OF Attribute
 
 AttributeTypeAndValue ::= SEQUENCE {
   type    AttributeType,
@@ -362,6 +364,23 @@ issuingDistributionPoint ::= SEQUENCE {
   onlySomeReasons        [3] ReasonFlags OPTIONAL,
   indirectCRL            [4] BOOLEAN DEFAULT FALSE 
 }
+
+
+--
+-- PKCS-10
+-- CertificationRequest ::= SEQUENCE {
+--   certificationRequestInfo  CertificationRequestInfo,
+--   signatureAlgorithm        SignatureAlgorithmIdentifier,
+--   signature                 Signature
+-- }
+
+CertificationRequestInfo ::= SEQUENCE {
+  certificationRequestInfo  Version,
+  subject                   Name,
+  subjectPublicKeyInfo      SubjectPublicKeyInfo,
+  attributes                [0] IMPLICIT Attributes
+}
+  
 
 
 
