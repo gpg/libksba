@@ -18,7 +18,7 @@ PGM=libksba
 autoconf_vers=2.57
 
 # Required version of automake. 
-automake_vers=1.7.7
+automake_vers=1.7.6
 
 
 aclocal_vers="$automake_vers"
@@ -58,8 +58,8 @@ if test "$DIE" = "yes"; then
     exit 1
 fi
 
-echo "Running aclocal ..."
-$ACLOCAL
+echo "Running aclocal -I m4 ..."
+$ACLOCAL -I m4
 echo "Running autoheader..."
 $AUTOHEADER
 echo "Running automake --gnu ..."
