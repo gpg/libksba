@@ -51,6 +51,8 @@ gpg_error_t _ksba_der_store_integer (AsnNode node, const unsigned char *value);
 gpg_error_t _ksba_der_store_oid (AsnNode node, const char *oid);
 gpg_error_t _ksba_der_store_octet_string (AsnNode node,
                                         const char *buf, size_t len);
+gpg_error_t _ksba_der_store_sequence (AsnNode node,
+                                      const unsigned char *buf, size_t len);
 gpg_error_t _ksba_der_store_null (AsnNode node);
 
 

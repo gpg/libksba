@@ -50,6 +50,15 @@ struct oidlist_s {
   char *oid;
 };
 
+/* A structure to store an OID and a parameter. */
+struct oidparmlist_s {
+  struct oidparmlist_s *next;
+  char *oid;
+  size_t parmlen;
+  unsigned char parm[1];
+};
+
+
 struct certlist_s {
   struct certlist_s *next;
   ksba_cert_t cert;
@@ -121,6 +130,8 @@ struct ksba_cms_s {
   struct certlist_s *cert_info_list; /* A list with certificates intended
                                         to be send with a signed message */
 
+  struct oidparmlist_s *capability_list; /* A list of S/MIME capabilities. */
+  
   struct signer_info_s *signer_info;
 
   struct value_tree_s *recp_info;

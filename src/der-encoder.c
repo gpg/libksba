@@ -1,5 +1,5 @@
 /* der-decoder.c - Distinguished Encoding Rules Encoder
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2004 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -142,7 +142,7 @@ _ksba_der_write_algorithm_identifier (ksba_writer_t w, const char *oid,
 
   /* write the sequence */
   /* fixme: the the length to encode the TLV values are actually not
-     just 2 byte each but does prendend on the length of the values - for
+     just 2 byte each but depend on the length of the values - for
      our purposes the static values do work */
   err = _ksba_ber_write_tl (w, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1,
                             4 + len + (parm? parmlen:0));
@@ -355,6 +355,22 @@ _ksba_der_store_octet_string (AsnNode node, const char *buf, size_t len)
     return gpg_error (GPG_ERR_INV_VALUE);
 }
 
+
+gpg_error_t
+_ksba_der_store_sequence (AsnNode node, const unsigned char *buf, size_t len)
+{
+  if (node->type == TYPE_ANY)
+    node->type = TYPE_PRE_SEQUENCE;
+
+  if (node->type == TYPE_SEQUENCE || node->type == TYPE_PRE_SEQUENCE)
+    {
+      return store_value (node, buf, len);
+    }
+  else
+    return gpg_error (GPG_ERR_INV_VALUE);
+}
+
+
 gpg_error_t
 _ksba_der_store_null (AsnNode node)
 {
@@ -387,7 +403,7 @@ set_nhdr_and_len (AsnNode node, unsigned long length)
     buflen++;
   else if (node->type == TYPE_TAG)
     buflen++; 
-  else if (node->type < 0x1f)
+  else if (node->type < 0x1f || node->type == TYPE_PRE_SEQUENCE)
     buflen++;
   else
     {
@@ -431,6 +447,8 @@ copy_nhdr_and_len (unsigned char *buffer, AsnNode node)
     tag = TYPE_SET;
   else if (tag == TYPE_SEQUENCE_OF)
     tag = TYPE_SEQUENCE;
+  else if (tag == TYPE_PRE_SEQUENCE)
+    tag = TYPE_SEQUENCE;
   else if (tag == TYPE_TAG)
     {
       class = CLASS_CONTEXT;  /* Hmmm: we no way to handle other classes */
@@ -461,7 +479,7 @@ copy_nhdr_and_len (unsigned char *buffer, AsnNode node)
       int i;
 
       /* fixme: if we know the sizeof an ulong we could support larger
-         objetcs - however this is pretty ridiculous */
+         objects - however this is pretty ridiculous */
       i = (length <= 0xff ? 1:
            length <= 0xffff ? 2: 
            length <= 0xffffff ? 3: 4);
@@ -587,14 +605,3 @@ _ksba_der_encode_tree (AsnNode root,
     *r_imagelen = imagelen;
   return 0;
 }
-
-
-
-
-
-
-
-
-
-
-

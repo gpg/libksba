@@ -1,3 +1,15 @@
+2004-03-24  Werner Koch  <wk@gnupg.org>
+
+	* cms.c (ksba_cms_add_smime_capability): New.
+	(ksba_cms_release): Free the capability list.
+	(store_smime_capability_sequence): New.
+	(build_signed_data_attributes): Include the smime capabilities.
+	* cms.h (oidparmlist_s): New.
+	(ksba_cms_s): Add element CAPABILITY_LIST.
+	* der-encoder.c (_ksba_der_store_sequence): New.
+	* asn1-func.c (_ksba_asn_is_primitive): New dummy type PRE_SEQUENCE.
+	* der-encoder.c (set_nhdr_and_len, copy_nhdr_and_len): Support it.
+
 2004-03-17  Werner Koch  <wk@gnupg.org>
 
 	* ber-help.c (_ksba_ber_parse_tl): Check for length overflow.

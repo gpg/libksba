@@ -63,7 +63,8 @@ typedef enum {
   TYPE_SET_OF,
   TYPE_DEFINITIONS,
   TYPE_CHOICE,
-  TYPE_IMPORTS
+  TYPE_IMPORTS,
+  TYPE_PRE_SEQUENCE  /* premanufactured Seqences as used by the DER encoder. */
 } node_type_t;
 
 

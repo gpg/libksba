@@ -92,6 +92,7 @@ _ksba_asn_is_primitive (node_type_t type)
     case TYPE_UNIVERSAL_STRING:                      
     case TYPE_CHARACTER_STRING:                      
     case TYPE_BMP_STRING:                            
+    case TYPE_PRE_SEQUENCE:
       return 1;
     default:
       return 0;
@@ -429,6 +430,7 @@ _ksba_asn_node_dump (AsnNode p, FILE *fp)
     case TYPE_GENERALIZED_TIME: typestr = "GENERALIZEDTIME"; break;
     case TYPE_BOOLEAN:	    typestr = "BOOLEAN"; break;
     case TYPE_SEQUENCE:	    typestr = "SEQUENCE"; break;
+    case TYPE_PRE_SEQUENCE: typestr = "PRE_SEQUENCE"; break;
     case TYPE_BIT_STRING:   typestr = "BIT_STR"; break;
     case TYPE_OCTET_STRING: typestr = "OCT_STR"; break;
     case TYPE_TAG:	    typestr = "TAG"; break;

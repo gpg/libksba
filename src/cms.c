@@ -68,10 +68,14 @@ static struct {
 
 static char oidstr_contentType[] = "1.2.840.113549.1.9.3";
 /*static char oid_contentType[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x03";*/
+
 static char oidstr_messageDigest[] = "1.2.840.113549.1.9.4";
 static char oid_messageDigest[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x04";
+
 static char oidstr_signingTime[] = "1.2.840.113549.1.9.5";
 static char oid_signingTime[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x05";
+
+static char oidstr_smimeCapabilities[] = "1.2.840.113549.1.9.15";
 
 
 /* copy all the bytes from the reader to the writer and hash them if a
@@ -488,6 +492,14 @@ ksba_cms_release (ksba_cms_t cms)
       xfree (cms->sig_val->value);
       cms->sig_val = tmp;
     }
+  while (cms->capability_list)
+    { 
+      struct oidparmlist_s *tmp = cms->capability_list->next;
+      xfree (cms->capability_list->oid);
+      xfree (cms->capability_list);
+      cms->capability_list = tmp;
+    }
+
   xfree (cms);
 }
 
@@ -1385,6 +1397,52 @@ ksba_cms_add_cert (ksba_cms_t cms, ksba_cert_t cert)
 }
 
 
+/* Add an S/MIME capability as an extended attribute to the message.
+   This function is to be called for each capability in turn. The
+   first capability added will receive the highest priority.  CMS is
+   the context, OID the object identifier of the capability and if DER
+   is not NULL it is used as the DER-encoded parameters of the
+   capability; the length of that DER object is given in DERLEN.
+   DERLEN should be 0 if DER is NULL.
+
+   The function returns 0 on success or an error code.
+*/
+gpg_error_t
+ksba_cms_add_smime_capability (ksba_cms_t cms, const char *oid,
+                               const unsigned char *der, size_t derlen)
+{
+  gpg_error_t err;
+  struct oidparmlist_s *opl, *opl2;
+
+  if (!cms || !oid)
+    return gpg_error (GPG_ERR_INV_VALUE);
+
+  opl = xtrymalloc (sizeof *opl + derlen - 1);
+  if (!opl)
+    return gpg_error_from_errno (errno);
+  opl->next = NULL;
+  opl->oid = xtrystrdup (oid);
+  if (!opl->oid)
+    {
+      err = gpg_error_from_errno (errno);
+      xfree (opl);
+      return err;
+    }
+
+  /* Append it to maintain the desired order. */
+  if (!cms->capability_list)
+    cms->capability_list = opl;
+  else
+    {
+      for (opl2=cms->capability_list; opl2->next; opl2 = opl2->next)
+        ;
+      opl2->next = opl;
+    }
+
+  return 0;
+}
+
+
 
 /**
  * ksba_cms_set_message_digest:
@@ -1428,7 +1486,7 @@ ksba_cms_set_message_digest (ksba_cms_t cms, int idx,
  * ksba_cms_set_signing_time:
  * @cms: A CMS object
  * @idx: The index of the signer
- * @sigtime: a time or an emty value to use the current time
+ * @sigtime: a time or an empty value to use the current time
  * 
  * Set a signing time into the signedAttributes of the signer with
  * the index IDX.  The index of a signer is determined by the sequence
@@ -1451,7 +1509,7 @@ ksba_cms_set_signing_time (ksba_cms_t cms, int idx, const ksba_isotime_t sigtime
   if (!cl)
     return gpg_error (GPG_ERR_INV_INDEX); /* no certificate to store it */
   
-  /* Fixme: We might want to check the validity of the pased time
+  /* Fixme: We might want to check the validity of the passed time
      string. */
   if (!*sigtime)
     _ksba_current_time (cl->signing_time);
@@ -1459,6 +1517,7 @@ ksba_cms_set_signing_time (ksba_cms_t cms, int idx, const ksba_isotime_t sigtime
     _ksba_copy_time (cl->signing_time, sigtime); 
   return 0;
 }
+
 
 /*
   r_sig  = (sig-val
@@ -2123,6 +2182,59 @@ set_issuer_serial (AsnNode info, ksba_cert_t cert, int mode)
 }
 
 
+/* Store the sequence of capabilities at NODE */
+static gpg_error_t
+store_smime_capability_sequence (AsnNode node,
+                                 struct oidparmlist_s *capabilities)
+{
+  gpg_error_t err;
+  struct oidparmlist_s *cap, *cap2;
+  unsigned char *value;
+  size_t valuelen;
+  ksba_writer_t tmpwrt;
+
+  err = ksba_writer_new (&tmpwrt);
+  if (err)
+    return err;
+  err = ksba_writer_set_mem (tmpwrt, 512);
+  if (err)
+    {
+      ksba_writer_release (tmpwrt);
+      return err;
+    }
+    
+  for (cap=capabilities; cap; cap = cap->next)
+    {
+      /* (avoid writing duplicates) */
+      for (cap2=capabilities; cap2 != cap; cap2 = cap2->next)
+        {
+          if (!strcmp (cap->oid, cap2->oid)
+              && cap->parmlen && cap->parmlen == cap2->parmlen
+              && !memcmp (cap->parm, cap2->parm, cap->parmlen))
+            break; /* Duplicate found. */
+        }
+      if (cap2 == cap)
+        {
+          err = _ksba_der_write_algorithm_identifier
+                 (tmpwrt, cap->oid, cap->parmlen?cap->parm:NULL, cap->parmlen);
+          if (err)
+            {
+              ksba_writer_release (tmpwrt);
+              return err;
+            }
+        }
+    }
+  
+  value = ksba_writer_snatch_mem (tmpwrt, &valuelen);
+  if (!value)
+    err = gpg_error (GPG_ERR_ENOMEM);
+  if (!err)
+    err = _ksba_der_store_sequence (node, value, valuelen);
+  xfree (value);
+  ksba_writer_release (tmpwrt);
+  return err;
+}
+
 
 /* An object used to construct the signed attributes. */
 struct attrarray_s {
@@ -2232,7 +2344,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       unsigned char *image;
       size_t imagelen;
       int i;
-      struct attrarray_s attrarray[3]; 
+      struct attrarray_s attrarray[4]; 
       int attridx = 0;
 
       if (!digestlist)
@@ -2299,7 +2411,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       if (certlist->signing_time)
         {
           attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
-                                        "CryptographicMessageSyntax.Attribute");
+                                     "CryptographicMessageSyntax.Attribute");
           if (!attr)
             return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
           n = _ksba_asn_find_node (attr, "Attribute.attrType");
@@ -2324,6 +2436,36 @@ build_signed_data_attributes (ksba_cms_t cms)
           attrarray[attridx].imagelen = imagelen;
           attridx++;
         }
+
+      /* Include the S/MIME capabilities with the first signer. */
+      if (cms->capability_list && !signer)
+        {
+          attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+                                    "CryptographicMessageSyntax.Attribute");
+          if (!attr)
+            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+          n = _ksba_asn_find_node (attr, "Attribute.attrType");
+          if (!n)
+            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+          err = _ksba_der_store_oid (n, oidstr_smimeCapabilities);
+          if (err)
+            return err;
+          n = _ksba_asn_find_node (attr, "Attribute.attrValues");
+          if (!n || !n->down)
+            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+          n = n->down; /* fixme: ugly hack */
+          err = store_smime_capability_sequence (n, cms->capability_list);
+          if (err)
+            return err;
+          err = _ksba_der_encode_tree (attr, &image, &imagelen);
+          if (err)
+            return err;
+          attrarray[attridx].root = attr;
+          attrarray[attridx].image = image;
+          attrarray[attridx].imagelen = imagelen;
+          attridx++;
+        }
+
 
       /* Arggh.  That silly ASN.1 DER encoding rules: We need to sort
          the SET values. */

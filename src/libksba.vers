@@ -55,6 +55,7 @@ KSBA_0.9 {
     ksba_cms_set_enc_val; ksba_cms_set_hash_function;
     ksba_cms_set_message_digest; ksba_cms_set_reader_writer;
     ksba_cms_set_sig_val; ksba_cms_set_signing_time;
+    ksba_cms_add_smime_capability;
 
     ksba_crl_get_digest_algo; ksba_crl_get_issuer; ksba_crl_get_item;
     ksba_crl_get_sig_val; ksba_crl_get_update_times; ksba_crl_new;

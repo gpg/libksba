@@ -342,6 +342,9 @@ gpg_error_t ksba_cms_set_content_type (ksba_cms_t cms, int what,
 gpg_error_t ksba_cms_add_digest_algo (ksba_cms_t cms, const char *oid);
 gpg_error_t ksba_cms_add_signer (ksba_cms_t cms, ksba_cert_t cert);
 gpg_error_t ksba_cms_add_cert (ksba_cms_t cms, ksba_cert_t cert);
+gpg_error_t ksba_cms_add_smime_capability (ksba_cms_t cms, const char *oid,
+                                           const unsigned char *der,
+                                           size_t derlen);
 gpg_error_t ksba_cms_set_message_digest (ksba_cms_t cms, int idx,
                                          const char *digest,
                                          size_t digest_len);
