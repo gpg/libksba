@@ -39,11 +39,11 @@ AC_DEFUN(AM_PATH_KSBA,
                sed 's/\([[0-9]]*\)\.\([[0-9]]*\)\.\([[0-9]]*\)/\3/'`
     ksba_config_version=`$KSBA_CONFIG $ksba_config_args --version`
     major=`echo $ksba_config_version | \
-               sed 's/\([[0-9]]*\)\.\([[0-9]]*\)\.\([[0-9]]*\)/\1/'`
+               sed 's/\([[0-9]]*\)\.\([[0-9]]*\)\.\([[0-9]]*\).*/\1/'`
     minor=`echo $ksba_config_version | \
-               sed 's/\([[0-9]]*\)\.\([[0-9]]*\)\.\([[0-9]]*\)/\2/'`
+               sed 's/\([[0-9]]*\)\.\([[0-9]]*\)\.\([[0-9]]*\).*/\2/'`
     micro=`echo $ksba_config_version | \
-               sed 's/\([[0-9]]*\)\.\([[0-9]]*\)\.\([[0-9]]*\)/\3/'`
+               sed 's/\([[0-9]]*\)\.\([[0-9]]*\)\.\([[0-9]]*\).*/\3/'`
     if test "$major" -gt "$req_major"; then
         ok=yes
     else 
@@ -63,7 +63,6 @@ AC_DEFUN(AM_PATH_KSBA,
   if test $ok = yes; then
     KSBA_CFLAGS=`$KSBA_CONFIG $ksba_config_args --cflags`
     KSBA_LIBS=`$KSBA_CONFIG $ksba_config_args --libs`
-    KSBA_LIBS="$KSBA_LIBS -lpcsclite -lpthread"
     AC_MSG_RESULT(yes)
     ifelse([$2], , :, [$2])
   else

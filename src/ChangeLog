@@ -1,3 +1,9 @@
+2002-08-23  Werner Koch  <wk@gnupg.org>
+
+	* ksba.m4: Removed unnecessary libs
+	* ksba-config.in: Made --prefix work for --libs.
+	* Makefile.am (EXTRA_DIST): Add ksba.m4
+
 2002-08-21  Werner Koch  <wk@gnupg.org>
 
 	* der-encoder.c (_ksba_der_copy_tree)

@@ -21,7 +21,7 @@
 
 asn1_modules = tmttv2.asn cms.asn
 
-EXTRA_DIST = ksba-config.in mkerrors $(asn1_modules)
+EXTRA_DIST = ksba-config.in mkerrors $(asn1_modules) ksba.m4
 BUILT_SOURCES = asn1-parse.c errors.c asn1-tables.c
 DISTCLEANFILES = asn1-tables.c
 bin_SCRIPTS = ksba-config
