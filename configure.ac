@@ -23,7 +23,7 @@
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
-AC_INIT(libksba, 0.2.0, bug-$PACKAGE@g10code.com)
+AC_INIT(libksba, 0.2.1-cvs, bug-$PACKAGE@g10code.com)
 LIBKSBA_LT_CURRENT=1
 LIBKSBA_LT_AGE=1
 LIBKSBA_LT_REVISION=0

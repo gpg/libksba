@@ -149,6 +149,7 @@ list_extensions (KsbaCert cert)
   int idx, crit, is_ca, pathlen;
   size_t off, len;
   unsigned int usage;
+  char *string, *p;
 
   for (idx=0; !(err=ksba_cert_get_extension (cert, idx,
                                              &oid, &crit, &off, &len));idx++)
@@ -205,6 +206,27 @@ list_extensions (KsbaCert cert)
       if ( (usage & KSBA_KEYUSAGE_DECIPHER_ONLY))  
         fputs (" decipherOnly", stdout);
       putchar ('\n');
+    }
+
+  err = ksba_cert_get_cert_policies (cert, &string);
+  if (err == KSBA_No_Data)
+    printf ("CertificatePolicies: none\n");
+  else if (err)
+    { 
+      fprintf (stderr, "%s:%d: ksba_cert_get_cert_policies failed: %s\n", 
+               __FILE__, __LINE__, ksba_strerror (err));
+      errorcount++;
+    } 
+  else
+    {
+      /* for display purposes we repolace the linefeeds by commas */
+      for (p=string; *p; p++)
+        {
+          if (*p == '\n')
+            *p = ',';
+        }
+      printf ("CertificatePolicies: %s\n", string);
+      xfree (string);
     }
 
 }

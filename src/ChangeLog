@@ -1,3 +1,7 @@
+2002-02-19  Werner Koch  <wk@gnupg.org>
+
+	* cert.c (ksba_cert_get_cert_policies): New.
+
 2002-02-07  Werner Koch  <wk@gnupg.org>
 
 	* cert.c (ksba_cert_release): Release the nodes.

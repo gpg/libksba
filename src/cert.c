@@ -36,6 +36,7 @@ static const char oidstr_subjectAltName[]   = "2.5.29.17";
 static const char oidstr_issuerAltName[]    = "2.5.29.18";
 static const char oidstr_basicConstraints[] = "2.5.29.19";
 static const char oidstr_crlDistributionPoints[] = "2.5.29.31";
+static const char oidstr_certificatePolicies[] = "2.5.29.32";
 
 /**
  * ksba_cert_new:
@@ -935,5 +936,165 @@ ksba_cert_get_key_usage (KsbaCert cert, unsigned int *r_flags)
     *r_flags |= KSBA_KEYUSAGE_DECIPHER_ONLY;
 
   return 0;
+}
+
+
+
+static KsbaError
+append_cert_policy (char **policies, const char *oid, int crit)
+{
+  char *p;
+
+  if (!*policies)
+    {
+      *policies = xtrymalloc (strlen (oid) + 4);
+      if (!*policies)
+        return KSBA_Out_Of_Core;
+      p = *policies;
+    }
+  else
+    {
+      char *tmp = xtryrealloc (*policies,
+                               strlen(*policies) + 1 + strlen (oid) + 4);
+      if (!tmp)
+        return KSBA_Out_Of_Core;
+      *policies = tmp;
+      p = stpcpy (tmp+strlen (tmp), "\n");;
+    }
+  
+  strcpy (stpcpy (p, oid), crit? ":C:": ":N:");
+  return 0;   
+}
+
+
+/* Return a string with the certificatePolicies delimited by
+   linefeeds.  The return values may be extended to carry more
+   information er line, so the caller should only use the first
+   white-space delimited token per line.  The function KSBA_No_Data
+   when this extension is not used.  Caller must free
+   the returned value.  */
+KsbaError
+ksba_cert_get_cert_policies (KsbaCert cert, char **r_policies)
+{
+  KsbaError err;
+  const char *oid;
+  int idx, crit;
+  size_t off, derlen, seqlen;
+  const unsigned char *der;
+  struct tag_info ti;
+
+  if (!cert || !r_policies)
+    return KSBA_Invalid_Value;
+  *r_policies = NULL;
+
+  for (idx=0; !(err=ksba_cert_get_extension (cert, idx, &oid, &crit,
+                                             &off, &derlen)); idx++)
+    {
+      if (!strcmp (oid, oidstr_certificatePolicies))
+        {
+          char *suboid;
+
+          der = cert->image + off;
+ 
+          err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+          if (err)
+            goto leave;
+          if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+                 && ti.is_constructed) )
+            {
+              err = KSBA_Invalid_Cert_Object;
+              goto leave;
+            }
+          if (ti.ndef)
+            {
+              err = KSBA_Not_DER_Encoded;
+              goto leave;
+            }
+          seqlen = ti.length;
+          if (seqlen > derlen)
+            {
+              err = KSBA_BER_Error;
+              goto leave;
+            }
+          while (seqlen)
+            {
+              size_t seqseqlen;
+
+              err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+              if (err)
+                goto leave;
+              if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+                     && ti.is_constructed) )
+                {
+                  err =  KSBA_Invalid_Cert_Object;
+                  goto leave;
+                }
+              if (ti.ndef)
+                {
+                  err = KSBA_Not_DER_Encoded;
+                  goto leave;
+                }
+              if (!ti.length)
+                {
+                  err = KSBA_Invalid_Cert_Object; /* no empty inner SEQ */
+                  goto leave;
+                }
+              if (ti.nhdr+ti.length > seqlen)
+                {
+                  err = KSBA_BER_Error;
+                  goto leave;
+                }
+              seqlen -= ti.nhdr + ti.length;
+              seqseqlen = ti.length;
+
+              err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+              if (err)
+                goto leave;
+              if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OBJECT_ID))
+                {
+                  err = KSBA_Invalid_Cert_Object;
+                  goto leave;
+                }
+              if (ti.nhdr+ti.length > seqseqlen)
+                {
+                  err = KSBA_BER_Error;
+                  goto leave;
+                }
+              seqseqlen -= ti.nhdr;
+              
+              suboid = ksba_oid_to_str (der, ti.length);
+              if (!suboid)
+                {
+                  err = KSBA_Out_Of_Core;
+                  goto leave;
+                }
+              der       += ti.length;
+              derlen    -= ti.length;
+              seqseqlen -= ti.length;
+
+              err = append_cert_policy (r_policies, suboid, crit);
+              xfree (suboid);
+              if (err)
+                goto leave;
+
+              /* skip the rest of the seq which is more or less optional */
+              der    += seqseqlen;
+              derlen -= seqseqlen;
+            }
+        }
+    }
+
+  if (err == -1)
+    err = 0;
+  if (!*r_policies)
+    err = KSBA_No_Data;
+
+ leave:
+  if (err)
+    {
+      xfree (*r_policies);
+      *r_policies = NULL;
+    }
+  return err;
 }
 

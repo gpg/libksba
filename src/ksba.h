@@ -205,6 +205,7 @@ KsbaError ksba_cert_get_extension (KsbaCert cert, int idx,
 
 KsbaError ksba_cert_is_ca (KsbaCert cert, int *r_ca, int *r_pathlen);
 KsbaError ksba_cert_get_key_usage (KsbaCert cert, unsigned int *r_flags);
+KsbaError ksba_cert_get_cert_policies (KsbaCert cert, char **r_policies);
 
 
 /*-- cms.c --*/

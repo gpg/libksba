@@ -2,8 +2,14 @@
 
 * src/dn.c:
 
-  * Check that error handling of bad utf-8 encoding is correct
-  * Implemnetd UCS-4 and UCS-2 to UTF-8 conversion 
+** Check that error handling of bad utf-8 encoding is correct
+** Implemnetd UCS-4 and UCS-2 to UTF-8 conversion 
+** There is an ambiguity in rfc2253 related to the handling of spaces
+   around delimters.  At one place it talks about whitespace and few
+   lines later it talks about just the space characters which must be
+   ignored.   How should that be solved?  This is only related to
+   spaces at the beginning or end of a name part when old style quoting
+   is not used. 
 
 * src/der-decoder.c:  
 
@@ -35,6 +41,8 @@
 * Other modules
 
   * Do we need p12 stuff?
+
+
 
 
 
