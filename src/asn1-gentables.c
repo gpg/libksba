@@ -41,9 +41,11 @@
 /* keep track of parsing error */
 static int error_counter;
 
+/* option --dump */
+static int dump_only;
+
 
 static void print_error (const char *fmt, ... )  ATTR_PRINTF(1,2);
-
 
 
 static void
@@ -134,19 +136,26 @@ create_static_structure (AsnNode pointer, const char *file_name)
       fputs (p->flags.has_defined_by ? ",1":",0", file);
       fputs (p->flags.is_false       ? ",1":",0", file);
       fputs (p->flags.is_true        ? ",1":",0", file);
-      fputs (p->flags.is_default     ? ",1":",0", file);
+      fputs (p->flags.has_default     ? ",1":",0", file);
       fputs (p->flags.is_optional    ? ",1":",0", file);
       fputs (p->flags.is_utc_time    ? ",1":",0", file);
-      fputs (p->flags.is_set         ? ",1":",0", file);
-      fputs (p->flags.is_not_used    ? ",1":",0", file);
+      fputs (p->flags.in_set         ? ",1":",0", file);
+      fputs (p->flags.not_used       ? ",1":",0", file);
       fputs (p->flags.help_down      ? ",1":",0", file);
       fputs (p->flags.help_right     ? ",1":",0", file);
       fputs ("}", file);
 
-      if (p->value)
-	fprintf (file, ",\"%s\"", p->value);
+      if (p->valuetype == VALTYPE_CSTR)
+	fprintf (file, ",\"%s\"", p->value.v_cstr);
+      else if (p->valuetype == VALTYPE_LONG
+               && p->type == TYPE_INTEGER && p->flags.assignment)
+        fprintf (file, ",\"%ld\"", p->value.v_long);
       else
-	fprintf (file, ",0");
+        {
+          if (p->valuetype)
+            print_error ("can't store a value of type %d\n", p->valuetype);
+          fprintf (file, ",0");
+        }
       fputs ("},\n", file);
     }
 
@@ -179,8 +188,10 @@ one_file (FILE *fp, const char *fname)
       print_error ("error parsing `%s': unknown error %d\n", fname, rc);
   else 
     {
-      asn1_visit_tree (tree->parse_tree, NULL);
-      create_static_structure (tree->parse_tree, fname);
+      if (dump_only)
+        ksba_asn_tree_dump (tree, NULL, stdout);
+      else
+        create_static_structure (tree->parse_tree, fname);
     }
 }
 
@@ -191,12 +202,17 @@ main (int argc, char **argv)
   if (!argc || (argc > 1 &&
                 (!strcmp (argv[1],"--help") || !strcmp (argv[1],"-h"))) )
     {
-      fputs ("usage: asn1-gentables [files.asn]\n", stderr);
+      fputs ("usage: asn1-gentables [--dump] [files.asn]\n", stderr);
       return 0;
     }
   
   argc--; argv++;
-  
+  if (argc && !strcmp (*argv,"--dump"))
+    {
+      argc--; argv++;
+      dump_only = 1;
+    }
+
   if (!argc)
     one_file (stdin, "-");
   else

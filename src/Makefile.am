@@ -42,7 +42,6 @@ asn1_gentables_SOURCES = \
 	asn1-gentables.c \
 	asn1-parse.y asn1-parse.h \
 	asn1-func.c asn1-func.h \
-	asn1-der.c asn1-der.h \
 	util.c util.h	
 
 ber_dump_SOURCES = \
@@ -52,7 +51,6 @@ ber_dump_SOURCES = \
 	reader.c reader.h \
 	asn1-parse.y asn1-parse.h \
 	asn1-func.c asn1-func.h \
-	asn1-der.c asn1-der.h \
 	util.c util.h	
 
 

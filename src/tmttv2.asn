@@ -20,14 +20,17 @@
 
 
 TMTTv2 {iso(1) identified-organization(3) dod(6) internet(1)
-        security(5) mechanisms(5) }
+        security(5) mechanisms(5) teletrust(1) foo(17)}
 
 DEFINITIONS IMPLICIT TAGS ::=
 
 BEGIN
 
+
 -- standard object identifiers
+
 id-ce OBJECT IDENTIFIER  ::=  {joint-iso-ccitt(2) ds(5) 29}
+
 
 
 

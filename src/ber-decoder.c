@@ -86,7 +86,7 @@ universal_tag_name (unsigned long no)
     "PrintableString",
     "TeletexString",
     "VideotexString",
-    "IA4String",
+    "IA5String",
     "UTCTime",
     "GeneralizedTime",
     "GraphicString",
@@ -263,21 +263,7 @@ read_tl (BerDecoder d, struct tag_info *r_tag,
 static int
 cmp_tag (AsnNode node, const struct tag_info *ti)
 {
-
-  fprintf (stdout, "cmp_tag `%s' tag=%d",
-           node->name, node->type);
-  if (node->flags.class == CLASS_UNIVERSAL)
-    putchar ('U');
-  if (node->flags.class == CLASS_APPLICATION)
-    putchar ('A');
-  if (node->flags.class == CLASS_PRIVATE)
-    putchar ('P');
-
-  if (ti->tag != node->type)
-    return 0;
-  if (ti->class == node->flags.class)
-    return 1;
-  return 0; 
+  return ti->tag == node->type && ti->class == node->flags.class;
 }
 
 
@@ -294,10 +280,8 @@ find_node (AsnNode root, AsnNode node, const struct tag_info *ti)
     {
       if (cmp_tag (node, ti))
         {
-          puts (" got it");
           return node; /* found */
         }
-      putchar ('\n');
 
       if (node->down)
         node = node->down;
@@ -356,6 +340,11 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
     int ndef;
   } stack[100];
   AsnNode rootnode, curnode, node;
+  enum {
+    DS_INIT, DS_BYPASS, DS_NEXT
+  } state = DS_INIT;
+    
+
 
   rootnode = d->module;
   curnode = NULL;
@@ -363,7 +352,7 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
     {
       const char *tagname = NULL;
 
-      /* Without thsi kludge some example certs can't be parsed */
+      /* Without this kludge some example certs can't be parsed */
       if (ti.class == CLASS_UNIVERSAL && !ti.tag)
         length = 0;
 
@@ -382,17 +371,38 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
                  ti.tag);
       fprintf (fp, " %c n=%u", ti.is_constructed? 'c':'p', nread);
       if (is_indefinite)
-        fputs (" indefinite length\n", fp);
+        fputs (" indefinite length ", fp);
       else
-        fprintf (fp, " %lu octets\n", length);
+        fprintf (fp, " %lu octets ", length);
 
-      node = find_node (rootnode, curnode, &ti);
-      if (node)
+      if (state != DS_BYPASS)
         {
-          fprintf (fp, "%*s(found node `%s')\n", depth*2, "", node->name);
-          curnode = node;
+          node = find_node (rootnode, curnode, &ti);
+          switch (state)
+            {
+            case DS_INIT:
+              if (!node)
+                {
+                  state = DS_BYPASS;
+                  fputs (" anchor node not found", fp);
+                  break;
+                }
+              /* fall thru */
+            default:
+              if (node)
+                {
+                  putc ('(', fp);
+                  _ksba_asn_node_dump (node, fp);
+                  putc (')', fp);
+                  curnode = node;
+                }
+              state = DS_NEXT;
+              break;
+            } 
+          
         }
-
+      putc ('\n', fp);
+      
       if (!ti.is_constructed)
         { /* primitive: skip value */
           int n;

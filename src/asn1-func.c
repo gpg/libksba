@@ -24,13 +24,51 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 
+#include "ksba.h"
 #include "asn1-func.h"
 #include "asn1-der.h"
 #include "util.h"
 
 static int expand_identifier (AsnNode * node, AsnNode root);
 static int type_choice_config (AsnNode  node);
+
+
+static char *  /* FIXME: This is error prone */
+_asn1_ltostr (long v, char *str)
+{
+  long d, r;
+  char temp[20];
+  int count, k, start;
+
+  if (v < 0)
+    {
+      str[0] = '-';
+      start = 1;
+      v = -v;
+    }
+  else
+    start = 0;
+
+  count = 0;
+  do
+    {
+      d = v / 10;
+      r = v - d * 10;
+      temp[start + count] = '0' + (char) r;
+      count++;
+      v = d;
+    }
+  while (v);
+
+  for (k = 0; k < count; k++)
+    str[k + start] = temp[start + count - k - 1];
+  str[count + start] = 0;
+  return str;
+}
+
+
 
 
 static AsnNode 
@@ -43,7 +81,8 @@ add_node (node_type_t type)
   punt->left = NULL;
   punt->name = NULL;
   punt->type = type;
-  punt->value = NULL;
+  punt->valuetype = VALTYPE_NULL;
+  punt->value.v_cstr = NULL;
   punt->down = NULL;
   punt->right = NULL;
   punt->link_next = NULL;
@@ -51,24 +90,90 @@ add_node (node_type_t type)
 }
 
 
+
 /* Change the value field of the node to the content of buffer value
    of size LEN.  With VALUE of NULL or LEN of 0 the value field is
    deleted */
 void
-_ksba_asn_set_value (AsnNode node, const void *value, unsigned int len)
+_ksba_asn_set_value (AsnNode node,
+                     enum asn_value_type vtype, const void *value, size_t len)
 {
   return_if_fail (node);
 
-  if (node->value)
+  if (node->valuetype)
     {
-      xfree (node->value);
-      node->value = NULL;
+      if (node->valuetype == VALTYPE_CSTR)
+        xfree (node->value.v_cstr);
+      else if (node->valuetype == VALTYPE_MEM)
+        xfree (node->value.v_mem.buf);
+      node->valuetype = 0;
     }
-  if (value && len)
+
+  switch (vtype)
     {
-      node->value = xmalloc (len);
-      memcpy (node->value, value, len);
+    case VALTYPE_NULL:
+      break;
+    case VALTYPE_BOOL:
+      return_if_fail (len);
+      node->value.v_bool = !!(const unsigned *)value;
+      break;
+    case VALTYPE_CSTR:
+      node->value.v_cstr = xstrdup (value);
+      break;
+    case VALTYPE_MEM:
+      node->value.v_mem.len = len;
+      if (len)
+        {
+          node->value.v_mem.buf = xmalloc (len);
+          memcpy (node->value.v_mem.buf, value, len);
+        }
+      else
+          node->value.v_mem.buf = NULL;
+      break;
+    case VALTYPE_LONG:
+      return_if_fail (sizeof (long) == len);
+      node->value.v_long = *(long *)value;
+      break;
+
+    default:
+      return_if_fail (0);
     }
+  node->valuetype = vtype;
+}
+
+static void
+copy_value (AsnNode d, const AsnNode s)
+{
+  char helpbuf[1];
+  const void *buf = NULL;
+  size_t len = 0;
+
+  return_if_fail (d != s);
+
+  switch (s->valuetype)
+    {
+    case VALTYPE_NULL:
+      break;
+    case VALTYPE_BOOL:
+      len = 1;
+      helpbuf[1] = s->value.v_bool;
+      buf = helpbuf;
+      break;
+    case VALTYPE_CSTR:
+      buf = s->value.v_cstr;
+      break;
+    case VALTYPE_MEM:
+      len = s->value.v_mem.len;
+      buf = len? s->value.v_mem.buf : NULL;
+    case VALTYPE_LONG:
+      len = sizeof (long);
+      buf = &s->value.v_long;
+      break;
+
+    default:
+      return_if_fail (0);
+    }
+  _ksba_asn_set_value (d, s->valuetype, buf, len);
 }
 
 
@@ -95,6 +200,7 @@ set_right (AsnNode  node, AsnNode  right)
 {
   if (node == NULL)
     return node;
+
   node->right = right;
   if (right)
     right->left = node;
@@ -107,6 +213,7 @@ set_down (AsnNode node, AsnNode down)
 {
   if (node == NULL)
     return node;
+
   node->down = down;
   if (down)
     down->left = node;
@@ -121,90 +228,66 @@ _ksba_asn_remove_node (AsnNode  node)
     return;
 
   xfree (node->name);
-  xfree (node->value);
+  if (node->valuetype == VALTYPE_CSTR)
+    xfree (node->value.v_cstr);
+  else if (node->valuetype == VALTYPE_MEM)
+    xfree (node->value.v_mem.buf);
   xfree (node);
 }
 
 
-
+/* find the node with the given name.  A name part of "?LAST" matches
+   the last element of a set of */
 AsnNode 
-_ksba_asn_find_node (AsnNode  pointer, char *name)
+_ksba_asn_find_node (AsnNode root, const char *name)
 {
   AsnNode p;
-  char *n_start, *n_end, n[128];
+  const char *s;
+  char buf[129];
+  int i;
 
-  if ((name == NULL) || (name[0] == 0))
+  if (!name || !name[0])
     return NULL;
 
-  n_start = name;
-  n_end = strchr (n_start, '.');
-  if (n_end)
+  /* find the first part */
+  s = name;
+  for (i=0; *s && *s != '.' && i < DIM(buf)-1; s++)
+    buf[i++] = *s;
+  buf[i] = 0;
+  return_null_if_fail (i < DIM(buf)-1);
+          
+  for (p = root; p && (!p->name || strcmp (p->name, buf)); p = p->right)
+    ;
+
+  /* find other parts */
+  while (p && *s)
     {
-      memcpy (n, n_start, n_end - n_start);
-      n[n_end - n_start] = 0;
-      n_start = n_end;
-      n_start++;
-    }
-  else
-    {
-      strcpy (n, n_start);
-      n_start = NULL;
-    }
+      assert (*s == '.');
+      s++; /* skip the dot */
 
-  p = pointer;
-  while (p)
-    {
-      if ((p->name) && (!strcmp (p->name, n)))
-	break;
-      else
-	p = p->right;
-    }
-
-  if (p == NULL)
-    return NULL;
-
-  while (n_start)
-    {
-      n_end = strchr (n_start, '.');
-      if (n_end)
-	{
-	  memcpy (n, n_start, n_end - n_start);
-	  n[n_end - n_start] = 0;
-	  n_start = n_end;
-	  n_start++;
-	}
-      else
-	{
-	  strcpy (n, n_start);
-	  n_start = NULL;
-	}
-
-      if (p->down == NULL)
-	return NULL;
-
+      if (!p->down)
+	return NULL; /* not found */
       p = p->down;
 
-      if (!strcmp (n, "?LAST"))
+      for (i=0; *s && *s != '.' && i < DIM(buf)-1; s++)
+        buf[i++] = *s;
+      buf[i] = 0;
+      return_null_if_fail (i < DIM(buf)-1);
+
+      if (!strcmp (buf, "?LAST"))
 	{
-	  if (p == NULL)
+	  if (!p)
 	    return NULL;
 	  while (p->right)
 	    p = p->right;
 	}
       else
 	{
-	  while (p)
-	    {
-	      if ((p->name) && (!strcmp (p->name, n)))
-		break;
-	      else
-		p = p->right;
-	    }
-	  if (p == NULL)
-	    return NULL;
+          for (; p && (!p->name || strcmp (p->name, buf)); p = p->right)
+            ;
 	}
     }
-
+  
   return p;
 }
 
@@ -228,60 +311,16 @@ find_up (AsnNode  node)
     return NULL;
 
   p = node;
-
   while ((p->left != NULL) && (p->left->right == p))
     p = p->left;
 
   return p->left;
 }
 
-int
-_asn1_convert_integer (char *value, unsigned char *value_out,
-		       int value_out_size, int *len)
-{
-  char negative;
-  unsigned char val[4], temp;
-  int k, k2;
-
-  *((long *) val) = strtol (value, NULL, 10);
-  for (k = 0; k < 2; k++)
-    {
-      temp = val[k];
-      val[k] = val[3 - k];
-      val[3 - k] = temp;
-    }
-
-  if (val[0] & 0x80)
-    negative = 1;
-  else
-    negative = 0;
-
-  for (k = 0; k < 3; k++)
-    {
-      if (negative && (val[k] != 0xFF))
-	break;
-      else if (!negative && val[k])
-	break;
-    }
-
-  if ((negative && !(val[k] & 0x80)) || (!negative && (val[k] & 0x80)))
-    k--;
-
-  for (k2 = k; k2 < 4; k2++)
-    {
-      if (k2 - k > value_out_size - 1)
-	return ASN_MEM_ERROR;
-      value_out[k2 - k] = val[k2];
-    }
-  *len = 4 - k;
-
-  return ASN_OK;
-}
-
 
 /**
  * Creates the structures needed to manage the ASN1 definitions. ROOT is
- * a vector created by the asn1-gentables tool.
+ * a vector created by the asn1-gentable tool.
  * 
  * Input Parameter: 
  *   
@@ -300,22 +339,22 @@ int
 ksba_asn_create_tree (const static_asn * root, AsnNode * pointer)
 {
   enum { DOWN, UP, RIGHT } move;
-  AsnNode p, p_last;
+  AsnNode p, p_last = NULL;
   unsigned long k;
 
   *pointer = NULL;
   move = UP;
 
   k = 0;
-  while (root[k].value || root[k].type || root[k].name)
+  while (root[k].stringvalue || root[k].type || root[k].name)
     {
       p = add_node (root[k].type);
       p->flags = root[k].flags;
       p->flags.help_down = 0;
       if (root[k].name)
 	_ksba_asn_set_name (p, root[k].name);
-      if (root[k].value)
-	_ksba_asn_set_value (p, root[k].value, strlen (root[k].value) + 1);
+      if (root[k].stringvalue)
+	_ksba_asn_set_value (p, VALTYPE_CSTR, root[k].stringvalue, 0);
 
       if (*pointer == NULL)
 	*pointer = p;
@@ -366,199 +405,145 @@ ksba_asn_create_tree (const static_asn * root, AsnNode * pointer)
 }
 
 
-
+static void
+print_value (AsnNode node, FILE *fp)
+{
+  if (!node->valuetype)
+    return;
+  fputs (" val=", fp);
+  switch (node->valuetype)
+    {
+    case VALTYPE_BOOL:
+      fputs (node->value.v_bool? "True":"False", fp);
+      break;
+    case VALTYPE_CSTR:
+      fputs (node->value.v_cstr, fp);
+      break;
+    case VALTYPE_MEM:
+      {
+        size_t n;
+        unsigned char *p;
+        for (p=node->value.v_mem.buf, n=node->value.v_mem.len; n; n--, p++)
+          fprintf (fp, "%02X", *p);
+      }
+      break;
+    case VALTYPE_LONG:
+      fprintf (fp, "%ld", node->value.v_long);
+      break;
+    default:
+      return_if_fail (0);
+    }
+}
 
 void
-asn1_visit_tree (AsnNode  pointer, char *name)
+_ksba_asn_node_dump (AsnNode p, FILE *fp)
+{
+  const char *typestr;
+
+  switch (p->type)
+    {
+    case TYPE_NULL:	    typestr = "NULL"; break;
+    case TYPE_CONSTANT:     typestr = "CONST"; break;
+    case TYPE_IDENTIFIER:   typestr = "IDENTIFIER"; break;
+    case TYPE_INTEGER:	    typestr = "INTEGER"; break;
+    case TYPE_ENUMERATED:   typestr = "ENUMERATED"; break;
+    case TYPE_TIME:	    typestr = "TIME"; break;
+    case TYPE_BOOLEAN:	    typestr = "BOOLEAN"; break;
+    case TYPE_SEQUENCE:	    typestr = "SEQUENCE"; break;
+    case TYPE_BIT_STRING:   typestr = "BIT_STR"; break;
+    case TYPE_OCTET_STRING: typestr = "OCT_STR"; break;
+    case TYPE_TAG:	    typestr = "TAG"; break;
+    case TYPE_DEFAULT:	    typestr = "DEFAULT"; break;
+    case TYPE_SIZE:	    typestr = "SIZE"; break;
+    case TYPE_SEQUENCE_OF:  typestr = "SEQ_OF"; break;
+    case TYPE_OBJECT_ID:    typestr = "OBJ_ID"; break;
+    case TYPE_ANY:	    typestr = "ANY"; break;
+    case TYPE_SET:          typestr = "SET"; break;
+    case TYPE_SET_OF: 	    typestr = "SET_OF"; break;
+    case TYPE_CHOICE:	    typestr = "CHOICE"; break;
+    case TYPE_DEFINITIONS:  typestr = "DEFINITIONS"; break;
+    default:	            typestr = "ERROR\n"; break;
+    }
+
+  fprintf (fp, "%s", typestr);
+  if (p->name)
+    fprintf (fp, " `%s'", p->name);
+  print_value (p, fp);
+  fputs ("  ", fp);
+  switch (p->flags.class)
+    { 
+    case CLASS_UNIVERSAL:   fputs ("U", fp); break;
+    case CLASS_PRIVATE:     fputs ("P", fp); break;
+    case CLASS_APPLICATION: fputs ("A", fp); break;
+    case CLASS_CONTEXT:     fputs ("C", fp); break;
+    }
+  
+  if (p->flags.explicit)
+    fputs (",explicit", fp);
+  if (p->flags.implicit)
+    fputs (",implicit", fp);
+  if (p->flags.has_tag)
+    fputs (",tag", fp);
+  if (p->flags.has_default)
+    fputs (",default", fp);
+  if (p->flags.is_true)
+    fputs (",true", fp);
+  if (p->flags.is_false)
+    fputs (",false", fp);
+  if (p->flags.has_list)
+    fputs (",list", fp);
+  if (p->flags.has_min_max)
+    fputs (",min_max", fp);
+  if (p->flags.is_optional)
+    fputs (",optional", fp);
+  if (p->flags.one_param)
+    fputs (",1_param", fp);
+  if (p->flags.has_size)
+    fputs (",size", fp);
+  if (p->flags.has_defined_by)
+    fputs (",def_by", fp);
+  if (p->flags.is_utc_time)
+    fputs (",utc", fp);
+  if (p->flags.has_imports)
+    fputs (",imports", fp);
+  if (p->flags.assignment)
+    fputs (",assign",fp);
+  if (p->flags.in_set)
+    fputs (",in_set",fp);
+  if (p->flags.not_used)
+    fputs (",not_used",fp);
+  
+}
+
+
+/**
+ * ksba_asn_tree_dump:
+ * @tree: A Parse Tree
+ * @name: Name of the element or NULL
+ * @fp: dump to this stream
+ * 
+ * This function is a debugging aid.
+ **/
+void
+ksba_asn_tree_dump (KsbaAsnTree tree, const char *name, FILE *fp)
 {
   AsnNode p, root;
-  int k, indent = 0, len, len2, len3;
+  int k, indent = 0;
 
-  root = name? _ksba_asn_find_node (pointer, name) : pointer;
+  if (!tree || !tree->parse_tree)
+    return;
 
-  if (root == NULL)
+  root = name? _ksba_asn_find_node (tree->parse_tree, name) : tree->parse_tree;
+  if (!root)
     return;
 
   p = root;
   while (p)
     {
       for (k = 0; k < indent; k++)
-	printf (" ");
-
-      printf ("name:");
-      if (p->name)
-	printf ("%s  ", p->name);
-      else
-	printf ("NULL  ");
-
-      printf ("type:");
-      switch (p->type)
-	{
-	case TYPE_NULL:
-	  printf ("NULL");
-	  break;
-	case TYPE_CONSTANT:
-	  printf ("CONST");
-	  if (p->value)
-	    printf ("  value:%s", p->value);
-	  break;
-	case TYPE_IDENTIFIER:
-	  printf ("IDENTIFIER");
-	  if (p->value)
-	    printf ("  value:%s", p->value);
-	  break;
-	case TYPE_INTEGER:
-	  printf ("INTEGER");
-	  if (p->value)
-	    {
-	      len = _ksba_asn_get_length_der (p->value, &len2);
-	      printf ("  value:0x");
-	      for (k = 0; k < len; k++)
-		printf ("%02x", (p->value)[k + len2]);
-	    }
-	  break;
-	case TYPE_ENUMERATED:
-	  printf ("ENUMERATED");
-	  if (p->value)
-	    {
-	      len = _ksba_asn_get_length_der (p->value, &len2);
-	      printf ("  value:0x");
-	      for (k = 0; k < len; k++)
-		printf ("%02x", (p->value)[k + len2]);
-	    }
-	  break;
-	case TYPE_TIME:
-	  printf ("TIME");
-	  if (p->value)
-	    printf ("  value:%s", p->value);
-	  break;
-	case TYPE_BOOLEAN:
-	  printf ("BOOLEAN");
-	  if (p->value)
-	    {
-	      if (p->value[0] == 'T')
-		printf ("  value:TRUE");
-	      else if (p->value[0] == 'F')
-		printf ("  value:FALSE");
-	    }
-	  break;
-	case TYPE_SEQUENCE:
-	  printf ("SEQUENCE");
-	  break;
-	case TYPE_BIT_STRING:
-	  printf ("BIT_STR");
-	  if (p->value)
-	    {
-	      len = _ksba_asn_get_length_der (p->value, &len2);
-	      printf ("  value(%i):", (len - 1) * 8 - (p->value[len2]));
-	      for (k = 1; k < len; k++)
-		printf ("%02x", (p->value)[k + len2]);
-	    }
-	  break;
-	case TYPE_OCTET_STRING:
-	  printf ("OCT_STR");
-	  if (p->value)
-	    {
-	      len = _ksba_asn_get_length_der (p->value, &len2);
-	      printf ("  value:");
-	      for (k = 0; k < len; k++)
-		printf ("%02x", (p->value)[k + len2]);
-	    }
-	  break;
-	case TYPE_TAG:
-	  printf ("TAG");
-	  printf ("  value:%s", p->value);
-	  break;
-	case TYPE_DEFAULT:
-	  printf ("DEFAULT");
-	  if (p->value)
-	    printf ("  value:%s", p->value);
-	  break;
-	case TYPE_SIZE:
-	  printf ("SIZE");
-	  if (p->value)
-	    printf ("  value:%s", p->value);
-	  break;
-	case TYPE_SEQUENCE_OF:
-	  printf ("SEQ_OF");
-	  break;
-	case TYPE_OBJECT_ID:
-	  printf ("OBJ_ID");
-	  if (p->value)
-	    printf ("  value:%s", p->value);
-	  break;
-	case TYPE_ANY:
-	  printf ("ANY");
-	  if (p->value)
-	    {
-	      len2 = _ksba_asn_get_length_der (p->value, &len3);
-	      printf ("  value:");
-	      for (k = 0; k < len2; k++)
-		printf ("%02x", (p->value)[k + len3]);
-	    }
-
-	  break;
-	case TYPE_SET:
-	  printf ("SET");
-	  break;
-	case TYPE_SET_OF:
-	  printf ("SET_OF");
-	  break;
-	case TYPE_CHOICE:
-	  printf ("CHOICE");
-	  break;
-	case TYPE_DEFINITIONS:
-	  printf ("DEFINITIONS");
-	  break;
-	default:
-	  printf ("ERROR\n");
-	  break;
-	}
-      
-      if (p->type & 0xFFFFFF00)
-        {
-          printf ("  attr:");
-          switch (p->flags.class)
-            { 
-            case CLASS_UNIVERSAL: printf ("UNIVERSAL,"); break;
-            case CLASS_PRIVATE:   printf ("PRIVATE,"); break;
-            case CLASS_APPLICATION: printf ("APPLICTION,"); break;
-            case CLASS_CONTEXT: printf ("CONTEXT,"); break;
-            }
-
-	  if (p->flags.explicit)
-	    printf ("EXPLICIT,");
-	  if (p->flags.implicit)
-	    printf ("IMPLICIT,");
-	  if (p->flags.has_tag)
-	    printf ("TAG,");
-	  if (p->flags.is_default)
-	    printf ("DEFAULT,");
-	  if (p->flags.is_true)
-	    printf ("TRUE,");
-	  if (p->flags.is_false)
-	    printf ("FALSE,");
-	  if (p->flags.has_list)
-	    printf ("LIST,");
-	  if (p->flags.has_min_max)
-	    printf ("MIN_MAX,");
-	  if (p->flags.is_optional)
-	    printf ("OPTION,");
-	  if (p->flags.one_param)
-	    printf ("1_PARAM,");
-	  if (p->flags.has_size)
-	    printf ("SIZE,");
-	  if (p->flags.has_defined_by)
-	    printf ("DEF_BY,");
-	  if (p->flags.is_utc_time)
-	    printf ("UTC,");
-	  if (p->flags.has_imports)
-	    printf ("IMPORTS,");
-	  if (p->flags.assignment)
-	    printf ("ASSIGNEMENT,");
-	}
-
-      printf ("\n");
+	fprintf (fp, " ");
+      _ksba_asn_node_dump (p, fp);
+      putc ('\n', fp);
 
       if (p->down)
 	{
@@ -666,7 +651,7 @@ _asn1_copy_structure3 (AsnNode  source_node)
 	{
 	  if (p_s->name)
 	    _ksba_asn_set_name (p_d, p_s->name);
-	  if (p_s->value)
+	  if (p_s->valuetype)
 	    {
 	      switch (p_s->type)
 		{
@@ -674,11 +659,11 @@ _asn1_copy_structure3 (AsnNode  source_node)
 		case TYPE_BIT_STRING:
 		case TYPE_INTEGER:
 		case TYPE_DEFAULT:
-		  len = _ksba_asn_get_length_der (p_s->value, &len2);
-		  _ksba_asn_set_value (p_d, p_s->value, len + len2);
+		  len = 0 ;/* FIXME_ksba_asn_get_length_der (p_s->value, &len2);*/
+                    /*		  _ksba_asn_set_value (p_d, VALTYPE_MEM, p_s->value., len + len2);*/
 		  break;
 		default:
-		  _ksba_asn_set_value (p_d, p_s->value, strlen (p_s->value) + 1);
+		  _ksba_asn_set_value (p_d, VALTYPE_CSTR, p_s->value.v_cstr, 0);
 		}
 	    }
 	  move = DOWN;
@@ -732,9 +717,7 @@ _asn1_copy_structure2 (AsnNode  root, char *source_name)
   AsnNode source_node;
 
   source_node = _ksba_asn_find_node (root, source_name);
-
   return _asn1_copy_structure3 (source_node);
-
 }
 
 
@@ -813,6 +796,9 @@ int
 ksba_asn1_write_value (AsnNode  node_root, char *name, unsigned char *value,
                        int len)
 {
+
+  return -1;
+#if 0
   AsnNode node, p, p2;
   unsigned char *temp, *value_temp, *default_temp, val[4];
   int len2, k, k2, negative;
@@ -833,18 +819,20 @@ ksba_asn1_write_value (AsnNode  node_root, char *name, unsigned char *value,
     case TYPE_BOOLEAN:
       if (!strcmp (value, "TRUE") || !strcmp (value, "FALSE"))
 	{
-	  if (node->flags.is_default)
+	  if (node->flags.has_default)
 	    {
 	      p = node->down;
-	      while (p->type == TYPE_DEFAULT)
+	      while (p->type == TYPE_DEFAULT) /* XXX ???? */
 		p = p->right;
 	      if (*value == 'T'? p->flags.is_true: p->flags.is_false)
-		_ksba_asn_set_value (node, NULL, 0);
+		_ksba_asn_set_value (node, VALTYPE_NULL, NULL, 0);
 	      else
-		_ksba_asn_set_value (node, value, 1);
+		_ksba_asn_set_value (node, VALTYPE_BOOL,
+                                     *value == 'T'? "1":"" , 1);
 	    }
 	  else
-	    _ksba_asn_set_value (node, value, 1);
+	    _ksba_asn_set_value (node, VALTYPE_BOOL? value,
+                                 *value == 'T'? "1":"" , 1);
 	}
       else
 	return ASN_VALUE_NOT_VALID;
@@ -856,7 +844,7 @@ ksba_asn1_write_value (AsnNode  node_root, char *name, unsigned char *value,
 	  if (isdigit (value[0]))
 	    {
 	      value_temp = xmalloc (4);
-	      _asn1_convert_integer (value, value_temp, 4, &len);
+	      convert_integer (value, value_temp, 4, &len);
 	    }
 	  else
 	    {			/* is an identifier like v1 */
@@ -870,7 +858,7 @@ ksba_asn1_write_value (AsnNode  node_root, char *name, unsigned char *value,
 		      if (p->name && !strcmp (p->name, value))
 			{
 			  value_temp = xmalloc (4);
-			  _asn1_convert_integer (p->value, value_temp, 4,
+			  convert_integer (p->value, value_temp, 4,
 						 &len);
 			  break;
 			}
@@ -912,19 +900,19 @@ ksba_asn1_write_value (AsnNode  node_root, char *name, unsigned char *value,
       _asn1_length_der (len - k, NULL, &len2);
       temp = xmalloc (len - k + len2);
       _asn1_octet_der (value_temp + k, len - k, temp, &len2);
-      _ksba_asn_set_value (node, temp, len2);
+      _ksba_asn_set_value (node, VALTYPE_MEM, temp, len2);
 
       xfree (temp);
 
-      if (node->flags.is_default)
+      if (node->flags.has_default)
 	{
 	  p = node->down;
 	  while (p->type != TYPE_DEFAULT)
 	    p = p->right;
-	  if (isdigit (p->value[0]))
+	  if (p->valuetype == VALTYPE_CSTR && isdigit (*p->value.v_cstr))
 	    {
 	      default_temp = xmalloc (4);
-	      _asn1_convert_integer (p->value, default_temp, 4, &len2);
+	      convert_integer (p->value.v_cstr, default_temp, 4, &len2);
 	    }
 	  else
 	    {			/* is an identifier like v1 */
@@ -935,10 +923,12 @@ ksba_asn1_write_value (AsnNode  node_root, char *name, unsigned char *value,
 		{
 		  if (p2->type == TYPE_CONSTANT)
 		    {
-		      if ((p2->name) && (!strcmp (p2->name, p->value)))
+		      if ((p2->name) 
+                          && p->valuetype == VALTYPE_CSTR
+                          && !strcmp (p2->name, p->value.v_cstr))
 			{
 			  default_temp = xmalloc (4);
-			  _asn1_convert_integer (p2->value, default_temp, 4,
+			  convert_integer (p2->value.v_cstr, default_temp, 4,
 						 &len2);
 			  break;
 			}
@@ -957,7 +947,7 @@ ksba_asn1_write_value (AsnNode  node_root, char *name, unsigned char *value,
 		    break;
 		  }
 	      if (k2 == len2)
-		_ksba_asn_set_value (node, NULL, 0);
+		_ksba_asn_set_value (node, VALTYPE_NULL, NULL, 0);
 	    }
 	  xfree (default_temp);
 	}
@@ -967,7 +957,7 @@ ksba_asn1_write_value (AsnNode  node_root, char *name, unsigned char *value,
       for (k = 0; k < strlen (value); k++)
 	if ((!isdigit (value[k])) && (value[k] != ' ') && (value[k] != '+'))
 	  return ASN_VALUE_NOT_VALID;
-      _ksba_asn_set_value (node, value, strlen (value) + 1);
+      _ksba_asn_set_value (node, VALTYPE_CSTR, value, 0);
       break;
     case TYPE_TIME:
       if (node->flags.is_utc_time)
@@ -1007,26 +997,26 @@ ksba_asn1_write_value (AsnNode  node_root, char *name, unsigned char *value,
 	    default:
 	      return ASN_VALUE_NOT_FOUND;
 	    }
-	  _ksba_asn_set_value (node, value, strlen (value) + 1);
+	  _ksba_asn_set_value (node, VALTYPE_CSTR, value, 0);
 	}
       else
 	{			/* GENERALIZED TIME */
 	  if (value)
-	    _ksba_asn_set_value (node, value, strlen (value) + 1);
+	    _ksba_asn_set_value (node, VALTYPE_CSTR, value, 0);
 	}
       break;
     case TYPE_OCTET_STRING:
       _asn1_length_der (len, NULL, &len2);
       temp = xmalloc (len + len2);
       _asn1_octet_der (value, len, temp, &len2);
-      _ksba_asn_set_value (node, temp, len2);
+      _ksba_asn_set_value (node, VALTYPE_MEM, temp, len2);
       xfree (temp);
       break;
     case TYPE_BIT_STRING:
       _asn1_length_der ((len >> 3) + 2, NULL, &len2);
       temp = xmalloc ((len >> 3) + 2 + len2);
       _asn1_bit_der (value, len, temp, &len2);
-      _ksba_asn_set_value (node, temp, len2);
+      _ksba_asn_set_value (node, VALTYPE_MEM, temp, len2);
       xfree (temp);
       break;
     case TYPE_CHOICE:
@@ -1057,7 +1047,7 @@ ksba_asn1_write_value (AsnNode  node_root, char *name, unsigned char *value,
       _asn1_length_der (len, NULL, &len2);
       temp = xmalloc (len + len2);
       _asn1_octet_der (value, len, temp, &len2);
-      _ksba_asn_set_value (node, temp, len2);
+      _ksba_asn_set_value (node, VALTYPE_MEM, temp, len2);
       xfree (temp);
       break;
     case TYPE_SEQUENCE_OF:
@@ -1072,6 +1062,7 @@ ksba_asn1_write_value (AsnNode  node_root, char *name, unsigned char *value,
     }
 
   return ASN_OK;
+#endif
 }
 
 #define PUT_VALUE( ptr, ptr_size, data, data_size) \
@@ -1100,8 +1091,12 @@ ksba_asn1_write_value (AsnNode  node_root, char *name, unsigned char *value,
 
 
 int
-ksba_asn_read_value (AsnNode root, char *name, unsigned char *value, int *len)
+ksba_asn_read_value (AsnNode root, const char *name,
+                     unsigned char *value, int *len)
 {
+  return -1;
+#if 0
+
   AsnNode node, p;
   int len2, len3;
   int value_size = *len;
@@ -1112,9 +1107,9 @@ ksba_asn_read_value (AsnNode root, char *name, unsigned char *value, int *len)
 
   if (node->type != TYPE_NULL
       && node->type != TYPE_CHOICE
-      && !node->flags.is_default
+      && !node->flags.has_default
       && !node->flags.assignment 
-      && !node->value)
+      && !node->valuetype)
     return ASN_VALUE_NOT_FOUND;
 
   switch (node->type)
@@ -1123,11 +1118,12 @@ ksba_asn_read_value (AsnNode root, char *name, unsigned char *value, int *len)
       PUT_STR_VALUE (value, value_size, "NULL");
       break;
     case TYPE_BOOLEAN:
-      if (node->flags.is_default && !node->value)
+      if (!node->valuetype && node->flags.has_default)
 	{
 	  p = node->down;
 	  while (p->type != TYPE_DEFAULT)
 	    p = p->right;
+          assert (p); /* there should be a node of type default below it */
 	  if (p->flags.is_true)
 	    {
 	      PUT_STR_VALUE (value, value_size, "TRUE");
@@ -1137,7 +1133,8 @@ ksba_asn_read_value (AsnNode root, char *name, unsigned char *value, int *len)
 	      PUT_STR_VALUE (value, value_size, "FALSE");
 	    }
 	}
-      else if (node->value[0] == 'T')
+      else if (node->valuetype == VALTYPE_CSTR
+               && *node->value.v_cstr == 'T')
 	{
 	  PUT_STR_VALUE (value, value_size, "TRUE");
 	}
@@ -1148,17 +1145,16 @@ ksba_asn_read_value (AsnNode root, char *name, unsigned char *value, int *len)
       break;
     case TYPE_INTEGER:
     case TYPE_ENUMERATED:
-      if (node->flags.is_default && !node->value)
+      if (!node->valuetype && node->flags.has_default)
 	{
 	  p = node->down;
 	  while (p->type != TYPE_DEFAULT)
 	    p = p->right;
-	  if (_asn1_convert_integer (p->value, value, value_size, len) !=
-	      ASN_OK)
+          assert (p); /* there should be a node of type default below it */
+	  if (convert_integer (p->value, value, value_size, len) != ASN_OK)
 	    return ASN_MEM_ERROR;
 	}
-      else
-	if (_asn1_get_octet_der (node->value, &len2, value, value_size, len)
+      else if (_asn1_get_octet_der (node->value, &len2, value, value_size, len)
 	    != ASN_OK)
 	return ASN_MEM_ERROR;
       break;
@@ -1207,11 +1203,12 @@ ksba_asn_read_value (AsnNode root, char *name, unsigned char *value, int *len)
       break;
     }
   return ASN_OK;
+#endif
 }
 
 
 
-
+/* check that all identifiers referenced in the tree are available */
 int
 _ksba_asn_check_identifier (AsnNode node)
 {
@@ -1223,36 +1220,47 @@ _ksba_asn_check_identifier (AsnNode node)
 
   for (p = node; p; p = _ksba_asn_walk_tree (node, p))
     {
-      if (p->type == TYPE_IDENTIFIER)
+      if (p->type == TYPE_IDENTIFIER && p->valuetype == VALTYPE_CSTR)
 	{
-          strcpy (name2, node->name);
+          strcpy (name2, node->name); /* FIXME: check overflow */
           strcat (name2, ".");
-	  strcat (name2, p->value);
+	  strcat (name2, p->value.v_cstr);
 	  p2 = _ksba_asn_find_node (node, name2);
-	  if (p2 == NULL)
+	  if (!p2)
 	    {
-	      fprintf (stderr,"%s\n", name2);
+	      fprintf (stderr,"reference to `%s' not found\n", name2);
 	      return ASN_IDENTIFIER_NOT_FOUND;
 	    }
+/*            fprintf (stdout,"found reference for `%s' (", name2); */
+/*            print_node (p2, stdout); */
+/*            fputs (")\n", stdout); */
 	}
-      else if (p->type == TYPE_OBJECT_ID
-	       && p->flags.assignment)
-	{
+      else if (p->type == TYPE_OBJECT_ID && p->flags.assignment)
+	{ /* an object ID in an assignment */
 	  p2 = p->down;
 	  if (p2 && (p2->type == TYPE_CONSTANT))
-            {
-	      if (p2->value && !isdigit (p2->value[0]))
-		{
-                  strcpy (name2, node->name);
+            {  
+	      if (p2->valuetype == VALTYPE_CSTR && !isdigit (p2->value.v_cstr[0]))
+		{ /* the first constand below is a reference */
+                  strcpy (name2, node->name); /* FIXME: check overflow */
                   strcat (name2, ".");
-		  strcat (name2, p2->value);
+		  strcat (name2, p2->value.v_cstr);
 		  p2 = _ksba_asn_find_node (node, name2);
-		  if (!p2 || (p2->type != TYPE_OBJECT_ID) 
-                      || !p2->flags.assignment)
+		  if (!p2)
+                    {
+                      fprintf (stderr,"object id reference `%s' not found\n",
+                               name2);
+                      return ASN_IDENTIFIER_NOT_FOUND;
+                    }
+                  else if ( p2->type != TYPE_OBJECT_ID 
+                            || !p2->flags.assignment )
 		    {
-		      fprintf (stderr,"%s\n", name2);
+		      fprintf (stderr,"`%s' is not an object id\n", name2);
 		      return ASN_IDENTIFIER_NOT_FOUND;
 		    }
+/*                    fprintf (stdout,"found objid reference for `%s' (", name2); */
+/*                    print_node (p2, stdout); */
+/*                    fputs (")\n", stdout); */
 		}
 	    }
 	}
@@ -1299,14 +1307,12 @@ _ksba_asn_walk_tree (AsnNode root, AsnNode node)
   return node;
 }
 
-
+/* walk over the tree and change the value type of all integer types
+   from string to long. */
 int
 _ksba_asn_change_integer_value (AsnNode node)
 {
-  AsnNode p, p2;
-  char negative;
-  unsigned char val[4], val2[5], temp;
-  int len, k, force_exit;
+  AsnNode p;
 
   if (node == NULL)
     return ASN_ELEMENT_NOT_FOUND;
@@ -1315,11 +1321,10 @@ _ksba_asn_change_integer_value (AsnNode node)
     {
       if (p->type == TYPE_INTEGER && p->flags.assignment)
 	{
-	  if (p->value)
+	  if (p->valuetype == VALTYPE_CSTR)
 	    {
-	      _asn1_convert_integer (p->value, val, sizeof (val), &len);
-	      _asn1_octet_der (val, len, val2, &len);
-	      _ksba_asn_set_value (p, val2, len);
+              long val = strtol (p->value.v_cstr, NULL, 10);
+	      _ksba_asn_set_value (p, VALTYPE_LONG, &val, sizeof(val));
 	    }
 	}
     }
@@ -1338,7 +1343,7 @@ _ksba_asn_delete_not_used (AsnNode  node)
 
   for (p = node; p; p = _ksba_asn_walk_tree (node, p) )
     {
-      if (p->flags.is_not_used)
+      if (p->flags.not_used)
 	{
 	  p2 = NULL;
 	  if (p != node)
@@ -1358,298 +1363,200 @@ _ksba_asn_delete_not_used (AsnNode  node)
 
 
 static int
-expand_identifier (AsnNode * node, AsnNode  root)
+expand_identifier (AsnNode * node, AsnNode root)
 {
-  AsnNode p, p2, p3;
-  char name2[129];
-  enum { DOWN, UP, RIGHT } move;
-
   if (node == NULL)
     return ASN_ELEMENT_NOT_FOUND;
-
-  p = *node;
-  move = DOWN;
-
-  while (!((p == *node) && (move == UP)))
-    {
-      if (move != UP)
-	{
-	  if (p->type == TYPE_IDENTIFIER)
-	    {
-	      strcpy (name2, root->name);
-	      strcat (name2, ".");
-	      strcat (name2, p->value);
-	      p2 = _asn1_copy_structure2 (root, name2);
-	      if (p2 == NULL)
-		return ASN_IDENTIFIER_NOT_FOUND;
-	      _ksba_asn_set_name (p2, p->name);
-	      p2->right = p->right;
-	      p2->left = p->left;
-	      if (p->right)
-		p->right->left = p2;
-	      p3 = p->down;
-	      if (p3)
-		{
-		  while (p3->right)
-		    p3 = p3->right;
-		  set_right (p3, p2->down);
-		  set_down (p2, p->down);
-		}
-
-	      p3 = _asn1_find_left (p);
-	      if (p3)
-		set_right (p3, p2);
-	      else
-		{
-		  p3 = find_up (p);
-		  if (p3)
-		    set_down (p3, p2);
-		  else
-		    {
-		      p2->left = NULL;
-		    }
-		}
-
-	      if (p->flags.has_size)
-		p2->flags.has_size = 1;
-	      if (p->flags.has_tag)
-		p2->flags.has_tag = 1;
-	      if (p->flags.is_optional)
-		p2->flags.is_optional = 1;
-	      if (p->flags.is_default)
-		p2->flags.is_default = 1;
-	      if (p->flags.is_set)
-		p2->flags.is_set = 1;;
-	      if (p->flags.is_not_used)
-		p2->flags.is_not_used = 1;
-
-	      if (p == *node)
-		*node = p2;
-	      _ksba_asn_remove_node (p);
-	      p = p2;
-	      move = DOWN;
-	      continue;
-	    }
-	  move = DOWN;
-	}
-      else
-	move = RIGHT;
-
-      if (move == DOWN)
-	{
-	  if (p->down)
-	    p = p->down;
-	  else
-	    move = RIGHT;
-	}
-
-      if (p == *node)
-	{
-	  move = UP;
-	  continue;
-	}
-
-      if (move == RIGHT)
-	{
-	  if (p->right)
-	    p = p->right;
-	  else
-	    move = UP;
-	}
-      if (move == UP)
-	p = find_up (p);
-    }
-
+#warning fix this
   return ASN_OK;
+#if 0
+  AsnNode p, p2, p3;
+  char name2[129];
+  for (p = node; p; p = _ksba_asn_walk_tree (node, p))
+    {
+      if (p->type == TYPE_IDENTIFIER && p->valuetype == VALTYPE_CSTR)
+        {
+          strcpy (name2, root->name);
+          strcat (name2, ".");
+          strcat (name2, p->value.v_cstr);
+          p2 = _asn1_copy_structure2 (root, name2);
+          assert (p2);
+          if (p2 == NULL)
+            return ASN_IDENTIFIER_NOT_FOUND;
+          _ksba_asn_set_name (p2, p->name);
+          p2->right = p->right;
+          p2->left = p->left;
+          if (p->right)
+            p->right->left = p2;
+          p3 = p->down;
+          if (p3)
+            {
+              while (p3->right)
+                p3 = p3->right;
+              set_right (p3, p2->down);
+              set_down (p2, p->down);
+            }
+          
+          p3 = _asn1_find_left (p);
+          if (p3)
+            set_right (p3, p2);
+          else
+            {
+              p3 = find_up (p);
+              if (p3)
+                set_down (p3, p2);
+              else
+                {
+                  p2->left = NULL;
+                }
+            }
+          
+          if (p->flags.has_size)
+            p2->flags.has_size = 1;
+          if (p->flags.has_tag)
+            p2->flags.has_tag = 1;
+          if (p->flags.is_optional)
+            p2->flags.is_optional = 1;
+          if (p->flags.has_default)
+            p2->flags.has_default = 1;
+          if (p->flags.in_set)
+            p2->flags.in_set = 1;;
+          if (p->flags.not_used)
+            p2->flags.not_used = 1;
+          
+          if (p == *node)
+            *node = p2;
+          _ksba_asn_remove_node (p);
+          p = p2;
+        }
+    }
+#endif
 }
 
 
 
 static int
-type_choice_config (AsnNode  node)
+type_choice_config (AsnNode node)
 {
   AsnNode p, p2, p3, p4;
-  enum { DOWN, UP, RIGHT } move;
 
-  if (node == NULL)
-    return ASN_ELEMENT_NOT_FOUND;
+  if (!node)
+    return KSBA_Element_Not_Found;
 
-  p = node;
-  move = DOWN;
-
-  while (!((p == node) && (move == UP)))
+ restart:
+  for (p = node; p; p = _ksba_asn_walk_tree (node, p))
     {
-      if (move != UP)
-	{
-	  if (p->type == TYPE_CHOICE && p->flags.has_tag)
-	    {
-	      p2 = p->down;
-	      while (p2)
-		{
-		  if (p2->type != TYPE_TAG)
-		    {
-		      p2->flags.has_tag =1;
-		      p3 = _asn1_find_left (p2);
-		      while (p3)
-			{
-			  if (p3->type == TYPE_TAG)
-			    {
-			      p4 = add_node (p3->type);
-			      _ksba_asn_set_value (p4, p3->value,
-					       strlen (p3->value) + 1);
-			      set_right (p4, p2->down);
-			      set_down (p2, p4);
-			    }
-			  p3 = _asn1_find_left (p3);
-			}
-		    }
-		  p2 = p2->right;
-		}
-	      p->flags.has_tag = 0;
-	      p2 = p->down;
-	      while (p2)
-		{
-		  p3 = p2->right;
-		  if (p2->type == TYPE_TAG)
-		    ksba_asn_delete_structure (p2);
-		  p2 = p3;
-		}
-	    }
-	  move = DOWN;
-	}
-      else
-	move = RIGHT;
+      if (p->type == TYPE_CHOICE && p->flags.has_tag)
+        {
+          for (p2 = p->down; p2; p2 = p2->right)
+            {
+              if (p2->type != TYPE_TAG)
+                {
+                  p2->flags.has_tag = 1;
+                  for (p3 = _asn1_find_left (p2);
+                       p3; p3 = _asn1_find_left (p3))
+                    {
+                      if (p3->type == TYPE_TAG)
+                        {
+                          p4 = add_node (TYPE_TAG);
+                          p4->flags = p3->flags;
+                          copy_value (p4, p3);
+                          set_right (p4, p2->down);
+                          set_down (p2, p4);
+                        }
+                    }
+                }
+            }
 
-      if (move == DOWN)
-	{
-	  if (p->down)
-	    p = p->down;
-	  else
-	    move = RIGHT;
-	}
-
-      if (p == node)
-	{
-	  move = UP;
-	  continue;
-	}
-
-      if (move == RIGHT)
-	{
-	  if (p->right)
-	    p = p->right;
-	  else
-	    move = UP;
-	}
-      if (move == UP)
-	p = find_up (p);
+          p->flags.has_tag = 0;
+          p2 = p->down;
+          while (p2)
+            {
+              p3 = p2->right;
+              if (p2->type == TYPE_TAG)
+                ksba_asn_delete_structure (p2);
+              p2 = p3;
+            }
+          goto restart;
+        }
     }
 
-  return ASN_OK;
+  return 0;
 }
 
 
-
-
+/* Expand all object ID constants */
 int
 _ksba_asn_expand_object_id (AsnNode node)
 {
   AsnNode p, p2, p3, p4, p5;
-  char name_root[129], name2[129], *c;
-  enum { DOWN, UP, RIGHT } move;
+  char name_root[129], name2[129*2+1];
 
-  if (node == NULL)
-    return ASN_ELEMENT_NOT_FOUND;
-
+  /* FIXME: Make a cleaner implementation */
+  if (!node)
+    return KSBA_Element_Not_Found;
+  if (!node->name)
+    return KSBA_Invalid_Value;
+  if (strlen(node->name) >= DIM(name_root)-1)
+    return KSBA_General_Error;
   strcpy (name_root, node->name);
 
-  p = node;
-  move = DOWN;
-
-  while (!((p == node) && (move == UP)))
+ restart:
+  for (p = node; p; p = _ksba_asn_walk_tree (node, p))
     {
-      if (move != UP)
-	{
-	  if (p->type == TYPE_OBJECT_ID
-	      && p->flags.assignment)
-	    {
-	      p2 = p->down;
-	      if (p2 && p2->type == TYPE_CONSTANT)
-		{
-		  if (p2->value && !isdigit (p2->value[0]))
-		    {
-		      strcpy (name2, name_root);
-		      strcat (name2, ".");
-		      strcat (name2, p2->value);
-		      p3 = _ksba_asn_find_node (node, name2);
-		      if (!p3 || p3->type != TYPE_OBJECT_ID ||
-			  !p3->flags.assignment)
-			return ASN_ELEMENT_NOT_FOUND;
-		      set_down (p, p2->right);
-		      _ksba_asn_remove_node (p2);
-		      p2 = p;
-		      p4 = p3->down;
-		      while (p4)
-			{
-			  if (p4->type == TYPE_CONSTANT)
-			    {
-			      p5 = add_node (TYPE_CONSTANT);
-			      _ksba_asn_set_name (p5, p4->name);
-			      _ksba_asn_set_value (p5, p4->value,
-                                                   strlen (p4->value) + 1);
-			      if (p2 == p)
-				{
-				  set_right (p5, p->down);
-				  set_down (p, p5);
-				}
-			      else
-				{
-				  set_right (p5, p2->right);
-				  set_right (p2, p5);
-				}
-			      p2 = p5;
-			    }
-			  p4 = p4->right;
-			}
-		      move = DOWN;
-		      continue;
-		    }
-		}
-	    }
-	  move = DOWN;
-	}
-      else
-	move = RIGHT;
-
-      if (move == DOWN)
-	{
-	  if (p->down)
-	    p = p->down;
-	  else
-	    move = RIGHT;
-	}
-
-      if (p == node)
-	{
-	  move = UP;
-	  continue;
-	}
-
-      if (move == RIGHT)
-	{
-	  if (p->right)
-	    p = p->right;
-	  else
-	    move = UP;
-	}
-      if (move == UP)
-	p = find_up (p);
+      if (p->type == TYPE_OBJECT_ID && p->flags.assignment)
+        {
+          p2 = p->down;
+          if (p2 && p2->type == TYPE_CONSTANT)
+            {
+              if (p2->valuetype == VALTYPE_CSTR
+                  && !isdigit (p2->value.v_cstr[0]))
+                {
+                  if (strlen(p2->value.v_cstr)+1+strlen(name2) >= DIM(name2)-1)
+                    return KSBA_General_Error;
+                  strcpy (name2, name_root);
+                  strcat (name2, ".");
+                  strcat (name2, p2->value.v_cstr);
+                  p3 = _ksba_asn_find_node (node, name2);
+                  if (!p3 || p3->type != TYPE_OBJECT_ID ||
+                      !p3->flags.assignment)
+                    return ASN_ELEMENT_NOT_FOUND;
+                  set_down (p, p2->right);
+                  _ksba_asn_remove_node (p2);
+                  p2 = p;
+                  p4 = p3->down;
+                  while (p4)
+                    {
+                      if (p4->type == TYPE_CONSTANT)
+                        {
+                          p5 = add_node (TYPE_CONSTANT);
+                          _ksba_asn_set_name (p5, p4->name);
+                          _ksba_asn_set_value (p5, VALTYPE_CSTR,
+                                               p4->value.v_cstr, 0);
+                          if (p2 == p)
+                            {
+                              set_right (p5, p->down);
+                              set_down (p, p5);
+                            }
+                          else
+                            {
+                              set_right (p5, p2->right);
+                              set_right (p2, p5);
+                            }
+                          p2 = p5;
+                        }
+                      p4 = p4->right;
+                    }
+                  goto restart;  /* the most simple way to get it right ;-) */
+                }
+            }
+        }
     }
-
-  return ASN_OK;
+  return 0;
 }
 
-
+/* Walk the parse tree and set the default tag where appropriate.  The
+   node must be of type DEFINITIONS */
 void
 _ksba_asn_set_default_tag (AsnNode node)
 {
@@ -1670,59 +1577,28 @@ _ksba_asn_set_default_tag (AsnNode node)
     }
 }
 
+/* Walk the tree and set the is_set and not_used flags for all nodes below
+   a node of type SET. */
 void
 _ksba_asn_type_set_config (AsnNode node)
 {
   AsnNode p, p2;
-  enum { DOWN, UP, RIGHT } move;
 
-  return_if_fail (node);
-  
-  p = node;
-  move = DOWN;
-  while (!((p == node) && (move == UP)))
+  return_if_fail (node && node->type == TYPE_DEFINITIONS);
+
+  for (p = node; p; p = _ksba_asn_walk_tree (node, p))
     {
-      if (move != UP)
-	{
-	  if (p->type == TYPE_SET)
-	    {
-	      for (p2 = p->down; p2; p2 = p2->right)
-		{
-		  if (p2->type != TYPE_TAG)
-                    {
-                      p2->flags.is_set = 1;
-                      p2->flags.is_not_used = 1;
-                    }
+      if (p->type == TYPE_SET)
+        {
+          for (p2 = p->down; p2; p2 = p2->right)
+            {
+              if (p2->type != TYPE_TAG)
+                {
+                  p2->flags.in_set = 1;
+                  p2->flags.not_used = 1;
                 }
             }
-          move = DOWN;
         }
-      else
-        move = RIGHT;
-          
-      if (move == DOWN)
-        {
-          if (p->down)
-            p = p->down;
-          else
-            move = RIGHT;
-        }
-      
-      if (p == node)
-        {
-          move = UP;
-          continue;
-        }
-          
-      if (move == RIGHT)
-        {
-          if (p->right)
-            p = p->right;
-          else
-            move = UP;
-        }
-      if (move == UP)
-        p = find_up (p);
     }
 }
 

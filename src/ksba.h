@@ -41,6 +41,12 @@ typedef enum {
   KSBA_No_Value = 10,
   KSBA_Bug = 11,
   KSBA_BER_Error = 12,
+  KSBA_Element_Not_Found = 13,
+  KSBA_Identifier_Not_Found = 14,
+  KSBA_Value_Not_Found = 15,  /* needed?*/
+  KSBA_Syntax_Error = 16,
+  KSBA_Invalid_Tag = 17,
+  KSBA_Invalid_Length = 18,
 } KsbaError;
 
 typedef enum {
@@ -92,6 +98,9 @@ KsbaError ksba_reader_read (KsbaReader r,
 /*-- asn1-parse.y --*/
 int ksba_asn_parse_file (const char *filename, KsbaAsnTree *result);
 void ksba_asn_tree_release (KsbaAsnTree tree);
+
+/*-- asn1-func.c --*/
+void ksba_asn_tree_dump (KsbaAsnTree tree, const char *name, FILE *fp);
 
 
 #ifdef __cplusplus

@@ -78,7 +78,7 @@ struct node_flag_s {
   int explicit:1;
   int implicit:1;
   int has_imports:1;
-  int assignment:1;
+  int assignment:1;  /* node is an assignment */
   int one_param:1;
   int has_tag:1; 
   int has_size:1;
@@ -87,13 +87,31 @@ struct node_flag_s {
   int has_defined_by:1;
   int is_false:1;
   int is_true:1;
-  int is_default:1;
+  int has_default:1;  /* node has a default value (fixme:needed???)*/
   int is_optional:1;
-  int is_utc_time:1;
-  int is_set:1;       /* check whether this is needed */
-  int is_not_used:1;  /* check whether this is needed */
+  int is_utc_time:1;  /* the time type is acually an UTC time */
+  int in_set:1;       
+  int not_used:1;     
   int help_down:1;    /* helper for create_tree */
-  int help_right:1;
+  int help_right:1;   /* helper for create_tree */
+};
+
+enum asn_value_type {
+  VALTYPE_NULL = 0,
+  VALTYPE_BOOL,
+  VALTYPE_CSTR,
+  VALTYPE_MEM,
+  VALTYPE_LONG
+};
+
+union asn_value_u {
+  int v_bool;
+  char *v_cstr;
+  struct {
+    size_t len;
+    unsigned char *buf;
+  } v_mem;
+  long v_long;
 };
 
 /******************************************************/
@@ -106,7 +124,9 @@ struct asn_node_struct {
   node_type_t type;   
   struct node_flag_s flags;
 
-  unsigned char *value;          /* Node value */
+  enum asn_value_type valuetype;
+  union asn_value_u value;
+
   AsnNode down;                  /* Pointer to the son node */
   AsnNode right;                 /* Pointer to the brother node */
   AsnNode left;                  /* Pointer to the next list element */ 
@@ -125,7 +145,7 @@ typedef struct static_struct_asn {
   char *name;                    /* Node name */
   node_type_t type;             /* Node type */
   struct node_flag_s flags;
-  unsigned char *value;          /* Node value */
+  char *stringvalue;      
 } static_asn;
 
 
@@ -134,10 +154,11 @@ typedef struct static_struct_asn {
 /***************************************/
 /*  Functions used by ASN.1 parser     */
 /***************************************/
-void _ksba_asn_set_value (AsnNode node, const void *value, unsigned int len);
+void _ksba_asn_set_value (AsnNode node, enum asn_value_type vtype,
+                          const void *value, size_t len);
 void _ksba_asn_set_name (AsnNode node, const char *name);
 AsnNode _ksba_asn_walk_tree (AsnNode root, AsnNode node);
-AsnNode _ksba_asn_find_node(AsnNode pointer,char *name);
+AsnNode _ksba_asn_find_node(AsnNode pointer,const char *name);
 int _ksba_asn_check_identifier(AsnNode node);
 int _ksba_asn_change_integer_value(AsnNode node);
 int _ksba_asn_delete_not_used(AsnNode node);
@@ -147,11 +168,15 @@ void _ksba_asn_type_set_config (AsnNode node);
 
 
 /*-- asn1-func.c --*/
+void _ksba_asn_node_dump (AsnNode p, FILE *fp);
+
+
+
 int ksba_asn_create_structure (AsnNode root, char *source_name,
                                AsnNode*pointer , char *dest_name);
 int ksba_asn_delete_structure (AsnNode root);
 int ksba_asn1_create_tree (const static_asn *root,AsnNode*pointer);
-int ksba_asn_read_value(AsnNode root,char *name,unsigned char *value,int *len);
+int ksba_asn_read_value(AsnNode root,const char *name,unsigned char *value,int *len);
 int ksba_asn_write_value(AsnNode root,char *name,unsigned char *value,int len);
 
 

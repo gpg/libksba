@@ -444,7 +444,7 @@ type_assig_right_tag_default : type_assig_right_tag
                                  }
                              | type_assig_right_tag default  
                                  {
-                                   $1->flags.is_default = 1;
+                                   $1->flags.has_default = 1;
                                    set_right ($2, $$->down);
                                    set_down ($$, $2);
                                  }
@@ -545,7 +545,6 @@ constant_def : IDENTIFIER OBJECT STR_IDENTIFIER "::=" '{' obj_constant_list '}'
                    $$->flags.assignment = 1;
                    set_name ($$, $1);  
                    set_down ($$, $6);
-                   asn1_visit_tree ($$,NULL);
                  }
              | IDENTIFIER IDENTIFIER "::=" '{' obj_constant_list '}'
                  {
@@ -764,8 +763,7 @@ yyerror (const char *s)
 }
 
 
-
-
+ 
 static AsnNode
 new_node (struct parser_control_s *parsectl, node_type_t type)
 {
@@ -788,7 +786,12 @@ release_all_nodes (AsnNode node)
     {
       node2 = node->link_next;
       xfree (node->name);
-      xfree (node->value);
+      
+      if (node->valuetype == VALTYPE_CSTR)
+        xfree (node->value.v_cstr);
+      else if (node->valuetype == VALTYPE_MEM)
+        xfree (node->value.v_mem.buf);
+
       xfree (node);
     }
 }
@@ -802,7 +805,10 @@ set_name (AsnNode node, const char *name)
 static void
 set_str_value (AsnNode node, const char *text)
 {
-  _ksba_asn_set_value (node, text, (text && *text)? (strlen (text)+1): 0);
+  if (text && *text)
+    _ksba_asn_set_value (node, VALTYPE_CSTR, text, 0);
+  else
+    _ksba_asn_set_value (node, VALTYPE_NULL, NULL, 0);
 }
 
 static void
@@ -875,7 +881,7 @@ ksba_asn_parse_file (const char *file_name, KsbaAsnTree *result)
 
       _ksba_asn_change_integer_value (parsectl.parse_tree);
       _ksba_asn_expand_object_id (parsectl.parse_tree);
-      tree = xmalloc ( sizeof *tree + file_name? 1 : strlen (file_name) );
+      tree = xmalloc ( sizeof *tree + (file_name? strlen (file_name):1) );
       tree->parse_tree = parsectl.parse_tree;
       tree->node_list = parsectl.all_nodes;
       strcpy (tree->filename, file_name? file_name:"-");
