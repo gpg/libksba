@@ -1,5 +1,5 @@
 /* crl.c - CRL parser
- *      Copyright (C) 2002 g10 Code GmbH
+ *      Copyright (C) 2002, 2004 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -34,7 +34,10 @@
 #include "ber-decoder.h"
 #include "crl.h"
 
-/* we better buffer the hashing */
+static const char oidstr_crlNumber[] = "2.5.29.20";
+static const char oidstr_authorityKeyIdentifier[] = "2.5.29.35";
+
+/* We better buffer the hashing. */
 static inline void
 do_hash (ksba_crl_t crl, const void *buffer, size_t length)
 {
@@ -59,6 +62,101 @@ do_hash (ksba_crl_t crl, const void *buffer, size_t length)
 }
 
 #define HASH(a,b) do_hash (crl, (a), (b))
+
+
+
+static  void
+parse_skip (unsigned char const **buf, size_t *len, struct tag_info *ti)
+{
+  if (ti->length)
+    {
+      assert (ti->length <= *len);
+      *len -= ti->length;
+      *buf += ti->length;
+    }
+}
+
+static gpg_error_t
+parse_sequence (unsigned char const **buf, size_t *len, struct tag_info *ti)
+{
+  gpg_error_t err;
+
+  err = _ksba_ber_parse_tl (buf, len, ti);
+  if (err)
+    ;
+  else if (!(ti->class == CLASS_UNIVERSAL && ti->tag == TYPE_SEQUENCE
+             && ti->is_constructed) )
+    err = gpg_error (GPG_ERR_INV_OBJ);
+  else if (ti->length > *len)
+    err = gpg_error (GPG_ERR_BAD_BER);
+  return err;
+}
+
+static gpg_error_t
+parse_integer (unsigned char const **buf, size_t *len, struct tag_info *ti)
+{
+  gpg_error_t err;
+
+  err = _ksba_ber_parse_tl (buf, len, ti);
+  if (err)
+     ;
+  else if (!(ti->class == CLASS_UNIVERSAL && ti->tag == TYPE_INTEGER
+             && !ti->is_constructed) )
+    err = gpg_error (GPG_ERR_INV_OBJ);
+  else if (!ti->length)
+    err = gpg_error (GPG_ERR_TOO_SHORT);
+  else if (ti->length > *len)
+    err = gpg_error (GPG_ERR_BAD_BER);
+
+  return err;
+}
+
+static gpg_error_t
+parse_octet_string (unsigned char const **buf, size_t *len, struct tag_info *ti)
+{
+  gpg_error_t err;
+
+  err= _ksba_ber_parse_tl (buf, len, ti);
+  if (err)
+    ;
+  else if (!(ti->class == CLASS_UNIVERSAL && ti->tag == TYPE_OCTET_STRING
+             && !ti->is_constructed) )
+    err = gpg_error (GPG_ERR_INV_OBJ);
+  else if (!ti->length)
+    err = gpg_error (GPG_ERR_TOO_SHORT);
+  else if (ti->length > *len)
+    err = gpg_error (GPG_ERR_BAD_BER);
+
+  return err;
+}
+
+static gpg_error_t
+parse_object_id_into_str (unsigned char const **buf, size_t *len, char **oid)
+{
+  struct tag_info ti;
+  gpg_error_t err;
+
+  *oid = NULL;
+  err = _ksba_ber_parse_tl (buf, len, &ti);
+  if (err)
+    ;
+  else if (!(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OBJECT_ID
+                && !ti.is_constructed) )
+    err = gpg_error (GPG_ERR_INV_OBJ);
+  else if (!ti.length)
+    err = gpg_error (GPG_ERR_TOO_SHORT);
+  else if (ti.length > *len)
+    err = gpg_error (GPG_ERR_BAD_BER);
+  else if (!(*oid = ksba_oid_to_str (*buf, ti.length)))
+    err = gpg_error_from_errno (errno);
+  else
+    {
+      *buf += ti.length;
+      *len -= ti.length;
+    }
+  return err;
+}
+
 
 
 
@@ -99,6 +197,14 @@ ksba_crl_release (ksba_crl_t crl)
   xfree (crl->item.serial);
 
   xfree (crl->sigval);
+  while (crl->extension_list)
+    {
+      crl_extn_t tmp = crl->extension_list->next;
+      xfree (crl->extension_list->oid);
+      xfree (crl->extension_list);
+      crl->extension_list = tmp;
+    }
+
   xfree (crl);
 }
 
@@ -196,6 +302,221 @@ ksba_crl_get_issuer (ksba_crl_t crl, char **r_issuer)
 
   return err;
 }
+
+
+/* Return the CRL extension in OID, CRITICAL, DER and DERLEN.  The
+   caller should iterate IDX from 0 upwards until GPG_ERR_EOF is
+   returned. Note, that the returned values are valid as long as the
+   context is valid and no new parsing has been started. */
+gpg_error_t
+ksba_crl_get_extension (ksba_crl_t crl, int idx, 
+                        char const **oid, int *critical,
+                        unsigned char const **der, size_t *derlen)
+{
+  crl_extn_t e;
+
+  if (!crl)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  if (idx < 0)
+    return gpg_error (GPG_ERR_INV_INDEX);
+
+  for (e=crl->extension_list; e && idx; e = e->next, idx-- )
+    ;
+  if (!e)
+    return gpg_error (GPG_ERR_EOF);
+
+  if (oid)
+    *oid = e->oid;
+  if (critical)
+    *critical = e->critical;
+  if (der)
+    *der = e->der;
+  if (derlen)
+    *derlen = e->derlen;
+
+  return 0;
+}
+
+
+/* Return the authorityKeyIdentifier in r_name and r_serial or in
+   r_keyID.  Note that r_keyID is not yet supported and must be passed
+   as NULL.  GPG_ERR_NO_DATA is returned if no authorityKeyIdentifier
+   or only one using the keyIdentifier method is available. 
+
+   FIXME: This function shares a lot of code with the one in cert.c 
+*/
+gpg_error_t 
+ksba_crl_get_auth_key_id (ksba_crl_t crl,
+                          ksba_sexp_t *r_keyid,
+                          ksba_name_t *r_name,
+                          ksba_sexp_t *r_serial)
+{
+  gpg_error_t err;
+  size_t derlen;
+  const unsigned char *der;
+  struct tag_info ti;
+  char numbuf[30];
+  size_t numbuflen;
+  crl_extn_t e;
+
+  if (r_keyid)
+    return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
+  if (!crl || !r_name || !r_serial)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  *r_name = NULL;
+  *r_serial = NULL;
+
+  for (e=crl->extension_list; e; e = e->next)
+    if (!strcmp (e->oid, oidstr_authorityKeyIdentifier))
+      break;
+  if (!e)
+    return gpg_error (GPG_ERR_NO_DATA); /* not available */
+    
+  /* Check that there is only one */
+  {
+    crl_extn_t e2;
+
+    for (e2 = e->next; e2; e2 = e2->next)
+      if (!strcmp (e2->oid, oidstr_authorityKeyIdentifier))
+        return gpg_error (GPG_ERR_DUP_VALUE); 
+  }
+  
+  der = e->der;
+  derlen = e->derlen;
+
+  err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+  if (err)
+    return err;
+  if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+         && ti.is_constructed) )
+    return gpg_error (GPG_ERR_INV_CRL_OBJ);
+  if (ti.ndef)
+    return gpg_error (GPG_ERR_NOT_DER_ENCODED);
+  if (ti.length > derlen)
+    return gpg_error (GPG_ERR_BAD_BER);
+
+  err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+  if (err)
+    return err;
+  if (ti.class != CLASS_CONTEXT) 
+    return gpg_error (GPG_ERR_INV_CRL_OBJ); /* we expected a tag */
+  if (ti.ndef)
+    return gpg_error (GPG_ERR_NOT_DER_ENCODED);
+  if (derlen < ti.length)
+    return gpg_error (GPG_ERR_BAD_BER);
+
+  if (ti.tag == 0)
+    { /* We do not support the keyIdentifier method yet, but we need
+         to skip it. */
+      der += ti.length;
+      derlen -= ti.length;
+      if (!derlen)
+        return gpg_error (GPG_ERR_NO_DATA); /* not available */
+        
+      err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+      if (err)
+        return err;
+      if (ti.class != CLASS_CONTEXT) 
+        return gpg_error (GPG_ERR_INV_CRL_OBJ); /* we expected a tag */
+      if (ti.ndef)
+        return gpg_error (GPG_ERR_NOT_DER_ENCODED);
+      if (derlen < ti.length)
+        return gpg_error (GPG_ERR_BAD_BER);
+    }
+
+  if (ti.tag != 1 || !derlen)
+    return gpg_error (GPG_ERR_INV_CRL_OBJ);
+
+  err = _ksba_name_new_from_der (r_name, der, ti.length);
+  if (err)
+    return err;
+
+  der += ti.length;
+  derlen -= ti.length;
+
+  /* Fixme: we should release r_name before returning on error */
+  err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+  if (err)
+    return err;
+  if (ti.class != CLASS_CONTEXT) 
+    return gpg_error (GPG_ERR_INV_CRL_OBJ); /* we expected a tag */
+  if (ti.ndef)
+    return gpg_error (GPG_ERR_NOT_DER_ENCODED);
+  if (derlen < ti.length)
+    return gpg_error (GPG_ERR_BAD_BER);
+
+  if (ti.tag != 2 || !derlen)
+    return gpg_error (GPG_ERR_INV_CRL_OBJ);
+ 
+  sprintf (numbuf,"(%u:", (unsigned int)ti.length);
+  numbuflen = strlen (numbuf);
+  *r_serial = xtrymalloc (numbuflen + ti.length + 2);
+  if (!*r_serial)
+    return gpg_error_from_errno (errno);
+  strcpy (*r_serial, numbuf);
+  memcpy (*r_serial+numbuflen, der, ti.length);
+  (*r_serial)[numbuflen + ti.length] = ')';
+  (*r_serial)[numbuflen + ti.length + 1] = 0;
+
+  return 0;
+}
+
+
+/* Return the optional crlNumber in NUMBER or GPG_ERR_NO_DATA if it is
+   not available.  Caller must release NUMBER if the fuction retruned
+   with success. */
+gpg_error_t 
+ksba_crl_get_crl_number (ksba_crl_t crl, ksba_sexp_t *number)
+{
+  gpg_error_t err;
+  size_t derlen;
+  const unsigned char *der;
+  struct tag_info ti;
+  char numbuf[30];
+  size_t numbuflen;
+  crl_extn_t e;
+
+  if (!crl || !number)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  *number = NULL;
+
+  for (e=crl->extension_list; e; e = e->next)
+    if (!strcmp (e->oid, oidstr_crlNumber))
+      break;
+  if (!e)
+    return gpg_error (GPG_ERR_NO_DATA); /* not available */
+    
+  /* Check that there is only one. */
+  {
+    crl_extn_t e2;
+
+    for (e2 = e->next; e2; e2 = e2->next)
+      if (!strcmp (e2->oid, oidstr_crlNumber))
+        return gpg_error (GPG_ERR_DUP_VALUE); 
+  }
+  
+  der = e->der;
+  derlen = e->derlen;
+
+  err = parse_integer (&der, &derlen, &ti);
+  if (err)
+    return err;
+ 
+  sprintf (numbuf,"(%u:", (unsigned int)ti.length);
+  numbuflen = strlen (numbuf);
+  *number = xtrymalloc (numbuflen + ti.length + 2);
+  if (!*number)
+    return gpg_error_from_errno (errno);
+  strcpy (*number, numbuf);
+  memcpy (*number+numbuflen, der, ti.length);
+  (*number)[numbuflen + ti.length] = ')';
+  (*number)[numbuflen + ti.length + 1] = 0;
+
+  return 0;
+}
+
+
+
 
 /**
  * ksba_crl_get_update_times:
@@ -378,6 +699,101 @@ create_and_run_decoder (ksba_reader_t reader, const char *elem_name,
 }
 
 
+/* Parse the extension in the buffer DER or length DERLEN and return
+   the result in OID, CRITICAL, OFF and LEN. */
+static gpg_error_t
+parse_one_extension (const unsigned char *der, size_t derlen,
+                     char **oid, int *critical, size_t *off, size_t *len)
+{
+  gpg_error_t err;
+  struct tag_info ti;
+  const unsigned char *start = der;
+  
+  *oid = NULL;
+  *critical = 0;
+  *off = *len = 0;
+
+  /* 
+     Extension  ::=  SEQUENCE {
+         extnID      OBJECT IDENTIFIER,
+         critical    BOOLEAN DEFAULT FALSE,
+         extnValue   OCTET STRING }
+  */
+  err = parse_sequence (&der, &derlen, &ti);
+  if (err)
+    goto failure;
+
+  err = parse_object_id_into_str (&der, &derlen, oid);
+  if (err)
+    goto failure;
+
+  err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+  if (err)
+    goto failure;
+  if (ti.length > derlen)
+    return gpg_error (GPG_ERR_BAD_BER);
+  if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_BOOLEAN
+           && !ti.is_constructed)
+    { 
+      if (ti.length != 1)
+        goto bad_ber;
+      *critical = !!*der;
+      parse_skip (&der, &derlen, &ti);
+    }
+  else
+    { /* Undo that read. */
+      der -= ti.nhdr;
+      derlen += ti.nhdr;
+    }
+
+  err = parse_octet_string (&der, &derlen, &ti);
+  if (err)
+    goto failure;
+  *off = der - start;
+  *len = ti.length;
+
+  return 0;
+
+ bad_ber:
+  err = gpg_error (GPG_ERR_BAD_BER);
+ failure:
+  xfree (*oid);
+  *oid = NULL;
+  return err;
+}
+
+
+/* Store an extension into the context. */
+static gpg_error_t
+store_one_extension (ksba_crl_t crl, const unsigned char *der, size_t derlen)
+{
+  gpg_error_t err;
+  char *oid;
+  int critical;
+  size_t off, len;
+  crl_extn_t e;
+
+  err = parse_one_extension (der, derlen, &oid, &critical, &off, &len);
+  if (err)
+    return err;
+  e = xtrymalloc (sizeof *e + len - 1);
+  if (!e)
+    {
+      err = gpg_error_from_errno (errno);
+      xfree (oid);
+      return err;
+    }
+  e->oid = oid;
+  e->critical = critical;
+  e->derlen = len;
+  memcpy (e->der, der + off, len);
+  e->next = crl->extension_list;
+  crl->extension_list = e;
+
+  return 0;
+}
+
+
 
 /* Parse the fixed block at the beginning.  We use a custom parser
    here because our BER decoder is not yet able to stop at certain
@@ -416,10 +832,12 @@ parse_to_next_update (ksba_crl_t crl)
   if (!outer_ndef)
     {
       if (outer_len < ti.nhdr)
-        return gpg_error (GPG_ERR_BAD_BER); /* triplet header larger that outer sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* Triplet header larger
+                                               than outer sequence */
       outer_len -= ti.nhdr;
       if (!ti.ndef && outer_len < ti.length)
-        return gpg_error (GPG_ERR_BAD_BER); /* triplet larger that outer sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* Triplet larger than
+                                               outer sequence */
       outer_len -= ti.length;
     }
   tbs_len = ti.length; 
@@ -850,7 +1268,9 @@ parse_crl_extensions (ksba_crl_t crl)
       if (err)
         return err;
       HASH (tmpbuf, ti.nhdr+ti.length);
-      /* fixme: handle extension */
+      err = store_one_extension (crl, tmpbuf, ti.nhdr+ti.length);
+      if (err)
+        return err;
     }
 
   /* read ahead */

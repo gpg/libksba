@@ -28,6 +28,16 @@ typedef struct asn_node_struct *AsnNode;  /* FIXME: should not go here */
 #define HAVE_TYPEDEFD_ASNNODE
 #endif
 
+
+struct crl_extn_s {
+  struct crl_extn_s *next;
+  char *oid;
+  int critical;
+  size_t derlen;
+  unsigned char der[1];
+};
+typedef struct crl_extn_s *crl_extn_t;
+
 struct ksba_crl_s {
   gpg_error_t last_error;
 
@@ -64,6 +74,7 @@ struct ksba_crl_s {
     ksba_isotime_t revocation_date;
   } item;
 
+  crl_extn_t extension_list;
   ksba_sexp_t sigval;
 
   struct {

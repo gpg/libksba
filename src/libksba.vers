@@ -61,6 +61,8 @@ KSBA_0.9 {
     ksba_crl_get_sig_val; ksba_crl_get_update_times; ksba_crl_new;
     ksba_crl_parse; ksba_crl_release; ksba_crl_set_hash_function;
     ksba_crl_set_reader;
+    ksba_crl_get_extension; ksba_crl_get_auth_key_id;
+    ksba_crl_get_crl_number;      
 
     ksba_name_enum; ksba_name_get_uri; ksba_name_new; ksba_name_ref;
     ksba_name_release;

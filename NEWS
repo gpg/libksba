@@ -2,6 +2,13 @@ Noteworthy changes in version 0.9.6
 ------------------------------------------------
 
 
+
+ * Interface changes relative to the 0.9.5 release:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ksba_crl_get_extension               NEW.
+ksba_crl_get_auth_key_id             NEW.
+ksba_crl_get_crl_number              NEW.
+
 Noteworthy changes in version 0.9.5 (2004-04-06)
 ------------------------------------------------
 

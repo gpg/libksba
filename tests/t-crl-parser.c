@@ -1,5 +1,5 @@
 /* t-crl-parser.c - basic test for the CRl parser.
- *      Copyright (C) 2002 g10 Code GmbH
+ *      Copyright (C) 2002, 2004 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -46,6 +46,30 @@ my_hasher (void *arg, const void *buffer, size_t length)
     }
 }
 
+
+static void
+print_names (int indent, ksba_name_t name)
+{
+  int idx;
+  const char *s;
+  int indent_all;
+
+  if ((indent_all = (indent < 0)))
+    indent = - indent;
+
+  if (!name)
+    {
+      fputs ("none\n", stdout);
+      return;
+    }
+  
+  for (idx=0; (s = ksba_name_enum (name, idx)); idx++)
+    {
+      char *p = ksba_name_get_uri (name, idx);
+      printf ("%*s%s\n", idx||indent_all?indent:0, "", p?p:s);
+      xfree (p);
+    }
+}
 
 
 
@@ -165,6 +189,69 @@ one_file (const char *fname)
     fail ("digest algorithm mismatch");
 
   {
+    ksba_name_t name1;
+    ksba_sexp_t serial;
+
+    err = ksba_crl_get_auth_key_id (crl, NULL, &name1, &serial);
+    if (!err || gpg_err_code (err) == GPG_ERR_NO_DATA)
+      {
+        fputs ("AuthorityKeyIdentifier: ", stdout);
+        if (gpg_err_code (err) == GPG_ERR_NO_DATA)
+          fputs ("none", stdout);
+        else
+          {
+            print_names (24, name1);
+            ksba_name_release (name1);
+            fputs ("                serial: ", stdout);
+            print_sexp (serial);
+            ksba_free (serial);
+          }
+        putchar ('\n');
+      }
+    else
+      fail_if_err (err);
+  }
+
+  {
+    ksba_sexp_t serial;
+
+    err = ksba_crl_get_crl_number (crl, &serial);
+    if (!err || gpg_err_code (err) == GPG_ERR_NO_DATA)
+      {
+        fputs ("crlNumber: ", stdout);
+        if (gpg_err_code (err) == GPG_ERR_NO_DATA)
+          fputs ("none", stdout);
+        else
+          {
+            print_sexp (serial);
+            ksba_free (serial);
+          }
+        putchar ('\n');
+      }
+    else
+      fail_if_err (err);
+  }
+
+
+  {
+    int idx, crit;
+    const char *oid;
+    size_t derlen;
+
+    for (idx=0; !(err=ksba_crl_get_extension (crl, idx,
+                                              &oid, &crit,
+                                              NULL, &derlen)); idx++)
+      {
+        printf ("%sExtn: %s   (%lu octets)\n",
+                crit? "Crit":"", oid, (unsigned long)derlen);
+      }
+    if (err && gpg_err_code (err) != GPG_ERR_EOF 
+        && gpg_err_code (err) != GPG_ERR_NO_DATA )
+      fail_if_err (err);
+  }      
+  
+
+  {
     ksba_sexp_t sigval;
 
     sigval = ksba_crl_get_sig_val (crl);
@@ -174,6 +261,7 @@ one_file (const char *fname)
     putchar ('\n');
     xfree (sigval);
   }
+
 
   ksba_crl_release (crl);
   ksba_reader_release (r);

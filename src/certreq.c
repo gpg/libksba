@@ -129,7 +129,7 @@ ksba_certreq_add_subject (ksba_certreq_t cr, const char *name)
   /* this is assumed to be an subjectAltName */
 
   /* We only support email addresses for now, do some very basic
-     checks.  Note that the way we pass the name should match waht
+     checks.  Note that the way we pass the name should match what
      ksba_cert_get_subject() returns */
   namelen = strlen (name);
   if (*name != '<' || name[namelen-1] != '>'

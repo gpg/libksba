@@ -1,3 +1,15 @@
+2004-04-28  Werner Koch  <wk@gnupg.org>
+
+	* libksba.vers: Add new functions.
+
+	* crl.h (crl_extn_s, crl_extn_t): New.
+	(ksba_crl_s): Add member EXTENSION_LIST;
+	* crl.c (ksba_crl_release): Free an extension list.
+	(parse_one_extension, store_one_extension): New.
+	(parse_crl_extensions): Store extensions.
+	(ksba_crl_get_extension, ksba_crl_get_auth_key_id)
+	(ksba_crl_get_crl_number): New.
+
 2004-04-06  Werner Koch  <wk@gnupg.org>
 
 	* cms.c (ksba_cms_add_smime_capability): Oops, we forgot to store

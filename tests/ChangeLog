@@ -1,3 +1,8 @@
+2004-04-28  Werner Koch  <wk@gnupg.org>
+
+	* t-crl-parser.c (print_names): New.
+	(one_file): Print extensions info.
+
 2004-03-23  Werner Koch  <wk@gnupg.org>
 
 	* cert-basic.c (print_oid_and_desc): New.

@@ -372,6 +372,14 @@ void        ksba_crl_set_hash_function (ksba_crl_t crl,
                                         void *hash_fnc_arg);
 const char *ksba_crl_get_digest_algo (ksba_crl_t crl);
 gpg_error_t ksba_crl_get_issuer (ksba_crl_t crl, char **r_issuer);
+gpg_error_t ksba_crl_get_extension (ksba_crl_t crl, int idx, 
+                                    char const **oid, int *critical,
+                                    unsigned char const **der, size_t *derlen);
+gpg_error_t ksba_crl_get_auth_key_id (ksba_crl_t crl,
+                                      ksba_sexp_t *r_keyid,
+                                      ksba_name_t *r_name,
+                                      ksba_sexp_t *r_serial);
+gpg_error_t ksba_crl_get_crl_number (ksba_crl_t crl, ksba_sexp_t *number);
 gpg_error_t ksba_crl_get_update_times (ksba_crl_t crl,
                                        ksba_isotime_t this,
                                        ksba_isotime_t next);
