@@ -70,7 +70,7 @@ fatal (const char *fmt, ... )
 
 
 static void
-one_file (FILE *fp, const char *fname)
+one_file (FILE *fp, const char *fname, KsbaAsnTree asn_tree)
 {
   KsbaError err;
   KsbaReader r;
@@ -90,6 +90,13 @@ one_file (FILE *fp, const char *fname)
   if (err)
     fatal ("ksba_ber_decoder_set_reader failed: rc=%d\n", err);
   
+  if (asn_tree)
+    {
+      err = _ksba_ber_decoder_set_module (d, asn_tree);
+      if (err)
+        fatal ("ksba_ber_decoder_set_module failed: rc=%d\n", err);
+    }
+
   err = _ksba_ber_decoder_dump (d, stdout);
   if (err)
     print_error ("ksba_ber_decoder_dump failed: rc=%d\n", err);
@@ -99,20 +106,47 @@ one_file (FILE *fp, const char *fname)
 }
 
 
+static void
+usage (int exitcode)
+{
+  fputs ("usage: ber-dump [--module asnfile] [files]\n", stderr);
+  exit (exitcode);
+}
+
 int
 main (int argc, char **argv)
 {
+  const char *asnfile = NULL;
+  KsbaAsnTree asn_tree = NULL;
+  int rc;
+
   if (!argc || (argc > 1 &&
                 (!strcmp (argv[1],"--help") || !strcmp (argv[1],"-h"))) )
-    {
-      fputs ("usage: ber-dump [files]\n", stderr);
-      return 0;
-    }
+    usage (0);
   
   argc--; argv++;
+  if (argc && !strcmp (*argv,"--module"))
+    {
+      argc--; argv++;
+      if (!argc)
+        usage (1);
+      asnfile = *argv;
+      argc--; argv++;
+    }
+
+  if (asnfile)
+    {
+      rc = ksba_asn_parse_file (asnfile, &asn_tree);
+      if (rc)
+        {
+          print_error ("parsing `%s' failed: rc=%d\n", asnfile, rc);
+          exit (1);
+        }
+    }
+
   
   if (!argc)
-    one_file (stdin, "-");
+    one_file (stdin, "-", asn_tree);
   else
     {
       for (; argc; argc--, argv++) 
@@ -124,10 +158,14 @@ main (int argc, char **argv)
               print_error ("can't open `%s': %s\n", *argv, strerror (errno));
           else
             {
-              one_file (fp, *argv);
+              one_file (fp, *argv, asn_tree);
               fclose (fp);
             }
         }
     }
+  
+  ksba_asn_tree_release (asn_tree);
+
   return error_counter? 1:0;
 }
+

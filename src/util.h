@@ -68,6 +68,10 @@ char *_ksba_xstrdup (const char *p);
                  __FILE__, __LINE__, #expr );            \
         return (val);	                                 \
     } } while (0)
+#define never_reached() do {                                   \
+        fprintf (stderr, "%s:%d: oops; should never get here", \
+                 __FILE__, __LINE__ );                         \
+    } while (0)
 
 
 #endif /* UTIL_H */

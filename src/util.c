@@ -45,16 +45,16 @@ _ksba_calloc (size_t n, size_t m )
 }
 
 void *
-_ksba_realloc (void *p, size_t n)
+_ksba_realloc (void *mem, size_t n)
 {
-  return realloc (p, n );
+  return realloc (mem, n );
 }
 
 
 char *
-_ksba_strdup (const char *p)
+_ksba_strdup (const char *str)
 {
-  return strdup (p);
+  return strdup (str);
 }
 
 
@@ -93,9 +93,9 @@ _ksba_xcalloc (size_t n, size_t m )
 }
 
 void *
-_ksba_xrealloc (void *p, size_t n)
+_ksba_xrealloc (void *mem, size_t n)
 {
-  void *p = _ksba_realloc (p,n);
+  void *p = _ksba_realloc (mem,n);
   if (!p)
     out_of_core();
   return p;
@@ -103,9 +103,9 @@ _ksba_xrealloc (void *p, size_t n)
 
 
 char *
-_ksba_xstrdup (const char *p)
+_ksba_xstrdup (const char *str)
 {
-  char *p = _ksba_strdup (p);
+  char *p = _ksba_strdup (str);
   if (!p)
     out_of_core();
   return p;

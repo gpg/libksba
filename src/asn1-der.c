@@ -39,6 +39,25 @@
 #define TAG_ENUMERATED       0x0A
 #define TAG_NULL             0x05
 
+#define UNIVERSAL  (CLASS_UNIVERSAL << 6)
+#define STRUCTURED 0x20
+
+static AsnNode 
+find_up (AsnNode  node)
+{
+  AsnNode p;
+
+  if (node == NULL)
+    return NULL;
+
+  p = node;
+
+  while ((p->left != NULL) && (p->left->right == p))
+    p = p->left;
+
+  return p->left;
+}
+
 
 char *
 _asn1_ltostr (long v, char *str)
@@ -108,7 +127,7 @@ _asn1_length_der (unsigned long len, unsigned char *ans, int *ans_len)
 
 
 unsigned long
-_asn1_get_length_der (unsigned char *der, int *len)
+_ksba_asn_get_length_der (unsigned char *der, int *len)
 {
   unsigned long ans;
   int k, punt;
@@ -225,7 +244,7 @@ _asn1_get_octet_der (unsigned char *der, int *der_len, unsigned char *str,
 
   if (str == NULL)
     return ASN_OK;
-  *str_len = _asn1_get_length_der (der, &len_len);
+  *str_len = _ksba_asn_get_length_der (der, &len_len);
   if (str_size > *str_len)
     memcpy (str, der + len_len, *str_len);
   else
@@ -257,7 +276,7 @@ _asn1_get_utctime_der(unsigned char *der,int *der_len,unsigned char *str)
   char temp[20];
 
   if(str==NULL) return;
-  str_len=_asn1_get_length_der(der,&len_len);
+  str_len=_ksba_asn_get_length_der(der,&len_len);
   memcpy(temp,der+len_len,str_len);
   *der_len=str_len+len_len;
   switch(str_len){
@@ -292,7 +311,7 @@ _asn1_get_time_der (unsigned char *der, int *der_len, unsigned char *str)
 
   if (str == NULL)
     return;
-  str_len = _asn1_get_length_der (der, &len_len);
+  str_len = _ksba_asn_get_length_der (der, &len_len);
   memcpy (str, der + len_len, str_len);
   str[str_len] = 0;
   *der_len = str_len + len_len;
@@ -363,7 +382,7 @@ _asn1_get_objectid_der (unsigned char *der, int *der_len, unsigned char *str)
 
   if (str == NULL)
     return;
-  len = _asn1_get_length_der (der, &len_len);
+  len = _ksba_asn_get_length_der (der, &len_len);
 
   val1 = der[len_len] / 40;
   val = der[len_len] - val1 * 40;
@@ -421,7 +440,7 @@ _asn1_get_bit_der (unsigned char *der, int *der_len, unsigned char *str,
 
   if (str == NULL)
     return ASN_OK;
-  len_byte = _asn1_get_length_der (der, &len_len) - 1;
+  len_byte = _ksba_asn_get_length_der (der, &len_len) - 1;
 
   if (str_size > len_byte)
     memcpy (str, der + len_len + 1, len_byte);
@@ -443,27 +462,27 @@ _asn1_get_bit_der (unsigned char *der, int *der_len, unsigned char *str,
 
 
 void
-_asn1_complete_explicit_tag (node_asn * node, unsigned char *der,
+_asn1_complete_explicit_tag (AsnNode  node, unsigned char *der,
 			     int *counter)
 {
-  node_asn *p;
+  AsnNode p;
   int tag_len, is_tag_implicit, len2, len3;
   unsigned char class, class_implicit, temp[10];
   unsigned long tag_implicit;
 
   is_tag_implicit = 0;
 
-  if (node->type & CONST_TAG)
+  if (node->flags.has_tag)
     {
       p = node->down;
       while (p)
 	{
-	  if (type_field (p->type) == TYPE_TAG)
+	  if (p->type == TYPE_TAG)
 	    {
-	      if (p->type & CONST_EXPLICIT)
+	      if (p->flags.explicit)
 		{
 		  len2 = strtol (p->name, NULL, 10);
-		  _asn1_set_name (p, NULL);
+		  _ksba_asn_set_name (p, NULL);
 		  _asn1_length_der (*counter - len2, temp, &len3);
 		  memmove (der + len2 + len3, der + len2, *counter - len2);
 		  memcpy (der + len2, temp, len3);
@@ -471,7 +490,7 @@ _asn1_complete_explicit_tag (node_asn * node, unsigned char *der,
 		  is_tag_implicit = 0;
 		}
 	      else
-		{		/* CONST_IMPLICIT */
+		{	
 		  if (!is_tag_implicit)
 		    {
 		      is_tag_implicit = 1;
@@ -485,32 +504,25 @@ _asn1_complete_explicit_tag (node_asn * node, unsigned char *der,
 
 
 int
-_asn1_insert_tag_der (node_asn * node, unsigned char *der, int *counter)
+_asn1_insert_tag_der (AsnNode  node, unsigned char *der, int *counter)
 {
-  node_asn *p;
+  AsnNode p;
   int tag_len, is_tag_implicit, len2, len3;
   unsigned char class, class_implicit, temp[10];
   unsigned long tag_implicit;
 
+
   is_tag_implicit = 0;
 
-  if (node->type & CONST_TAG)
+  if (node->flags.has_tag)
     {
       p = node->down;
       while (p)
-	{
-	  if (type_field (p->type) == TYPE_TAG)
-	    {
-	      if (p->type & CONST_APPLICATION)
-		class = APPLICATION;
-	      else if (p->type & CONST_UNIVERSAL)
-		class = UNIVERSAL;
-	      else if (p->type & CONST_PRIVATE)
-		class = PRIVATE;
-	      else
-		class = CONTEXT_SPECIFIC;
-
-	      if (p->type & CONST_EXPLICIT)
+        {
+	  if (p->type == TYPE_TAG)
+            {
+              class = p->flags.class << 6;
+	      if (p->flags.explicit)
 		{
 		  if (is_tag_implicit)
 		    _asn1_tag_der (class_implicit, tag_implicit,
@@ -521,19 +533,20 @@ _asn1_insert_tag_der (node_asn * node, unsigned char *der, int *counter)
 				   der + *counter, &tag_len);
 		  *counter += tag_len;
 		  _asn1_ltostr (*counter, temp);
-		  _asn1_set_name (p, temp);
+		  _ksba_asn_set_name (p, temp);
 
 		  is_tag_implicit = 0;
 		}
 	      else
-		{		/* CONST_IMPLICIT */
+		{	
 		  if (!is_tag_implicit)
 		    {
-		      if ((type_field (node->type) == TYPE_SEQUENCE) ||
-			  (type_field (node->type) == TYPE_SEQUENCE_OF) ||
-			  (type_field (node->type) == TYPE_SET) ||
-			  (type_field (node->type) == TYPE_SET_OF))
+		      if (node->type == TYPE_SEQUENCE 
+                          || node->type == TYPE_SEQUENCE_OF
+                          || node->type == TYPE_SET
+                          || node->type == TYPE_SET_OF)
 			class |= STRUCTURED;
+
 		      class_implicit = class;
 		      tag_implicit = strtoul (p->value, NULL, 10);
 		      is_tag_implicit = 1;
@@ -550,7 +563,7 @@ _asn1_insert_tag_der (node_asn * node, unsigned char *der, int *counter)
     }
   else
     {
-      switch (type_field (node->type))
+      switch (node->type)
 	{
 	case TYPE_NULL:
 	  _asn1_tag_der (UNIVERSAL, TAG_NULL, der + *counter, &tag_len);
@@ -568,7 +581,7 @@ _asn1_insert_tag_der (node_asn * node, unsigned char *der, int *counter)
 	  _asn1_tag_der (UNIVERSAL, TAG_OBJECT_ID, der + *counter, &tag_len);
 	  break;
 	case TYPE_TIME:
-	  if (node->type & CONST_UTC)
+	  if (node->flags.is_utc_time)
 	    {
 	      _asn1_tag_der (UNIVERSAL, TAG_UTCTime, der + *counter,
 			     &tag_len);
@@ -615,35 +628,28 @@ _asn1_insert_tag_der (node_asn * node, unsigned char *der, int *counter)
 
 
 int
-_asn1_extract_tag_der (node_asn * node, unsigned char *der, int *der_len)
+_asn1_extract_tag_der (AsnNode  node, unsigned char *der, int *der_len)
 {
-  node_asn *p;
+  AsnNode p;
   int counter, len2, len3, is_tag_implicit;
   unsigned long tag, tag_implicit;
   unsigned char class, class2, class_implicit;
 
   counter = is_tag_implicit = 0;
-  if (node->type & CONST_TAG)
+  if (node->flags.has_tag)
     {
       p = node->down;
       while (p)
 	{
-	  if (type_field (p->type) == TYPE_TAG)
+	  if (p->type == TYPE_TAG)
 	    {
-	      if (p->type & CONST_APPLICATION)
-		class2 = APPLICATION;
-	      else if (p->type & CONST_UNIVERSAL)
-		class2 = UNIVERSAL;
-	      else if (p->type & CONST_PRIVATE)
-		class2 = PRIVATE;
-	      else
-		class2 = CONTEXT_SPECIFIC;
+	      class2 = p->flags.class << 6;
 
-	      if (p->type & CONST_EXPLICIT)
+	      if (p->flags.explicit)
 		{
 		  tag = _asn1_get_tag_der (der + counter, &class, &len2);
 		  counter += len2;
-		  len3 = _asn1_get_length_der (der + counter, &len2);
+		  len3 = _ksba_asn_get_length_der (der + counter, &len2);
 		  counter += len2;
 		  if (!is_tag_implicit)
 		    {
@@ -663,11 +669,12 @@ _asn1_extract_tag_der (node_asn * node, unsigned char *der, int *der_len)
 		{		/* TAG_IMPLICIT */
 		  if (!is_tag_implicit)
 		    {
-		      if ((type_field (node->type) == TYPE_SEQUENCE) ||
-			  (type_field (node->type) == TYPE_SEQUENCE_OF) ||
-			  (type_field (node->type) == TYPE_SET) ||
-			  (type_field (node->type) == TYPE_SET_OF))
+		      if (node->type == TYPE_SEQUENCE
+                          || node->type == TYPE_SEQUENCE_OF
+                          || node->type == TYPE_SET
+                          || node->type == TYPE_SET_OF)
 			class2 |= STRUCTURED;
+
 		      class_implicit = class2;
 		      tag_implicit = strtoul (p->value, NULL, 10);
 		      is_tag_implicit = 1;
@@ -686,7 +693,7 @@ _asn1_extract_tag_der (node_asn * node, unsigned char *der, int *der_len)
     }
   else
     {
-      if (type_field (node->type) == TYPE_TAG)
+      if (node->type == TYPE_TAG)
 	{
 	  counter = 0;
 	  *der_len = counter;
@@ -694,7 +701,7 @@ _asn1_extract_tag_der (node_asn * node, unsigned char *der, int *der_len)
 	}
 
       tag = _asn1_get_tag_der (der + counter, &class, &len2);
-      switch (type_field (node->type))
+      switch (node->type)
 	{
 	case TYPE_NULL:
 	  if ((class != UNIVERSAL) || (tag != TAG_NULL))
@@ -717,7 +724,7 @@ _asn1_extract_tag_der (node_asn * node, unsigned char *der, int *der_len)
 	    return ASN_DER_ERROR;
 	  break;
 	case TYPE_TIME:
-	  if (node->type & CONST_UTC)
+	  if (node->flags.is_utc_time)
 	    {
 	      if ((class != UNIVERSAL) || (tag != TAG_UTCTime))
 		return ASN_DER_ERROR;
@@ -762,7 +769,7 @@ _asn1_extract_tag_der (node_asn * node, unsigned char *der, int *der_len)
 
 
 void
-_asn1_ordering_set (unsigned char *der, node_asn * node)
+_asn1_ordering_set (unsigned char *der, AsnNode  node)
 {
   struct vet
   {
@@ -773,21 +780,20 @@ _asn1_ordering_set (unsigned char *der, node_asn * node)
 
   int counter, len, len2;
   struct vet *first, *last, *p_vet, *p2_vet;
-  node_asn *p;
+  AsnNode p;
   unsigned char class, *temp;
   unsigned long tag;
 
   counter = 0;
 
-  if (type_field (node->type) != TYPE_SET)
+  if (node->type != TYPE_SET)
     return;
 
   p = node->down;
-  while ((type_field (p->type) == TYPE_TAG)
-	 || (type_field (p->type) == TYPE_SIZE))
+  while (p->type == TYPE_TAG || p->type == TYPE_SIZE)
     p = p->right;
 
-  if ((p == NULL) || (p->right == NULL))
+  if (!p || !p->right )
     return;
 
   first = last = NULL;
@@ -808,7 +814,7 @@ _asn1_ordering_set (unsigned char *der, node_asn * node)
       counter += len2;
 
       /* extraction  and length */
-      len2 = _asn1_get_length_der (der + counter, &len);
+      len2 = _ksba_asn_get_length_der (der + counter, &len);
       counter += len + len2;
 
       p_vet->end = counter;
@@ -856,7 +862,7 @@ _asn1_ordering_set (unsigned char *der, node_asn * node)
 
 
 void
-_asn1_ordering_set_of (unsigned char *der, node_asn * node)
+_asn1_ordering_set_of (unsigned char *der, AsnNode  node)
 {
   struct vet
   {
@@ -866,18 +872,17 @@ _asn1_ordering_set_of (unsigned char *der, node_asn * node)
 
   int counter, len, len2, change;
   struct vet *first, *last, *p_vet, *p2_vet;
-  node_asn *p;
+  AsnNode p;
   unsigned char *temp, class;
   unsigned long k, max;
 
   counter = 0;
 
-  if (type_field (node->type) != TYPE_SET_OF)
+  if (node->type != TYPE_SET_OF)
     return;
 
   p = node->down;
-  while ((type_field (p->type) == TYPE_TAG)
-	 || (type_field (p->type) == TYPE_SIZE))
+  while (p->type == TYPE_TAG || p->type == TYPE_SIZE)
     p = p->right;
   p = p->right;
 
@@ -899,7 +904,7 @@ _asn1_ordering_set_of (unsigned char *der, node_asn * node)
       /* extraction of tag and length */
       _asn1_get_tag_der (der + counter, &class, &len);
       counter += len;
-      len2 = _asn1_get_length_der (der + counter, &len);
+      len2 = _ksba_asn_get_length_der (der + counter, &len);
       counter += len + len2;
 
       p_vet->end = counter;
@@ -965,13 +970,13 @@ _asn1_ordering_set_of (unsigned char *der, node_asn * node)
 
 
 int
-asn1_create_der (node_asn * root, char *name, unsigned char *der, int *len)
+asn1_create_der (AsnNode  root, char *name, unsigned char *der, int *len)
 {
-  node_asn *node, *p, *p2, *p3;
+  AsnNode node, p, p2, p3;
   char temp[20];
   int counter, counter_old, len2, len3, len4, move, ris;
 
-  node = _asn1_find_node (root, name);
+  node = _ksba_asn_find_node (root, name);
   if (node == NULL)
     return ASN_ELEMENT_NOT_FOUND;
 
@@ -985,7 +990,7 @@ asn1_create_der (node_asn * root, char *name, unsigned char *der, int *len)
       if (move != UP)
 	ris = _asn1_insert_tag_der (p, der, &counter);
 
-      switch (type_field (p->type))
+      switch (p->type)
 	{
 	case TYPE_NULL:
 	  der[counter] = 0;
@@ -993,7 +998,7 @@ asn1_create_der (node_asn * root, char *name, unsigned char *der, int *len)
 	  move = RIGHT;
 	  break;
 	case TYPE_BOOLEAN:
-	  if ((p->type & CONST_DEFAULT) && (p->value == NULL))
+	  if (p->flags.is_default && !p->value)
 	    counter = counter_old;
 	  else
 	    {
@@ -1007,11 +1012,11 @@ asn1_create_der (node_asn * root, char *name, unsigned char *der, int *len)
 	  break;
 	case TYPE_INTEGER:
 	case TYPE_ENUMERATED:
-	  if ((p->type & CONST_DEFAULT) && (p->value == NULL))
+	  if (p->flags.is_default && !p->value)
 	    counter = counter_old;
 	  else
 	    {
-	      len2 = _asn1_get_length_der (p->value, &len3);
+	      len2 = _ksba_asn_get_length_der (p->value, &len3);
 	      memcpy (der + counter, p->value, len3 + len2);
 	      counter += len3 + len2;
 	    }
@@ -1028,13 +1033,13 @@ asn1_create_der (node_asn * root, char *name, unsigned char *der, int *len)
 	  move = RIGHT;
 	  break;
 	case TYPE_OCTET_STRING:
-	  len2 = _asn1_get_length_der (p->value, &len3);
+	  len2 = _ksba_asn_get_length_der (p->value, &len3);
 	  memcpy (der + counter, p->value, len3 + len2);
 	  counter += len3 + len2;
 	  move = RIGHT;
 	  break;
 	case TYPE_BIT_STRING:
-	  len2 = _asn1_get_length_der (p->value, &len3);
+	  len2 = _ksba_asn_get_length_der (p->value, &len3);
 	  memcpy (der + counter, p->value, len3 + len2);
 	  counter += len3 + len2;
 	  move = RIGHT;
@@ -1044,14 +1049,14 @@ asn1_create_der (node_asn * root, char *name, unsigned char *der, int *len)
 	  if (move != UP)
 	    {
 	      _asn1_ltostr (counter, temp);
-	      _asn1_set_value (p, temp, strlen (temp) + 1);
+	      _ksba_asn_set_value (p, temp, strlen (temp) + 1);
 	      move = DOWN;
 	    }
 	  else
 	    {			/* move==UP */
 	      len2 = strtol (p->value, NULL, 10);
-	      _asn1_set_value (p, NULL, 0);
-	      if (type_field (p->type) == TYPE_SET)
+	      _ksba_asn_set_value (p, NULL, 0);
+	      if (p->type == TYPE_SET)
 		_asn1_ordering_set (der + len2, p);
 	      _asn1_length_der (counter - len2, temp, &len3);
 	      memmove (der + len2 + len3, der + len2, counter - len2);
@@ -1065,10 +1070,9 @@ asn1_create_der (node_asn * root, char *name, unsigned char *der, int *len)
 	  if (move != UP)
 	    {
 	      _asn1_ltostr (counter, temp);
-	      _asn1_set_value (p, temp, strlen (temp) + 1);
+	      _ksba_asn_set_value (p, temp, strlen (temp) + 1);
 	      p = p->down;
-	      while ((type_field (p->type) == TYPE_TAG)
-		     || (type_field (p->type) == TYPE_SIZE))
+	      while (p->type == TYPE_TAG || p->type == TYPE_SIZE)
 		p = p->right;
 	      if (p->right)
 		{
@@ -1077,14 +1081,14 @@ asn1_create_der (node_asn * root, char *name, unsigned char *der, int *len)
 		  continue;
 		}
 	      else
-		p = _asn1_find_up (p);
+		p = find_up (p);
 	      move = UP;
 	    }
 	  if (move == UP)
 	    {
 	      len2 = strtol (p->value, NULL, 10);
-	      _asn1_set_value (p, NULL, 0);
-	      if (type_field (p->type) == TYPE_SET_OF)
+	      _ksba_asn_set_value (p, NULL, 0);
+	      if (p->type == TYPE_SET_OF)
 		_asn1_ordering_set_of (der + len2, p);
 	      _asn1_length_der (counter - len2, temp, &len3);
 	      memmove (der + len2 + len3, der + len2, counter - len2);
@@ -1094,7 +1098,7 @@ asn1_create_der (node_asn * root, char *name, unsigned char *der, int *len)
 	    }
 	  break;
 	case TYPE_ANY:
-	  len2 = _asn1_get_length_der (p->value, &len3);
+	  len2 = _ksba_asn_get_length_der (p->value, &len3);
 	  memcpy (der + counter, p->value + len3, len2);
 	  counter += len2;
 	  move = RIGHT;
@@ -1125,7 +1129,7 @@ asn1_create_der (node_asn * root, char *name, unsigned char *der, int *len)
 	    move = UP;
 	}
       if (move == UP)
-	p = _asn1_find_up (p);
+	p = find_up (p);
     }
 
   *len = counter;
@@ -1150,9 +1154,9 @@ asn1_create_der (node_asn * root, char *name, unsigned char *der, int *len)
  *   ASN_DER_ERROR:          Ditto.
  **/
 int
-asn1_get_der (node_asn * root, unsigned char *der, int len)
+asn1_get_der (AsnNode  root, unsigned char *der, int len)
 {
-  node_asn *node, *p, *p2, *p3;
+  AsnNode node, p, p2, p3;
   char temp[128];
   int counter, len2, len3, len4, move, ris;
   unsigned char class, *temp2;
@@ -1163,7 +1167,7 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
   if (node == NULL)
     return ASN_ELEMENT_NOT_FOUND;
 
-  if (node->type & CONST_OPTION)
+  if (node->flags.is_optional)
     return ASN_GENERIC_ERROR;
 
   counter = 0;
@@ -1175,9 +1179,9 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 
       if (move != UP)
 	{
-	  if (p->type & CONST_SET)
+	  if (p->flags.is_set)
 	    {
-	      p2 = _asn1_find_up (p);
+	      p2 = find_up (p);
 	      len2 = strtol (p2->value, NULL, 10);
 	      if (counter == len2)
 		{
@@ -1190,10 +1194,10 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 	      p2 = p2->down;
 	      while (p2)
 		{
-		  if ((p2->type & CONST_SET) && (p2->type & CONST_NOT_USED))
+		  if (p2->flags.is_set && p2->flags.is_not_used)
 		    {		/* CONTROLLARE */
-		      if (type_field (p2->type) != TYPE_CHOICE)
-			ris =  _asn1_extract_tag_der (p2, der + counter, &len2);
+		      if (p2->type != TYPE_CHOICE)
+			ris = _asn1_extract_tag_der (p2, der + counter, &len2);
 		      else
 			{
 			  p3 = p2->down;
@@ -1210,7 +1214,7 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 			}
 		      if (ris == ASN_OK)
 			{
-			  p2->type &= ~CONST_NOT_USED;
+                          p2->flags.is_not_used = 0;
 			  p = p2;
 			  break;
 			}
@@ -1222,7 +1226,7 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 		return ASN_DER_ERROR;
 	    }
 
-	  if (type_field (p->type) == TYPE_CHOICE)
+	  if (p->type == TYPE_CHOICE)
 	    {
 	      while (p->down)
 		{
@@ -1230,22 +1234,22 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 		  if (ris == ASN_OK)
 		    {
 		      while (p->down->right)
-			asn1_delete_structure (p->down->right);
+			ksba_asn_delete_structure (p->down->right);
 		      break;
 		    }
 		  else if (ris == ASN_ERROR_TYPE_ANY)
 		    return ASN_ERROR_TYPE_ANY;
 		  else
-		    asn1_delete_structure (p->down);
+		    ksba_asn_delete_structure (p->down);
 		}
 	      if (p->down == NULL)
 		return ASN_DER_ERROR;
 	      p = p->down;
 	    }
 
-	  if ((p->type & CONST_OPTION) || (p->type & CONST_DEFAULT))
+	  if (p->flags.is_optional || p->flags.is_default)
 	    {
-	      p2 = _asn1_find_up (p);
+	      p2 = find_up (p);
 	      len2 = strtol (p2->value, NULL, 10);
 	      if (counter >= len2)
 		ris = ASN_TAG_ERROR;
@@ -1256,14 +1260,14 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 	  if (ris != ASN_OK)
 	    {
 	      //if(ris==ASN_ERROR_TYPE_ANY) return ASN_ERROR_TYPE_ANY;
-	      if (p->type & CONST_OPTION)
+	      if (p->flags.is_optional)
 		{
-		  p->type |= CONST_NOT_USED;
+                  p->flags.is_not_used = 1;
 		  move = RIGHT;
 		}
-	      else if (p->type & CONST_DEFAULT)
+	      else if (p->flags.is_default)
 		{
-		  _asn1_set_value (p, NULL, 0);
+		  _ksba_asn_set_value (p, NULL, 0);
 		  move = RIGHT;
 		}
 	      else
@@ -1278,7 +1282,7 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 
       if (ris == ASN_OK)
 	{
-	  switch (type_field (p->type))
+	  switch (p->type)
 	    {
 	    case TYPE_NULL:
 	      if (der[counter])
@@ -1290,39 +1294,39 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 	      if (der[counter++] != 1)
 		return ASN_DER_ERROR;
 	      if (der[counter++] == 0)
-		_asn1_set_value (p, "F", 1);
+		_ksba_asn_set_value (p, "F", 1);
 	      else
-		_asn1_set_value (p, "T", 1);
+		_ksba_asn_set_value (p, "T", 1);
 	      move = RIGHT;
 	      break;
 	    case TYPE_INTEGER:
 	    case TYPE_ENUMERATED:
-	      len2 = _asn1_get_length_der (der + counter, &len3);
-	      _asn1_set_value (p, der + counter, len3 + len2);
+	      len2 = _ksba_asn_get_length_der (der + counter, &len3);
+	      _ksba_asn_set_value (p, der + counter, len3 + len2);
 	      counter += len3 + len2;
 	      move = RIGHT;
 	      break;
 	    case TYPE_OBJECT_ID:
 	      _asn1_get_objectid_der (der + counter, &len2, temp);
-	      _asn1_set_value (p, temp, strlen (temp) + 1);
+	      _ksba_asn_set_value (p, temp, strlen (temp) + 1);
 	      counter += len2;
 	      move = RIGHT;
 	      break;
 	    case TYPE_TIME:
 	      _asn1_get_time_der (der + counter, &len2, temp);
-	      _asn1_set_value (p, temp, strlen (temp) + 1);
+	      _ksba_asn_set_value (p, temp, strlen (temp) + 1);
 	      counter += len2;
 	      move = RIGHT;
 	      break;
 	    case TYPE_OCTET_STRING:
-	      len2 = _asn1_get_length_der (der + counter, &len3);
-	      _asn1_set_value (p, der + counter, len3 + len2);
+	      len2 = _ksba_asn_get_length_der (der + counter, &len3);
+	      _ksba_asn_set_value (p, der + counter, len3 + len2);
 	      counter += len3 + len2;
 	      move = RIGHT;
 	      break;
 	    case TYPE_BIT_STRING:
-	      len2 = _asn1_get_length_der (der + counter, &len3);
-	      _asn1_set_value (p, der + counter, len3 + len2);
+	      len2 = _ksba_asn_get_length_der (der + counter, &len3);
+	      _ksba_asn_set_value (p, der + counter, len3 + len2);
 	      counter += len3 + len2;
 	      move = RIGHT;
 	      break;
@@ -1331,17 +1335,17 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 	      if (move == UP)
 		{
 		  len2 = strtol (p->value, NULL, 10);
-		  _asn1_set_value (p, NULL, 0);
+		  _ksba_asn_set_value (p, NULL, 0);
 		  if (len2 != counter)
 		    return ASN_DER_ERROR;
 		  move = RIGHT;
 		}
 	      else
 		{		/* move==DOWN || move==RIGHT */
-		  len3 = _asn1_get_length_der (der + counter, &len2);
+		  len3 = _ksba_asn_get_length_der (der + counter, &len2);
 		  counter += len2;
 		  _asn1_ltostr (counter + len3, temp);
-		  _asn1_set_value (p, temp, strlen (temp) + 1);
+		  _ksba_asn_set_value (p, temp, strlen (temp) + 1);
 		  move = DOWN;
 		}
 	      break;
@@ -1359,21 +1363,20 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 		      move = RIGHT;
 		      continue;
 		    }
-		  _asn1_set_value (p, NULL, 0);
+		  _ksba_asn_set_value (p, NULL, 0);
 		  if (len2 != counter)
 		    return ASN_DER_ERROR;
 		}
 	      else
 		{		/* move==DOWN || move==RIGHT */
-		  len3 = _asn1_get_length_der (der + counter, &len2);
+		  len3 = _ksba_asn_get_length_der (der + counter, &len2);
 		  counter += len2;
 		  if (len3)
 		    {
 		      _asn1_ltostr (counter + len3, temp);
-		      _asn1_set_value (p, temp, strlen (temp) + 1);
+		      _ksba_asn_set_value (p, temp, strlen (temp) + 1);
 		      p2 = p->down;
-		      while ((type_field (p2->type) == TYPE_TAG)
-			     || (type_field (p2->type) == TYPE_SIZE))
+		      while (p2->type == TYPE_TAG || p2->type == TYPE_SIZE)
 			p2 = p2->right;
 		      if (p2->right == NULL)
 			_asn1_append_sequence_set (p);
@@ -1384,11 +1387,11 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 	      break;
 	    case TYPE_ANY:
 	      tag = _asn1_get_tag_der (der + counter, &class, &len2);
-	      len2 += _asn1_get_length_der (der + counter + len2, &len3);
+	      len2 += _ksba_asn_get_length_der (der + counter + len2, &len3);
 	      _asn1_length_der (len2 + len3, NULL, &len4);
 	      temp2 = xmalloc (len2 + len3 + len4);
 	      _asn1_octet_der (der + counter, len2 + len3, temp2, &len4);
-	      _asn1_set_value (p, temp2, len4);
+	      _ksba_asn_set_value (p, temp2, len4);
 	      xfree (temp2);
 	      counter += len2 + len3;
 	      move = RIGHT;
@@ -1409,7 +1412,7 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 	  else
 	    move = RIGHT;
 	}
-      if ((move == RIGHT) && !(p->type & CONST_SET))
+      if (move == RIGHT && !p->flags.is_set)
 	{
 	  if (p->right)
 	    p = p->right;
@@ -1417,10 +1420,10 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 	    move = UP;
 	}
       if (move == UP)
-	p = _asn1_find_up (p);
+	p = find_up (p);
     }
 
-  _asn1_delete_not_used (root);
+  _ksba_asn_delete_not_used (root);
 
   return (counter == len) ? ASN_OK : ASN_DER_ERROR;
 }
@@ -1428,10 +1431,10 @@ asn1_get_der (node_asn * root, unsigned char *der, int len)
 
 
 int
-asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
+asn1_get_start_end_der (AsnNode  root, unsigned char *der, int len,
 			char *name_element, int *start, int *end)
 {
-  node_asn *node, *node_to_find, *p, *p2, *p3;
+  AsnNode node, node_to_find, p, p2, p3;
   char temp[128];
   int counter, len2, len3, move, ris;
   unsigned char class;
@@ -1439,7 +1442,7 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
   long val;
 
   node = root;
-  node_to_find = _asn1_find_node (root, name_element);
+  node_to_find = _ksba_asn_find_node (root, name_element);
 
   if (node_to_find == NULL)
     return ASN_ELEMENT_NOT_FOUND;
@@ -1454,7 +1457,7 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
   if (node == NULL)
     return ASN_ELEMENT_NOT_FOUND;
 
-  if (node->type & CONST_OPTION)
+  if (node->flags.is_optional)
     return ASN_GENERIC_ERROR;
 
   counter = 0;
@@ -1469,9 +1472,9 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
 
       if (move != UP)
 	{
-	  if (p->type & CONST_SET)
+	  if (p->flags.is_set)
 	    {
-	      p2 = _asn1_find_up (p);
+	      p2 = find_up (p);
 	      len2 = strtol (p2->value, NULL, 10);
 	      if (counter == len2)
 		{
@@ -1484,11 +1487,10 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
 	      p2 = p2->down;
 	      while (p2)
 		{
-		  if ((p2->type & CONST_SET) && (p2->type & CONST_NOT_USED))
+		  if (p2->flags.is_set && p2->flags.is_not_used)
 		    {		/* CONTROLLARE */
-		      if (type_field (p2->type) != TYPE_CHOICE)
-			ris =
-			  _asn1_extract_tag_der (p2, der + counter, &len2);
+		      if (p2->type != TYPE_CHOICE)
+			ris =  _asn1_extract_tag_der (p2, der+counter, &len2);
 		      else
 			{
 			  p3 = p2->down;
@@ -1497,7 +1499,7 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
 			}
 		      if (ris == ASN_OK)
 			{
-			  p2->type &= ~CONST_NOT_USED;
+                          p2->flags.is_not_used = 0;
 			  p = p2;
 			  break;
 			}
@@ -1508,7 +1510,7 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
 		return ASN_DER_ERROR;
 	    }
 
-	  if (type_field (p->type) == TYPE_CHOICE)
+	  if (p->type == TYPE_CHOICE)
 	    {
 	      p = p->down;
 	      ris = _asn1_extract_tag_der (p, der + counter, &len2);
@@ -1518,12 +1520,12 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
 	    ris = _asn1_extract_tag_der (p, der + counter, &len2);
 	  if (ris != ASN_OK)
 	    {
-	      if (p->type & CONST_OPTION)
+	      if (p->flags.is_optional)
 		{
-		  p->type |= CONST_NOT_USED;
+                  p->flags.is_not_used = 1;
 		  move = RIGHT;
 		}
-	      else if (p->type & CONST_DEFAULT)
+	      else if (p->flags.is_default)
 		{
 		  move = RIGHT;
 		}
@@ -1538,7 +1540,7 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
 
       if (ris == ASN_OK)
 	{
-	  switch (type_field (p->type))
+	  switch (p->type)
 	    {
 	    case TYPE_NULL:
 	      if (der[counter])
@@ -1554,27 +1556,27 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
 	      break;
 	    case TYPE_INTEGER:
 	    case TYPE_ENUMERATED:
-	      len2 = _asn1_get_length_der (der + counter, &len3);
+	      len2 = _ksba_asn_get_length_der (der + counter, &len3);
 	      counter += len3 + len2;
 	      move = RIGHT;
 	      break;
 	    case TYPE_OBJECT_ID:
-	      len2 = _asn1_get_length_der (der + counter, &len3);
+	      len2 = _ksba_asn_get_length_der (der + counter, &len3);
 	      counter += len2 + len3;
 	      move = RIGHT;
 	      break;
 	    case TYPE_TIME:
-	      len2 = _asn1_get_length_der (der + counter, &len3);
+	      len2 = _ksba_asn_get_length_der (der + counter, &len3);
 	      counter += len2 + len3;
 	      move = RIGHT;
 	      break;
 	    case TYPE_OCTET_STRING:
-	      len2 = _asn1_get_length_der (der + counter, &len3);
+	      len2 = _ksba_asn_get_length_der (der + counter, &len3);
 	      counter += len3 + len2;
 	      move = RIGHT;
 	      break;
 	    case TYPE_BIT_STRING:
-	      len2 = _asn1_get_length_der (der + counter, &len3);
+	      len2 = _ksba_asn_get_length_der (der + counter, &len3);
 	      counter += len3 + len2;
 	      move = RIGHT;
 	      break;
@@ -1582,7 +1584,7 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
 	    case TYPE_SET:
 	      if (move != UP)
 		{
-		  len3 = _asn1_get_length_der (der + counter, &len2);
+		  len3 = _ksba_asn_get_length_der (der + counter, &len2);
 		  counter += len2;
 		  move = DOWN;
 		}
@@ -1593,13 +1595,12 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
 	    case TYPE_SET_OF:
 	      if (move != UP)
 		{
-		  len3 = _asn1_get_length_der (der + counter, &len2);
+		  len3 = _ksba_asn_get_length_der (der + counter, &len2);
 		  counter += len2;
 		  if (len3)
 		    {
 		      p2 = p->down;
-		      while ((type_field (p2->type) == TYPE_TAG) ||
-			     (type_field (p2->type) == TYPE_SIZE))
+		      while (p2->type == TYPE_TAG || p2->type == TYPE_SIZE)
 			p2 = p2->right;
 		      p = p2;
 		    }
@@ -1608,7 +1609,7 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
 	      break;
 	    case TYPE_ANY:
 	      tag = _asn1_get_tag_der (der + counter, &class, &len2);
-	      len2 += _asn1_get_length_der (der + counter + len2, &len3);
+	      len2 += _ksba_asn_get_length_der (der + counter + len2, &len3);
 	      counter += len3 + len2;
 	      move = RIGHT;
 	      break;
@@ -1634,7 +1635,7 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
 	  else
 	    move = RIGHT;
 	}
-      if ((move == RIGHT) && !(p->type & CONST_SET))
+      if ((move == RIGHT) && !p->flags.is_set)
 	{
 	  if (p->right)
 	    p = p->right;
@@ -1642,7 +1643,7 @@ asn1_get_start_end_der (node_asn * root, unsigned char *der, int len,
 	    move = UP;
 	}
       if (move == UP)
-	p = _asn1_find_up (p);
+	p = find_up (p);
     }
 
   return ASN_ELEMENT_NOT_FOUND;

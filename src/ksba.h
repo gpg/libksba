@@ -56,13 +56,16 @@ typedef enum {
 struct ksba_cert_s;
 typedef struct ksba_cert_s *KsbaCert;
 
-
 /* This is a reader object vor various purposes
    see ksba_reader_new et al. */
 struct ksba_reader_s;
 typedef struct ksba_reader_s *KsbaReader;
 
-
+/* This is an object to store an ASN.1 parse tree as
+   create by ksba_asn_parse_file() */
+struct ksba_asn_tree_s;
+typedef struct ksba_asn_tree_s *KsbaAsnTree;
+   
 
 /*-- cert.c --*/
 KsbaCert ksba_cert_new (void);
@@ -86,7 +89,9 @@ KsbaError ksba_reader_read (KsbaReader r,
                             char *buffer, size_t length, size_t *nread);
 
 
-
+/*-- asn1-parse.y --*/
+int ksba_asn_parse_file (const char *filename, KsbaAsnTree *result);
+void ksba_asn_tree_release (KsbaAsnTree tree);
 
 
 #ifdef __cplusplus

@@ -29,7 +29,7 @@ typedef struct ber_decoder_s *BerDecoder;
 BerDecoder _ksba_ber_decoder_new (void);
 void       _ksba_ber_decoder_release (BerDecoder d);
 
-KsbaError _ksba_ber_decoder_set_module (BerDecoder d, AsnNode module);
+KsbaError _ksba_ber_decoder_set_module (BerDecoder d, KsbaAsnTree module);
 KsbaError _ksba_ber_decoder_set_reader (BerDecoder d, KsbaReader r);
 
 KsbaError _ksba_ber_decoder_dump (BerDecoder d, FILE *fp);

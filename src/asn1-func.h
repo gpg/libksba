@@ -22,189 +22,141 @@
 #ifndef ASN1_FUNC_H
 #define ASN1_FUNC_H
 
-#define PARSE_MODE_CHECK  1
-#define PARSE_MODE_CREATE 2
-
-/* List of constants for field type of typedef node_asn  */
-#define TYPE_CONSTANT     1
-#define TYPE_IDENTIFIER   2
-#define TYPE_INTEGER      3
-#define TYPE_BOOLEAN      4
-#define TYPE_SEQUENCE     5
-#define TYPE_BIT_STRING   6
-#define TYPE_OCTET_STRING 7
-#define TYPE_TAG          8
-#define TYPE_DEFAULT      9
-#define TYPE_SIZE        10
-#define TYPE_SEQUENCE_OF 11
-#define TYPE_OBJECT_ID   12
-#define TYPE_ANY         13
-#define TYPE_SET         14
-#define TYPE_SET_OF      15
-#define TYPE_DEFINITIONS 16
-#define TYPE_TIME        17
-#define TYPE_CHOICE      18
-#define TYPE_IMPORTS     19
-#define TYPE_NULL        20
-#define TYPE_ENUMERATED  21
+/* Error Codes */
+enum {
+  ASN_OK                  =  0,
+  ASN_FILE_NOT_FOUND      =  1,
+  ASN_ELEMENT_NOT_FOUND   =  2,
+  ASN_IDENTIFIER_NOT_FOUND=  3,
+  ASN_DER_ERROR           =  4,
+  ASN_VALUE_NOT_FOUND     =  5,
+  ASN_GENERIC_ERROR       =  6,
+  ASN_VALUE_NOT_VALID     =  7,
+  ASN_TAG_ERROR           =  8,
+  ASN_TAG_IMPLICIT        =  9,
+  ASN_ERROR_TYPE_ANY      = 10,
+  ASN_SYNTAX_ERROR        = 11,
+  ASN_MEM_ERROR           = 12
+};
 
 
-/***********************************************************************/
-/* List of constants for specify better the type of typedef node_asn.  */
-/***********************************************************************/
-/*  Used with TYPE_TAG  */
-#define CONST_UNIVERSAL   (1<<8)
-#define CONST_PRIVATE     (1<<9)
-#define CONST_APPLICATION (1<<10)
-#define CONST_EXPLICIT    (1<<11)
-#define CONST_IMPLICIT    (1<<12)
-
-#define CONST_TAG         (1<<13)  /*  Used in ASN.1 assignement  */
-#define CONST_OPTION      (1<<14)
-#define CONST_DEFAULT     (1<<15)
-#define CONST_TRUE        (1<<16)
-#define CONST_FALSE       (1<<17)
-
-#define CONST_LIST        (1<<18)  /*  Used with TYPE_INTEGER and TYPE_BIT_STRING  */
-#define CONST_MIN_MAX     (1<<19)
-
-#define CONST_1_PARAM     (1<<20)
-
-#define CONST_SIZE        (1<<21)
-
-#define CONST_DEFINED_BY  (1<<22)
-
-#define CONST_GENERALIZED (1<<23)
-#define CONST_UTC         (1<<24)
-
-#define CONST_IMPORTS     (1<<25)
-
-#define CONST_NOT_USED    (1<<26)
-#define CONST_SET         (1<<27)
-#define CONST_ASSIGN      (1<<28)
-
-#define CONST_DOWN        (1<<29)
-#define CONST_RIGHT       (1<<30)
+typedef enum {
+  TYPE_NONE = 0,
+  TYPE_BOOLEAN = 1,
+  TYPE_INTEGER = 2,
+  TYPE_BIT_STRING = 3,
+  TYPE_OCTET_STRING = 4,
+  TYPE_OBJECT_ID = 6,
+  TYPE_SEQUENCE = 16,
+  TYPE_SET = 17,
+  TYPE_CONSTANT,
+  TYPE_IDENTIFIER,
+  TYPE_TAG,
+  TYPE_DEFAULT,
+  TYPE_SIZE,
+  TYPE_SEQUENCE_OF,
+  TYPE_ANY,
+  TYPE_SET_OF,
+  TYPE_DEFINITIONS,
+  TYPE_TIME,
+  TYPE_CHOICE,
+  TYPE_IMPORTS,
+  TYPE_NULL,
+  TYPE_ENUMERATED
+} node_type_t;
 
 
-#define ASN_OK                    0
-#define ASN_FILE_NOT_FOUND        1
-#define ASN_ELEMENT_NOT_FOUND     2
-#define ASN_IDENTIFIER_NOT_FOUND  3
-#define ASN_DER_ERROR             4
-#define ASN_VALUE_NOT_FOUND       5
-#define ASN_GENERIC_ERROR         6
-#define ASN_VALUE_NOT_VALID       7
-#define ASN_TAG_ERROR             8
-#define ASN_TAG_IMPLICIT          9
-#define ASN_ERROR_TYPE_ANY       10
-#define ASN_SYNTAX_ERROR         11
-#define ASN_MEM_ERROR		 12
+enum tag_class {
+  CLASS_UNIVERSAL = 0,
+  CLASS_APPLICATION = 1,
+  CLASS_CONTEXT = 2,
+  CLASS_PRIVATE =3
+};
+
+struct node_flag_s {
+  enum tag_class class;
+  int explicit:1;
+  int implicit:1;
+  int has_imports:1;
+  int assignment:1;
+  int one_param:1;
+  int has_tag:1; 
+  int has_size:1;
+  int has_list:1;
+  int has_min_max:1;
+  int has_defined_by:1;
+  int is_false:1;
+  int is_true:1;
+  int is_default:1;
+  int is_optional:1;
+  int is_utc_time:1;
+  int is_set:1;       /* check whether this is needed */
+  int is_not_used:1;  /* check whether this is needed */
+  int help_down:1;    /* helper for create_tree */
+  int help_right:1;
+};
 
 /******************************************************/
 /* Structure definition used for the node of the tree */
 /* that rappresent an ASN.1 DEFINITION.               */
 /******************************************************/
-struct node_asn_struct {
+typedef struct asn_node_struct *AsnNode; 
+struct asn_node_struct {
   char *name;                    /* Node name */
-  unsigned int type;             /* Node type */
+  node_type_t type;   
+  struct node_flag_s flags;
+
   unsigned char *value;          /* Node value */
-  struct node_asn_struct *down;  /* Pointer to the son node */
-  struct node_asn_struct *right; /* Pointer to the brother node */
-  struct node_asn_struct *left;  /* Pointer to the next list element */ 
+  AsnNode down;                  /* Pointer to the son node */
+  AsnNode right;                 /* Pointer to the brother node */
+  AsnNode left;                  /* Pointer to the next list element */ 
+  AsnNode link_next;             /* to keep track of all nodes in a tree */
 }; 
-typedef struct node_asn_struct node_asn; /* fixme: replace by below */
-typedef struct node_asn_struct *AsnNode; 
+
+/* Structure to keep an entire ASN.1 parse tree and associated information */
+struct ksba_asn_tree_s {
+  AsnNode parse_tree;
+  AsnNode node_list;  /* for easier release of all nodes */
+  char filename[1];
+};
 
 
-
-typedef struct static_struct_asn{
+typedef struct static_struct_asn {
   char *name;                    /* Node name */
-  unsigned int type;             /* Node type */
+  node_type_t type;             /* Node type */
+  struct node_flag_s flags;
   unsigned char *value;          /* Node value */
 } static_asn;
 
 
-/****************************************/
-/* Returns the first 8 bits.            */
-/* Used with the field type of node_asn */
-/****************************************/
-#define type_field(x)     (x&0xFF) 
 
 
 /***************************************/
 /*  Functions used by ASN.1 parser     */
 /***************************************/
-node_asn *
-_asn1_add_node(unsigned int type);
-
-node_asn *
-_asn1_set_value(node_asn *node,unsigned char *value,unsigned int len);
-
-node_asn *
-_asn1_set_name(node_asn *node,char *name);
-
-node_asn *
-_asn1_set_right(node_asn *node,node_asn *right);
-
-node_asn *
-_asn1_get_right(node_asn *node);
-
-node_asn *
-_asn1_get_last_right(node_asn *node);
-
-node_asn *
-_asn1_set_down(node_asn *node,node_asn *down);
-
-char *
-_asn1_get_name(node_asn *node);
-
-node_asn *
-_asn1_get_down(node_asn *node);
-
-node_asn *
-_asn1_mod_type(node_asn *node,unsigned int value);
-
-void
-_asn1_append_tree(node_asn *node);
-
-node_asn *
-_asn1_find_node(node_asn *pointer,char *name);
-
-node_asn *
-_asn1_find_up(node_asn *node);
-
-int _asn1_create_static_structure(node_asn *pointer,
-                                  char *file_name, char* out_name);
-
-int _asn1_set_default_tag(node_asn *node);
-int _asn1_check_identifier(node_asn *node);
-int _asn1_change_integer_value(node_asn *node);
-int _asn1_delete_not_used(node_asn *node);
-int _asn1_expand_identifier(node_asn **node,node_asn *root);
-int _asn1_type_choice_config(node_asn *node);
-int _asn1_type_set_config(node_asn *node);
-int _asn1_expand_object_id(node_asn *node);
+void _ksba_asn_set_value (AsnNode node, const void *value, unsigned int len);
+void _ksba_asn_set_name (AsnNode node, const char *name);
+AsnNode _ksba_asn_walk_tree (AsnNode root, AsnNode node);
+AsnNode _ksba_asn_find_node(AsnNode pointer,char *name);
+int _ksba_asn_check_identifier(AsnNode node);
+int _ksba_asn_change_integer_value(AsnNode node);
+int _ksba_asn_delete_not_used(AsnNode node);
+int _ksba_asn_expand_object_id(AsnNode node);
+void _ksba_asn_set_default_tag (AsnNode node);
+void _ksba_asn_type_set_config (AsnNode node);
 
 
-int 
-asn1_parser_asn1(char *file_name,node_asn **pointer);
+/*-- asn1-func.c --*/
+int ksba_asn_create_structure (AsnNode root, char *source_name,
+                               AsnNode*pointer , char *dest_name);
+int ksba_asn_delete_structure (AsnNode root);
+int ksba_asn1_create_tree (const static_asn *root,AsnNode*pointer);
+int ksba_asn_read_value(AsnNode root,char *name,unsigned char *value,int *len);
+int ksba_asn_write_value(AsnNode root,char *name,unsigned char *value,int len);
 
-int
-asn1_create_structure(node_asn *root,char *source_name,node_asn **pointer,
-		 char *dest_name);
 
-int
-asn1_delete_structure(node_asn *root);
 
-int 
-asn1_write_value(node_asn *root,char *name,unsigned char *value,int len);
-
-int 
-asn1_read_value(node_asn *root,char *name,unsigned char *value,int *len);
-
-int
-asn1_create_tree(const static_asn *root,node_asn **pointer);
 
 #endif /*ASN1_FUNC_H*/
+
 

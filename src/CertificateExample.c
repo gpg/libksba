@@ -459,7 +459,7 @@ main(int argc,char *argv[])
   char file_name[128];
   node_asn *PKIX1Implicit88;
 
-  result=asn1_create_tree(pkix_asn1_tab,&PKIX1Implicit88);
+  result=ksba_asn_create_tree(pkix_asn1_tab,&PKIX1Implicit88);
 
   if(result==ASN_FILE_NOT_FOUND){
     printf("FILE NOT FOUND\n");

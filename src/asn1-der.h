@@ -24,13 +24,6 @@
 
 #include "asn1-func.h"
 
-#define UNIVERSAL        0x00
-#define APPLICATION      0x40
-#define CONTEXT_SPECIFIC 0x80
-#define PRIVATE          0xC0
-#define STRUCTURED       0x20
-
-
 void
 _asn1_octet_der(unsigned char *str,int str_len,unsigned char *der,int *der_len);
 
@@ -44,13 +37,15 @@ int
 _asn1_get_bit_der(unsigned char *der,int *der_len,unsigned char *str, int str_size, int *bit_len);
 
 int 
-asn1_create_der(node_asn *root,char *name,unsigned char *der,int *len);
+asn1_create_der(AsnNode root,char *name,unsigned char *der,int *len);
 
 int 
-asn1_get_der(node_asn *root,unsigned char *der,int len);
+asn1_get_der(AsnNode root,unsigned char *der,int len);
 
 int 
-asn1_get_start_end_der(node_asn *root,unsigned char *der,int len,char *name_element,int *start, int *end);
+asn1_get_start_end_der(AsnNode root,unsigned char *der,int len,char *name_element,int *start, int *end);
+
+unsigned long _ksba_asn_get_length_der (unsigned char *der, int *len);
 
 
 #endif /*ASN1_DER_H*/

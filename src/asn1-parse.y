@@ -34,31 +34,58 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 
+#include "util.h"
+#include "ksba.h"
 #include "asn1-parse.h"
 #include "asn1-func.h"
 
 #define YYERROR_VERBOSE = 1
-
 #define MAX_STRING_LENGTH 129
 
-FILE *file_asn1;  /* Pointer to file to parse */
-extern int parse_mode;
-int result_parse;
-node_asn *p_tree;
+/* constants used in the grammar */
+enum {
+  CONST_EXPLICIT = 1,
+  CONST_IMPLICIT,
+};
 
-int yylex(void);
-void yyerror (const char *s);
+struct parser_control_s {
+  FILE *fp;
+  int lineno;
+  int result_parse;
+  AsnNode parse_tree;
+  AsnNode all_nodes;
+};
+#define PARSECTL ((struct parser_control_s *)parm)
+#define YYPARSE_PARAM parm
+#define YYLEX_PARAM parm
 
 %}
+
 
+%pure_parser
+%expect 1
 
 %union {
   unsigned int constant;
   char str[MAX_STRING_LENGTH];
-  node_asn* node;
+  AsnNode node;
 }
 
+%{
+static AsnNode new_node (struct parser_control_s *parsectl, node_type_t type);
+#define NEW_NODE(a)  (new_node (PARSECTL, (a)))
+static void set_name (AsnNode node, const char *name);
+static void set_str_value (AsnNode node, const char *text);
+static void set_right (AsnNode node, AsnNode right);
+static void append_right (AsnNode node, AsnNode right);
+static void set_down (AsnNode node, AsnNode down);
+
+
+static int yylex (YYSTYPE *lvalp, void *parm);
+static void yyerror (const char *s);
+%}
 
 %token ASSIG "::=" 
 %token <str> NUM
@@ -110,22 +137,26 @@ void yyerror (const char *s);
 %type <str>  pos_num neg_num pos_neg_num pos_neg_identifier num_identifier 
 %type <constant> class explicit_implicit
 
+
 %%
 
 input:  /* empty */  
        | input definitions
 ;
 
-pos_num :   NUM       {strcpy($$,$1);}
-          | '+' NUM   {strcpy($$,$2);}
+pos_num :   NUM       { strcpy($$,$1); }
+          | '+' NUM   { strcpy($$,$2); }
 ;
 
-neg_num : '-' NUM     {strcpy($$,"-");
-                       strcat($$,$2);}
+neg_num : '-' NUM    
+                {
+                  strcpy($$,"-");
+                  strcat($$,$2);
+                }
 ;
 
-pos_neg_num :  pos_num  {strcpy($$,$1);}
-             | neg_num  {strcpy($$,$1);}
+pos_neg_num :  pos_num  { strcpy($$,$1); }
+             | neg_num  { strcpy($$,$1); }
 ;
 
 num_identifier :  NUM            {strcpy($$,$1);}
@@ -136,123 +167,247 @@ pos_neg_identifier :  pos_neg_num    {strcpy($$,$1);}
                     | IDENTIFIER     {strcpy($$,$1);}
 ;
 
-constant: '(' pos_neg_num ')'   {$$=_asn1_add_node(TYPE_CONSTANT); 
-                         _asn1_set_value($$,$2,strlen($2)+1);}
-        | IDENTIFIER'('pos_neg_num')' {$$=_asn1_add_node(TYPE_CONSTANT);
-	                         _asn1_set_name($$,$1); 
-                               _asn1_set_value($$,$3,strlen($3)+1);}
+constant: '(' pos_neg_num ')'  
+                        {
+                          $$ = NEW_NODE (TYPE_CONSTANT); 
+                          set_str_value ($$, $2);
+                        }
+          | IDENTIFIER'('pos_neg_num')'
+                        {
+                          $$ = NEW_NODE (TYPE_CONSTANT); 
+                          set_name ($$, $1); 
+                          set_str_value ($$, $3);
+                        }
 ;
 
-constant_list:  constant   {$$=$1;}
-              | constant_list ',' constant {$$=$1;
-                                            _asn1_set_right(_asn1_get_last_right($1),$3);}
+constant_list:  constant   { $$=$1; }
+              | constant_list ',' constant
+                  {
+                    $$ = $1;
+                    append_right ($1, $3);
+                  }
 ;
 
-identifier_list  :  IDENTIFIER  {$$=_asn1_add_node(TYPE_IDENTIFIER);
-                                 _asn1_set_name($$,$1);}
-                  | identifier_list IDENTIFIER  
-                                {$$=$1;
-                                 _asn1_set_right(_asn1_get_last_right($$),_asn1_add_node(TYPE_IDENTIFIER));
-                                 _asn1_set_name(_asn1_get_last_right($$),$2);}
+identifier_list  :  IDENTIFIER  
+                        {
+                          $$ = NEW_NODE (TYPE_IDENTIFIER);
+                          set_name($$,$1);
+                        }
+                 | identifier_list IDENTIFIER  
+                        {
+                          AsnNode node;
+
+                          $$=$1;
+                          node = NEW_NODE (TYPE_IDENTIFIER);
+                          set_name (node, $2);
+                          append_right ($$, node);
+                        }
 ;
 
-obj_constant:  num_identifier     {$$=_asn1_add_node(TYPE_CONSTANT); 
-                                   _asn1_set_value($$,$1,strlen($1)+1);}
-             | IDENTIFIER'('NUM')' {$$=_asn1_add_node(TYPE_CONSTANT);
-	                            _asn1_set_name($$,$1); 
-                                    _asn1_set_value($$,$3,strlen($3)+1);}
+obj_constant:  num_identifier   
+                 { 
+                   $$ = NEW_NODE (TYPE_CONSTANT); 
+                   set_str_value ($$, $1);
+                 }
+             | IDENTIFIER '(' NUM ')'
+                 {
+                   $$ = NEW_NODE (TYPE_CONSTANT);
+                   set_name ($$, $1); 
+                   set_str_value ($$, $3);
+                 }
 ;
 
-obj_constant_list:  obj_constant        {$$=$1;}
-                  | obj_constant_list obj_constant {$$=$1;
-                                                    _asn1_set_right(_asn1_get_last_right($1),$2);}
+obj_constant_list:  obj_constant   
+                        { $$=$1;}
+                  | obj_constant_list obj_constant 
+                        {
+                          $$=$1;
+                          append_right ($$, $2);
+                        }
 ;
 
-class :  UNIVERSAL    {$$=CONST_UNIVERSAL;}
-       | PRIVATE      {$$=CONST_PRIVATE;}
-       | APPLICATION  {$$=CONST_APPLICATION;}
+class :  UNIVERSAL    { $$ = CLASS_UNIVERSAL;   }
+       | PRIVATE      { $$ = CLASS_PRIVATE;     }
+       | APPLICATION  { $$ = CLASS_APPLICATION; }
 ;
 
-tag_type :  '[' NUM ']'    {$$=_asn1_add_node(TYPE_TAG); 
-                            _asn1_set_value($$,$2,strlen($2)+1);}
-          | '[' class NUM ']'  {$$=_asn1_add_node(TYPE_TAG | $2); 
-                                _asn1_set_value($$,$3,strlen($3)+1);}
+tag_type :  '[' NUM ']'   
+                {
+                  $$ = NEW_NODE (TYPE_TAG); 
+                  $$->flags.class = CLASS_CONTEXT;
+                  set_str_value ($$, $2);
+                }
+          | '[' class NUM ']' 
+                {
+                  $$ = NEW_NODE (TYPE_TAG);
+                  $$->flags.class = $2;
+                  set_str_value ($$, $3);
+                }
 ;
 
-tag :  tag_type           {$$=$1;}
-     | tag_type EXPLICIT  {$$=_asn1_mod_type($1,CONST_EXPLICIT);}
-     | tag_type IMPLICIT  {$$=_asn1_mod_type($1,CONST_IMPLICIT);}
+tag :  tag_type
+         { $$ = $1; }
+     | tag_type EXPLICIT  
+         {
+           $$ = $1;
+           $$->flags.explicit = 1;
+         }
+     | tag_type IMPLICIT 
+         {
+           $$ = $1;
+           $$->flags.implicit = 1;
+         }
 ;
 
-default :  DEFAULT pos_neg_identifier {$$=_asn1_add_node(TYPE_DEFAULT); 
-                                   _asn1_set_value($$,$2,strlen($2)+1);}
-         | DEFAULT TRUE           {$$=_asn1_add_node(TYPE_DEFAULT|CONST_TRUE);}
-         | DEFAULT FALSE          {$$=_asn1_add_node(TYPE_DEFAULT|CONST_FALSE);}
+default :  DEFAULT pos_neg_identifier 
+               {
+                 $$ = NEW_NODE (TYPE_DEFAULT); 
+                 set_str_value ($$, $2);
+               }
+         | DEFAULT TRUE 
+               {
+                 $$ = NEW_NODE (TYPE_DEFAULT);
+                 $$->flags.is_true = 1;
+               }
+         | DEFAULT FALSE 
+               {
+                 $$ = NEW_NODE (TYPE_DEFAULT);
+                 $$->flags.is_false = 1;
+               }
 ;
 
-integer_def: INTEGER   {$$=_asn1_add_node(TYPE_INTEGER);}
-           | INTEGER'{'constant_list'}' {$$=_asn1_add_node(TYPE_INTEGER|CONST_LIST);
-	                                 _asn1_set_down($$,$3);}
-           | integer_def'('num_identifier'.''.'num_identifier')'
-                                        {$$=_asn1_add_node(TYPE_INTEGER|CONST_MIN_MAX);
-                                         _asn1_set_down($$,_asn1_add_node(TYPE_SIZE)); 
-                                         _asn1_set_value(_asn1_get_down($$),$6,strlen($6)+1); 
-                                         _asn1_set_name(_asn1_get_down($$),$3);}
+integer_def: INTEGER   
+               {
+                 $$ = NEW_NODE (TYPE_INTEGER);
+               }
+           | INTEGER '{' constant_list '}' 
+               {
+                 $$ = NEW_NODE (TYPE_INTEGER);
+                 $$->flags.has_list = 1;
+                 set_down ($$, $3);
+               }
+           | integer_def '(' num_identifier '.' '.' num_identifier ')'
+               {
+                 $$ = NEW_NODE (TYPE_INTEGER);
+                 $$->flags.has_min_max = 1;
+                 /* the following is wrong.  Better use a union for the value*/
+                 set_down ($$, NEW_NODE (TYPE_SIZE) ); 
+                 set_str_value ($$->down, $6); 
+                 set_name ($$->down, $3);
+               }
 ;
 
-boolean_def: BOOLEAN   {$$=_asn1_add_node(TYPE_BOOLEAN);}
+boolean_def: BOOLEAN  
+              {
+                $$ = NEW_NODE (TYPE_BOOLEAN);
+              }
 ;
 
-Time:   UTCTime          {$$=_asn1_add_node(TYPE_TIME|CONST_UTC);} 
-      | GeneralizedTime  {$$=_asn1_add_node(TYPE_TIME|CONST_GENERALIZED);} 
+Time:   UTCTime       
+          {
+            $$ = NEW_NODE (TYPE_TIME);
+            $$->flags.is_utc_time = 1;
+          } 
+      | GeneralizedTime  
+          { 
+            $$ = NEW_NODE (TYPE_TIME);
+          } 
 ;
 
-size_def2: SIZE'('num_identifier')'  {$$=_asn1_add_node(TYPE_SIZE|CONST_1_PARAM);
-	                              _asn1_set_value($$,$3,strlen($3)+1);}
-        | SIZE'('num_identifier'.''.'num_identifier')'  
-                                    {$$=_asn1_add_node(TYPE_SIZE|CONST_MIN_MAX);
-	                               _asn1_set_value($$,$3,strlen($3)+1);
-                                     _asn1_set_name($$,$6);}
+size_def2: SIZE '(' num_identifier ')' 
+             {
+               $$ = NEW_NODE (TYPE_SIZE);
+               $$->flags.one_param = 1;
+               set_str_value ($$, $3);
+             }
+        | SIZE '(' num_identifier '.' '.' num_identifier ')'  
+             {
+               $$ = NEW_NODE (TYPE_SIZE);
+               $$->flags.has_min_max = 1;
+               set_str_value ($$, $3);
+               set_name ($$, $6);
+             }
 ;
 
-size_def:   size_def2          {$$=$1;}
-          | '(' size_def2 ')'  {$$=$2;}
+size_def:   size_def2          
+             {
+               $$=$1;
+             }
+          | '(' size_def2 ')'  
+             {
+               $$=$2;
+             }
 ;
 
-octet_string_def : OCTET STRING   {$$=_asn1_add_node(TYPE_OCTET_STRING);}
-                 | OCTET STRING size_def  {$$=_asn1_add_node(TYPE_OCTET_STRING|CONST_SIZE);
-                                           _asn1_set_down($$,$3);}
+octet_string_def : OCTET STRING 
+                     {
+                       $$ = NEW_NODE (TYPE_OCTET_STRING);
+                     }
+                 | OCTET STRING size_def
+                     {
+                       $$ = NEW_NODE (TYPE_OCTET_STRING);
+                       $$->flags.has_size = 1;
+                       set_down ($$,$3);
+                     }
 ;
 
-bit_element :  IDENTIFIER'('NUM')' {$$=_asn1_add_node(TYPE_CONSTANT);
-	                              _asn1_set_name($$,$1); 
-                                    _asn1_set_value($$,$3,strlen($3)+1);}
+bit_element :  IDENTIFIER'('NUM')'
+                 {
+                   $$ = NEW_NODE (TYPE_CONSTANT);
+                   set_name ($$, $1); 
+                   set_str_value ($$, $3);
+                 }
 ;
 
-bit_element_list :  bit_element   {$$=$1;}
-                  | bit_element_list ',' bit_element  {$$=$1;
-                                                       _asn1_set_right(_asn1_get_last_right($1),$3);}
+bit_element_list :  bit_element 
+                      {
+                        $$=$1;
+                      }
+                  | bit_element_list ',' bit_element 
+                      {
+                        $$=$1;
+                        append_right ($$, $3);
+                      }
 ;
 
-bit_string_def : BIT STRING    {$$=_asn1_add_node(TYPE_BIT_STRING);}
-               | BIT STRING'{'bit_element_list'}' 
-                               {$$=_asn1_add_node(TYPE_BIT_STRING|CONST_LIST);
-                                _asn1_set_down($$,$4);}
+bit_string_def : BIT STRING 
+                   {
+                     $$ = NEW_NODE (TYPE_BIT_STRING);
+                   }
+               | BIT STRING '{' bit_element_list '}' 
+                   {
+                     $$ = NEW_NODE (TYPE_BIT_STRING);
+                     $$->flags.has_list = 1;
+                     set_down ($$, $4);
+                   }
 ;
 
-enumerated_def : ENUMERATED'{'bit_element_list'}' 
-                               {$$=_asn1_add_node(TYPE_ENUMERATED|CONST_LIST);
-                                _asn1_set_down($$,$3);}
+enumerated_def : ENUMERATED '{' bit_element_list '}' 
+                   {
+                     $$ = NEW_NODE (TYPE_ENUMERATED);
+                     $$->flags.has_list = 1;
+                     set_down ($$, $3);
+                   }
 ;
 
-object_def :  OBJECT STR_IDENTIFIER {$$=_asn1_add_node(TYPE_OBJECT_ID);}
+object_def :  OBJECT STR_IDENTIFIER 
+                   {
+                     $$ = NEW_NODE (TYPE_OBJECT_ID);
+                   }
 ;
 
-type_assig_right: IDENTIFIER         {$$=_asn1_add_node(TYPE_IDENTIFIER);
-                                      _asn1_set_value($$,$1,strlen($1)+1);}
-                | IDENTIFIER size_def {$$=_asn1_add_node(TYPE_IDENTIFIER|CONST_SIZE);
-                                      _asn1_set_value($$,$1,strlen($1)+1);
-                                      _asn1_set_down($$,$2);}
+type_assig_right: IDENTIFIER  
+                    {
+                      $$ = NEW_NODE (TYPE_IDENTIFIER);
+                      set_str_value ($$, $1);
+                    }
+                | IDENTIFIER size_def
+                    {
+                      $$ = NEW_NODE (TYPE_IDENTIFIER);
+                      $$->flags.has_size = 1;
+                      set_str_value ($$, $1);
+                      set_down ($$, $2);
+                    }
                 | integer_def        {$$=$1;}
                 | enumerated_def     {$$=$1;}
                 | boolean_def        {$$=$1;}
@@ -264,127 +419,229 @@ type_assig_right: IDENTIFIER         {$$=_asn1_add_node(TYPE_IDENTIFIER);
                 | choise_def         {$$=$1;}
                 | any_def            {$$=$1;}
                 | set_def            {$$=$1;}
-                | TOKEN_NULL         {$$=_asn1_add_node(TYPE_NULL);}
+                | TOKEN_NULL  
+                    {
+                      $$ = NEW_NODE(TYPE_NULL);
+                    }
 ;
 
-type_assig_right_tag :   type_assig_right  {$$=$1;}
-                       | tag type_assig_right {$$=_asn1_mod_type($2,CONST_TAG);
-                                                   _asn1_set_right($1,_asn1_get_down($$));
-                                                   _asn1_set_down($$,$1);}
+type_assig_right_tag :   type_assig_right  
+                           {
+                             $$ = $1;
+                           }
+                       | tag type_assig_right
+                           {
+                             $2->flags.has_tag = 1;
+                             $$ = $2;
+                             set_right ($1, $$->down );
+                             set_down ($$, $1);
+                           }
 ;
 
-type_assig_right_tag_default : type_assig_right_tag  {$$=$1;}
-                      | type_assig_right_tag default  {$$=_asn1_mod_type($1,CONST_DEFAULT);
-                                                       _asn1_set_right($2,_asn1_get_down($$));
-						       _asn1_set_down($$,$2);}
-                      | type_assig_right_tag OPTIONAL   {$$=_asn1_mod_type($1,CONST_OPTION);}
+type_assig_right_tag_default : type_assig_right_tag  
+                                 {
+                                   $$ = $1;
+                                 }
+                             | type_assig_right_tag default  
+                                 {
+                                   $1->flags.is_default = 1;
+                                   set_right ($2, $$->down);
+                                   set_down ($$, $2);
+                                 }
+                             | type_assig_right_tag OPTIONAL  
+                                 {
+                                   $1->flags.is_optional = 1;
+                                   $$ = $1;
+                                 }
 ;
  
-type_assig : IDENTIFIER type_assig_right_tag_default  {$$=_asn1_set_name($2,$1);}
+type_assig : IDENTIFIER type_assig_right_tag_default
+               {
+                 set_name ($2, $1);
+                 $$ = $2;
+               }
 ;
 
-type_assig_list : type_assig                   {$$=$1;}
-                | type_assig_list','type_assig {$$=$1;
-                                                _asn1_set_right(_asn1_get_last_right($1),$3)}
+type_assig_list : type_assig         
+                    { $$=$1; }
+                | type_assig_list ',' type_assig 
+                    {
+                      $$=$1;
+                      append_right ($$, $3);
+                    }
 ;
 
-sequence_def : SEQUENCE'{'type_assig_list'}' {$$=_asn1_add_node(TYPE_SEQUENCE);
-                                              _asn1_set_down($$,$3);}
-   | SEQUENCE OF type_assig_right  {$$=_asn1_add_node(TYPE_SEQUENCE_OF);
-                                    _asn1_set_down($$,$3);}
-   | SEQUENCE size_def OF type_assig_right {$$=_asn1_add_node(TYPE_SEQUENCE_OF|CONST_SIZE);
-                                            _asn1_set_right($2,$4);
-                                            _asn1_set_down($$,$2);}
+sequence_def : SEQUENCE '{' type_assig_list '}'
+                 {
+                   $$ = NEW_NODE (TYPE_SEQUENCE);
+                   set_down ($$, $3);
+                 }
+             | SEQUENCE OF type_assig_right 
+                 {
+                   $$ = NEW_NODE (TYPE_SEQUENCE_OF);
+                   set_down ($$, $3);
+                 }
+             | SEQUENCE size_def OF type_assig_right
+                 {
+                   $$ = NEW_NODE (TYPE_SEQUENCE_OF);
+                   $$->flags.has_size = 1;
+                   set_right ($2,$4);
+                   set_down ($$,$2);
+                 }
 ; 
 
-set_def :  SET'{'type_assig_list'}' {$$=_asn1_add_node(TYPE_SET);
-                                     _asn1_set_down($$,$3);}
-   | SET OF type_assig_right  {$$=_asn1_add_node(TYPE_SET_OF);
-                               _asn1_set_down($$,$3);}
-   | SET size_def OF type_assig_right {$$=_asn1_add_node(TYPE_SET_OF|CONST_SIZE);
-                                       _asn1_set_right($2,$4);
-                                       _asn1_set_down($$,$2);}
+set_def :  SET '{' type_assig_list '}'
+             {
+               $$ = NEW_NODE (TYPE_SET);
+               set_down ($$, $3);
+             }
+         | SET OF type_assig_right
+             {
+               $$ = NEW_NODE (TYPE_SET_OF);
+               set_down ($$, $3);
+             }
+         | SET size_def OF type_assig_right
+             {
+               $$ = NEW_NODE (TYPE_SET_OF);
+               $$->flags.has_size = 1;
+               set_right ($2, $4);
+               set_down ($$, $2);
+             }
 ; 
 
-choise_def :   CHOICE'{'type_assig_list'}'  {$$=_asn1_add_node(TYPE_CHOICE);
-                                              _asn1_set_down($$,$3);}
+choise_def :  CHOICE '{' type_assig_list '}'
+                {
+                  $$ = NEW_NODE (TYPE_CHOICE);
+                  set_down ($$, $3);
+                }
 ;
 
-any_def :  ANY                         {$$=_asn1_add_node(TYPE_ANY);}
-         | ANY DEFINED BY IDENTIFIER   {$$=_asn1_add_node(TYPE_ANY|CONST_DEFINED_BY);
-                                        _asn1_set_down($$,_asn1_add_node(TYPE_CONSTANT));
-	                                _asn1_set_name(_asn1_get_down($$),$4);}
+any_def :  ANY   
+             {
+               $$ = NEW_NODE (TYPE_ANY);
+             }
+         | ANY DEFINED BY IDENTIFIER  
+             {
+               AsnNode node;
+
+               $$ = NEW_NODE (TYPE_ANY);
+               $$->flags.has_defined_by = 1;
+               node = NEW_NODE (TYPE_CONSTANT);
+               set_name (node, $4);
+               set_down($$, node);
+             }
 ;
 
-type_def : IDENTIFIER "::=" type_assig_right_tag  {$$=_asn1_set_name($3,$1);}
+type_def : IDENTIFIER "::=" type_assig_right_tag 
+             {
+               set_name ($3, $1);
+               $$ = $3;
+             }
 ;
 
-constant_def :  IDENTIFIER OBJECT STR_IDENTIFIER "::=" '{'obj_constant_list'}'
-                        {$$=_asn1_add_node(TYPE_OBJECT_ID|CONST_ASSIGN);
-                         _asn1_set_name($$,$1);  
-                         _asn1_set_down($$,$6);}
-              | IDENTIFIER IDENTIFIER "::=" '{' obj_constant_list '}'
-                        {$$=_asn1_add_node(TYPE_OBJECT_ID|CONST_ASSIGN|CONST_1_PARAM);
-                         _asn1_set_name($$,$1);  
-                         _asn1_set_value($$,$2,strlen($2)+1);
-                         _asn1_set_down($$,$5);}
-              | IDENTIFIER INTEGER "::=" NUM
-                        {$$=_asn1_add_node(TYPE_INTEGER|CONST_ASSIGN);
-                         _asn1_set_name($$,$1);  
-                         _asn1_set_value($$,$4,strlen($4)+1);}
+constant_def : IDENTIFIER OBJECT STR_IDENTIFIER "::=" '{' obj_constant_list '}'
+                 {
+                   $$ = NEW_NODE (TYPE_OBJECT_ID);
+                   $$->flags.assignment = 1;
+                   set_name ($$, $1);  
+                   set_down ($$, $6);
+                   asn1_visit_tree ($$,NULL);
+                 }
+             | IDENTIFIER IDENTIFIER "::=" '{' obj_constant_list '}'
+                 {
+                   $$ = NEW_NODE (TYPE_OBJECT_ID);
+                   $$->flags.assignment = 1;
+                   $$->flags.one_param = 1;
+                   set_name ($$, $1);  
+                   set_str_value ($$, $2);
+                   set_down ($$, $5);
+                 }
+             | IDENTIFIER INTEGER "::=" NUM
+                 {
+                   $$ = NEW_NODE (TYPE_INTEGER);
+                   $$->flags.assignment = 1;
+                   set_name ($$, $1);  
+                   set_str_value ($$, $4);
+                 }
 ;
 
-type_constant:   type_def     {$$=$1;}
-               | constant_def {$$=$1;}
+type_constant:   type_def     { $$ = $1; }
+               | constant_def { $$ = $1; }
 ;
 
-type_constant_list :   type_constant    {$$=$1;}
-                     | type_constant_list type_constant  {$$=$1;
-                                                          _asn1_set_right(_asn1_get_last_right($1),$2);}
+type_constant_list : type_constant  
+                       { $$ = $1; }
+                   | type_constant_list type_constant 
+                       { 
+                         $$ = $1;
+                         append_right ($$, $2);
+                       }
 ;
 
-definitions_id  :  IDENTIFIER  '{' obj_constant_list '}' {$$=_asn1_add_node(TYPE_OBJECT_ID);
-                                                          _asn1_set_down($$,$3);
-                                                          _asn1_set_name($$,$1)}
+definitions_id : IDENTIFIER  '{' obj_constant_list '}' 
+                   {
+                     $$ = NEW_NODE (TYPE_OBJECT_ID);
+                     set_down ($$, $3);
+                     set_name ($$, $1);
+                   }
 ;
 
-imports_def :   /* empty */  {$$=NULL;}
-              | IMPORTS identifier_list FROM IDENTIFIER obj_constant_list 
-                        {$$=_asn1_add_node(TYPE_IMPORTS);
-                         _asn1_set_down($$,_asn1_add_node(TYPE_OBJECT_ID));
-                         _asn1_set_name(_asn1_get_down($$),$4);  
-                         _asn1_set_down(_asn1_get_down($$),$5);
-                         _asn1_set_right($$,$2);}
+imports_def :  /* empty */ 
+                { $$=NULL;}
+            | IMPORTS identifier_list FROM IDENTIFIER obj_constant_list 
+                {
+                  AsnNode node;
+
+                  $$ = NEW_NODE (TYPE_IMPORTS);
+                  node = NEW_NODE (TYPE_OBJECT_ID);
+                  set_name (node, $4);  
+                  set_down (node, $5);
+                  set_down ($$, node);
+                  set_right ($$, $2);
+                }
 ;
 
-explicit_implicit :  EXPLICIT  {$$=CONST_EXPLICIT;}
-                   | IMPLICIT  {$$=CONST_IMPLICIT;}
+explicit_implicit :  EXPLICIT  { $$ = CONST_EXPLICIT; }
+                   | IMPLICIT  { $$ = CONST_IMPLICIT; }
 ;
 
-definitions:   definitions_id
-               DEFINITIONS explicit_implicit TAGS "::=" BEGIN imports_def 
-               type_constant_list END
-                   {$$=_asn1_add_node(TYPE_DEFINITIONS|$3|(($7==NULL)?0:CONST_IMPORTS));
-                    _asn1_set_name($$,_asn1_get_name($1));
-                    _asn1_set_name($1,"");
-                    if($7==NULL) _asn1_set_right($1,$8);
-                    else {_asn1_set_right($7,$8);_asn1_set_right($1,$7);}
-                    _asn1_set_down($$,$1);
-      		    if(parse_mode==PARSE_MODE_CREATE){
-		      _asn1_set_default_tag($$);
-		      _asn1_type_set_config($$);
-		      result_parse=_asn1_check_identifier($$);
-		      if(result_parse==ASN_IDENTIFIER_NOT_FOUND)
-		      	asn1_delete_structure($$);
-		      else p_tree=$$;
-		    }}
+definitions: definitions_id
+             DEFINITIONS explicit_implicit TAGS "::=" BEGIN imports_def 
+             type_constant_list END
+               {
+                 AsnNode node;
+                 
+                 $$ = node = NEW_NODE (TYPE_DEFINITIONS);
+
+                 if ($3 == CONST_EXPLICIT)
+                   node->flags.explicit = 1;
+                 else if ($3 == CONST_IMPLICIT)
+                   node->flags.implicit = 1;
+
+                 if ($7)
+                   node->flags.has_imports = 1;
+
+                 set_name ($$, $1->name);
+                 set_name ($1, "");
+
+                 if (!node->flags.has_imports) 
+                   set_right ($1,$8);
+                 else
+                   {
+                     set_right ($7,$8);
+                     set_right ($1,$7);
+                   }
+
+                 set_down ($$, $1);
+
+                 _ksba_asn_set_default_tag ($$);
+                 _ksba_asn_type_set_config ($$);
+                 PARSECTL->result_parse = _ksba_asn_check_identifier($$);
+                 PARSECTL->parse_tree=$$;
+               }
 ;
 
 %%
-
-
-#include <ctype.h>
-#include <string.h>
 
 const char *key_word[]={"::=","OPTIONAL","INTEGER","SIZE","OCTET","STRING"
                        ,"SEQUENCE","BIT","UNIVERSAL","PRIVATE","OPTIONAL"
@@ -401,27 +658,30 @@ const int key_word_token[]={ASSIG,OPTIONAL,INTEGER,SIZE,OCTET,STRING
                        ,BEGIN,END,UTCTime,GeneralizedTime,FROM
                        ,IMPORTS,TOKEN_NULL,ENUMERATED};
 
-static int lineno = 1;  /* keep track of input linenumbers */
-
+
 /*************************************************************/
 /*  Function: yylex                                          */
 /*  Description: looks for tokens in file_asn1 pointer file. */
 /*  Return: int                                              */
 /*    Token identifier or ASCII code or 0(zero: End Of File) */
 /*************************************************************/
-int 
-yylex() 
+static int 
+yylex (YYSTYPE *lvalp, void *parm)
 {
   int c,counter=0,k;
-  char string[MAX_STRING_LENGTH];  
+  char string[MAX_STRING_LENGTH];
+  FILE *fp = PARSECTL->fp;
+
+  if (!PARSECTL->lineno)
+    PARSECTL->lineno++; /* start with line one */
 
   while (1)
     {
-      while ( (c=fgetc(file_asn1))==' ' || c=='\t')
+      while ( (c=fgetc (fp))==' ' || c=='\t')
         ;
       if (c =='\n')
         {
-          lineno++;
+          PARSECTL->lineno++;
           continue;
         }
       if(c==EOF)
@@ -433,16 +693,16 @@ yylex()
 
       if (c=='-')
         {
-          if ( (c=fgetc(file_asn1))!='-')
+          if ( (c=fgetc(fp))!='-')
             {
-              ungetc(c,file_asn1);
+              ungetc(c,fp);
               return '-';
             }
           else
             {
               /* A comment finishes at the end of line */
               counter=0;
-              while ( (c=fgetc(file_asn1))!=EOF && c != '\n' )
+              while ( (c=fgetc(fp))!=EOF && c != '\n' )
                 ;
               if (c==EOF)
                 return 0;
@@ -450,26 +710,23 @@ yylex()
                 continue; /* repeat the search */
             }
         }
-      if (counter==sizeof (string))
-        {
-          fprintf (stderr,"%s:%d: token too long\n", "myfile:", lineno);
-          return 0; /* EOF */
-        }
       
-      string[counter++]=c;
-      while ( !((c=fgetc(file_asn1))==EOF
-                || c==' '|| c=='\t' || c=='\n' 
-                || c=='(' || c==')' || c=='[' || c==']' 
-                || c=='{' || c=='}' || c==',' || c=='.'))
+      do
         { 
-          if (counter==sizeof (string))
+          if (counter >= DIM (string)-1 )
             {
-              fprintf (stderr,"%s:%d: token too long\n", "myfile:", lineno);
+              fprintf (stderr,"%s:%d: token too long\n", "myfile:",
+                       PARSECTL->lineno);
               return 0; /* EOF */
             }
           string[counter++]=c;
         }
-      ungetc(c,file_asn1);
+      while ( !((c=fgetc(fp))==EOF
+                || c==' '|| c=='\t' || c=='\n' 
+                || c=='(' || c==')' || c=='[' || c==']' 
+                || c=='{' || c=='}' || c==',' || c=='.'));
+      
+      ungetc (c,fp);
       string[counter]=0;
       /*fprintf (stderr, "yylex token `%s'\n", string);*/
 
@@ -481,7 +738,7 @@ yylex()
         }
       if (k>=counter)
         {
-          strcpy (yylval.str,string);  
+          strcpy (lvalp->str,string);  
           return NUM;
         }
       
@@ -493,117 +750,150 @@ yylex()
         }
       
       /* STRING is an IDENTIFIER */
-      strcpy(yylval.str,string);
+      strcpy(lvalp->str,string);
       return IDENTIFIER;
     }
 }
 
-
-/*************************************************************/
-/*  Function: parser_asn1                                    */
-/*  Description: function used to start the parse algorithm. */
-/*  Parameters:                                              */
-/*    char *file_name : file name to parse                   */
-/*  Return: int                                              */
-/*                                                           */
-/*************************************************************/
-int 
-asn1_parser_asn1(char *file_name,node_asn **pointer)
-{
-  /*  yydebug=1;  */
-
-  p_tree=NULL;
-  *pointer=NULL;
-  
-  file_asn1=fopen(file_name,"r");
-
-  if(file_asn1==NULL) return ASN_FILE_NOT_FOUND;
-
-  result_parse=ASN_OK;
-
-  parse_mode=PARSE_MODE_CHECK;
-  yyparse();
-
-  if(result_parse==ASN_OK){
-    fclose(file_asn1);
-    file_asn1=fopen(file_name,"r");
-
-    parse_mode=PARSE_MODE_CREATE;
-    yyparse();
-    _asn1_change_integer_value(p_tree);
-    _asn1_expand_object_id(p_tree);
-  }
-
-  fclose(file_asn1);
-
-  parse_mode=PARSE_MODE_CREATE;
-
-  *pointer=p_tree;
-
-  return result_parse;
-}
-
-
-
-/*************************************************************/
-/*  Function: parser_asn1_file_c                             */
-/*  Description: function that generates a C structure from  */
-/*               an ASN1 file                                */
-/*  Parameters:                                              */
-/*    char *file_name : file name to parse                   */
-/*  Return: int                                              */
-/*                                                           */
-/*************************************************************/
-int 
-asn1_parser_asn1_file_c(char *file_name)
-{
-  int result;
-
-  /*  yydebug=1;  */
-
-  p_tree=NULL;
-    
-  file_asn1=fopen(file_name,"r");
-
-  if(file_asn1==NULL) return ASN_FILE_NOT_FOUND;
-
-  result_parse=ASN_OK;
-
-  parse_mode=PARSE_MODE_CHECK;
-  yyparse();
-
-  if(result_parse==ASN_OK){
-    fclose(file_asn1);
-    file_asn1=fopen(file_name,"r");
-
-    parse_mode=PARSE_MODE_CREATE;
-    yyparse();
-
-    result=_asn1_create_static_structure(p_tree,file_name, NULL);
-
-    asn1_delete_structure(p_tree);
-   }
-
-  fclose(file_asn1);
-
-  parse_mode=PARSE_MODE_CREATE;
-
-  return result_parse;
-}
-
-
-/*************************************************************/
-/*  Function: yyerror                                        */
-/*  Description: function used with syntax errors            */
-/*  Parameters:                                              */
-/*    char *s : error description                            */
-/*  Return: int                                              */
-/*                                                           */
-/*************************************************************/
-void 
+static void 
 yyerror (const char *s)
 {
-  /* Sends the error description to stdout */
-  fprintf (stderr, "%s:%d: %s\n","myfile", lineno, s); 
-  result_parse = ASN_SYNTAX_ERROR;
+  /* Sends the error description to stderr */
+  fprintf (stderr, "%s\n", s); 
+  /* Why doesn't bison provide a way to pass the parm to yyerror ??*/
 }
+
+
+
+
+static AsnNode
+new_node (struct parser_control_s *parsectl, node_type_t type)
+{
+  AsnNode node;
+
+  node = xcalloc (1, sizeof *node);
+  node->type = type;
+  node->link_next = parsectl->all_nodes;
+  parsectl->all_nodes = node->link_next;
+
+  return node;
+}
+
+static void
+release_all_nodes (AsnNode node)
+{
+  AsnNode node2;
+
+  for (; node; node = node2)
+    {
+      node2 = node->link_next;
+      xfree (node->name);
+      xfree (node->value);
+      xfree (node);
+    }
+}
+
+static void
+set_name (AsnNode node, const char *name)
+{
+  _ksba_asn_set_name (node, name);
+}
+
+static void
+set_str_value (AsnNode node, const char *text)
+{
+  _ksba_asn_set_value (node, text, (text && *text)? (strlen (text)+1): 0);
+}
+
+static void
+set_right (AsnNode node, AsnNode right)
+{
+  return_if_fail (node);
+
+  node->right = right;
+  if (right)
+    right->left = node;
+}
+
+static void
+append_right (AsnNode node, AsnNode right)
+{
+  return_if_fail (node);
+
+  while (node->right)
+    node = node->right;
+
+  node->right = right;
+  if (right)
+    right->left = node;
+}
+
+
+static void
+set_down (AsnNode node, AsnNode down)
+{
+  return_if_fail (node);
+
+  node->down = down;
+  if (down)
+    down->left = node;
+}
+
+
+/**
+ * ksba_asn_parse_file:
+ * @file_name: Filename with the ASN module
+ * @pointer: Returns the syntax tree
+ * 
+ * Parse an ASN.1 file and return an syntax tree.
+ * 
+ * Return value: 0 for okay or an ASN_xx error code
+ **/
+int 
+ksba_asn_parse_file (const char *file_name, KsbaAsnTree *result)
+{
+  struct parser_control_s parsectl;
+     
+  *result = NULL;
+  
+  parsectl.fp = file_name? fopen (file_name, "r") : NULL;
+  if ( !parsectl.fp )
+    return ASN_FILE_NOT_FOUND;
+
+  parsectl.lineno = 0;
+  parsectl.result_parse = ASN_SYNTAX_ERROR;
+  parsectl.parse_tree = NULL;
+  parsectl.all_nodes = NULL;
+  if ( yyparse ((void*)&parsectl) || parsectl.result_parse != ASN_OK )
+    { /* error */
+      release_all_nodes (parsectl.all_nodes);
+      parsectl.all_nodes = NULL;
+    }
+  else 
+    { /* okay */
+      KsbaAsnTree tree;
+
+      _ksba_asn_change_integer_value (parsectl.parse_tree);
+      _ksba_asn_expand_object_id (parsectl.parse_tree);
+      tree = xmalloc ( sizeof *tree + file_name? 1 : strlen (file_name) );
+      tree->parse_tree = parsectl.parse_tree;
+      tree->node_list = parsectl.all_nodes;
+      strcpy (tree->filename, file_name? file_name:"-");
+      *result = tree;
+    }
+
+  if (file_name)
+    fclose (parsectl.fp);
+  return parsectl.result_parse;
+}
+
+void
+ksba_asn_tree_release (KsbaAsnTree tree)
+{
+  if (!tree)
+    return;
+  release_all_nodes (tree->node_list);
+  tree->node_list = NULL;
+  xfree (tree);
+}
+

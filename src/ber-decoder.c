@@ -102,6 +102,10 @@ universal_tag_name (unsigned long no)
 
 
 
+
+
+
+
 
 BerDecoder
 _ksba_ber_decoder_new (void)
@@ -124,7 +128,7 @@ _ksba_ber_decoder_release (BerDecoder d)
 /**
  * _ksba_ber_decoder_set_module:
  * @d: Decoder object 
- * @module: Modul structure
+ * @module: ASN.1 Parse tree
  * 
  * Initialize the decoder with the ASN.1 module.  Note, that this is a
  * shallow copy of the module.  FIXME: What about ref-counting of
@@ -133,14 +137,14 @@ _ksba_ber_decoder_release (BerDecoder d)
  * Return value: 0 on success or an error code
  **/
 KsbaError
-_ksba_ber_decoder_set_module (BerDecoder d, AsnNode module)
+_ksba_ber_decoder_set_module (BerDecoder d, KsbaAsnTree module)
 {
   if (!d || !module)
     return KSBA_Invalid_Value;
   if (d->module)
     return KSBA_Conflict; /* module already set */
 
-  d->module = module;
+  d->module = module->parse_tree;
   return 0;
 }
 
@@ -161,12 +165,6 @@ _ksba_ber_decoder_set_reader (BerDecoder d, KsbaReader r)
 /**********************************************
  ***********  decoding machinery  *************
  **********************************************/
-enum tag_class {
-  CLASS_UNIVERSAL = 0,
-  CLASS_APPLICATION = 1,
-  CLASS_CONTEXT = 2,
-  CLASS_PRIVATE =3
-};
 
 struct tag_info {
   enum tag_class class;
@@ -262,6 +260,70 @@ read_tl (BerDecoder d, struct tag_info *r_tag,
 }
 
 
+static int
+cmp_tag (AsnNode node, const struct tag_info *ti)
+{
+
+  fprintf (stdout, "cmp_tag `%s' tag=%d",
+           node->name, node->type);
+  if (node->flags.class == CLASS_UNIVERSAL)
+    putchar ('U');
+  if (node->flags.class == CLASS_APPLICATION)
+    putchar ('A');
+  if (node->flags.class == CLASS_PRIVATE)
+    putchar ('P');
+
+  if (ti->tag != node->type)
+    return 0;
+  if (ti->class == node->flags.class)
+    return 1;
+  return 0; 
+}
+
+
+/* Find the matching node for the tag described by ti.  ROOT is the
+   root node of the syntaxtree, node either NULL or the last node
+   matched.  */
+static AsnNode
+find_node (AsnNode root, AsnNode node, const struct tag_info *ti)
+{
+  if (!node)
+    node = root;
+
+  while (node)
+    {
+      if (cmp_tag (node, ti))
+        {
+          puts (" got it");
+          return node; /* found */
+        }
+      putchar ('\n');
+
+      if (node->down)
+        node = node->down;
+      else if (node == root)
+        return NULL; /* not found */
+      else if (node->right)
+        node = node->right;
+      else 
+        { /* go up and right */
+          do
+            {
+              while (node->left && node->left->right == node)
+                node = node->left;
+              node = node->left;
+              
+              if (!node || node == root)
+                return NULL; /* back at the root -> not found */
+            }
+          while (!node->right);
+          node = node->right;
+        }
+    }
+
+  return NULL;
+}
+
 
 KsbaError
 _ksba_ber_decoder_decode (BerDecoder d)
@@ -293,7 +355,10 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
     unsigned long length;
     int ndef;
   } stack[100];
+  AsnNode rootnode, curnode, node;
 
+  rootnode = d->module;
+  curnode = NULL;
   while ( !(rc = read_tl (d, &ti, &length, &is_indefinite, &nread)) )
     {
       const char *tagname = NULL;
@@ -320,6 +385,13 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
         fputs (" indefinite length\n", fp);
       else
         fprintf (fp, " %lu octets\n", length);
+
+      node = find_node (rootnode, curnode, &ti);
+      if (node)
+        {
+          fprintf (fp, "%*s(found node `%s')\n", depth*2, "", node->name);
+          curnode = node;
+        }
 
       if (!ti.is_constructed)
         { /* primitive: skip value */
@@ -368,9 +440,6 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
           stack[depth].ndef = is_indefinite;
           depth++;
         }
-
-
-
     }
 
   if (rc==-1 && !d->last_errdesc)

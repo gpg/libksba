@@ -50,7 +50,13 @@ ber_dump_SOURCES = \
 	ksba.h \
 	ber-decoder.c ber-decoder.h \
 	reader.c reader.h \
+	asn1-parse.y asn1-parse.h \
+	asn1-func.c asn1-func.h \
+	asn1-der.c asn1-der.h \
 	util.c util.h	
+
+
+asn1-parse.c : asn1-func.h
 
 
 

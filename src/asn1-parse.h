@@ -21,9 +21,6 @@
 #ifndef ASN1_PARSE_H
 #define ASN1_PARSE_H
 
-int asn1_parser_asn1_file_c (char *file_name);
-
-
 
 
 #endif /*ASN1_PARSE_H*/
