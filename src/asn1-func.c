@@ -478,6 +478,8 @@ _ksba_asn_node_dump (AsnNode p, FILE *fp)
     fputs (",not_used",fp);
   if (p->flags.skip_this)
     fputs (",[skip]",fp);
+  if (p->flags.is_any)
+    fputs (",is_any",fp);
   if (p->off != -1 )
     fprintf (fp, " %d.%d.%d", p->off, p->nhdr, p->len );
   
@@ -948,6 +950,10 @@ _ksba_asn_type_set_config (AsnNode node)
           for (p2 = p->down; p2; p2 = p2->right)
             p2->flags.in_array = 1;
         }
+      else if (p->type == TYPE_ANY)
+        { /* Help the DER encoder to track ANY tags */
+          p->flags.is_any = 1;
+        }
     }
 }
 
@@ -1028,6 +1034,10 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
      we can break out a valid subtree. */
   for (; s; s=depth?s->right:NULL )
     {
+      if (s->type == TYPE_SIZE)
+        continue; /* this node gets in the way all the time.  It
+                     should be an attribute to a node */
+      
       down = s->down;
       if (s->type == TYPE_IDENTIFIER)
         {
@@ -1049,6 +1059,8 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
             d->flags.in_array = 1;
           if (s->flags.is_implicit)
             d->flags.is_implicit = 1;
+          if (s->flags.is_any)
+            d->flags.is_any = 1;
           /* we don't want the resolved name - change it back */
           _ksba_asn_set_name (d, s->name);
           /* copy the default and tag attributes */

@@ -74,7 +74,8 @@ typedef enum {
   KSBA_Invalid_Index = 39,
   KSBA_Invalid_OID_String = 40,
   KSBA_Invalid_Sexp = 41,
-  KSBA_Unknown_Sexp = 42
+  KSBA_Unknown_Sexp = 42,
+  KSBA_Invalid_Time = 43,
 } KsbaError;
 
 
@@ -167,6 +168,7 @@ const char *ksba_cms_get_digest_algo (KsbaCMS cms, int idx);
 KsbaCert ksba_cms_get_cert (KsbaCMS cms, int idx);
 KsbaError ksba_cms_get_message_digest (KsbaCMS cms, int idx,
                                        char **r_digest, size_t *r_digest_len);
+KsbaError ksba_cms_get_signing_time (KsbaCMS cms, int idx, time_t *r_sigtime);
 char *ksba_cms_get_sig_val (KsbaCMS cms, int idx);
 
 
@@ -185,6 +187,7 @@ KsbaError ksba_cms_add_signer (KsbaCMS cms, KsbaCert cert);
 KsbaError ksba_cms_set_message_digest (KsbaCMS cms, int idx,
                                        const char *digest,
                                        size_t digest_len);
+KsbaError ksba_cms_set_signing_time (KsbaCMS cms, int idx, time_t sigtime);
 KsbaError ksba_cms_set_sig_val (KsbaCMS cms, int idx, const char *sigval);
 
 

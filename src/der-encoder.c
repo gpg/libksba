@@ -993,9 +993,11 @@ _ksba_der_copy_tree (AsnNode dst_root,
 
   s = src_root;
   d = dst_root;
-  while (s && d && (s->type == d->type || d->type == TYPE_ANY))
+  /* note: we use the is_any flags becuase an inserted copy may have
+     already changed the any tag to the actual type */
+  while (s && d && (s->type == d->type || d->flags.is_any))
     {
-      if (d->type == TYPE_ANY)
+      if (d->flags.is_any)
         d->type = s->type;
 
       if (s->flags.in_array && s->right)
@@ -1036,23 +1038,36 @@ _ksba_der_copy_tree (AsnNode dst_root,
 KsbaError
 _ksba_der_store_time (AsnNode node, time_t atime)
 {
+  char buf[50], *p;
+  struct tm *tp;
+  int need_gen;
 
-  if (node->type == TYPE_CHOICE)
-    {
-      /* find a suitable choice to store the value */
+  tp = gmtime (&atime);
+  sprintf (buf, "%04d%02d%02d%02d%02d%02dZ",
+           1900+tp->tm_year, tp->tm_mon+1, tp->tm_mday,
+           tp->tm_hour, tp->tm_min, tp->tm_sec);
+  need_gen = tp->tm_year >= 150;
+
+  if (node->type == TYPE_ANY)
+    node->type = need_gen? TYPE_GENERALIZED_TIME : TYPE_UTC_TIME;
+  else if (node->type == TYPE_CHOICE)
+    { /* find a suitable choice to store the value */
+      AsnNode n;
+
+      for (n=node->down; n; n=n->right)
+        {
+          if ( (need_gen && n->type == TYPE_GENERALIZED_TIME)
+               || (!need_gen && n->type == TYPE_UTC_TIME))
+            {
+              node = n;
+              break;
+            }
+        }
     }
-
-
+  
   if (node->type == TYPE_GENERALIZED_TIME
       || node->type == TYPE_UTC_TIME)
     {
-      char buf[50], *p;
-      struct tm *tp;
-
-      tp = gmtime (&atime);
-      sprintf (buf, "%04d%02d%02d%02d%02d%02dZ",
-               1900+tp->tm_year, tp->tm_mon+1, tp->tm_mday,
-               tp->tm_hour, tp->tm_min, tp->tm_sec);
       p = node->type == TYPE_UTC_TIME? (buf+2):buf;
       return store_value (node, p, strlen (p));
     }

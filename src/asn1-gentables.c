@@ -134,6 +134,7 @@ create_static_structure (AsnNode pointer, const char *file_name)
       fputs (p->flags.in_set         ? ",1":",0", stdout);
       fputs (p->flags.in_choice      ? ",1":",0", stdout);
       fputs (p->flags.in_array       ? ",1":",0", stdout);
+      fputs (p->flags.is_any         ? ",1":",0", stdout);
       fputs (p->flags.not_used       ? ",1":",0", stdout);
       fputs (p->flags.help_down      ? ",1":",0", stdout);
       fputs (p->flags.help_right     ? ",1":",0", stdout);

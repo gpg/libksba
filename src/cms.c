@@ -67,7 +67,8 @@ static struct {
 
 static char oidstr_messageDigest[] = "1.2.840.113549.1.9.4";
 static char oid_messageDigest[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x04";
-
+static char oidstr_signingTime[] = "1.2.840.113549.1.9.5";
+static char oid_signingTime[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x05";
 
 /**
  * ksba_cms_new:
@@ -112,8 +113,6 @@ ksba_cms_release (KsbaCMS cms)
     {
       struct certlist_s *cl = cms->cert_list->next;
       ksba_cert_release (cms->cert_list->cert);
-      _ksba_asn_release_nodes (cms->cert_list->attr.root);
-      xfree (cms->cert_list->attr.image);
       xfree (cms->cert_list);
       cms->cert_list = cl;
     }
@@ -424,7 +423,7 @@ ksba_cms_get_cert (KsbaCMS cms, int idx)
 
 
 /* 
- Return the extension attribute messageDigest 
+   Return the extension attribute messageDigest 
 */
 KsbaError
 ksba_cms_get_message_digest (KsbaCMS cms, int idx,
@@ -473,6 +472,63 @@ ksba_cms_get_message_digest (KsbaCMS cms, int idx,
   return 0;
 }
 
+
+/* 
+   Return the extension attribute signing time, which may be 0 for no
+   signing time */
+KsbaError
+ksba_cms_get_signing_time (KsbaCMS cms, int idx, time_t *r_sigtime)
+{ 
+  AsnNode nsiginfo, n;
+  time_t t;
+
+  if (!cms || !r_sigtime)
+    return KSBA_Invalid_Value;
+  if (!cms->signer_info.root)
+    return KSBA_No_Data;
+  if (idx)
+    return KSBA_Not_Implemented;
+  
+  *r_sigtime = 0;
+  nsiginfo = _ksba_asn_find_node (cms->signer_info.root,
+                                  "SignerInfos..signedAttrs");
+  if (!nsiginfo)
+    return 0; /* this is okay, because signedAttribs are optional */
+
+  n = _ksba_asn_find_type_value (cms->signer_info.image, nsiginfo, 0,
+                                 oid_signingTime, DIM(oid_signingTime));
+  if (!n)
+    return 0; /* signing time is optional */
+
+  /* check that there is only one */
+  if (_ksba_asn_find_type_value (cms->signer_info.image, nsiginfo, 1,
+                                 oid_signingTime, DIM(oid_signingTime)))
+    return KSBA_Duplicate_Value;
+
+  /* the value is is a SET OF CHOICE but the set must have
+     excactly one CHOICE of generalized or utctime.  (rfc2630 11.3) */
+  if ( !(n->type == TYPE_SET_OF && n->down
+         && (n->down->type == TYPE_GENERALIZED_TIME
+             || n->down->type == TYPE_UTC_TIME)
+         && !n->down->right))
+    return KSBA_Invalid_CMS_Object;
+  n = n->down;
+  if (n->off == -1)
+    return KSBA_Bug;
+
+  t = _ksba_asntime_to_epoch (cms->signer_info.image + n->off + n->nhdr,
+                              n->len);
+  if (t == (time_t)-1)
+    return KSBA_Invalid_Time;
+  /* Because we use 0 as no signing time, we return an error if this
+     is used as a real value.  If the GCHQ folks would have even
+     invented by coincidence the X.509 format and used it on
+     1970-01-01 we can't do much about it.*/
+  if (!t)
+    return KSBA_Invalid_Time;
+  *r_sigtime = t;
+  return 0;
+}
 
 
 /**
@@ -724,6 +780,40 @@ ksba_cms_set_message_digest (KsbaCMS cms, int idx,
     return KSBA_Invalid_Index; /* no certificate to store it */
   cl->msg_digest_len = digest_len;
   memcpy (cl->msg_digest, digest, digest_len);
+  return 0;
+}
+
+/**
+ * ksba_cms_set_signing_time:
+ * @cms: A CMS object
+ * @idx: The index of the signer
+ * @sigtime: a time or 0 to use the current time
+ * 
+ * Set a signing time into the signedAttributes of the signer with
+ * the index IDX.  The index of a signer is determined by the sequence
+ * of ksba_cms_add_signer() calls; the first signer has the index 0.
+ * 
+ * Return value: 0 on success or an error code
+ **/
+KsbaError
+ksba_cms_set_signing_time (KsbaCMS cms, int idx, time_t sigtime)
+{ 
+  struct certlist_s *cl;
+
+  if (!cms)
+    return KSBA_Invalid_Value;
+  if (idx < 0)
+    return KSBA_Invalid_Index;
+
+  for (cl=cms->cert_list; cl && idx; cl = cl->next, idx--)
+    ;
+  if (!cl)
+    return KSBA_Invalid_Index; /* no certificate to store it */
+  
+  if (!sigtime)
+    sigtime = time (NULL);
+
+  cl->signing_time = sigtime;
   return 0;
 }
 
@@ -1104,6 +1194,12 @@ build_signed_data_attributes (KsbaCMS cms)
       AsnNode attr, root;
       AsnNode n;
       unsigned char *image;
+      int i;
+      struct {
+        AsnNode root;
+        unsigned char *image;
+      } attrarray[2]; 
+      int attridx = 0;
 
       if (!digestlist)
         return KSBA_Missing_Value; /* oops */
@@ -1131,13 +1227,41 @@ build_signed_data_attributes (KsbaCMS cms)
                                           certlist->msg_digest_len);
       if (err)
         return err;
-      
       err = _ksba_der_encode_tree (attr, &image, NULL);
       if (err)
           return err;
-      /* we will use the attributes again - so save them */
-      certlist->attr.root = attr;
-      certlist->attr.image = image;
+      attrarray[attridx].root = attr;
+      attrarray[attridx].image = image;
+      attridx++;
+
+      /* insert the signing time */
+      if (certlist->signing_time)
+        {
+          attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+                                  "CryptographicMessageSyntax.Attribute");
+          if (!attr)
+            return KSBA_Element_Not_Found;
+          n = _ksba_asn_find_node (attr, "Attribute.attrType");
+          if (!n)
+            return KSBA_Element_Not_Found;
+          err = _ksba_der_store_oid (n, oidstr_signingTime);
+          if (err)
+            return err;
+          n = _ksba_asn_find_node (attr, "Attribute.attrValues");
+          if (!n || !n->down)
+            return KSBA_Element_Not_Found;
+          n = n->down; /* fixme: ugly hack */
+          err = _ksba_der_store_time (n, certlist->signing_time);
+          if (err)
+            return err;
+          err = _ksba_der_encode_tree (attr, &image, NULL);
+          if (err)
+            return err;
+          /* we will use the attributes again - so save them */
+          attrarray[attridx].root = attr;
+          attrarray[attridx].image = image;
+          attridx++;
+        }
 
       /* now copy them to an SignerInfos tree.  This tree is not
          complete but suitable for ksba_cms_hash_igned_attributes() */
@@ -1146,17 +1270,24 @@ build_signed_data_attributes (KsbaCMS cms)
       n = _ksba_asn_find_node (root, "SignerInfos..signedAttrs");
       if (!n || !n->down) 
         return KSBA_Element_Not_Found; 
-
-      /* This is another ugly hack to move to the element we want */
+          /* This is another ugly hack to move to the element we want */
+      _ksba_asn_node_dump_all (n, stderr);
       for (n = n->down->down; n && n->type != TYPE_SEQUENCE; n = n->right)
         ;
       if (!n) 
         return KSBA_Element_Not_Found; 
 
-      err = _ksba_der_copy_tree (n, attr, image);
-      if (err)
-        return err;
-      image = NULL;
+
+
+      for (i=0; i < attridx; i++)
+        {
+          if (i && !_ksba_asn_insert_copy (n))
+            return KSBA_Out_Of_Core;
+          err = _ksba_der_copy_tree (n, attrarray[i].root, attrarray[i].image);
+          if (err)
+            return err;
+          /* fixme: release this array slot */
+        }
 
       err = _ksba_der_encode_tree (root, &image, NULL);
       if (err)
@@ -1202,7 +1333,7 @@ build_signed_data_rest (KsbaCMS cms)
   for (signer=0; certlist;
        signer++, certlist = certlist->next, digestlist = digestlist->next)
     {
-      AsnNode root, n;
+      AsnNode root, n, n2;
       unsigned char *image;
       size_t imagelen;
 
@@ -1249,17 +1380,13 @@ build_signed_data_rest (KsbaCMS cms)
       n = _ksba_asn_find_node (root, "SignerInfos..signedAttrs");
       if (!n || !n->down) 
         return KSBA_Element_Not_Found; 
-
-      /* This is another ugly hack to move to the element we want */
-      for (n = n->down->down; n && n->type != TYPE_SEQUENCE; n = n->right)
-        ;
-      if (!n) 
+      assert (cms->signer_info.root);
+      assert (cms->signer_info.image);
+      n2 = _ksba_asn_find_node (cms->signer_info.root,
+                                "SignerInfos..signedAttrs");
+      if (!n2 || !n->down) 
         return KSBA_Element_Not_Found; 
-
-
-      assert (certlist->attr.root);
-      assert (certlist->attr.image);
-      err = _ksba_der_copy_tree (n, certlist->attr.root, certlist->attr.image);
+      err = _ksba_der_copy_tree (n, n2, cms->signer_info.image);
       if (err)
         return err;
       image = NULL;

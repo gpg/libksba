@@ -75,6 +75,7 @@ enum tag_class {
   CLASS_PRIVATE =3
 };
 
+/* Important: this must match the code in asn1-gentables.c */
 struct node_flag_s {
   enum tag_class class;
   int explicit:1;
@@ -95,6 +96,8 @@ struct node_flag_s {
   int in_set:1;       
   int in_choice:1;
   int in_array:1;
+  int is_any:1;      /* The der-encoder must change any to a real type
+                        but still be aware that it actually is any */
   int not_used:1;     
   int help_down:1;    /* helper for create_tree */
   int help_right:1;   /* helper for create_tree */

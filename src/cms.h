@@ -39,10 +39,11 @@ struct certlist_s {
   KsbaCert cert;
   int  msg_digest_len;  /* used length of .. */
   char msg_digest[32];  /* enough space to store a SHA-256 hash */
+  time_t signing_time;
   struct {
     AsnNode root;
     unsigned char *image;
-  } attr; /* temporary storage of signed attributes */
+  } sa; 
 };
 
 
