@@ -1031,6 +1031,7 @@ ksba_asn_tree_release (KsbaAsnTree tree)
   xfree (tree);
 }
 
+
 void
 _ksba_asn_release_nodes (AsnNode node)
 {

@@ -90,10 +90,6 @@ char *stpcpy (char *a, const char *b);
                      *(p) <= 'F'? (*(p)-'A'+10):(*(p)-'a'+10))
 #define xtoi_2(p)   ((xtoi_1(p) * 16) + xtoi_1((p)+1))
 
-
-
-
-
 #endif /* UTIL_H */
 
 

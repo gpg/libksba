@@ -524,7 +524,7 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
    with the known algorithms from our table and returns the table
    entries for the DER encoded OID.
 
-   FIXME: We restrict this for now to RSA becuase the code using this
+   FIXME: We restrict this for now to RSA because the code using this
    function is not yet prepared to handle other algorithms */
 static const unsigned char *
 oid_from_buffer (const unsigned char *buf, int buflen, int *oidlen)

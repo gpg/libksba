@@ -192,7 +192,7 @@ ksba_certreq_set_public_key (KsbaCertreq cr, KsbaConstSexp key)
  *		(<param_namen> <mpi>)
  *	      ))
  * The sexp must be in canocial form. 
- * FIXME:  The code is mostly duplicated from cms.c
+ * Fixme:  The code is mostly duplicated from cms.c
  * Note, that <algo> must be given as a stringified OID or the special
  * string "rsa" which is translated to sha1WithRSAEncryption
 */

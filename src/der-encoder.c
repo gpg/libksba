@@ -82,7 +82,7 @@ _ksba_der_encoder_release (DerEncoder d)
  * @module: ASN.1 Parse tree
  * 
  * Initialize the decoder with the ASN.1 module.  Note, that this is a
- * shallow copy of the module.  FIXME: What about ref-counting of
+ * shallow copy of the module.  Fixme: What about ref-counting of
  * AsnNodes?
  * 
  * Return value: 0 on success or an error code
@@ -383,7 +383,7 @@ set_nhdr_and_len (AsnNode node, unsigned long length)
   else
     {
       never_reached ();
-      /* FIXME: tags with values above 31 are not yet implemented */
+      /* Fixme: tags with values above 31 are not yet implemented */
     }
 
   if (!node->type /*&& !class*/)

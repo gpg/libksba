@@ -22,7 +22,6 @@
 #ifndef ASN1_FUNC_H
 #define ASN1_FUNC_H
 
-/* The values below 128 correspond to the  Universal tag values */
 typedef enum {
   TYPE_NONE = 0,
   TYPE_BOOLEAN = 1,
