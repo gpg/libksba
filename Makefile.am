@@ -21,7 +21,7 @@
 
 EXTRA_DIST = README-alpha autogen.sh
 
-SUBDIRS = src tests
+SUBDIRS = src tests doc
 
 
 

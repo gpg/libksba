@@ -108,11 +108,11 @@ KSBA_CFLAGS=""
 AC_SUBST(KSBA_LIBS)
 AC_SUBST(KSBA_CFLAGS)
 
-
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
 src/ksba-config
 tests/Makefile
+doc/Makefile
 ])
 AC_OUTPUT

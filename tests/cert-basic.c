@@ -142,6 +142,42 @@ print_dn (char *p)
 
 
 static void
+list_extensions (KsbaCert cert)
+{
+  KsbaError err;
+  const char *oid;
+  int idx, crit, is_ca, pathlen;
+  size_t off, len;
+
+  for (idx=0; !(err=ksba_cert_get_extension (cert, idx,
+                                             &oid, &crit, &off, &len));idx++)
+    {
+      printf ("Extn: %s at %d with length %d %s\n",
+              oid, (int)off, (int)len, crit? "(critical)":"");
+    }
+  if (err && err != -1 )
+    {
+      fprintf (stderr,
+               "%s:%d: enumerating extensions failed: %s\n", 
+               __FILE__, __LINE__, ksba_strerror (err));
+      errorcount++;
+    }
+
+  err = ksba_cert_is_ca (cert, &is_ca, &pathlen);
+  if (err)
+    {
+      fprintf (stderr,
+               "%s:%d: ksba_cert_is_ca failed: %s\n", 
+               __FILE__, __LINE__, ksba_strerror (err));
+      errorcount++;
+    }
+  else if (is_ca)
+    printf ("This is a CA certificate with a path length of %d\n", pathlen);
+
+}
+
+
+static void
 one_file (const char *fname)
 {
   KsbaError err;
@@ -272,6 +308,7 @@ one_file (const char *fname)
       }
   }
 
+  list_extensions (cert);
 
   ksba_cert_release (cert);
   cert = ksba_cert_new ();
@@ -333,3 +370,4 @@ main (int argc, char **argv)
 
   return !!errorcount;
 }
+
