@@ -2,7 +2,7 @@
 
 	* dn.c: Updated the table and changed a few names only used for
 	String->DER.  Added a source specifier as a replacement for the
-	allowed_by_rfc2253 field..
+	allowed_by_rfc2253 field.
 
 2004-01-19  Werner Koch  <wk@gnupg.org>
 
