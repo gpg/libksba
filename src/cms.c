@@ -548,9 +548,9 @@ ksba_cms_get_digest_algo (KsbaCMS cms, int idx)
  * @idx: enumerator
  * 
  * Get the certificate out of a CMS.  The caller should use this in a
- * loop to get all certificates.  NOte: This function can be used only
- * once because an already retrieved cert is deleted from the CMS
- * object for efficiency. FIXME: we should use reference counting instead.
+ * loop to get all certificates.  The returned certificate is a
+ * shallow copy of the original one; the caller must still use
+ * ksba_cert_release() to free it.
  * 
  * Return value: A Certificate object or NULL for end of list or error
  **/
@@ -558,7 +558,6 @@ KsbaCert
 ksba_cms_get_cert (KsbaCMS cms, int idx)
 {
   struct certlist_s *cl;
-  KsbaCert cert;
 
   if (!cms || idx < 0)
     return NULL;
@@ -567,9 +566,8 @@ ksba_cms_get_cert (KsbaCMS cms, int idx)
     ;
   if (!cl)
     return NULL;
-  cert = cl->cert;
-  cl->cert = NULL;
-  return cert;
+  ksba_cert_ref (cl->cert);
+  return cl->cert;
 }
 
 
@@ -919,8 +917,7 @@ ksba_cms_add_digest_algo (KsbaCMS cms, const char *oid)
  * another signer to the list of signers.
  *
  * Note: after successful completion of this function ownership of
- * @cert is transferred to @cms.  The caller should not continue to
- * use cert.  Fixme:  We  should use reference counting instead.
+ * @cert is transferred to @cms.  
  * 
  * Return value: 0 on success or an error code.
  **/
@@ -936,6 +933,7 @@ ksba_cms_add_signer (KsbaCMS cms, KsbaCert cert)
   if (!cl)
       return KSBA_Out_Of_Core;
 
+  ksba_cert_ref (cert);
   cl->cert = cert;
   cl->next = cms->cert_list;
   cms->cert_list = cl;
@@ -1249,8 +1247,7 @@ ksba_cms_set_enc_val (KsbaCMS cms, int idx, const char *encval)
  * another recipient to the list of recipients.
  *
  * Note: after successful completion of this function ownership of
- * @cert is transferred to @cms.  The caller should not continue to
- * use cert.  Fixme:  We  should use reference counting instead.
+ * @cert is transferred to @cms.  
  * 
  * Return value: 0 on success or an error code.
  **/

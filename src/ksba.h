@@ -134,6 +134,7 @@ typedef struct ksba_asn_tree_s *KsbaAsnTree;
 
 /*-- cert.c --*/
 KsbaCert ksba_cert_new (void);
+void ksba_cert_ref (KsbaCert cert);
 void     ksba_cert_release (KsbaCert cert);
 KsbaError ksba_cert_read_der (KsbaCert cert, KsbaReader reader);
 KsbaError ksba_cert_init_from_mem (KsbaCert cert,

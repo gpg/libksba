@@ -46,9 +46,18 @@ ksba_cert_new (void)
   cert = xtrycalloc (1, sizeof *cert);
   if (!cert)
     return NULL;
-
+  cert->ref_count++;
 
   return cert;
+}
+
+void
+ksba_cert_ref (KsbaCert cert)
+{
+  if (!cert)
+      fprintf (stderr, "BUG: ksba_cert_ref for NULL\n");
+  else
+    ++cert->ref_count;
 }
 
 /**
@@ -62,6 +71,14 @@ ksba_cert_release (KsbaCert cert)
 {
   if (!cert)
     return;
+  if (cert->ref_count < 1)
+    {
+      fprintf (stderr, "BUG: trying to release an already released cert\n");
+      return;
+    }
+  if (--cert->ref_count)
+    return;
+
   xfree (cert->cache.digest_algo);
   /* FIXME: release cert->root, ->asn_tree */
   xfree (cert);

@@ -25,6 +25,7 @@
 
 struct ksba_cert_s {
   int initialized;
+  int ref_count;
   KsbaAsnTree asn_tree;
   AsnNode root;  /* root of the tree with the values */
   unsigned char *image;
