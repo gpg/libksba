@@ -1,3 +1,18 @@
+2004-03-16  Werner Koch  <wk@gnupg.org>
+
+	* ocsp.c (ksba_ocsp_get_responder_id, ksba_ocsp_get_cert): New.
+
+2004-03-15  Werner Koch  <wk@gnupg.org>
+
+	* Makefile.am: Support for version scripts.
+	* libksba.vers: New.
+
+	* ocsp.c (parse_response): Fixed parsing of optional certificates.
+
+2004-03-09  Werner Koch  <wk@gnupg.org>
+
+	* ksba.h (ksba_set_hash_buffer_function): Add missing prototype.
+
 2004-02-20  Werner Koch  <wk@gnupg.org>
 
 	* cert.c (ksba_cert_get_ext_key_usages): New.

@@ -1,5 +1,5 @@
 /* ocsp.c - OCSP (rfc2560)
- *      Copyright (C) 2003 g10 Code GmbH
+ *      Copyright (C) 2003, 2004 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -1229,7 +1229,8 @@ parse_response (ksba_ocsp_t ocsp, const unsigned char *msg, size_t msglen)
         err = ksba_cert_new (&cert);
         if (err)
           return err;
-        err = ksba_cert_init_from_mem (cert, msg, ti.length);
+        err = ksba_cert_init_from_mem (cert, msg - ti.nhdr,
+                                       ti.nhdr + ti.length);
         if (err)
           {
             ksba_cert_release (cert);
@@ -1300,7 +1301,7 @@ ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
   if (*response_status == KSBA_OCSP_RSPSTATUS_SUCCESS
       && ocsp->noncelen)
     {
-      /* FIXME: Check that tehre is a rceived nonce and thit it matches. */
+      /* FIXME: Check that there is a received nonce and that it it matches. */
 
     }
 
@@ -1369,6 +1370,48 @@ ksba_ocsp_get_sig_val (ksba_ocsp_t ocsp, ksba_isotime_t produced_at)
   ocsp->sigval = NULL;
   return p;
 }
+
+
+/* Return the responder ID for the current response into NAME or into
+   the provided 20 byte buffer SHA1KEYHASH.  On sucess NAME either
+   contains the responder ID as a standard name or if NAME is NULL,
+   SHA1KEYHASH contains the hash of the public key.  SHA1KEYHASH may
+   be given as NULL if support for a KEYHASH is not intended.  Caller
+   must release NAME. */
+gpg_error_t
+ksba_ocsp_get_responder_id (ksba_ocsp_t ocsp,
+                            ksba_name_t *name, unsigned char *sha1keyhash)
+{
+  if (!ocsp)
+    return gpg_error (GPG_ERR_INV_VALUE);
+
+
+  return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
+}
+
+
+/* Get optional certificates out of a response.  The caller may use
+ * this in a loop to get all certificates.  The returned certificate
+ * is a shallow copy of the original one; the caller must still use
+ * ksba_cert_release() to free it. Returns: A certificate object or
+ * NULL for end of list or error. */
+ksba_cert_t
+ksba_ocsp_get_cert (ksba_ocsp_t ocsp, int idx)
+{
+  struct ocsp_certlist_s *cl;
+
+  if (!ocsp || idx < 0)
+    return NULL;
+
+  for (cl=ocsp->received_certs; cl && idx; cl = cl->next, idx--)
+    ;
+  if (!cl)
+    return NULL;
+  ksba_cert_ref (cl->cert);
+  return cl->cert;
+}
+
+
 
 
 /* Return the status of the certificate CERT for the last response

@@ -1,5 +1,5 @@
 # Makefile.am - for the KSBA ASN.1 and X.509 library
-#       Copyright (C) 2001, 2002 g10 Code GmbH
+#       Copyright (C) 2001, 2002, 2004 g10 Code GmbH
 # 	
 # This file is part of KSBA.
 # 
@@ -33,9 +33,19 @@ m4data_DATA = ksba.m4
 
 AM_CFLAGS = @GPG_ERROR_CFLAGS@
 
-libksba_la_LDFLAGS = -version-info \
+
+if HAVE_LD_VERSION_SCRIPT
+  libksba_version_script_cmd = -Wl,--version-script=$(srcdir)/libksba.vers
+else
+  libksba_version_script_cmd = 
+endif
+
+
+
+libksba_la_LDFLAGS = $(libksba_version_script_cmd) -version-info \
       @LIBKSBA_LT_CURRENT@:@LIBKSBA_LT_REVISION@:@LIBKSBA_LT_AGE@
 libksba_la_INCLUDES = -I$(top_srcdir)/lib 
+libksba_la_DEPENDENCIES = $(srcdir)/libksba.vers
 
 libksba_la_SOURCES = \
 	ksba.h \

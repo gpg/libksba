@@ -64,7 +64,7 @@ ksba_set_malloc_hooks ( void *(*new_alloc_func)(size_t n),
    Where ARG is the same pointer as set along with the fucntion, OID
    is an OID string telling the hash algorithm to be used - SHA-1
    shall be used if OID is NULL.  The text to hash is expected in
-   BUFFER of LENGTH and the result will be palce in the provided
+   BUFFER of LENGTH and the result will be placed into the provided
    buffer RESULT which has been allocated by the caller with at LEAST
    RESULTSIZE bytes; the actual length of the result is put into
    RESULTLEN. 

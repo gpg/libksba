@@ -409,6 +409,10 @@ gpg_error_t ksba_ocsp_hash_response (ksba_ocsp_t ocsp,
                                      void *hasher_arg);
 ksba_sexp_t ksba_ocsp_get_sig_val (ksba_ocsp_t ocsp,
                                    ksba_isotime_t produced_at);
+gpg_error_t ksba_ocsp_get_responder_id (ksba_ocsp_t ocsp,
+                                        ksba_name_t *name,
+                                        unsigned char *sha1keyhash);
+ksba_cert_t ksba_ocsp_get_cert (ksba_ocsp_t ocsp, int idx);
 gpg_error_t ksba_ocsp_get_status (ksba_ocsp_t ocsp, ksba_cert_t cert,
                                   ksba_status_t *r_status,
                                   ksba_isotime_t r_this_update,
@@ -506,6 +510,13 @@ char       *ksba_name_get_uri (ksba_name_t name, int idx);
 void ksba_set_malloc_hooks ( void *(*new_alloc_func)(size_t n),
                              void *(*new_realloc_func)(void *p, size_t n),
                              void (*new_free_func)(void*) );
+void ksba_set_hash_buffer_function ( gpg_error_t (*fnc)
+                                     (void *arg, const char *oid,
+                                      const void *buffer, size_t length,
+                                      size_t resultsize,
+                                      unsigned char *result,
+                                      size_t *resultlen),
+                                     void *fnc_arg);
 void *ksba_malloc (size_t n );
 void *ksba_calloc (size_t n, size_t m );
 void *ksba_realloc (void *p, size_t n);
