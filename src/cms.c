@@ -304,7 +304,7 @@ write_encrypted_cont (ksba_cms_t cms)
       if (!err)
         err = ksba_writer_write (cms->writer, buffer, nread);
     }
-  if (err == -1) /* write the end tag */
+  if (gpg_err_code (err) == GPG_ERR_EOF) /* write the end tag */
       err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
 
   return err;

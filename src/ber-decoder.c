@@ -788,7 +788,7 @@ decoder_next (BerDecoder d)
                 {
                   /* We must push back the stuff we already read */
                   ksba_reader_unread (d->reader, ti.buf, ti.nhdr);
-                  return -1; 
+                  return gpg_error (GPG_ERR_EOF); 
                 }
               else
                 d->bypass = 1;
@@ -1024,7 +1024,7 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
         break;
 
     }
-  if (err == -1)
+  if (gpg_err_code (err) == GPG_ERR_EOF)
     err = 0;
 
   decoder_deinit (d);
@@ -1105,7 +1105,7 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
           for (n=0; !err && n < d->val.length; n++)
             {
               if ( (c=read_byte (d->reader)) == -1)
-                err =  eof_or_error (d, 1);
+                err = eof_or_error (d, 1);
               buf[n] = c;
             }
           if (err)
@@ -1125,7 +1125,7 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
       if (err)
         break;
     }
-  if (err == -1)
+  if (gpg_err_code (err) == GPG_ERR_EOF)
     err = 0;
 
   if (r_root && !err)

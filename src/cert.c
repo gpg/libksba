@@ -779,7 +779,7 @@ ksba_cert_is_ca (ksba_cert_t cert, int *r_ca, int *r_pathlen)
       if (!strcmp (oid, oidstr_basicConstraints))
         break;
     }
-  if (err == -1)
+  if (gpg_err_code (err) == GPG_ERR_EOF)
       return 0; /* no such constraint */
   if (err)
     return err;
@@ -885,7 +885,7 @@ ksba_cert_get_key_usage (ksba_cert_t cert, unsigned int *r_flags)
       if (!strcmp (oid, oidstr_keyUsage))
         break;
     }
-  if (err == -1)
+  if (gpg_err_code (err) == GPG_ERR_EOF)
       return gpg_error (GPG_ERR_NO_DATA); /* no key usage */
   if (err)
     return err;
@@ -1110,7 +1110,7 @@ ksba_cert_get_cert_policies (ksba_cert_t cert, char **r_policies)
         }
     }
 
-  if (err == -1)
+  if (gpg_err_code (err) == GPG_ERR_EOF)
     err = 0;
   if (!*r_policies)
     err = gpg_error (GPG_ERR_NO_DATA);
@@ -1413,7 +1413,7 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
       if (!strcmp (oid, oidstr_authorityKeyIdentifier))
         break;
     }
-  if (err == -1)
+  if (gpg_err_code (err) == GPG_ERR_EOF)
     return gpg_error (GPG_ERR_NO_DATA); /* not available */
   if (err)
     return err;

@@ -723,7 +723,7 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
                                     &si->root, &si->image, &si->imagelen);
       /* The signerInfo might be an empty set in the case of a certs-only
          signature.  Thus we have to allow for EOF here */
-      if (err == -1)
+      if (gpg_err_code (err) == GPG_ERR_EOF)
         {
           err = 0;
           break;
