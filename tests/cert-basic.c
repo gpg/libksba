@@ -148,6 +148,7 @@ list_extensions (KsbaCert cert)
   const char *oid;
   int idx, crit, is_ca, pathlen;
   size_t off, len;
+  unsigned int usage;
 
   for (idx=0; !(err=ksba_cert_get_extension (cert, idx,
                                              &oid, &crit, &off, &len));idx++)
@@ -166,13 +167,45 @@ list_extensions (KsbaCert cert)
   err = ksba_cert_is_ca (cert, &is_ca, &pathlen);
   if (err)
     {
-      fprintf (stderr,
-               "%s:%d: ksba_cert_is_ca failed: %s\n", 
+      fprintf (stderr, "%s:%d: ksba_cert_is_ca failed: %s\n", 
                __FILE__, __LINE__, ksba_strerror (err));
       errorcount++;
     }
   else if (is_ca)
     printf ("This is a CA certificate with a path length of %d\n", pathlen);
+
+  err = ksba_cert_get_key_usage (cert, &usage);
+  if (err == KSBA_No_Data)
+    printf ("KeyUsage: Not specified\n");
+  else if (err)
+    { 
+      fprintf (stderr, "%s:%d: ksba_cert_get_key_usage failed: %s\n", 
+               __FILE__, __LINE__, ksba_strerror (err));
+      errorcount++;
+    } 
+  else
+    {
+      fputs ("KeyUsage:", stdout);
+      if ( (usage & KSBA_KEYUSAGE_DIGITAL_SIGNATURE))
+        fputs (" digitalSignature", stdout);
+      if ( (usage & KSBA_KEYUSAGE_NON_REPUDIATION))  
+        fputs (" nonRepudiation", stdout);
+      if ( (usage & KSBA_KEYUSAGE_KEY_ENCIPHERMENT)) 
+        fputs (" keyEncipherment", stdout);
+      if ( (usage & KSBA_KEYUSAGE_DATA_ENCIPHERMENT))
+        fputs (" dataEncripherment", stdout);
+      if ( (usage & KSBA_KEYUSAGE_KEY_AGREEMENT))    
+        fputs (" keyAgreement", stdout);
+      if ( (usage & KSBA_KEYUSAGE_KEY_CERT_SIGN))
+        fputs (" certSign", stdout);
+      if ( (usage & KSBA_KEYUSAGE_CRL_SIGN))  
+        fputs (" crlSign", stdout);
+      if ( (usage & KSBA_KEYUSAGE_ENCIPHER_ONLY))
+        fputs (" encipherOnly", stdout);
+      if ( (usage & KSBA_KEYUSAGE_DECIPHER_ONLY))  
+        fputs (" decipherOnly", stdout);
+      putchar ('\n');
+    }
 
 }
 
@@ -220,7 +253,7 @@ one_file (const char *fname)
 
   for (idx=0;(dn = ksba_cert_get_issuer (cert, idx));idx++) 
     {
-      fputs (idx?"         aka: ":"  issuer....:", stdout);
+      fputs (idx?"         aka: ":"  issuer....: ", stdout);
       print_dn (dn);
       ksba_free (dn);
       putchar ('\n');
@@ -228,7 +261,7 @@ one_file (const char *fname)
 
   for (idx=0;(dn = ksba_cert_get_subject (cert, idx));idx++) 
     {
-      fputs (idx?"         aka: ":"  subject....: ", stdout);
+      fputs (idx?"         aka: ":"  subject...: ", stdout);
       print_dn (dn);
       ksba_free (dn);
       putchar ('\n');

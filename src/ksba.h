@@ -122,6 +122,17 @@ typedef enum {
   KSBA_CRLREASON_REMOVE_FROM_CRL = 8
 } KsbaCRLReason;
 
+typedef enum {
+  KSBA_KEYUSAGE_DIGITAL_SIGNATURE =  1,
+  KSBA_KEYUSAGE_NON_REPUDIATION   =  2,
+  KSBA_KEYUSAGE_KEY_ENCIPHERMENT  =  4,
+  KSBA_KEYUSAGE_DATA_ENCIPHERMENT =  8,
+  KSBA_KEYUSAGE_KEY_AGREEMENT     = 16,
+  KSBA_KEYUSAGE_KEY_CERT_SIGN     = 32,     
+  KSBA_KEYUSAGE_CRL_SIGN          = 64,
+  KSBA_KEYUSAGE_ENCIPHER_ONLY    = 128,
+  KSBA_KEYUSAGE_DECIPHER_ONLY    = 256
+} KsbaKeyUsage;
 
 /* X.509 certificates are represented by this object.
    ksba_cert_new() creates such an object */
@@ -193,6 +204,7 @@ KsbaError ksba_cert_get_extension (KsbaCert cert, int idx,
                                    size_t *r_deroff, size_t *r_derlen);
 
 KsbaError ksba_cert_is_ca (KsbaCert cert, int *r_ca, int *r_pathlen);
+KsbaError ksba_cert_get_key_usage (KsbaCert cert, unsigned int *r_flags);
 
 
 /*-- cms.c --*/

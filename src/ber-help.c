@@ -28,6 +28,9 @@
 #include "asn1-func.h" /* need some constants */
 #include "ber-help.h"
 
+/* Fixme: The parser functions should check that primitive types don't
+   have the constructed bit set (which is not allowed).  This saves us
+   some work when using these parsers */
 
 static int
 read_byte (KsbaReader reader)

@@ -31,6 +31,11 @@
 #include "keyinfo.h"
 #include "cert.h"
 
+static const char oidstr_keyUsage[]         = "2.5.29.15";
+static const char oidstr_subjectAltName[]   = "2.5.29.17";
+static const char oidstr_issuerAltName[]    = "2.5.29.18";
+static const char oidstr_basicConstraints[] = "2.5.29.19";
+static const char oidstr_crlDistributionPoints[] = "2.5.29.31";
 
 /**
  * ksba_cert_new:
@@ -322,6 +327,113 @@ ksba_cert_get_serial (KsbaCert cert)
   return p;
 }
 
+
+/* Worker function for get_isssuer and get_subject. */
+static KsbaError
+get_name (KsbaCert cert, int idx, int use_subject, char **result)
+{
+  KsbaError err;
+  char *p;
+  int i;
+  const char *oid;
+  struct tag_info ti;
+  const unsigned char *der;
+  size_t off, derlen, seqlen;
+
+  if (!cert || !cert->initialized || !result)
+    return KSBA_Invalid_Value;
+  if (idx < 0)
+    return KSBA_Invalid_Index;
+
+  *result = NULL;
+  if (!idx)
+    { /* Get the required DN */
+      AsnNode n;
+
+      n = _ksba_asn_find_node (cert->root,
+                               (use_subject?
+                                "Certificate.tbsCertificate.subject":
+                                "Certificate.tbsCertificate.issuer") );
+      if (!n || !n->down)
+        return KSBA_No_Value; /* oops - should be there */
+      n = n->down; /* dereference the choice node */
+      if (n->off == -1)
+        return KSBA_No_Value;
+      
+      err = _ksba_dn_to_str (cert->image, n, &p);
+      if (err)
+        return err;
+      *result = p;
+      return 0;
+    }
+
+  /* get {issuer,subject}AltName */
+  for (i=0; !(err=ksba_cert_get_extension (cert, i, &oid, NULL,
+                                           &off, &derlen)); i++)
+    {
+      if (!strcmp (oid, (use_subject?
+                         oidstr_subjectAltName:oidstr_issuerAltName)))
+        break;
+    }
+  if (err)
+      return err; /* no alt name or error*/
+  
+  der = cert->image + off;
+ 
+  err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+  if (err)
+    return err;
+  if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+         && ti.is_constructed) )
+    return KSBA_Invalid_Cert_Object;
+  if (ti.ndef)
+    return KSBA_Not_DER_Encoded;
+  seqlen = ti.length;
+  if (seqlen > derlen)
+    return KSBA_BER_Error;
+  if (!seqlen)
+    return KSBA_Invalid_Cert_Object; /* empty sequence is not allowed */
+
+  while (seqlen)
+    {
+      err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+      if (err)
+        return err;
+      if (ti.class != CLASS_CONTEXT) 
+        return KSBA_Invalid_Cert_Object; /* we expected a tag */
+      if (ti.ndef)
+        return KSBA_Not_DER_Encoded;
+      if (seqlen < ti.nhdr)
+        return KSBA_BER_Error;
+      seqlen -= ti.nhdr;
+      if (seqlen < ti.length)
+        return KSBA_BER_Error;
+      seqlen -= ti.length;
+      if (--idx)
+        ; /* not yet at the desired index */
+      else if (ti.tag == 1)
+        { /* rfc822Name - this is an imlicit IA5_STRING */
+          p = xtrymalloc (ti.length+3);
+          if (!p)
+            return KSBA_Out_Of_Core;
+          *p = '<';
+          memcpy (p+1, der, ti.length);
+          p[ti.length+1] = '>';
+          p[ti.length+2] = 0;
+          *result = p;
+          return 0;
+        }
+
+      /* advance pointer */
+      der += ti.length;
+      der -= ti.length;
+    }
+  
+  return -1;     
+}
+
+
+
 /**
  * ksba_cert_get_issuer:
  * @cert: certificate object
@@ -343,9 +455,9 @@ ksba_cert_get_serial (KsbaCert cert)
  * indicate this.  Other formats are returned as an S-Expression in
  * canonical format, so a opening parenthesis may be used to detect
  * this encoding, the name may include binary null characters, so
- * strlen may return a legth shorther than actually used, the real
+ * strlen may return a length shorther than actually used, the real
  * length is implictly given by the structure of the S-Exp, an extra
- * null is appended to make debugging output easier.
+ * null is appended for safety reasons.
  * 
  * The caller must free the returned string using ksba_free() or the
  * function he has registered as a replacement.
@@ -356,33 +468,31 @@ char *
 ksba_cert_get_issuer (KsbaCert cert, int idx)
 {
   KsbaError err;
-  AsnNode n;
-  char *p;
+  char *name;
 
-  if (!cert || !cert->initialized)
-    return NULL;
-  if (idx)
-    return NULL;
-  
-  n = _ksba_asn_find_node (cert->root,
-                           "Certificate.tbsCertificate.issuer");
-  if (!n || !n->down)
-    return NULL; /* oops - should be there */
-  n = n->down; /* dereference the choice node */
-
-  if (n->off == -1)
-    {
-      fputs ("get_issuer problem at node:\n", stderr);
-      _ksba_asn_node_dump_all (n, stderr);
-      return NULL;
-    }
-  err = _ksba_dn_to_str (cert->image, n, &p);
+  err = get_name (cert, idx, 0, &name);
   if (err)
     {
       cert->last_error = err;
       return NULL;
     }
-  return p;
+  return name;
+}
+
+/* See ..get_issuer */
+char *
+ksba_cert_get_subject (KsbaCert cert, int idx)
+{
+  KsbaError err;
+  char *name;
+
+  err = get_name (cert, idx, 1, &name);
+  if (err)
+    {
+      cert->last_error = err;
+      return NULL;
+    }
+  return name;
 }
 
 
@@ -434,40 +544,6 @@ ksba_cert_get_validity (KsbaCert cert, int what)
   return t;
 }
 
-
-/* See ..get_issuer */
-char *
-ksba_cert_get_subject (KsbaCert cert, int idx)
-{
-  KsbaError err;
-  AsnNode n;
-  char *p;
-
-  if (!cert || !cert->initialized)
-    return NULL;
-  if (idx)
-    return NULL;
-  
-  n = _ksba_asn_find_node (cert->root,
-                           "Certificate.tbsCertificate.subject");
-  if (!n || !n->down)
-    return NULL; /* oops - should be there */
-  n = n->down; /* dereference the choice node */
-
-  if (n->off == -1)
-    {
-      fputs ("get_issuer problem at node:\n", stderr);
-      _ksba_asn_node_dump_all (n, stderr);
-      return NULL;
-    }
-  err = _ksba_dn_to_str (cert->image, n, &p);
-  if (err)
-    {
-      cert->last_error = err;
-      return NULL;
-    }
-  return p;
-}
 
 
 KsbaSexp
@@ -672,7 +748,7 @@ ksba_cert_is_ca (KsbaCert cert, int *r_ca, int *r_pathlen)
   for (idx=0; !(err=ksba_cert_get_extension (cert, idx, &oid, &crit,
                                              &off, &derlen)); idx++)
     {
-      if (!strcmp (oid, "2.5.29.19"))
+      if (!strcmp (oid, oidstr_basicConstraints))
         break;
     }
   if (err == -1)
@@ -684,7 +760,7 @@ ksba_cert_is_ca (KsbaCert cert, int *r_ca, int *r_pathlen)
   for (idx++; !(err=ksba_cert_get_extension (cert, idx, &oid, NULL,
                                              NULL, NULL)); idx++)
     {
-      if (!strcmp (oid, "2.5.29.19"))
+      if (!strcmp (oid, oidstr_basicConstraints))
         return KSBA_Duplicate_Value; 
     }
   
@@ -752,6 +828,110 @@ ksba_cert_is_ca (KsbaCert cert, int *r_ca, int *r_pathlen)
      left we better return an error */
   if (crit && seqlen)
     return KSBA_Invalid_Cert_Object;
+
+  return 0;
+}
+
+
+
+/* Get the key usage flags. The function returns Ksba_No_Data if no
+   key usage is specified. */
+KsbaError
+ksba_cert_get_key_usage (KsbaCert cert, unsigned int *r_flags)
+{
+  KsbaError err;
+  const char *oid;
+  int idx, crit;
+  size_t off, derlen;
+  const unsigned char *der;
+  struct tag_info ti;
+  unsigned int bits, mask;
+  int i, unused, full;
+
+  if (!r_flags)
+    return KSBA_Invalid_Value;
+  *r_flags = 0;
+  for (idx=0; !(err=ksba_cert_get_extension (cert, idx, &oid, &crit,
+                                             &off, &derlen)); idx++)
+    {
+      if (!strcmp (oid, oidstr_keyUsage))
+        break;
+    }
+  if (err == -1)
+      return KSBA_No_Data; /* no key usage */
+  if (err)
+    return err;
+    
+  /* check that there is only one */
+  for (idx++; !(err=ksba_cert_get_extension (cert, idx, &oid, NULL,
+                                             NULL, NULL)); idx++)
+    {
+      if (!strcmp (oid, oidstr_keyUsage))
+        return KSBA_Duplicate_Value; 
+    }
+  
+  der = cert->image + off;
+ 
+  err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+  if (err)
+    return err;
+  if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_BIT_STRING
+         && !ti.is_constructed) )
+    return KSBA_Invalid_Cert_Object;
+  if (ti.ndef)
+    return KSBA_Not_DER_Encoded;
+  if (!ti.length || ti.length > derlen)
+    return KSBA_Encoding_Error; /* number of unused bits missing */
+  unused = *der++; derlen--;
+  ti.length--;
+  if ((!ti.length && unused) || unused/8 > ti.length)
+    return KSBA_Encoding_Error;
+
+  full = ti.length - (unused+7)/8;
+  unused %= 8;
+  mask = 0;
+  for (i=1; unused; i <<= 1, unused--)
+    mask |= i;
+
+  /* the first octet */
+  if (!ti.length)
+    return 0; /* no bits set */
+  bits = *der++; derlen--; ti.length--;
+  if (full)
+    full--;
+  else {
+    bits &= ~mask;
+    mask = 0; 
+  }
+  if (bits & 0x80)
+    *r_flags |= KSBA_KEYUSAGE_DIGITAL_SIGNATURE;
+  if (bits & 0x40)
+    *r_flags |= KSBA_KEYUSAGE_NON_REPUDIATION;
+  if (bits & 0x20)
+    *r_flags |= KSBA_KEYUSAGE_KEY_ENCIPHERMENT;
+  if (bits & 0x10)
+    *r_flags |= KSBA_KEYUSAGE_DATA_ENCIPHERMENT;
+  if (bits & 0x08)
+    *r_flags |= KSBA_KEYUSAGE_KEY_AGREEMENT;
+  if (bits & 0x04)
+    *r_flags |= KSBA_KEYUSAGE_KEY_CERT_SIGN;
+  if (bits & 0x02)
+    *r_flags |= KSBA_KEYUSAGE_CRL_SIGN;
+  if (bits & 0x01)
+    *r_flags |= KSBA_KEYUSAGE_ENCIPHER_ONLY;
+
+  /* the second octet */
+  if (!ti.length)
+    return 0; /* no bits set */
+  bits = *der++; derlen--; ti.length--;
+  if (full)
+    full--;
+  else {
+    bits &= mask;
+    mask = ~0; 
+  }
+  if (bits & 0x80)
+    *r_flags |= KSBA_KEYUSAGE_DECIPHER_ONLY;
 
   return 0;
 }

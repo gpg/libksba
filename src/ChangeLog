@@ -1,3 +1,11 @@
+2002-01-23  Werner Koch  <wk@gnupg.org>
+
+	* ksba.h (KsbaKeyUsage): New.
+	* cert.c (ksba_cert_get_key_usage): New.
+
+	* cert.c (get_name): New, implemented rfc822 AltNames.
+	(ksba_cert_get_issuer,ksba_cert_get_subject): Use it.
+
 2002-01-22  Werner Koch  <wk@gnupg.org>
 
 	* cert.c (ksba_cert_is_ca): New.
