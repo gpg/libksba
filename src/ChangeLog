@@ -1,5 +1,9 @@
 2002-01-23  Werner Koch  <wk@gnupg.org>
 
+	* crl.c (parse_to_next_update): Use measured length to fixup the
+	tbs_len after reading the name.  Check tbs_len before checking 
+	for the entry list.
+
 	* ksba.h (KsbaKeyUsage): New.
 	* cert.c (ksba_cert_get_key_usage): New.
 

@@ -505,14 +505,15 @@ parse_to_next_update (KsbaCRL crl)
     if (n > crl->issuer.imagelen)
       return KSBA_Bug;
     HASH (crl->issuer.image, n);
+
+    if (!tbs_ndef)
+      {
+        if (tbs_len < n)
+          return KSBA_BER_Error;
+        tbs_len -= n;
+      }
   }
 
-  if (!tbs_ndef)
-    {
-      if (tbs_len < crl->issuer.imagelen)
-        return KSBA_BER_Error;
-      tbs_len -= crl->issuer.imagelen;
-    }
 
   
   /* read the thisUpdate time */
@@ -572,29 +573,31 @@ parse_to_next_update (KsbaCRL crl)
     }
 
   /* read the first sequence tag of the optional SEQ of SEQ */
-  if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
-      && ti.is_constructed )
-    { /* yes, there is one */
-      HASH (ti.buf, ti.nhdr);
-      if (!tbs_ndef)
-        {
-          if (tbs_len < ti.nhdr)
+  if (tbs_ndef || tbs_len)
+    {
+      if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+          && ti.is_constructed )
+        { /* yes, there is one */
+          HASH (ti.buf, ti.nhdr);
+          if (!tbs_ndef)
+            {
+              if (tbs_len < ti.nhdr)
             return KSBA_BER_Error;
-          tbs_len -= ti.nhdr;
-          /* fixme: tbslen is 2 bytes too short at this point  */
-/*            if (!ti.ndef && tbs_len < ti.length) */
-/*              return KSBA_BER_Error; */
-/*            tbs_len -= ti.length;  */
+              tbs_len -= ti.nhdr;
+              if (!ti.ndef && tbs_len < ti.length)
+                return KSBA_BER_Error;
+              tbs_len -= ti.length; 
+            }
+          crl->state.have_seqseq = 1;
+          crl->state.seqseq_ndef = ti.ndef;
+          crl->state.seqseq_len  = ti.length;
+          /* and read the next */
+          err = _ksba_ber_read_tl (crl->reader, &ti);
+          if (err)
+            return err;
         }
-      crl->state.have_seqseq = 1;
-      crl->state.seqseq_ndef = ti.ndef;
-      crl->state.seqseq_len  = ti.length;
-      /* and read the next */
-      err = _ksba_ber_read_tl (crl->reader, &ti);
-      if (err)
-        return err;
     }
-  
+
   /* we need to save some stuff for the next round */
   crl->state.ti = ti;
   crl->state.outer_ndef = outer_ndef;
