@@ -23,10 +23,9 @@
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
-# Note: We won't change the libversion while we are heavy working on Aegypten.
-AC_INIT(libksba, 0.0.0a-cvs, bug-$PACKAGE@g10code.com)
-LIBKSBA_LT_CURRENT=0
-LIBKSBA_LT_AGE=0
+AC_INIT(libksba, 0.2.0, bug-$PACKAGE@g10code.com)
+LIBKSBA_LT_CURRENT=1
+LIBKSBA_LT_AGE=1
 LIBKSBA_LT_REVISION=0
 #-------------------
 

@@ -1,3 +1,8 @@
+2002-02-07  Werner Koch  <wk@gnupg.org>
+
+	* configure.ac: Bumped version to 0.2.0
+	* Makefile.am:  Add doc directory and VERSION kludge 
+
 2002-01-11  Werner Koch  <wk@gnupg.org>
 
 	* configure.ac (AC_C_INLINE): New.
@@ -7,7 +12,7 @@
 	* configure.ac (KSBA_LIBS,KSBA_CFLAGS): Set them.
 	
 
- Copyright 2001 g10 Code GmbH
+ Copyright 2001, 2002 g10 Code GmbH
 
  This file is free software; as a special exception the author gives
  unlimited permission to copy and/or distribute it, with or without

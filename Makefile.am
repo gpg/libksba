@@ -1,5 +1,5 @@
 # Makefile.am - main makefile for libksba
-#     	Copyright (C) 2001 g10 Code GmbH
+#     	Copyright (C) 2001, 2002 g10 Code GmbH
 # 
 # This file is part of KSBA.
 # 
@@ -23,6 +23,8 @@ EXTRA_DIST = README-alpha autogen.sh
 
 SUBDIRS = src tests doc
 
+dist-hook:
+	@set -e; echo "$(VERSION)" > $(distdir)/VERSION
 
 
 
