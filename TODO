@@ -6,7 +6,6 @@
 * src/dn.c:
 
 ** Check that error handling of bad utf-8 encoding is correct
-** Implemnetd UCS-4 and UCS-2 to UTF-8 conversion 
 ** There is an ambiguity in rfc2253.
 This is related to the handling of spaces around delimiters.  At one
 place it talks about whitespace and few lines later it talks about

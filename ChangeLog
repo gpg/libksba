@@ -1,3 +1,10 @@
+2002-04-15  Werner Koch  <wk@gnupg.org>
+
+        Released 0.4.0;
+
+	* configure.ac: Bumbed libversion due to added interfaces.
+	* NEWS: Started tracking news.
+
 2002-04-01  Werner Koch  <wk@gnupg.org>
 
 	Released 0.2.3.
