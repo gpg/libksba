@@ -25,10 +25,6 @@
 #include <assert.h>
 
 #include "util.h"
-#include "ber-decoder.h"
-
-
-/* transform the object id from BER-enocding to IETF format */
 
 
 /**

@@ -150,6 +150,9 @@ struct asn_node_struct {
 
   enum asn_value_type valuetype;
   union asn_value_u value;
+  int off;                       /* offset of this TLV */
+  int nhdr;                      /* length of the header */
+  int len;                       /* length part of the TLV */
 
   AsnNode down;                  /* Pointer to the son node */
   AsnNode right;                 /* Pointer to the brother node */
@@ -195,6 +198,7 @@ AsnNode _ksba_asn_expand_tree (AsnNode src_root);
 
 /*-- asn1-func.c --*/
 void _ksba_asn_node_dump (AsnNode p, FILE *fp);
+void _ksba_asn_node_dump_all (AsnNode root, FILE *fp);
 
 
 

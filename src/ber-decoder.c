@@ -38,6 +38,7 @@ struct tag_info {
   unsigned long length; /* length part of the TLV */
   int ndef;             /* It is an indefinite length */
   size_t nhdr;          /* number of bytes in the TL */
+  unsigned char buf[10]; /* buffer for the TL */
 };
 
 
@@ -71,6 +72,12 @@ struct ber_decoder_s {
   DECODER_STATE ds;
   int bypass;
   int debug;
+  int use_image;
+  struct {
+    unsigned char *buf;
+    size_t used;
+    size_t length;
+  } image;
   struct {
     int primitive;  /* current value is a primitive one */
     int length;     /* length of the primitive one */
@@ -381,7 +388,7 @@ read_tl (BerDecoder d, struct tag_info *ti)
   c = read_byte (d->reader);
   if (c==-1)
     return eof_or_error (d, 0);
-  ti->nhdr++;
+  ti->buf[ti->nhdr++] = c;
   ti->class = (c & 0xc0) >> 6;
   ti->is_constructed = !!(c & 0x20);
   tag = c & 0x1f;
@@ -395,7 +402,9 @@ read_tl (BerDecoder d, struct tag_info *ti)
           c = read_byte (d->reader);
           if (c == -1)
             return eof_or_error (d, 1);
-          ti->nhdr++;
+          if (ti->nhdr >= DIM (ti->buf))
+            return set_error(d, NULL, "tag+length header too large");
+          ti->buf[ti->nhdr++] = c;
           tag |= c & 0x7f;
         }
       while (c & 0x80);
@@ -406,7 +415,9 @@ read_tl (BerDecoder d, struct tag_info *ti)
   c = read_byte (d->reader);
   if (c == -1)
     return eof_or_error (d, 1);
- ti->nhdr++;
+  if (ti->nhdr >= DIM (ti->buf))
+    return set_error(d, NULL, "tag+length header too large");
+  ti->buf[ti->nhdr++] = c;
   if ( !(c & 0x80) )
     ti->length = c;
   else if (c == 0x80)
@@ -428,7 +439,9 @@ read_tl (BerDecoder d, struct tag_info *ti)
           c = read_byte (d->reader);
           if (c == -1)
             return eof_or_error (d, 1);
-          ti->nhdr++;
+          if (ti->nhdr >= DIM (ti->buf))
+            return set_error(d, NULL, "tag+length header too large");
+          ti->buf[ti->nhdr++] = c;
           len |= c & 0xff;
         }
       ti->length = len;
@@ -723,6 +736,8 @@ match_der (AsnNode root, const struct tag_info *ti,
     {
       if (debug)
         printf ("   use default value\n");
+      if (node->type == TYPE_TAG)
+        ds->cur.next_tag = 1;
       *retnode = node;
       return 2;
     }
@@ -749,7 +764,6 @@ decoder_deinit (BerDecoder d)
   release_decoder_state (d->ds);
   d->ds = NULL;
   d->val.node = NULL;
-  /* FIXME: release root */
 }
 
 
@@ -767,11 +781,29 @@ decoder_next (BerDecoder d)
     {
       return err;
     }
-  
+
   if (debug)
     {
       printf ("ReadTLV <"); dump_tlv (&ti, stdout); printf (">\n");
     }
+
+  if (d->use_image)
+    {
+      if (!d->image.buf)
+        {
+          d->image.length = ti.length + 100;
+          d->image.used = 0;
+          d->image.buf = xtrymalloc (d->image.length);
+          if (!d->image.buf)
+            return KSBA_Out_Of_Core;
+        }
+
+      if (ti.nhdr + d->image.used >= d->image.length)
+        return set_error (d, NULL, "image buffer too short to store the tag");
+      memcpy (d->image.buf + d->image.used, ti.buf, ti.nhdr);
+      d->image.used += ti.nhdr;
+    }
+  
 
   if (!d->bypass)
     {
@@ -942,6 +974,9 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
   if (!d)
     return KSBA_Invalid_Value;
 
+  d->debug = !!getenv("DEBUG_BER_DECODER");
+  d->use_image = 0;
+  d->image.buf = NULL;
   err = decoder_init (d);
   if (err)
     return err;
@@ -1025,10 +1060,101 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
 
 
 KsbaError
-_ksba_ber_decoder_decode (BerDecoder d)
+_ksba_ber_decoder_decode (BerDecoder d, AsnNode *r_root,
+                          unsigned char **r_image, size_t *r_imagelen)
 {
-  
-  return -1;
+  KsbaError err;
+  AsnNode node;
+  unsigned char *buf = NULL;
+  size_t buflen = 0;;
+
+  if (!d)
+    return KSBA_Invalid_Value;
+
+  if (r_root)
+    *r_root = NULL;
+
+  d->use_image = 1;
+  d->image.buf = NULL;
+
+  err = decoder_init (d);
+  if (err)
+    return err;
+
+  while (!(err = decoder_next (d)))
+    {
+      int n, c;
+
+      node = d->val.node;
+      if (node && d->use_image)
+        {
+          node->off = ksba_reader_tell (d->reader) - d->val.nhdr;
+          node->nhdr = d->val.nhdr;
+          node->len = d->val.length;
+          if (d->image.used + d->val.length > d->image.length)
+            err = set_error(d, NULL, "TLV length too large");
+          else if (d->val.primitive)
+            {
+              for (n=0; n < d->val.length; n++)
+                {
+                  if ( (c=read_byte (d->reader)) == -1)
+                    {
+                      err = eof_or_error (d, 1);
+                      break;
+                    }
+                  d->image.buf[d->image.used++] = c;
+                }
+            }
+        }
+      else if (node && d->val.primitive)
+        {
+          if (!buf || buflen < d->val.length)
+            {
+              xfree (buf);
+              buflen = d->val.length + 100;
+              buf = xtrymalloc (buflen);
+              if (!buf)
+                err = KSBA_Out_Of_Core;
+            }
+
+          for (n=0; !err && n < d->val.length; n++)
+            {
+              if ( (c=read_byte (d->reader)) == -1)
+                err =  eof_or_error (d, 1);
+              buf[n] = c;
+            }
+          if (err)
+            break;
+
+          switch (node->type)
+            {
+            default:
+              _ksba_asn_set_value (node, VALTYPE_MEM, buf, n);
+              break;
+            }
+        }
+      else
+        {
+          err = decoder_skip (d);
+        }
+      if (err)
+        break;
+    }
+  if (err == -1)
+    err = 0;
+
+  if (r_root && !err)
+    {
+      *r_root = d->root;
+      d->root = NULL;
+      *r_image = d->image.buf;
+      d->image.buf = NULL;
+      *r_imagelen = d->image.used;
+    }
+
+  decoder_deinit (d);
+  xfree (buf);
+  return err;
 }
 
 

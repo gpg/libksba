@@ -19,8 +19,8 @@
 
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST = ksba-config.in 
-BUILT_SOURCES = asn1-parse.c
+EXTRA_DIST = ksba-config.in mkerrors
+BUILT_SOURCES = asn1-parse.c errors.c
 bin_SCRIPTS = ksba-config
 include_HEADERS = ksba.h
 lib_LTLIBRARIES = libksba.la
@@ -36,8 +36,10 @@ libksba_la_SOURCES = \
 	reader.c reader.h \
 	asn1-parse.y asn1-parse.h \
 	asn1-func.c asn1-func.h \
-	oid.c \
-	util.c util.h	
+	cert.c cert.h \
+	keyinfo.c keyinfo.h \
+	oid.c dn.c time.c convert.h \
+	util.c util.h errors.c	
 
 asn1_gentables_SOURCES = \
 	asn1-gentables.c \
@@ -59,6 +61,8 @@ ber_dump_SOURCES = \
 
 asn1-parse.c : asn1-func.h
 
+errors.c : ksba.h
+	$(srcdir)/mkerrors < $(srcdir)/ksba.h > errors.c
 
 
 

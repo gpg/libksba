@@ -1,6 +1,6 @@
-# Makefile.am - main makefile for libksba
-#     	Copyright (C) 2001 g10 Code GmbH
-# 
+# Makefile.am - for the KSBA regression tests
+#       Copyright (C) 2001 g10 Code GmbH
+# 	
 # This file is part of KSBA.
 # 
 # KSBA is free software; you can redistribute it and/or modify
@@ -19,9 +19,18 @@
 
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST = README-alpha autogen.sh
+TESTS_ENVIRONMENT = 
 
-SUBDIRS = src tests
+test_certs = root-cert-1.der root-cert-2.der pers-cert-1.der
+
+EXTRA_DIST = $(test_certs)
+
+TESTS = cert-basic
+
+noinst_PROGRAMS = $(TESTS)
+LDADD = ../src/libksba.la
+
+
 
 
 

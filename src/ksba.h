@@ -20,6 +20,9 @@
 
 #ifndef KSBA_H
 #define KSBA_H 1
+
+#include <time.h>
+
 #ifdef __cplusplus
 extern "C" { 
 #if 0
@@ -48,6 +51,10 @@ typedef enum {
   KSBA_Syntax_Error = 16,
   KSBA_Invalid_Tag = 17,
   KSBA_Invalid_Length = 18,
+  KSBA_Invalid_Keyinfo = 19,
+  KSBA_Unexpected_Tag = 20,
+  KSBA_Not_DER_Encoded = 21,
+  KSBA_Unknown_Algorithm = 22,
 } KsbaError;
 
 typedef enum {
@@ -77,6 +84,11 @@ typedef struct ksba_asn_tree_s *KsbaAsnTree;
 /*-- cert.c --*/
 KsbaCert ksba_cert_new (void);
 void     ksba_cert_release (KsbaCert cert);
+KsbaError ksba_cert_read_der (KsbaCert cert, KsbaReader reader);
+unsigned char *ksba_cert_get_serial (KsbaCert cert);
+char *ksba_cert_get_issuer (KsbaCert cert);
+time_t ksba_cert_get_validity (KsbaCert cert, int what);
+char *ksba_cert_get_subject (KsbaCert cert);
 
 
 /*-- reader.c --*/
@@ -115,6 +127,9 @@ void *ksba_calloc (size_t n, size_t m );
 void *ksba_realloc (void *p, size_t n);
 char *ksba_strdup (const char *p);
 void  ksba_free ( void *a );
+
+/*-- errors.c (generated from this file) --*/
+const char *ksba_strerror (KsbaError err);
 
 #ifdef __cplusplus
 }

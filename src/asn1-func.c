@@ -81,6 +81,9 @@ add_node (node_type_t type)
   punt->type = type;
   punt->valuetype = VALTYPE_NULL;
   punt->value.v_cstr = NULL;
+  punt->off = -1;
+  punt->nhdr = 0;
+  punt->len = 0;
   punt->down = NULL;
   punt->right = NULL;
   punt->link_next = NULL;
@@ -168,6 +171,7 @@ copy_value (AsnNode d, const AsnNode s)
     case VALTYPE_MEM:
       len = s->value.v_mem.len;
       buf = len? s->value.v_mem.buf : NULL;
+      break;
     case VALTYPE_LONG:
       len = sizeof (long);
       buf = &s->value.v_long;
@@ -544,9 +548,55 @@ _ksba_asn_node_dump (AsnNode p, FILE *fp)
     fputs (",in_array",fp);
   if (p->flags.not_used)
     fputs (",not_used",fp);
+  if (p->off != -1 )
+    fprintf (fp, " %d.%d.%d", p->off, p->nhdr, p->len );
   
 }
 
+void
+_ksba_asn_node_dump_all (AsnNode root, FILE *fp)
+{
+  AsnNode p = root;
+  int indent = 0;
+
+  while (p)
+    {
+      fprintf (fp, "%*s", indent, "");
+      _ksba_asn_node_dump (p, fp);
+      putc ('\n', fp);
+
+      if (p->down)
+	{
+	  p = p->down;
+	  indent += 2;
+	}
+      else if (p == root)
+	{
+	  p = NULL;
+	  break;
+	}
+      else if (p->right)
+	p = p->right;
+      else
+	{
+	  while (1)
+	    {
+	      p = find_up (p);
+	      if (p == root)
+		{
+		  p = NULL;
+		  break;
+		}
+	      indent -= 2;
+	      if (p->right)
+		{
+		  p = p->right;
+		  break;
+		}
+	    }
+	}
+    }
+}
 
 /**
  * ksba_asn_tree_dump:

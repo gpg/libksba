@@ -96,11 +96,12 @@ AC_CHECK_HEADERS([string.h])
 AC_C_CONST
 
 # Checks for library functions.
-AC_CHECK_FUNCS([memmove strchr strtol strtoul stpcpy])
+AC_CHECK_FUNCS([memmove strchr strtol strtoul stpcpy timegm])
 
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
 src/ksba-config
+tests/Makefile
 ])
 AC_OUTPUT

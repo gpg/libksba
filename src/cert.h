@@ -21,9 +21,14 @@
 #ifndef CERT_H
 #define CERT_H 1
 
+#include "asn1-func.h"
 
 struct ksba_cert_s {
   int initialized;
+  KsbaAsnTree asn_tree;
+  AsnNode root;  /* root of the tree with the values */
+  unsigned char *image;
+  size_t imagelen;
 };
 
 

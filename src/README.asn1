@@ -28,19 +28,14 @@ Other differences are:
 
 FILE LIST
 ---------
-asn1-readme.txt (ASN.readme.txt) this file
+README.asn1 (ASN.readme.txt) this file
 
-asn1-parse.y    (cert_ASN.y)     bison input file
+asn1-parse.y (cert_ASN.y)     bison input file
 
 asn1-func.c (cert_asn1.c)     functions for ASN1 parser and for
                               reading and setting elements value
 asn1-func.h (cert_asn1.h)     contains constants for the
                               gnutls_asn1.c.  Must be included in files 
-                              that use ASN1 parser.
-asn1-der.c (cert_der.c)       functions for der encoding creation and
-                              analysis
-asn1-der.h (cert_der.h)       contains constants for the gnutls_der.c.
-                              Must be included in files 
                               that use ASN1 parser.
 
 CertificateExample.c          example based on Appendix D.1 of rfc2459
