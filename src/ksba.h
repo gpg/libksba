@@ -343,8 +343,9 @@ ksba_writer_set_filter (KsbaWriter w,
                         void *filter_arg);
 
 KsbaError ksba_writer_write (KsbaWriter w, const void *buffer, size_t length);
-
-
+KsbaError ksba_writer_write_octet_string (KsbaWriter w,
+                                          const void *buffer, size_t length,
+                                          int flush);
 
 /*-- asn1-parse.y --*/
 int ksba_asn_parse_file (const char *filename, KsbaAsnTree *result, int debug);

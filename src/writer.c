@@ -28,12 +28,14 @@
 
 #include "ksba.h"
 #include "writer.h"
+#include "asn1-func.h"
+#include "ber-help.h"
 
 /**
  * ksba_writer_new:
  * 
  * Create a new but uninitialized KsbaWriter Object.  Using this
- * write object in unitialized state does always return an errorf.
+ * write object in unitialized state does always return an error.
  * 
  * Return value: KsbaWriter Object or NULL in case of memory shortage.
  **/
@@ -373,7 +375,27 @@ ksba_writer_write (KsbaWriter w, const void *buffer, size_t length)
   return err;
 } 
 
+/* Write LENGTH bytes of BUFFER to W while encoding it as an BER
+   encoded octet string.  With FLUSH set to 1 the octect strema will
+   be terminated.  This may be used along with a BUFFER set to NULL to
+   just write an end tag.  If the entire octet string is available in
+   BUFFER it is a good idea to set FLUS to 1 so that the function does
+   not need to encode the string partially. */
+KsbaError
+ksba_writer_write_octet_string (KsbaWriter w,
+                                const void *buffer, size_t length, int flush)
+{
+  KsbaError err = 0;
 
+  if (buffer && length)
+    {
+      err = _ksba_ber_write_tl (w, TYPE_OCTET_STRING,
+                                CLASS_UNIVERSAL, 0, length);
+      if (!err)
+        err = ksba_writer_write (w, buffer, length);
+    }
 
-
-
+  if (!err && flush) /* write an end tag */
+      err = _ksba_ber_write_tl (w, 0, 0, 0, 0);
+  return err;
+}

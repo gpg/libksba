@@ -1,3 +1,8 @@
+2002-06-12  Werner Koch  <wk@gnupg.org>
+
+	* writer.c (ksba_writer_write_octet_string): New.
+	* cms.c (write_encrypted_cont): Use it here.
+
 2002-05-17  Werner Koch  <wk@gnupg.org>
 
 	* Makefile.am: Tweaked to avoid double compilations.

@@ -260,15 +260,12 @@ write_encrypted_cont (KsbaCMS cms)
   while (!(err = ksba_reader_read (cms->reader, buffer,
                                    sizeof buffer, &nread)) )
     {
-      err = _ksba_ber_write_tl (cms->writer, TYPE_OCTET_STRING,
-                                CLASS_UNIVERSAL, 0, nread);
-      if (!err)
-        err = ksba_writer_write (cms->writer, buffer, nread);
+      err = ksba_writer_write_octet_string (cms->writer, buffer, nread, 0);
       if (err)
         return err;
     }
   if (err == -1) /* write the end tag */
-      err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
+      err = ksba_writer_write_octet_string (cms->writer, NULL, 0, 1);
 
   return err;
 }
@@ -1709,7 +1706,7 @@ ct_build_data (KsbaCMS cms)
 
 
 
-/* write everything up to the encapsulated data content type */
+/* Write everything up to the encapsulated data content type. */
 static KsbaError
 build_signed_data_header (KsbaCMS cms)
 {
@@ -1719,7 +1716,7 @@ build_signed_data_header (KsbaCMS cms)
   size_t len;
   int i;
 
-  /* Write the outer contentInfo */
+  /* Write the outer contentInfo. */
   err = _ksba_ber_write_tl (cms->writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, 0);
   if (err)
     return err;
