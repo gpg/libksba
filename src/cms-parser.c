@@ -619,29 +619,41 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
         return err;
     }
 
-
-
   if (ti.class == CLASS_CONTEXT && ti.tag == 0 && ti.is_constructed)
-    {  /* implicit SET OF certificateSet with elements of CHOICE, but
+    {  /* Implicit SET OF certificateSet with elements of CHOICE, but
           we assume the first choice which is a Certificate; all other
           choices are obsolete.  We are now parsing a set of
           certificates which we do by utilizing the ksba_cert code. */
       ksba_cert_t cert;
+      int expect_endtag;
 
-      if (ti.ndef)
-        return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);
+      expect_endtag = !!ti.ndef;
       
       for (;;)
         {
           struct certlist_s *cl;
 
-          /* first see whether this is really a sequence */
+          /* First see whether this is really a sequence */
           err = _ksba_ber_read_tl (cms->reader, &ti);
           if (err)
             return err;
-          if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
-                 && ti.is_constructed))
+          if (expect_endtag && !ti.class && ti.tag == TYPE_NULL )
+            {
+              /* This is an end tag.  Read the next tag but don't fail
+                 if this is just an EOF.  */
+              err = _ksba_ber_read_tl (cms->reader, &ti);
+              if (err)
+                {
+                  if (gpg_err_code (err) == GPG_ERR_EOF)
+                    err = 0;
+                  return err;
+                }
+              break;
+            }
+          if (!(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+                && ti.is_constructed))
             break; /* not a sequence, so we are ready with the set */
+
           /* We must unread so that the standard parser sees the sequence */
           err = ksba_reader_unread (cms->reader, ti.buf, ti.nhdr);
           if (err)
@@ -673,18 +685,32 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
           parsing to a - not yet existing - ksba_crl module.  CRLs are
           quite important for other applications too so we should
           provide a nice interface */
-       /* fprintf (stderr,"WARNING: Can't handle CRLs yet\n"); */
+      int expect_endtag;
 
-      if (ti.ndef)
-        return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);
+
+      expect_endtag = !!ti.ndef;
 
       /* FIXME this is just dummy read code */
+       /* fprintf (stderr,"WARNING: Can't handle CRLs yet\n"); */
       for (;;)
         {
           /* first see whether this is really a sequence */
           err = _ksba_ber_read_tl (cms->reader, &ti);
           if (err)
             return err;
+          if (expect_endtag && !ti.class && ti.tag == TYPE_NULL )
+            {
+              /* This is an end tag.  Read the next tag but don't fail
+                 if this is just an EOF.  */
+              err = _ksba_ber_read_tl (cms->reader, &ti);
+              if (err)
+                {
+                  if (gpg_err_code (err) == GPG_ERR_EOF)
+                    err = 0;
+                  return err;
+                }
+              break;
+            }
           if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
                  && ti.is_constructed))
             break; /* not a sequence, so we are ready with the set */
