@@ -1351,7 +1351,7 @@ parse_distribution_point (const unsigned char *der, size_t derlen,
 }
 
 /* Return the CRLDistPoints given in the cert extension.  IDX should
-   be iterated started from 0 until the function retruns -1.
+   be iterated started from 0 until the function returns -1.
    R_DISTPOINT returns a ksba_name_t object with the distribution point
    name(s) the return value may be NULL to indicate that this name is
    not available.  R_ISSUER returns the CRL issuer; if the returned
