@@ -31,18 +31,30 @@
 
 struct {
   const char *name;
+  int allowed_by_sphinx;
   const char *description;
   int                  oidlen;
   const unsigned char *oid;
-} oid_name_tbl[] = {
-{"CN", "commonName",            3, "\x55\x04\x03"}, /* 2.5.4.3 */
-{"C",  "countryName",           3, "\x55\x04\x06"}, /* 2.5.4.6 */
-{"L" , "localityName",          3, "\x55\x04\x07"}, /* 2.5.4.7 */
-{"ST", "stateOrProvinceName",   3, "\x55\x04\x08"}, /* 2.5.4.8 */
-{"STREET", "streetAddress",     3, "\x55\x04\x09"}, /* 2.5.4.9 */
-{"O",  "organizationName",      3, "\x55\x04\x0a"}, /* 2.5.4.10 */
-{"OU", "organizationalUnitName",3, "\x55\x04\x0b"}, /* 2.5.4.11 */
-{"DC", "domainComponent",      10, 
+} oid_name_tbl[] = { /* see rfc2256 for a list of them */
+{"CN", 1, "CommonName",            3, "\x55\x04\x03"}, /* 2.5.4.3 */
+{"SN", 1, "SurName",               3, "\x55\x04\x04"}, /* 2.5.4.4 */
+{"SERIALNUMBER", 0, "SerialNumber",3, "\x55\x04\x05"}, /* 2.5.4.5 */
+{"C",  1, "CountryName",           3, "\x55\x04\x06"}, /* 2.5.4.6 */
+{"L" , 1, "LocalityName",          3, "\x55\x04\x07"}, /* 2.5.4.7 */
+{"ST", 1, "StateOrProvince",       3, "\x55\x04\x08"}, /* 2.5.4.8 */
+{"STREET", 0, "StreetAddress",     3, "\x55\x04\x09"}, /* 2.5.4.9 */
+{"O",  1, "OrganizationName",      3, "\x55\x04\x0a"}, /* 2.5.4.10 */
+{"OU", 1, "OrganizationalUnit",    3, "\x55\x04\x0b"}, /* 2.5.4.11 */
+{"TITLE",1, "Title",               3, "\x55\x04\x0c"}, /* 2.5.4.12 */
+{"DESCRIPTION",
+       0, "Description",           3, "\x55\x04\x0d"}, /* 2.5.4.13 */
+{"BUSINESSCATEGORY",
+       1, "BusinessCategory",      3, "\x55\x04\x0f"}, /* 2.5.4.15 */
+{"POSTALADDRESS",
+       0, "PostalAddress",         3, "\x55\x04\x11"}, /* 2.5.4.16 */
+{"POSTALCODE" , 1, "PostalCode",   3, "\x55\x04\x11"}, /* 2.5.4.17 */
+{"GIVENNAME"  , 1, "GivenName",    3, "\x55\x04\x2a"}, /* 2.5.4.42 */
+{"DC", 0, "domainComponent",      10, 
        "\x09\x92\x26\x89\x93\xF2\x2C\x64\x01\x01"},
                             /* 0.9.2342.19200300.100.1.25 */
 
@@ -151,16 +163,39 @@ get_stringbuf (struct stringbuf *sb)
 
 
 
-/* Append VALUE of LENGTH and TYPE to SB.  Perform quoting and
-   character set conversion when needed */
+/* Append VALUE of LENGTH and TYPE to SB.  Do the required quoting. */
 static void
-append_value (node_type_t type, const unsigned char *value, size_t length,
-              struct stringbuf *sb)
+append_utf8_value (const unsigned char *value, size_t length,
+                   struct stringbuf *sb)
 {
-  /* FIXME:  Most stuff is missing */
-
-  
+  /* FIXME */
   put_stringbuf_mem (sb, value, length);
+}
+
+/* Append VALUE of LENGTH and TYPE to SB.  Do character set conversion
+   and quoting */
+static void
+append_latin1_value (const unsigned char *value, size_t length,
+                     struct stringbuf *sb)
+{
+  unsigned char tmp[2];
+  const unsigned char *s = value;
+  size_t n = 0;
+
+  for (;;)
+    {
+      for (value = s; n < length && !(*s & 0x80); n++, s++)
+        ;
+      if (s != value)
+        put_stringbuf_mem (sb, value, s-value);
+      if (n==length)
+        return; /* ready */
+      assert ((*s & 0x80));
+      tmp[0] = 0xc0 | ((*s >> 6) & 3);
+      tmp[1] = 0x80 | ( *s & 0x3f );
+      put_stringbuf_mem (sb, tmp, 2);
+      n++; s++;
+    }
 }
 
 /* Append attribute and value.  ROOT is the sequence */
@@ -192,7 +227,6 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
     put_stringbuf (sb, name);
   else
     { /* No name in table: use the oid */
-      
       char *p = ksba_oid_to_str (image+node->off+node->nhdr, node->len);
       if (!p)
         return KSBA_Out_Of_Core;
@@ -205,12 +239,19 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
   if (!node || node->off == -1)
     return KSBA_No_Value;
 
-  switch (node->type)
+  switch (use_hex? 0 : node->type)
     {
     case TYPE_UTF8_STRING:
+      append_utf8_value (image+node->off+node->nhdr, node->len, sb);
+      break;
     case TYPE_PRINTABLE_STRING:
-/*      case TYPE_TELETEX_STRING: */
     case TYPE_IA5_STRING:
+      /* we assume that wrong encodings are latin-1 */
+    case TYPE_TELETEX_STRING: /* most likely latin-1 */
+      append_latin1_value (image+node->off+node->nhdr, node->len, sb);
+      break;
+
+/*      case TYPE_TELETEX_STRING: */
 /*      case TYPE_GRAPHIC_STRING: */
 /*      case TYPE_VISIBLE_STRING: */
 /*      case TYPE_GENERAL_STRING: */
@@ -218,13 +259,9 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
 /*      case TYPE_CHARACTER_STRING: */
 /*      case TYPE_BMP_STRING: */
       break;
-    default:
-      use_hex = 1;
-      break;
-    }
 
-  if (use_hex)
-    {
+    case 0: /* forced usage of hex */
+    default:
       put_stringbuf (sb, "#");
       for (i=0; i < node->len; i++)
         { 
@@ -233,9 +270,8 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
           put_stringbuf (sb, tmp);
         }
       put_stringbuf (sb, "#");
+      break;
     }
-  else
-    append_value (node->type, image+node->off+node->nhdr, node->len, sb);
 
   return 0;
 }
