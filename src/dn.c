@@ -32,34 +32,36 @@
 
 struct {
   const char *name;
-  int allowed_by_sphinx;
+  int allowed_by_rfc2253;
   const char *description;
   int                  oidlen;
   const unsigned char *oid;
 } oid_name_tbl[] = { /* see rfc2256 for a list of them */
 {"CN", 1, "CommonName",            3, "\x55\x04\x03"}, /* 2.5.4.3 */
-{"SN", 1, "SurName",               3, "\x55\x04\x04"}, /* 2.5.4.4 */
+{"SN", 0, "SurName",               3, "\x55\x04\x04"}, /* 2.5.4.4 */
 {"SERIALNUMBER", 0, "SerialNumber",3, "\x55\x04\x05"}, /* 2.5.4.5 */
 {"C",  1, "CountryName",           3, "\x55\x04\x06"}, /* 2.5.4.6 */
 {"L" , 1, "LocalityName",          3, "\x55\x04\x07"}, /* 2.5.4.7 */
 {"ST", 1, "StateOrProvince",       3, "\x55\x04\x08"}, /* 2.5.4.8 */
-{"STREET", 0, "StreetAddress",     3, "\x55\x04\x09"}, /* 2.5.4.9 */
+{"STREET", 1, "StreetAddress",     3, "\x55\x04\x09"}, /* 2.5.4.9 */
 {"O",  1, "OrganizationName",      3, "\x55\x04\x0a"}, /* 2.5.4.10 */
 {"OU", 1, "OrganizationalUnit",    3, "\x55\x04\x0b"}, /* 2.5.4.11 */
-{"TITLE",1, "Title",               3, "\x55\x04\x0c"}, /* 2.5.4.12 */
+{"TITLE",0, "Title",               3, "\x55\x04\x0c"}, /* 2.5.4.12 */
 {"DESCRIPTION",
        0, "Description",           3, "\x55\x04\x0d"}, /* 2.5.4.13 */
 {"BUSINESSCATEGORY",
-       1, "BusinessCategory",      3, "\x55\x04\x0f"}, /* 2.5.4.15 */
+       0, "BusinessCategory",      3, "\x55\x04\x0f"}, /* 2.5.4.15 */
 {"POSTALADDRESS",
        0, "PostalAddress",         3, "\x55\x04\x11"}, /* 2.5.4.16 */
-{"POSTALCODE" , 1, "PostalCode",   3, "\x55\x04\x11"}, /* 2.5.4.17 */
-{"GIVENNAME"  , 1, "GivenName",    3, "\x55\x04\x2a"}, /* 2.5.4.42 */
-{"DC", 0, "domainComponent",      10, 
-       "\x09\x92\x26\x89\x93\xF2\x2C\x64\x01\x01"},
+{"POSTALCODE" , 0, "PostalCode",   3, "\x55\x04\x11"}, /* 2.5.4.17 */
+{"GIVENNAME"  , 0, "GivenName",    3, "\x55\x04\x2a"}, /* 2.5.4.42 */
+{"DC", 1, "domainComponent",      10, 
+       "\x09\x92\x26\x89\x93\xF2\x2C\x64\x01\x09"},
                             /* 0.9.2342.19200300.100.1.25 */
+{"UID", 1, "userid",              10,
+       "\x09\x92\x26\x89\x93\xF2\x2C\x64\x01\x01"},
+                            /* 0.9.2342.19200300.100.1.1  */
 
-/* {"UID","userid",}  FIXME: I don't have the OID  it might be ...100.1.1 */
 { NULL }
 };
 
@@ -419,7 +421,8 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
   name = NULL;
   for (i=0; oid_name_tbl[i].name; i++)
     {
-      if (node->len == oid_name_tbl[i].oidlen
+      if (oid_name_tbl[i].allowed_by_rfc2253
+          && node->len == oid_name_tbl[i].oidlen
           && !memcmp (image+node->off+node->nhdr,
                       oid_name_tbl[i].oid, node->len))
         {
