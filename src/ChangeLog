@@ -1,3 +1,8 @@
+2002-01-07  Werner Koch  <wk@gnupg.org>
+
+	* ksba.h (KsbaCRLReason): New.
+	* crl.c: Basically works.
+
 2002-01-05  Werner Koch  <wk@gnupg.org>
 
 	* asn1-func.c (_ksba_asn_find_node): Moved code to ..

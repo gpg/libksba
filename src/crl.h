@@ -61,6 +61,7 @@ struct ksba_crl_s {
   struct {
     KsbaSexp serial;
     time_t revocation_date;
+    KsbaCRLReason reason;
   } item;
 
 

@@ -109,6 +109,16 @@ typedef enum {
   KSBA_SR_END_ITEMS = 11,
 } KsbaStopReason;
 
+typedef enum {
+  KSBA_CRLREASON_UNSPECIFIED = 0,
+  KSBA_CRLREASON_KEY_COMPROMISE = 1,
+  KSBA_CRLREASON_CA_COMPROMISE = 2,
+  KSBA_CRLREASON_AFFILIATION_CHANGED = 3,
+  KSBA_CRLREASON_SUPERSEEDED = 4,
+  KSBA_CRLREASON_CESSATION_OF_OPERATION = 5,
+  KSBA_CRLREASON_CERTIFICATE_HOLD = 6,
+  KSBA_CRLREASON_REMOVE_FROM_CRL = 8
+} KsbaCRLReason;
 
 
 /* X.509 certificates are represented by this object.
@@ -228,6 +238,11 @@ void      ksba_crl_release (KsbaCRL crl);
 KsbaError ksba_crl_set_reader (KsbaCRL crl, KsbaReader r);
 const char *ksba_crl_get_digest_algo (KsbaCRL crl);
 KsbaError ksba_crl_get_issuer (KsbaCRL crl, char **r_issuer);
+KsbaError ksba_crl_get_update_times (KsbaCRL crl, time_t *this, time_t *next);
+KsbaError ksba_crl_get_item (KsbaCRL crl,
+                             KsbaSexp *r_serial,
+                             time_t *r_revocation_date,
+                             KsbaCRLReason *r_reason);
 KsbaSexp  ksba_crl_get_sig_val (KsbaCRL crl);
 KsbaError ksba_crl_parse (KsbaCRL crl, KsbaStopReason *r_stopreason);
 

@@ -159,10 +159,70 @@ ksba_crl_get_issuer (KsbaCRL crl, char **r_issuer)
   return err;
 }
 
+/**
+ * ksba_crl_get_update_times:
+ * @crl: CRL object
+ * @this: Returns the thisUpdate value
+ * @next: Returns the nextUpdate value.
+ * 
+ * Return value: 0 on success or an error code
+ **/
+KsbaError
+ksba_crl_get_update_times (KsbaCRL crl, time_t *this, time_t *next)
+{
+  if (!crl)
+    return KSBA_Invalid_Value;
+  if (crl->this_update == (time_t)(-1) || crl->next_update == (time_t)(-1))
+    return KSBA_Invalid_Time;
+  if (this)
+    *this = crl->this_update;
+  if (next)
+    *next = crl->next_update;
+  return 0;
+}
+
+/**
+ * ksba_crl_get_item:
+ * @crl: CRL object
+ * @r_serial: Returns a S-exp with the serial number; caller must free.
+ * @r_revocation_date: Returns the recocation date
+ * @r_reason: Retrun the reason for revocation
+ * 
+ * Return the serial number, revocation time and reason of the current
+ * item.  Any of these arguments may be passed as %NULL if the value
+ * is not of interest.  This function should be used after the parse
+ * function came back with %KSBA_SR_GOT_ITEM.  For efficiency reasons
+ * the function shouild be called only once, the implementation may
+ * return an error for the second call.
+ * 
+ * Return value: 0 in success or an error code.
+ **/
+KsbaError
+ksba_crl_get_item (KsbaCRL crl, KsbaSexp *r_serial,
+                   time_t *r_revocation_date, KsbaCRLReason *r_reason)
+{ 
+  if (!crl)
+    return KSBA_Invalid_Value;
+
+  if (r_serial)
+    {
+      if (!crl->item.serial)
+        return KSBA_No_Data;
+      *r_serial = crl->item.serial;
+      crl->item.serial = NULL;
+    }
+  if (r_revocation_date)
+    *r_revocation_date = crl->item.revocation_date;
+  if (r_reason)
+    *r_reason = crl->item.reason;
+  return 0;
+}
+
+
 
 /**
  * ksba_crl_get_sig_val:
- * @cms: CMS object
+ * @crl: CRL object
  * 
  * Return the actual signature in a format suitable to be used as
  * input to Libgcrypt's verification function.  The caller must free
@@ -616,7 +676,9 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
   if (err)
     return err;
 
-  /* Fixme: the seqseq length is not correct if any elemnet was ndef'd */
+  *got_entry = 1;
+
+  /* Fixme: the seqseq length is not correct if any element was ndef'd */
   crl->state.ti = ti;
   crl->state.seqseq_ndef = seqseq_ndef;
   crl->state.seqseq_len  = seqseq_len;
