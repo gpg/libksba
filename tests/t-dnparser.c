@@ -27,38 +27,8 @@
 
 #include "../src/ksba.h"
 #include "../src/convert.h"
+#include "t-common.h"
 
-#define fail_if_err(a) do { if(a) {                                       \
-                              fprintf (stderr, "%s:%d: KSBA error: %s\n", \
-                              __FILE__, __LINE__, gpg_strerror(a));   \
-                              exit (1); }                              \
-                           } while(0)
-
-
-#define fail_if_err2(f, a) do { if(a) {\
-            fprintf (stderr, "%s:%d: KSBA error on file `%s': %s\n", \
-                       __FILE__, __LINE__, (f), gpg_strerror(a));   \
-                            exit (1); }                              \
-                           } while(0)
-
-#define fail(s)  do { fprintf (stderr, "%s:%d: %s\n", __FILE__,__LINE__, (s));\
-                      exit (1); } while(0)
-
-#define xfree(a)  ksba_free (a)
-
-#if 0
-static void *
-xmalloc (size_t n)
-{
-  char *p = ksba_malloc (n);
-  if (!p)
-    {
-      fprintf (stderr, "out of core\n");
-      exit (1);
-    }
-  return p;
-}
-#endif
 
 
 static void

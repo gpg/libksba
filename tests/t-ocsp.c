@@ -1,0 +1,296 @@
+/* t-ocsp.c - Basic tests for the OCSP subsystem.
+ *      Copyright (C) 2003 g10 Code GmbH
+ *
+ * This file is part of KSBA.
+ *
+ * KSBA is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * KSBA is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <time.h>
+#include <errno.h>
+
+#include "../src/ksba.h"
+#include "../src/ocsp.h" /* FIXME remove this when ksba.h includes the API. */
+void ksba_set_hash_buffer_function ( gpg_error_t (*fnc)
+                                (void *arg, const char *oid,
+                                 const void *buffer, size_t length,
+                                 size_t resultsize,
+                                 unsigned char *result,
+                                 size_t *resultlen),
+                                     void *fnc_arg); /* FIXME: as above. */
+
+
+
+#if defined(__GNUC__) && defined(__ELF__)
+void gcry_md_hash_buffer (int algo, void *digest,
+			  const void *buffer,
+                          size_t length) __attribute__ ((weak));
+#endif
+
+#include "t-common.h"
+
+int verbose;
+int debug;
+
+
+static unsigned char *
+read_file (const char *fname, size_t *r_length)
+{
+  FILE *fp;
+  struct stat st;
+  char *buf;
+  size_t buflen;
+  
+  fp = fopen (fname, "rb");
+  if (!fp)
+    {
+      fprintf (stderr, "can't open `%s': %s\n", fname, strerror (errno));
+      return NULL;
+    }
+  
+  if (fstat (fileno(fp), &st))
+    {
+      fprintf (stderr, "can't stat `%s': %s\n", fname, strerror (errno));
+      fclose (fp);
+      return NULL;
+    }
+
+  buflen = st.st_size;
+  buf = xmalloc (buflen+1);
+  if (fread (buf, buflen, 1, fp) != 1)
+    {
+      fprintf (stderr, "error reading `%s': %s\n", fname, strerror (errno));
+      fclose (fp);
+      xfree (buf);
+      return NULL;
+    }
+  fclose (fp);
+
+  *r_length = buflen;
+  return buf;
+}
+
+
+
+ksba_cert_t
+get_one_cert (const char *fname)
+{
+  gpg_error_t err;
+  FILE *fp;
+  ksba_reader_t r;
+  ksba_cert_t cert;
+
+  fp = fopen (fname, "r");
+  if (!fp)
+    {
+      fprintf (stderr, "%s:%d: can't open `%s': %s\n", 
+               __FILE__, __LINE__, fname, strerror (errno));
+      exit (1);
+    }
+
+  err = ksba_reader_new (&r);
+  if (err)
+    fail_if_err (err);
+  err = ksba_reader_set_file (r, fp);
+  fail_if_err (err);
+
+  err = ksba_cert_new (&cert);
+  if (err)
+    fail_if_err (err);
+
+  err = ksba_cert_read_der (cert, r);
+  fail_if_err2 (fname, err);
+  return cert;
+}
+
+
+/* Create a request for the DER encoded certificate in the file
+   CERT_FNAME and its issuer's certificate in the file
+   ISSUER_CERT_FNAME. */
+void
+one_request (const char *cert_fname, const char *issuer_cert_fname)
+{
+  gpg_error_t err;
+  ksba_cert_t cert = get_one_cert (cert_fname);
+  ksba_cert_t issuer_cert = get_one_cert (issuer_cert_fname);
+  ksba_ocsp_t ocsp;
+  unsigned char *request;
+  size_t requestlen;
+
+  err = ksba_ocsp_new (&ocsp);
+  fail_if_err (err);
+  
+  err = ksba_ocsp_add_certs (ocsp, cert, issuer_cert);
+  fail_if_err (err);
+  ksba_cert_release (cert);
+  ksba_cert_release (issuer_cert);
+
+  err = ksba_ocsp_build_request (ocsp, &request, &requestlen);
+  fail_if_err (err);
+  ksba_ocsp_release (ocsp);
+
+  printf ("OCSP request of length %u created\n", (unsigned int)requestlen);
+  {
+
+    FILE *fp = fopen ("a.req", "wb");
+    if (!fp)
+      fail ("can't create output file `a.req'");
+    if (fwrite (request, requestlen, 1, fp) != 1)
+      fail ("can't write output");
+    fclose (fp);
+  }
+  
+  xfree (request);
+}
+
+
+void 
+one_response (const char *response_fname)
+{
+  gpg_error_t err;
+  ksba_ocsp_t ocsp;
+  unsigned char *request;
+  size_t requestlen;
+
+  request = read_file (response_fname, &requestlen);
+  if (!request)
+    fail ("file error");
+
+  err = ksba_ocsp_new (&ocsp);
+  fail_if_err (err);
+
+  err = ksba_ocsp_parse_response (ocsp, request, requestlen);
+  fail_if_err (err);
+
+  ksba_ocsp_release (ocsp);
+  xfree (request);
+}
+
+
+#if defined(__GNUC__) && defined(__ELF__)
+gpg_error_t 
+my_hash_buffer (void *arg, const char *oid,
+                const void *buffer, size_t length, size_t resultsize,
+                unsigned char *result, size_t *resultlen)
+{
+  if (oid && strcmp (oid, "1.3.14.3.2.26")) 
+    return gpg_error (GPG_ERR_NOT_SUPPORTED); /* We only support SHA-1. */ 
+  if (resultsize < 20)
+    return gpg_error (GPG_ERR_BUFFER_TOO_SHORT);
+  gcry_md_hash_buffer (2, result, buffer, length); 
+  *resultlen = 20;
+  return 0;
+}
+#endif /* __GNUC__  && __ELF__ */
+
+static void
+setup_libgcrypt (void)
+{
+#if defined(__GNUC__) && defined(__ELF__)
+  if (gcry_md_hash_buffer)
+    {
+      ksba_set_hash_buffer_function (my_hash_buffer, NULL);
+      return;
+    }
+#endif /* __GNUC__  && __ELF__ */
+  fputs ("libgcrypt not available - can't run this test\n", stderr);
+  exit (0);
+}
+
+
+/* ( printf "POST / HTTP/1.0\r\nContent-Type: application/ocsp-request\r\nContent-Length: `wc -c <a.req | tr -d ' '`\r\n\r\n"; cat a.req ) |  nc -v ocsp.openvalidation.org 8088   | sed 1,8d >a.rsp  */
+
+
+int 
+main (int argc, char **argv)
+{
+  int last_argc = -1;
+  int response_mode = 0;
+  const char *srcdir = getenv ("srcdir");
+  
+  if (!srcdir)
+    srcdir = ".";
+
+  setup_libgcrypt ();
+ 
+  if (argc)
+    {
+      argc--; argv++;
+    }
+  while (argc && last_argc != argc )
+    {
+      last_argc = argc;
+      if (!strcmp (*argv, "--verbose"))
+        {
+          verbose = 1;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--debug"))
+        {
+          verbose = debug = 1;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--response"))
+        {
+          response_mode = 1;
+          argc--; argv++;
+        }
+    }          
+
+ 
+  if (response_mode)
+    {
+      for (; argc ; argc--, argv++)
+        one_response (*argv);
+    }
+  else if (argc)
+    {
+      for ( ; argc > 1; argc -=2, argv += 2)
+        one_request (*argv, argv[1]);
+      if (argc)
+        fputs ("warning: extra argument ignored\n", stderr);
+    }
+  else
+    {
+      struct {
+        const char *cert_fname;
+        const char *issuer_cert_fname;
+      } files[] = {
+        { "samples/ov-userrev.crt", "samples/ov-root-ca-cert.crt" },
+        { NULL }
+      };
+      int idx;
+      
+      for (idx=0; files[idx].cert_fname; idx++)
+        {
+          char *f1, *f2;
+
+          f1 = prepend_srcdir (files[idx].cert_fname);
+          f2 = prepend_srcdir (files[idx].issuer_cert_fname);
+          one_request (f1, f2);
+          xfree (f2);
+          xfree (f1);
+        }
+    }
+  
+  return 0;
+}
+

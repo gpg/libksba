@@ -27,72 +27,7 @@
 
 #include "../src/ksba.h"
 
-#define fail_if_err(a) do { if(a) {                                       \
-                              fprintf (stderr, "%s:%d: KSBA error: %s\n", \
-                              __FILE__, __LINE__, gpg_strerror(a));   \
-                              exit (1); }                              \
-                           } while(0)
-
-
-#define fail_if_err2(f, a) do { if(a) {\
-            fprintf (stderr, "%s:%d: KSBA error on file `%s': %s\n", \
-                       __FILE__, __LINE__, (f), gpg_strerror(a));   \
-                            exit (1); }                              \
-                           } while(0)
-
-
-static void
-print_sexp (ksba_const_sexp_t p)
-{
-  unsigned long n;
-  char *endp;
-
-  if (!p)
-    fputs ("none", stdout);
-  else
-    {
-      if (*p != '(')
-        fputs ("ERROR - invalid S-exp", stdout);
-      else
-        {
-          p++;
-          n = strtoul (p, &endp, 10);
-          p = endp;
-          if (*p!=':')
-            fputs ("ERROR - invalid value", stdout);
-          else
-            {
-              for (p++; n; n--, p++)
-                printf ("%02X", *p);
-            }
-        }
-    }
-}
-
-
-static void
-print_dn (char *p)
-{
-
-  if (!p)
-    fputs ("error", stdout);
-  else
-    printf ("`%s'", p);
-}
-
-
-static void
-print_hex (unsigned char *p, size_t n)
-{
-  if (!p)
-    fputs ("none", stdout);
-  else
-    {
-      for (; n; n--, p++)
-        printf ("%02X", *p);
-    }
-}
-
+#include "t-common.h"
 
 static void
 one_file (const char *fname)

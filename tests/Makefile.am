@@ -1,5 +1,5 @@
 # Makefile.am - for the KSBA regression tests
-#       Copyright (C) 2001 g10 Code GmbH
+#       Copyright (C) 2001, 2003 g10 Code GmbH
 # 	
 # This file is part of KSBA.
 # 
@@ -22,15 +22,25 @@
 TESTS_ENVIRONMENT = 
 
 test_certs = cert_dfn_pca01.der cert_dfn_pca15.der \
-	     cert_g10code_test1.der crl_testpki_testpca.der
+	     cert_g10code_test1.der crl_testpki_testpca.der \
+	     samples/authority.crt samples/betsy.crt samples/bull.crt \
+             samples/ov-ocsp-server.crt samples/ov-userrev.crt \
+             samples/ov-root-ca-cert.crt samples/ov-serverrev.crt \
+	     samples/ov-user.crt samples/ov-server.crt 
 
-EXTRA_DIST = $(test_certs)
+test_crls = samples/ov-test-crl.crl 
+
+test_keys = samples/ov-server.p12  samples/ov-userrev.p12 \
+             samples/ov-serverrev.p12  samples/ov-user.p12
+
+EXTRA_DIST = $(test_certs) samples/README
 
 TESTS = cert-basic t-crl-parser
 
 AM_CFLAGS = @GPG_ERROR_CFLAGS@
 
-noinst_PROGRAMS = $(TESTS) t-cms-parser t-crl-parser t-dnparser
-LDADD = ../src/libksba.la @GPG_ERROR_LIBS@
+noinst_HEADERS = t-common.h
+noinst_PROGRAMS = $(TESTS) t-cms-parser t-crl-parser t-dnparser t-ocsp
+LDADD = ../src/libksba.la @GPG_ERROR_LIBS@ -lgcrypt
 
 

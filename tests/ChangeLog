@@ -1,3 +1,8 @@
+2003-11-21  Werner Koch  <wk@gnupg.org>
+
+	* t-common.h: New.  Shared functions from other tests. 
+	* t-dnparser.c, t-cms-parser.c, t-crl-parser.c: Use it here.
+
 2003-11-17  Werner Koch  <wk@gnupg.org>
 
 	* cert-basic.c (list_extensions): Fixed test on EOF.
