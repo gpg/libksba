@@ -330,9 +330,11 @@ static void
 append_ucs4_value (const unsigned char *value, size_t length,
                    struct stringbuf *sb)
 {
-  unsigned char tmp[2];
+  unsigned char tmp[7];
   const unsigned char *s;
   size_t n;
+  unsigned int c;
+  int i;
 
   if (length>3 && !value[0] && !value[1] && !value[2]
       && (value[3] == ' ' || value[3] == '#'))
@@ -360,8 +362,54 @@ append_ucs4_value (const unsigned char *value, size_t length,
         append_quoted (sb, value, s-value);
       if (n>=length)
         return; /* ready */
-      /* fixme: need to do the actual conversion */
-      n++; s++;
+      if (n < 4)
+        { /* This is an invalid encoding - better stop after adding
+             one impossible characater */
+          put_stringbuf_mem (sb, "\xff", 1);
+          return;
+        }
+      c = *s++ << 24;
+      c |= *s++ << 16;
+      c |= *s++ << 8;
+      c |= *s++;
+      n += 4;
+      i=0;
+      if (c < (1<<11))
+        {
+          tmp[i++] = 0xc0 | ( c >>  6);
+          tmp[i++] = 0x80 | ( c        & 0x3f);
+        }
+      else if (c < (1<<16))
+        {
+          tmp[i++] = 0xe0 | ( c >> 12);
+          tmp[i++] = 0x80 | ((c >>  6) & 0x3f);
+          tmp[i++] = 0x80 | ( c        & 0x3f);
+        }
+      else if (c < (1<<21))
+        {
+          tmp[i++] = 0xf0 | ( c >> 18);
+          tmp[i++] = 0x80 | ((c >> 12) & 0x3f);
+          tmp[i++] = 0x80 | ((c >>  6) & 0x3f);
+          tmp[i++] = 0x80 | ( c        & 0x3f);
+        }
+      else if (c < (1<<26))
+        {
+          tmp[i++] = 0xf8 | ( c >> 24);
+          tmp[i++] = 0x80 | ((c >> 18) & 0x3f);
+          tmp[i++] = 0x80 | ((c >> 12) & 0x3f);
+          tmp[i++] = 0x80 | ((c >>  6) & 0x3f);
+          tmp[i++] = 0x80 | ( c        & 0x3f);
+        }
+      else 
+        {
+          tmp[i++] = 0xfc | ( c >> 30);
+          tmp[i++] = 0x80 | ((c >> 24) & 0x3f);
+          tmp[i++] = 0x80 | ((c >> 18) & 0x3f);
+          tmp[i++] = 0x80 | ((c >> 12) & 0x3f);
+          tmp[i++] = 0x80 | ((c >>  6) & 0x3f);
+          tmp[i++] = 0x80 | ( c        & 0x3f);
+        }
+      put_stringbuf_mem (sb, tmp, i);
     }
 }
 
@@ -374,6 +422,8 @@ append_ucs2_value (const unsigned char *value, size_t length,
   unsigned char tmp[2];
   const unsigned char *s;
   size_t n;
+  unsigned int c;
+  int i;
 
   if (length>1 && !value[0] && (value[1] == ' ' || value[1] == '#'))
     {
@@ -399,8 +449,28 @@ append_ucs2_value (const unsigned char *value, size_t length,
         append_quoted (sb, value, s-value);
       if (n>=length)
         return; /* ready */
-      /* fixme: need to do the actual conversion */
-      n++; s++;
+      if (n < 2)
+        { /* This is an invalid encoding - better stop after adding
+             one impossible characater */
+          put_stringbuf_mem (sb, "\xff", 1);
+          return;
+        }
+      c  = *s++ << 8;
+      c |= *s++;
+      n += 2;
+      i=0;
+      if (c < (1<<11))
+        {
+          tmp[i++] = 0xc0 | ( c >>  6);
+          tmp[i++] = 0x80 | ( c        & 0x3f);
+        }
+      else 
+        {
+          tmp[i++] = 0xe0 | ( c >> 12);
+          tmp[i++] = 0x80 | ((c >>  6) & 0x3f);
+          tmp[i++] = 0x80 | ( c        & 0x3f);
+        }
+      put_stringbuf_mem (sb, tmp, i);
     }
 }
 

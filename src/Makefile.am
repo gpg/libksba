@@ -49,7 +49,7 @@ libksba_la_SOURCES = \
 	certreq.c certreq.h \
 	keyinfo.c keyinfo.h \
 	oid.c name.c dn.c time.c convert.h \
-	util.c util.h shared.h errors.c	\
+	version.c util.c util.h shared.h errors.c \
 	asn1-tables.c
 
 asn1_gentables_SOURCES = \

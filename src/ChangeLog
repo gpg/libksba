@@ -1,5 +1,9 @@
 2002-04-15  Werner Koch  <wk@gnupg.org>
 
+	* version.c: New.
+
+	* dn.c (append_ucs4_value,append_ucs2_value): Implemented.
+
 	* cert.c (ksba_cert_get_auth_key_id): New.
 	* name.c (_ksba_name_new_from_der): Add support for "Name" type.
 	* dn.c (_ksba_derdn_to_str): New.
