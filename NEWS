@@ -1,4 +1,4 @@
-Noteworthy changes in version 0.9.7
+Noteworthy changes in version 0.9.7 (2004-06-08)
 ------------------------------------------------
 
  * New API function to add arbitrary extensions to pkcs#10 requests.
