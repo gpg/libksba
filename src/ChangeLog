@@ -1,3 +1,10 @@
+2003-12-09  Werner Koch  <wk@gnupg.org>
+
+	* cms.c (ksba_cms_set_sig_val): Fixed a code cleanup I did on Nov
+	25 and led to bad signature creation.  Unfortunatley gpgsm has
+	currently no real regression tests.  BTW, why the hell didn't I
+	wrote an entry for that cleanup.
+
 2003-11-28  Werner Koch  <wk@gnupg.org>
 
 	* ocsp.h, ocsp.c: New.

@@ -1523,7 +1523,7 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
       return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
     }
 
-  if (!(n - snext (&s)))
+  if (!(n = snext (&s)))
     {
       xfree (sv->algo);
       xfree (sv);
