@@ -163,25 +163,109 @@ one_request (const char *cert_fname, const char *issuer_cert_fname)
 
 
 void 
-one_response (const char *response_fname)
+one_response (const char *cert_fname, const char *issuer_cert_fname,
+              char *response_fname)
 {
   gpg_error_t err;
   ksba_ocsp_t ocsp;
-  unsigned char *request;
-  size_t requestlen;
-
-  request = read_file (response_fname, &requestlen);
-  if (!request)
-    fail ("file error");
+  unsigned char *request, *response;
+  size_t requestlen, responselen;
+  ksba_cert_t cert = get_one_cert (cert_fname);
+  ksba_cert_t issuer_cert = get_one_cert (issuer_cert_fname);
+  ksba_ocsp_response_status_t response_status;
+  const char *t;
 
   err = ksba_ocsp_new (&ocsp);
   fail_if_err (err);
 
-  err = ksba_ocsp_parse_response (ocsp, request, requestlen);
+  /* We need to build a request, so that the context is properly
+     prepared for the response. */
+  err = ksba_ocsp_add_certs (ocsp, cert, issuer_cert);
   fail_if_err (err);
+  ksba_cert_release (issuer_cert);
 
-  ksba_ocsp_release (ocsp);
+  err = ksba_ocsp_build_request (ocsp, &request, &requestlen);
+  fail_if_err (err);
   xfree (request);
+
+  /* Now for the response. */
+  response = read_file (response_fname, &responselen);
+  if (!response)
+    fail ("file error");
+
+  err = ksba_ocsp_parse_response (ocsp, response, responselen,
+                                  &response_status);
+  fail_if_err (err);
+  switch (response_status)
+    {
+    case KSBA_OCSP_RSPSTATUS_SUCCESS:      t = "success"; break;
+    case KSBA_OCSP_RSPSTATUS_MALFORMED:    t = "malformed"; break;  
+    case KSBA_OCSP_RSPSTATUS_INTERNAL:     t = "internal error"; break;  
+    case KSBA_OCSP_RSPSTATUS_TRYLATER:     t = "try later"; break;      
+    case KSBA_OCSP_RSPSTATUS_SIGREQUIRED:  t = "must sign request"; break;  
+    case KSBA_OCSP_RSPSTATUS_UNAUTHORIZED: t = "unautorized"; break;  
+    case KSBA_OCSP_RSPSTATUS_REPLAYED:     t = "replay detected"; break;  
+    case KSBA_OCSP_RSPSTATUS_OTHER:        t = "other (unknown)"; break;  
+    case KSBA_OCSP_RSPSTATUS_NONE:         t = "no status"; break;
+    default: fail ("impossible response_status"); break;
+    }
+  printf ("response status ..: %s\n", t);
+
+  if (response_status == KSBA_OCSP_RSPSTATUS_SUCCESS)
+    {
+      ksba_status_t status;
+      ksba_crl_reason_t reason;
+      ksba_isotime_t this_update, next_update, revocation_time, produced_at;
+      ksba_sexp_t sigval;
+
+      sigval = ksba_ocsp_get_sig_val (ocsp, produced_at);
+      printf ("signature value ..: ");
+      print_sexp (sigval);
+      printf ("\nproduced at ......: ");
+      print_time (produced_at);
+      putchar ('\n');
+
+      err = ksba_ocsp_get_status (ocsp, cert,
+                                  &status, this_update, next_update,
+                                  revocation_time, &reason);
+      fail_if_err (err);
+      printf ("certificate status: %s\n",
+              status == KSBA_STATUS_GOOD? "good":
+              status == KSBA_STATUS_REVOKED? "revoked":
+              status == KSBA_STATUS_UNKNOWN? "unknown":
+              status == KSBA_STATUS_NONE? "none": "?");
+      if (status == KSBA_STATUS_REVOKED)
+        {
+          printf ("revocation time ..: ");
+          print_time (revocation_time);
+          printf ("\nrevocation reason : %s\n",
+                  reason == KSBA_CRLREASON_UNSPECIFIED?   "unspecified":        
+                  reason == KSBA_CRLREASON_KEY_COMPROMISE? "key compromise":
+                  reason == KSBA_CRLREASON_CA_COMPROMISE?   "CA compromise":
+                  reason == KSBA_CRLREASON_AFFILIATION_CHANGED?
+                                                       "affiliation changed":
+                  reason == KSBA_CRLREASON_SUPERSEDED?   "superseeded":
+                  reason == KSBA_CRLREASON_CESSATION_OF_OPERATION?
+                                                      "cessation of operation": 
+                  reason == KSBA_CRLREASON_CERTIFICATE_HOLD?
+                                                      "certificate on hold":   
+                  reason == KSBA_CRLREASON_REMOVE_FROM_CRL? "removed from CRL":
+                  reason == KSBA_CRLREASON_PRIVILEGE_WITHDRAWN?
+                                                       "privilege withdrawn":
+                  reason == KSBA_CRLREASON_AA_COMPROMISE? "AA compromise":
+                  reason == KSBA_CRLREASON_OTHER?   "other":"?");
+        }
+      printf ("this update ......: ");
+      print_time (this_update);
+      printf ("\nnext update ......: ");
+      print_time (next_update);
+      putchar ('\n');
+    }
+  
+
+  ksba_cert_release (cert);
+  ksba_ocsp_release (ocsp);
+  xfree (response);
 }
 
 
@@ -238,6 +322,15 @@ main (int argc, char **argv)
   while (argc && last_argc != argc )
     {
       last_argc = argc;
+      if (!strcmp (*argv, "--help"))
+        {
+          puts (
+"usage: ./t-ocsp [options] {CERTFILE ISSUERCERTFILE}\n"
+"       ./t-ocsp [options] --response {CERTFILE ISSUERCERTFILE RESPONSEFILE}\n"
+"\n"
+"       Options are --verbose and --debug");
+          exit (0);
+        }
       if (!strcmp (*argv, "--verbose"))
         {
           verbose = 1;
@@ -258,8 +351,10 @@ main (int argc, char **argv)
  
   if (response_mode)
     {
-      for (; argc ; argc--, argv++)
-        one_response (*argv);
+      for ( ; argc > 2; argc -=3, argv += 3)
+        one_response (*argv, argv[1], argv[2]);
+      if (argc)
+        fputs ("warning: extra argument ignored\n", stderr);
     }
   else if (argc)
     {
@@ -273,8 +368,9 @@ main (int argc, char **argv)
       struct {
         const char *cert_fname;
         const char *issuer_cert_fname;
+        const char *response_fname;
       } files[] = {
-        { "samples/ov-userrev.crt", "samples/ov-root-ca-cert.crt" },
+        { "samples/ov-userrev.crt", "samples/ov-root-ca-cert.crt", NULL },
         { NULL }
       };
       int idx;

@@ -118,19 +118,35 @@ print_sexp (ksba_const_sexp_t p)
           else
             {
               char *endp;
-              unsigned long n;
+              const unsigned char *s;
+              unsigned long len, n;
 
-              n = strtoul (p, &endp, 10);
+              len = strtoul (p, &endp, 10);
               p = endp;
               if (*p != ':')
                 {
                   fputs ("[invalid s-exp]", stdout);
                   return;
                 }
-              putchar('#');
-              for (p++; n; n--, p++)
-                printf ("%02X", *p);
-              putchar('#');
+              p++;
+              for (s=p,n=0; n < len; n++, s++)
+                if ( !((*s >= 'a' && *s <= 'z')
+                       || (*s >= 'A' && *s <= 'Z')
+                       || (*s >= '0' && *s <= '9')
+                       || *s == '-' || *s == '.'))
+                  break;
+              if (n < len)
+                {
+                  putchar('#');
+                  for (n=0; n < len; n++, p++)
+                    printf ("%02X", *p);
+                  putchar('#');
+                }
+              else
+                {
+                  for (n=0; n < len; n++, p++)
+                    putchar (*p);
+                }
             }
         }
     }
