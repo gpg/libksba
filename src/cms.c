@@ -2092,6 +2092,39 @@ set_issuer_serial (AsnNode info, ksba_cert_t cert, int mode)
 }
 
 
+
+/* An object used to construct the signed attributes. */
+struct attrarray_s {
+  AsnNode root;
+  unsigned char *image;
+  size_t imagelen;
+};
+
+
+/* Thank you ASN.1 committee for allowing us to employ a sort to make
+   that DER encoding even more complicate. */
+static int
+compare_attrarray (const void *a_v, const void *b_v)
+{
+  const struct attrarray_s *a = a_v;
+  const struct attrarray_s *b = b_v;
+  const unsigned char *ap, *bp;
+  size_t an, bn;
+
+  ap = a->image;
+  an = a->imagelen;
+  bp = b->image;
+  bn = b->imagelen;
+  for (; an && bn; an--, bn--, ap++, bp++ )
+    if (*ap != *bp)
+      return *ap - *bp;
+
+  return (an == bn)? 0 : (an > bn)? 1 : -1;
+}     
+
+
+
+
 /* Write the END of data NULL tag and everything we can write before
    the user can calculate the signature */
 static gpg_error_t
@@ -2110,7 +2143,8 @@ build_signed_data_attributes (ksba_cms_t cms)
     return err;
 
   if (cms->signer_info)
-    return gpg_error (GPG_ERR_CONFLICT); /* This list must be empty at this point. */
+    return gpg_error (GPG_ERR_CONFLICT); /* This list must be empty at
+                                            this point. */
 
   /* Write optional certificates */
   if (cms->cert_info_list)
@@ -2122,7 +2156,8 @@ build_signed_data_attributes (ksba_cms_t cms)
       for (certlist = cms->cert_info_list; certlist; certlist = certlist->next)
         {
           if (!ksba_cert_get_image (certlist->cert, &n))
-            return gpg_error (GPG_ERR_GENERAL); /* user passed an unitialized cert */
+            return gpg_error (GPG_ERR_GENERAL); /* User passed an
+                                                   unitialized cert */
           totallen += n;
         }
 
@@ -2164,11 +2199,9 @@ build_signed_data_attributes (ksba_cms_t cms)
       AsnNode attr, root;
       AsnNode n;
       unsigned char *image;
+      size_t imagelen;
       int i;
-      struct {
-        AsnNode root;
-        unsigned char *image;
-      } attrarray[3]; 
+      struct attrarray_s attrarray[3]; 
       int attridx = 0;
 
       if (!digestlist)
@@ -2177,72 +2210,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       if (!certlist->cert || !digestlist->oid)
         return gpg_error (GPG_ERR_BUG);
 
-      /* Include the content-type attribute. */
-      attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
-                                    "CryptographicMessageSyntax.Attribute");
-      if (!attr)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
-      n = _ksba_asn_find_node (attr, "Attribute.attrType");
-      if (!n)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
-      err = _ksba_der_store_oid (n, oidstr_contentType);
-      if (err)
-        return err;
-      n = _ksba_asn_find_node (attr, "Attribute.attrValues");
-      if (!n || !n->down)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
-      n = n->down; /* fixme: ugly hack */
-      err = _ksba_der_store_oid (n, cms->inner_cont_oid);
-      if (err)
-        return err;
-      err = _ksba_der_encode_tree (attr, &image, NULL);
-      if (err)
-          return err;
-      attrarray[attridx].root = attr;
-      attrarray[attridx].image = image;
-      attridx++;
-
-      /* Include the signing time */
-      if (certlist->signing_time)
-        {
-          attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
-                                  "CryptographicMessageSyntax.Attribute");
-          if (!attr)
-            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
-          n = _ksba_asn_find_node (attr, "Attribute.attrType");
-          if (!n)
-            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
-          err = _ksba_der_store_oid (n, oidstr_signingTime);
-          if (err)
-            return err;
-          n = _ksba_asn_find_node (attr, "Attribute.attrValues");
-          if (!n || !n->down)
-            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
-          n = n->down; /* fixme: ugly hack */
-          err = _ksba_der_store_time (n, certlist->signing_time);
-          if (err)
-            return err;
-          err = _ksba_der_encode_tree (attr, &image, NULL);
-          if (err)
-            return err;
-          /* we will use the attributes again - so save them */
-          attrarray[attridx].root = attr;
-          attrarray[attridx].image = image;
-          attridx++;
-        }
-
-      /* The message digest is pretty important; include it.
-
-         Note: We used to include this attribute first, but during an
-         interoperability tests with the proprietary Crypotovision
-         v2.1.1 software for MS Windows, it turned out that this
-         software somehow rebuilds the set of signed attributes in a
-         different way before calculating the hash - therefore the
-         signature always turned out to be bad.  To help those guys we
-         are really kind and sweap the attributes despite the fact
-         that there is - of course - no defined sequence of signed
-         attributes.
-      */
+      /* Include the pretty important message digest. */
       attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
                                     "CryptographicMessageSyntax.Attribute");
       if (!attr)
@@ -2262,12 +2230,74 @@ build_signed_data_attributes (ksba_cms_t cms)
                                           certlist->msg_digest_len);
       if (err)
         return err;
-      err = _ksba_der_encode_tree (attr, &image, NULL);
+      err = _ksba_der_encode_tree (attr, &image, &imagelen);
       if (err)
-          return err;
+        return err;
       attrarray[attridx].root = attr;
       attrarray[attridx].image = image;
+      attrarray[attridx].imagelen = imagelen;
       attridx++;
+
+      /* Include the content-type attribute. */
+      attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+                                    "CryptographicMessageSyntax.Attribute");
+      if (!attr)
+        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+      n = _ksba_asn_find_node (attr, "Attribute.attrType");
+      if (!n)
+        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+      err = _ksba_der_store_oid (n, oidstr_contentType);
+      if (err)
+        return err;
+      n = _ksba_asn_find_node (attr, "Attribute.attrValues");
+      if (!n || !n->down)
+        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+      n = n->down; /* fixme: ugly hack */
+      err = _ksba_der_store_oid (n, cms->inner_cont_oid);
+      if (err)
+        return err;
+      err = _ksba_der_encode_tree (attr, &image, &imagelen);
+      if (err)
+        return err;
+      attrarray[attridx].root = attr;
+      attrarray[attridx].image = image;
+      attrarray[attridx].imagelen = imagelen;
+      attridx++;
+
+      /* Include the signing time */
+      if (certlist->signing_time)
+        {
+          attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+                                        "CryptographicMessageSyntax.Attribute");
+          if (!attr)
+            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+          n = _ksba_asn_find_node (attr, "Attribute.attrType");
+          if (!n)
+            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+          err = _ksba_der_store_oid (n, oidstr_signingTime);
+          if (err)
+            return err;
+          n = _ksba_asn_find_node (attr, "Attribute.attrValues");
+          if (!n || !n->down)
+            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+          n = n->down; /* fixme: ugly hack */
+          err = _ksba_der_store_time (n, certlist->signing_time);
+          if (err)
+            return err;
+          err = _ksba_der_encode_tree (attr, &image, &imagelen);
+          if (err)
+            return err;
+          /* We will use the attributes again - so save them */
+          attrarray[attridx].root = attr;
+          attrarray[attridx].image = image;
+          attrarray[attridx].imagelen = imagelen;
+          attridx++;
+        }
+
+      /* Arggh.  That silly ASN.1 DER encoding rules: We need to sort
+         the SET values. */
+      qsort (attrarray, attridx+1, sizeof (struct attrarray_s),
+             compare_attrarray);
 
       /* Now copy them to an SignerInfo tree.  This tree is not
          complete but suitable for ksba_cms_hash_signed_attributes() */
