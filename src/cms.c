@@ -70,6 +70,37 @@ static char oid_messageDigest[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x04";
 static char oidstr_signingTime[] = "1.2.840.113549.1.9.5";
 static char oid_signingTime[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x05";
 
+
+/* copy all the encrypted bytes from the reader to the writer.
+   Handles indefinite length encoding */
+static KsbaError
+copy_encrypted_cont (KsbaCMS cms)
+{
+  KsbaError err = 0;
+  unsigned long nleft;
+  char buffer[4096];
+  size_t n, nread;
+
+  if (cms->inner_cont_ndef)
+    return KSBA_Unsupported_Encoding;
+  nleft = cms->inner_cont_len;
+  while (nleft)
+    {
+      n = nleft < sizeof (buffer)? nleft : sizeof (buffer);
+      err = ksba_reader_read (cms->reader, buffer, n, &nread);
+      if (err)
+        return err;
+      nleft -= nread;
+      err = ksba_writer_write (cms->writer, buffer, nread);
+      if (err)
+        return err;
+    }
+  return 0;
+}
+
+
+
+
 /**
  * ksba_cms_new:
  * 
@@ -116,11 +147,15 @@ ksba_cms_release (KsbaCMS cms)
       xfree (cms->cert_list);
       cms->cert_list = cl;
     }
-  xfree (cms->encap_cont_type);
+  xfree (cms->inner_cont_oid);
+  xfree (cms->encr_algo_oid);
+  xfree (cms->encr_iv);
   xfree (cms->data.digest);
   _ksba_asn_release_nodes (cms->signer_info.root);
   xfree (cms->signer_info.image);
   xfree (cms->signer_info.cache.digest_algo);
+  _ksba_asn_release_nodes (cms->recp_info.root);
+  xfree (cms->recp_info.image);
   xfree (cms->sig_val.algo);
   xfree (cms->sig_val.value);
   xfree (cms);
@@ -198,7 +233,7 @@ ksba_cms_build (KsbaCMS cms, KsbaStopReason *r_stopreason)
         return KSBA_Missing_Action;
       if (!cms->content.handler)
         return KSBA_Missing_Action;
-      if (!cms->encap_cont_type)
+      if (!cms->inner_cont_oid)
         return KSBA_Missing_Action;
       cms->stop_reason = KSBA_SR_GOT_CONTENT;
     }
@@ -231,11 +266,11 @@ ksba_cms_get_content_type (KsbaCMS cms, int what)
   if (!what)
     return cms->content.ct;
 
-  if (what == 1 && cms->encap_cont_type)
+  if (what == 1 && cms->inner_cont_oid)
     {
       for (i=0; content_handlers[i].oid; i++)
         {
-          if (!strcmp (content_handlers[i].oid, cms->encap_cont_type))
+          if (!strcmp (content_handlers[i].oid, cms->inner_cont_oid))
             return content_handlers[i].ct;
         }
     }
@@ -254,8 +289,27 @@ ksba_cms_get_content_oid (KsbaCMS cms, int what)
   if (!what)
     return cms->content.oid;
   if (what == 1)
-    return cms->encap_cont_type;
+    return cms->inner_cont_oid;
+  if (what == 2)
+    return cms->encr_algo_oid;
   return NULL;
+}
+
+/* copy the initialization vector into iv and it'ss len into ivlen.
+   The caller should provide a suitable large buffer */
+KsbaError
+ksba_cms_get_content_enc_iv (KsbaCMS cms, unsigned char *iv,
+                             size_t maxivlen, size_t *ivlen)
+{
+  if (!cms || !iv || !ivlen)
+    return KSBA_Invalid_Value;
+  if (!cms->encr_ivlen)
+    return KSBA_No_Data;
+  if (cms->encr_ivlen > maxivlen)
+    return KSBA_Buffer_Too_Short;
+  memcpy (iv, cms->encr_iv, cms->encr_ivlen);
+  *ivlen = cms->encr_ivlen;
+  return 0;
 }
 
 
@@ -287,22 +341,52 @@ ksba_cms_get_digest_algo_list (KsbaCMS cms, int idx)
 }
 
 
+/**
+ * ksba_cms_get_issuer_serial:
+ * @cms: CMS object
+ * @idx: index number
+ * @r_issuer: returns the issuer
+ * @r_serial: returns the serial number
+ * 
+ * This functions returns the issuer and serial number either from the
+ * sid or the rid elements of a CMS object.
+ * 
+ * Return value: 0 on success or an error code
+ **/
 KsbaError
 ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
                             char **r_issuer, unsigned char **r_serial)
 {
   KsbaError err;
+  const char *issuer_path, *serial_path;
+  AsnNode root;
+  const unsigned char *image;
   AsnNode n;
 
   if (!cms)
     return KSBA_Invalid_Value;
-  if (!cms->signer_info.root)
+  if (idx)
+    return KSBA_Invalid_Index;
+  if (cms->signer_info.root)
+    {
+      issuer_path = "SignerInfos..sid.issuerAndSerialNumber.issuer";
+      serial_path = "SignerInfos..sid.issuerAndSerialNumber.serialNumber";
+      root = cms->signer_info.root;
+      image = cms->signer_info.image;
+    }
+  else if (cms->recp_info.root)
+    {
+      issuer_path = "RecipientInfos..ktri.rid.issuerAndSerialNumber.issuer";
+      serial_path = "RecipientInfos..ktri.rid.issuerAndSerialNumber.serialNumber";
+      root = cms->recp_info.root;
+      image = cms->recp_info.image;
+    }
+  else
     return KSBA_No_Data;
   
   if (r_issuer)
     {
-      n = _ksba_asn_find_node (cms->signer_info.root,
-                               "SignerInfos..sid.issuerAndSerialNumber.issuer");
+      n = _ksba_asn_find_node (root, issuer_path);
       if (!n || !n->down)
         return KSBA_No_Value; 
       n = n->down; /* dereference the choice node */
@@ -313,7 +397,7 @@ ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
           _ksba_asn_node_dump_all (n, stderr);
           return KSBA_General_Error;
         }
-      err = _ksba_dn_to_str (cms->signer_info.image, n, r_issuer);
+      err = _ksba_dn_to_str (image, n, r_issuer);
       if (err)
         return err;
     }
@@ -323,8 +407,7 @@ ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
       unsigned char *p;
 
       /* fixme: we do not release the r_issuer stuff on error */
-      n = _ksba_asn_find_node (cms->signer_info.root,
-                      "SignerInfos..sid.issuerAndSerialNumber.serialNumber");
+      n = _ksba_asn_find_node (root, serial_path);
       if (!n)
         return KSBA_No_Value; 
       
@@ -343,7 +426,7 @@ ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
       p[1] = n->len >> 16;
       p[2] = n->len >> 8;
       p[3] = n->len;
-      memcpy (p+4, cms->signer_info.image + n->off + n->nhdr, n->len);
+      memcpy (p+4, image + n->off + n->nhdr, n->len);
       *r_serial = p;
     }
 
@@ -579,6 +662,54 @@ ksba_cms_get_sig_val (KsbaCMS cms, int idx)
 }
 
 
+/**
+ * ksba_cms_get_enc_val:
+ * @cms: CMS object
+ * @idx: index of recipient info
+ * 
+ * Return the sencrypted val (the session key) of recipient @idx in a
+ * format suitable to be used as input to Libgcrypt's verification
+ * function.  The caller must free the returned string.
+ * 
+ * Return value: NULL or a string with a S-Exp.
+ **/
+char *
+ksba_cms_get_enc_val (KsbaCMS cms, int idx)
+{
+  AsnNode n, n2;
+  KsbaError err;
+  char *string;
+
+  if (!cms)
+    return NULL;
+  if (!cms->recp_info.root)
+    return NULL;
+  if (idx)
+    return NULL; /* we can only handle one recipient for now */
+
+  n = _ksba_asn_find_node (cms->recp_info.root,
+                           "RecipientInfos..ktri.keyEncryptionAlgorithm");
+  if (!n)
+      return NULL;
+  if (n->off == -1)
+    {
+      fputs ("ksba_cms_get_enc_val problem at node:\n", stderr);
+      _ksba_asn_node_dump_all (n, stderr);
+      return NULL;
+    }
+
+  n2 = n->right; /* point to the actual value */
+  err = _ksba_encval_to_sexp (cms->recp_info.image + n->off,
+                              n->nhdr + n->len
+                              + ((!n2||n2->off == -1)? 0:(n2->nhdr+n2->len)),
+                              &string);
+  if (err)
+      return NULL;
+
+  return string;
+}
+
+
 
 
 
@@ -670,7 +801,7 @@ ksba_cms_set_content_type (KsbaCMS cms, int what, KsbaContentType type)
     }
   else
     {
-      cms->encap_cont_type = oid;
+      cms->inner_cont_oid = oid;
     }
 
   return 0;
@@ -978,7 +1109,7 @@ ct_parse_signed_data (KsbaCMS cms)
   /* Calculate new stop reason */
   if (state == sSTART)
     {
-      if (cms->detached_signature && !cms->data.digest)
+      if (cms->detached_data && !cms->data.digest)
         { /* We use this stop reason to inform the caller about a
              detached signatures.  Actually there is no need for him
              to hash the data now, he can do this also later. */
@@ -1003,7 +1134,68 @@ ct_parse_signed_data (KsbaCMS cms)
 static KsbaError 
 ct_parse_enveloped_data (KsbaCMS cms)
 {
-  return KSBA_Not_Implemented;
+  enum { 
+    sSTART,
+    sREST,
+    sINDATA,
+    sERROR
+  } state = sERROR;
+  KsbaStopReason stop_reason = cms->stop_reason;
+  KsbaError err = 0;
+
+  cms->stop_reason = KSBA_SR_RUNNING;
+
+  /* Calculate state from last reason and do some checks */
+  if (stop_reason == KSBA_SR_GOT_CONTENT)
+    {
+      state = sSTART;
+    }
+  else if (stop_reason == KSBA_SR_DETACHED_DATA)
+    {
+      state = sREST;
+    }
+  else if (stop_reason == KSBA_SR_BEGIN_DATA)
+    {
+      state = sINDATA;
+    }
+  else if (stop_reason == KSBA_SR_END_DATA)
+    {
+      state = sREST;
+    }
+  else if (stop_reason == KSBA_SR_RUNNING)
+    err = KSBA_Invalid_State;
+  else if (stop_reason)
+    err = KSBA_Bug;
+  
+  if (err)
+    return err;
+
+  /* Do the action */
+  if (state == sSTART)
+    err = _ksba_cms_parse_enveloped_data_part_1 (cms);
+  else if (state == sREST)
+    err = _ksba_cms_parse_enveloped_data_part_2 (cms);
+  else if (state == sINDATA)
+    err = copy_encrypted_cont (cms);
+  else
+    err = KSBA_Invalid_State;
+
+  if (err)
+    return err;
+
+  /* Calculate new stop reason */
+  if (state == sSTART)
+    {
+      stop_reason = cms->detached_data? KSBA_SR_DETACHED_DATA
+                                      : KSBA_SR_BEGIN_DATA;
+    }
+  else if (state == sINDATA)
+    stop_reason = KSBA_SR_END_DATA;
+  else if (state ==sREST)
+    stop_reason = KSBA_SR_READY;
+    
+  cms->stop_reason = stop_reason;
+  return 0;
 }
 
 
@@ -1100,7 +1292,7 @@ build_signed_data_header (KsbaCMS cms)
   err = _ksba_ber_write_tl (cms->writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, 0);
   if (err)
     return err;
-  err = ksba_oid_from_str (cms->encap_cont_type, &buf, &len);
+  err = ksba_oid_from_str (cms->inner_cont_oid, &buf, &len);
   if (err)
     return err;
   err = _ksba_ber_write_tl (cms->writer,
@@ -1111,7 +1303,7 @@ build_signed_data_header (KsbaCMS cms)
   if (err)
     return err;
 
-  if ( !cms->detached_signature)
+  if ( !cms->detached_data)
     { /* write the tag */
       err = _ksba_ber_write_tl (cms->writer, 0, CLASS_CONTEXT, 1, 0);
       if (err)
@@ -1270,8 +1462,7 @@ build_signed_data_attributes (KsbaCMS cms)
       n = _ksba_asn_find_node (root, "SignerInfos..signedAttrs");
       if (!n || !n->down) 
         return KSBA_Element_Not_Found; 
-          /* This is another ugly hack to move to the element we want */
-      _ksba_asn_node_dump_all (n, stderr);
+      /* This is another ugly hack to move to the element we want */
       for (n = n->down->down; n && n->type != TYPE_SEQUENCE; n = n->right)
         ;
       if (!n) 
@@ -1492,9 +1683,9 @@ ct_build_signed_data (KsbaCMS cms)
     {
       /* figure out whether a detached signature is requested */
       if (cms->cert_list && cms->cert_list->msg_digest_len)
-        cms->detached_signature = 1;
+        cms->detached_data = 1;
       else
-        cms->detached_signature = 0;
+        cms->detached_data = 0;
       /* and start encoding */
       err = build_signed_data_header (cms);
     }
@@ -1513,8 +1704,8 @@ ct_build_signed_data (KsbaCMS cms)
     {
       /* user should write the data and calculate the hash or do
          nothing in case of END_DATA */
-      stop_reason = cms->detached_signature? KSBA_SR_END_DATA
-                                           : KSBA_SR_BEGIN_DATA;
+      stop_reason = cms->detached_data? KSBA_SR_END_DATA
+                                      : KSBA_SR_BEGIN_DATA;
     }
   else if (state == sDATAREADY)
     stop_reason = KSBA_SR_NEED_SIG;

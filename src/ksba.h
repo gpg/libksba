@@ -76,6 +76,8 @@ typedef enum {
   KSBA_Invalid_Sexp = 41,
   KSBA_Unknown_Sexp = 42,
   KSBA_Invalid_Time = 43,
+  KSBA_User_Error = 44,        /* may be used by callbacks */
+  KSBA_Buffer_Too_Short = 45,
 } KsbaError;
 
 
@@ -98,7 +100,8 @@ typedef enum {
   KSBA_SR_BEGIN_DATA = 4,
   KSBA_SR_END_DATA = 5,
   KSBA_SR_READY = 6,
-  KSBA_SR_NEED_SIG = 7
+  KSBA_SR_NEED_SIG = 7,
+  KSBA_SR_DETACHED_DATA = 8
 } KsbaStopReason;
 
 
@@ -160,6 +163,8 @@ KsbaError ksba_cms_build (KsbaCMS cms, KsbaStopReason *r_stopreason);
 
 KsbaContentType ksba_cms_get_content_type (KsbaCMS cms, int what);
 const char *ksba_cms_get_content_oid (KsbaCMS cms, int what);
+KsbaError ksba_cms_get_content_enc_iv (KsbaCMS cms, unsigned char *iv,
+                                       size_t maxivlen, size_t *ivlen);
 const char *ksba_cms_get_digest_algo_list (KsbaCMS cms, int idx);
 KsbaError ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
                                       char **r_issuer,
@@ -170,7 +175,7 @@ KsbaError ksba_cms_get_message_digest (KsbaCMS cms, int idx,
                                        char **r_digest, size_t *r_digest_len);
 KsbaError ksba_cms_get_signing_time (KsbaCMS cms, int idx, time_t *r_sigtime);
 char *ksba_cms_get_sig_val (KsbaCMS cms, int idx);
-
+char *ksba_cms_get_enc_val (KsbaCMS cms, int idx);
 
 void
 ksba_cms_set_hash_function (KsbaCMS cms,
@@ -221,6 +226,13 @@ KsbaError ksba_writer_set_file (KsbaWriter w, FILE *fp);
 KsbaError ksba_writer_set_cb (KsbaWriter w, 
                               int (*cb)(void*,const void *,size_t),
                               void *cb_value);
+KsbaError 
+ksba_writer_set_filter (KsbaWriter w, 
+                        KsbaError (*filter)(void*,
+                                            const void *,size_t, size_t *,
+                                            void *, size_t, size_t *),
+                        void *filter_arg);
+
 KsbaError ksba_writer_write (KsbaWriter w, const void *buffer, size_t length);
 
 

@@ -75,8 +75,14 @@ struct ksba_cms_s {
   
   struct oidlist_s *digest_algos;
   struct certlist_s *cert_list;
-  char *encap_cont_type; /* EncapsulatedContentInfo.contentType as string */
-  int detached_signature; /* no actual data */
+  char *inner_cont_oid; /* Encapsulated or Encrypted
+                           ContentInfo.contentType as string */
+  unsigned long inner_cont_len;
+  int inner_cont_ndef;
+  int detached_data; /* no actual data */
+  char *encr_algo_oid;
+  char *encr_iv;
+  size_t encr_ivlen;
 
   struct {
     AsnNode root;  /* root of the tree with the values */
@@ -86,6 +92,12 @@ struct ksba_cms_s {
       char *digest_algo;
     } cache;
   } signer_info;  
+
+  struct {
+    AsnNode root;  /* root of the tree with the values */
+    unsigned char *image;
+    size_t imagelen;
+  } recp_info;  
 
   struct {
     char *algo;
@@ -103,6 +115,8 @@ struct ksba_cms_s {
 KsbaError _ksba_cms_parse_content_info (KsbaCMS cms);
 KsbaError _ksba_cms_parse_signed_data_part_1 (KsbaCMS cms);
 KsbaError _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms);
+KsbaError _ksba_cms_parse_enveloped_data_part_1 (KsbaCMS cms);
+KsbaError _ksba_cms_parse_enveloped_data_part_2 (KsbaCMS cms);
 
 
 

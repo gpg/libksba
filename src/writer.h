@@ -35,6 +35,12 @@ struct ksba_writer_s {
   int error;
   unsigned long nwritten;
   enum writer_type type;
+
+  KsbaError (*filter)(void*,
+                      const void *,size_t, size_t *,
+                      void *, size_t, size_t *);
+  void *filter_arg;
+
   union {
     struct {
       unsigned char *buffer;

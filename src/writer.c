@@ -163,26 +163,28 @@ ksba_writer_set_cb (KsbaWriter w,
 }
 
 
-/**
- * ksba_writer_write:
- * @w: Writer object
- * @buffer: A buffer with the data to be written
- * @length: The length of this buffer
- * 
- * Write @length bytes from @buffer.
- *
-
- * Return value: 0 on success or an error code
- **/
+
 KsbaError
-ksba_writer_write (KsbaWriter w, const void *buffer, size_t length)
+ksba_writer_set_filter (KsbaWriter w, 
+                        KsbaError (*filter)(void*,
+                                            const void *,size_t, size_t *,
+                                            void *, size_t, size_t *),
+                        void *filter_arg)
 {
   if (!w)
     return KSBA_Invalid_Value;
+  
+  w->filter = filter;
+  w->filter_arg = filter_arg;
+  return 0;
+}
 
-  if (!buffer)
-      return KSBA_Not_Implemented;
 
+
+
+static KsbaError
+do_writer_write (KsbaWriter w, const void *buffer, size_t length)
+{
   if (!w->type)
     {
       w->error = -1;
@@ -214,6 +216,57 @@ ksba_writer_write (KsbaWriter w, const void *buffer, size_t length)
     return KSBA_Bug;
   
   return 0;
+} 
+
+/**
+ * ksba_writer_write:
+ * @w: Writer object
+ * @buffer: A buffer with the data to be written
+ * @length: The length of this buffer
+ * 
+ * Write @length bytes from @buffer.
+ *
+
+ * Return value: 0 on success or an error code
+ **/
+KsbaError
+ksba_writer_write (KsbaWriter w, const void *buffer, size_t length)
+{
+  KsbaError err=0;
+
+  if (!w)
+    return KSBA_Invalid_Value;
+
+  if (!buffer)
+      return KSBA_Not_Implemented;
+
+  if (w->filter)
+    {
+      char outbuf[4096];
+      size_t nin, nout;
+      const char *p = buffer;
+
+      while (length)
+        {
+          err = w->filter (w->filter_arg, p, length, &nin,
+                           outbuf, sizeof (outbuf), &nout);
+          if (err)
+            break;
+          if (nin > length || nout > sizeof (outbuf))
+            return KSBA_Bug; /* tsss, someone else made an error */
+          err = do_writer_write (w, outbuf, nout);
+          if (err)
+            break;
+          length -= nin;
+          p += nin;
+        }
+    }
+  else
+    {
+      err = do_writer_write (w, buffer, length);
+    }
+  
+  return err;
 } 
 
 

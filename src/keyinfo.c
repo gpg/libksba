@@ -97,6 +97,14 @@ static struct algo_table_s sig_algo_table[] = {
   {NULL}
 };
 
+static struct algo_table_s enc_algo_table[] = {
+  { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
+    "1.2.840.113549.1.1.1", /* rsaEncryption (RSAES-PKCA1-v1.5) */ 
+    "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01", 9, 
+    1, "rsa", "a", "\x82" },
+  {NULL}
+};
+
 
 struct stringbuf {
   size_t len;
@@ -145,7 +153,8 @@ struct stringbuf {
  */
 static KsbaError
 get_algorithm (int mode, const unsigned char *der, size_t derlen,
-               size_t *r_nread, size_t *r_pos, size_t *r_len, int *r_bitstr)
+               size_t *r_nread, size_t *r_pos, size_t *r_len, int *r_bitstr,
+               size_t *r_parm_pos, size_t *r_parm_len)
 {
   int c;
   const unsigned char *start = der;
@@ -184,11 +193,7 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
   seqlen -= der - startseq;;
 
   /* check that the parameter is NULL or not there */
-  if (!seqlen)
-    {
-      printf ("parameter: none\n");
-    }
-  else
+  if (seqlen)
     {
       const unsigned char *startparm = der;
 
@@ -204,6 +209,16 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
           if (c) 
             return KSBA_BER_Error;  /* NULL must have a length of 0 */
           seqlen -= 2;
+        }
+      else if (r_parm_pos && r_parm_len && c == 0x04)
+        { /* this is an octet string parameter and we need it */
+          TLV_LENGTH();
+          *r_parm_pos = der - start;
+          *r_parm_len = len;
+          seqlen -= der - startparm;
+          der += len;
+          derlen -= len;
+          seqlen -= len;
         }
       else
         {
@@ -253,12 +268,49 @@ _ksba_parse_algorithm_identifier (const unsigned char *der, size_t derlen,
      this should be invalid algorithm identifier */
   *r_oid = NULL;
   *r_nread = 0;
-  err = get_algorithm (0, der, derlen, &nread, &off, &len, &is_bitstr);
+  err = get_algorithm (0, der, derlen, &nread, &off, &len, &is_bitstr,
+                       NULL, NULL);
   if (err)
     return err;
   *r_nread = nread;
   *r_oid = ksba_oid_to_str (der+off, len);
   return *r_oid? 0 : KSBA_Out_Of_Core;
+}
+
+KsbaError
+_ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
+                                   size_t *r_nread, char **r_oid,
+                                   char **r_parm, size_t *r_parmlen)
+{
+  KsbaError err;
+  int is_bitstr;
+  size_t nread, off, len, off2, len2;
+
+  /* fixme: get_algorithm might return the error invalid keyinfo -
+     this should be invalid algorithm identifier */
+  *r_oid = NULL;
+  *r_nread = 0;
+  err = get_algorithm (0, der, derlen, &nread, &off, &len, &is_bitstr,
+                       &off2, &len2);
+  if (err)
+    return err;
+  *r_nread = nread;
+  *r_oid = ksba_oid_to_str (der+off, len);
+  if (!*r_oid)
+    return KSBA_Out_Of_Core;
+  if (r_parm && r_parmlen)
+    {
+      *r_parm = xtrymalloc (len2);
+      if (!*r_parm)
+        {
+          xfree (*r_oid); 
+          *r_oid = NULL;
+          return KSBA_Out_Of_Core;
+        }
+      memcpy (*r_parm, der+off2, len2);
+      *r_parmlen = len2;
+    }
+  return 0;
 }
 
 
@@ -359,7 +411,8 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
     return KSBA_Unexpected_Tag; /* not a SEQUENCE */
   TLV_LENGTH();
   /* and now the inner part */
-  err = get_algorithm (1, der, derlen, &nread, &off, &len, &is_bitstr);
+  err = get_algorithm (1, der, derlen, &nread, &off, &len, &is_bitstr,
+                       NULL, NULL);
   if (err)
     return err;
   
@@ -449,33 +502,14 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
 }
 
 
-/* Assume that der is a buffer of length DERLEN with a DER encoded
- Asn.1 structure like this:
- 
-     SEQUENCE { 
-        algorithm    OBJECT IDENTIFIER,
-        parameters   ANY DEFINED BY algorithm OPTIONAL }
-     signature  BIT STRING 
-  
-  We only allow parameters == NULL.
-
-  The function parses this structure and creates a S-Exp suitable to be
-  used as signature value in Libgcrypt:
-  
-  (sig-val
-    (<algo>
-      (<param_name1> <mpi>)
-      ...
-      (<param_namen> <mpi>)
-    ))
-
- The S-Exp will be returned in a string which the caller must free.
- We don't pass an ASN.1 node here but a plain memory block.  */
-KsbaError
-_ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
-                       char **r_string)
+/* Mode 0: work as described under _ksba_sigval_to_sexp
+   mode 1: work as described under _ksba_encval_to_sexp */
+static KsbaError
+cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
+                  char **r_string)
 {
   KsbaError err;
+  struct algo_table_s *algo_table;
   int c;
   size_t nread, off, len;
   int algoidx;
@@ -485,23 +519,29 @@ _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
   struct stringbuf sb;
 
   /* FIXME: The entire function is very similar to keyinfo_to_sexp */
-
   *r_string = NULL;
 
-  err = get_algorithm (1, der, derlen, &nread, &off, &len, &is_bitstr);
+  if (!mode)
+    algo_table = sig_algo_table;
+  else
+    algo_table = enc_algo_table;
+  
+
+  err = get_algorithm (1, der, derlen, &nread, &off, &len, &is_bitstr,
+                       NULL, NULL);
   if (err)
     return err;
   
   /* look into our table of supported algorithms */
-  for (algoidx=0; sig_algo_table[algoidx].oid; algoidx++)
+  for (algoidx=0; algo_table[algoidx].oid; algoidx++)
     {
-      if ( len == sig_algo_table[algoidx].oidlen
-           && !memcmp (der+off, sig_algo_table[algoidx].oid, len))
+      if ( len == algo_table[algoidx].oidlen
+           && !memcmp (der+off, algo_table[algoidx].oid, len))
         break;
     }
-  if (!sig_algo_table[algoidx].oid)
+  if (!algo_table[algoidx].oid)
     return KSBA_Unknown_Algorithm;
-  if (!sig_algo_table[algoidx].supported)
+  if (!algo_table[algoidx].supported)
     return KSBA_Unsupported_Algorithm;
 
   der += nread;
@@ -521,13 +561,13 @@ _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
   /* fixme: we should calculate the initial length form the size of the
      sequence, so that we don't neen a realloc later */
   init_stringbuf (&sb, 100);
-  put_stringbuf (&sb, "(sig-val(");
-  put_stringbuf (&sb, sig_algo_table[algoidx].algo_string);
+  put_stringbuf (&sb, mode? "(enc-val(":"(sig-val(");
+  put_stringbuf (&sb, algo_table[algoidx].algo_string);
 
   /* FIXME: We don't release the stringbuf in case of error
      better let the macro jump to a label */
-  elem = sig_algo_table[algoidx].elem_string; 
-  ctrl = sig_algo_table[algoidx].ctrl_string; 
+  elem = algo_table[algoidx].elem_string; 
+  ctrl = algo_table[algoidx].ctrl_string; 
   for (; *elem; ctrl++, elem++)
     {
       int is_int;
@@ -579,5 +619,64 @@ _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
     return KSBA_Out_Of_Core;
 
   return 0;
+}
+
+/* Assume that der is a buffer of length DERLEN with a DER encoded
+  Asn.1 structure like this:
+ 
+     SEQUENCE { 
+        algorithm    OBJECT IDENTIFIER,
+        parameters   ANY DEFINED BY algorithm OPTIONAL }
+     signature  BIT STRING 
+  
+  We only allow parameters == NULL.
+
+  The function parses this structure and creates a S-Exp suitable to be
+  used as signature value in Libgcrypt:
+  
+  (sig-val
+    (<algo>
+      (<param_name1> <mpi>)
+      ...
+      (<param_namen> <mpi>)
+    ))
+
+ The S-Exp will be returned in a string which the caller must free.
+ We don't pass an ASN.1 node here but a plain memory block.  */
+KsbaError
+_ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
+                       char **r_string)
+{
+  return cryptval_to_sexp (0, der, derlen, r_string);
+}
+
+
+/* Assume that der is a buffer of length DERLEN with a DER encoded
+ Asn.1 structure like this:
+ 
+     SEQUENCE { 
+        algorithm    OBJECT IDENTIFIER,
+        parameters   ANY DEFINED BY algorithm OPTIONAL }
+     encryptedKey  OCTET STRING 
+  
+  We only allow parameters == NULL.
+
+  The function parses this structure and creates a S-Exp suitable to be
+  used as encrypted value in Libgcrypt's public key functions:
+  
+  (enc-val
+    (<algo>
+      (<param_name1> <mpi>)
+      ...
+      (<param_namen> <mpi>)
+    ))
+
+ The S-Exp will be returned in a string which the caller must free.
+ We don't pass an ASN.1 node here but a plain memory block.  */
+KsbaError
+_ksba_encval_to_sexp (const unsigned char *der, size_t derlen,
+                       char **r_string)
+{
+  return cryptval_to_sexp (1, der, derlen, r_string);
 }
 

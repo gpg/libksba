@@ -1335,7 +1335,7 @@ _ksba_der_encode_tree (AsnNode root,
   /* Now calculate the length of all constructed types */
   imagelen = sum_up_lengths (root);
 
-#if 1
+#if 0
   /* set off to zero, so that it can be dumped */
   for (n=root; n ; n = _ksba_asn_walk_tree (root, n))
       n->off = 0;
