@@ -472,7 +472,6 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
           sprintf (tmp, "%02X", image[node->off+node->nhdr+i]);
           put_stringbuf (sb, tmp);
         }
-      put_stringbuf (sb, "#");
       break;
     }
 

@@ -1,5 +1,7 @@
 2002-01-11  Werner Koch  <wk@gnupg.org>
 
+	* dn.c (append_atv): Don't write a trailing hash sign.
+
 	* time.c (_ksba_asntime_to_epoch): Kludge to cope with the Y2038
 	problem.
 
