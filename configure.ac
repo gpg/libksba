@@ -79,8 +79,6 @@ AC_PROG_YACC
 
 AC_C_INLINE
 
-# Don't build shared libs for now.
-AM_DISABLE_SHARED
 AM_PROG_LIBTOOL
 
 if test "$GCC" = yes; then
