@@ -40,6 +40,7 @@ _ksba_asntime_to_epoch (const char *buffer, size_t length)
   struct tm buf;
   int year;
 
+  memset (&buf, 0, sizeof buf);
   for (s=buffer, n=0; n < length && digitp (s); n++, s++)
     ;
   if ((n != 12 && n != 14) || *s != 'Z')
@@ -59,6 +60,12 @@ _ksba_asntime_to_epoch (const char *buffer, size_t length)
     }
   if (year < 1900)
     return (time_t)(-1);
+
+  /* FIXME: we should use a configure test to see whether the 
+     mktime works */
+  if (sizeof (time_t) <= 4 && year >= 2038)
+    return (time_t)2145914603; /* 2037-12-31 23:23:23 */
+
   buf.tm_year = year - 1900;
   buf.tm_mon = atoi_2 (s) - 1; 
   s += 2;
@@ -70,7 +77,7 @@ _ksba_asntime_to_epoch (const char *buffer, size_t length)
   s += 2;
   buf.tm_sec = atoi_2 (s);
   s += 2;
-  buf.tm_isdst = 0;
+
 
 #ifdef HAVE_TIMEGM
   return timegm (&buf);

@@ -1,3 +1,10 @@
+2002-01-11  Werner Koch  <wk@gnupg.org>
+
+	* time.c (_ksba_asntime_to_epoch): Kludge to cope with the Y2038
+	problem.
+
+	* crl.c (do_hash): New.  Apply the hashing where needed.
+
 2002-01-10  Werner Koch  <wk@gnupg.org>
 
 	* certreq.c, certreq.h: New.

@@ -32,6 +32,32 @@
 #include "ber-decoder.h"
 #include "crl.h"
 
+/* we better buffer the hashing */
+static inline void
+do_hash (KsbaCRL crl, const void *buffer, size_t length)
+{
+  while (length)
+    {
+      size_t n = length;
+      
+      if (crl->hashbuf.used + n > sizeof crl->hashbuf.buffer)
+        n = sizeof crl->hashbuf.buffer - crl->hashbuf.used;
+      memcpy (crl->hashbuf.buffer+crl->hashbuf.used, buffer, n);
+      crl->hashbuf.used += n;
+      if (crl->hashbuf.used == sizeof crl->hashbuf.buffer)
+        {
+          if (crl->hash_fnc)
+            crl->hash_fnc (crl->hash_fnc_arg,
+                           crl->hashbuf.buffer, crl->hashbuf.used);
+          crl->hashbuf.used = 0;
+        }
+      buffer += n;
+      length -= n;
+    }
+}
+
+#define HASH(a,b) do_hash (crl, (a), (b))
+
 
 
 /**
@@ -73,8 +99,7 @@ ksba_crl_release (KsbaCRL crl)
 
   xfree (crl->item.serial);
 
-  xfree (crl->sig_val.algo);
-  xfree (crl->sig_val.value);
+  xfree (crl->sigval);
   xfree (crl);
 }
 
@@ -88,6 +113,20 @@ ksba_crl_set_reader (KsbaCRL crl, KsbaReader r)
   crl->reader = r;
   return 0;
 }
+
+/* Provide a hash function so that we are able to hash the data */
+void
+ksba_crl_set_hash_function (KsbaCRL crl,
+                            void (*hash_fnc)(void *, const void *, size_t),
+                            void *hash_fnc_arg)
+{
+  if (crl)
+    {
+      crl->hash_fnc = hash_fnc;
+      crl->hash_fnc_arg = hash_fnc_arg;
+    }
+}
+
 
 
 /* 
@@ -233,35 +272,17 @@ ksba_crl_get_item (KsbaCRL crl, KsbaSexp *r_serial,
 KsbaSexp
 ksba_crl_get_sig_val (KsbaCRL crl)
 {
-  AsnNode n, n2;
-  KsbaError err;
-  KsbaSexp string;
-
-
-  string = NULL;
-#if 0
+  KsbaSexp p;
 
   if (!crl)
     return NULL;
-  if (!crl->issuersigner_info.root)
+
+  if (!crl->sigval)
     return NULL;
-
-  n = _ksba_asn_find_node (crl->signer_info.root,
-                           "SignerInfos..signatureAlgorithm");
-  if (!n)
-      return NULL;
-  if (n->off == -1)
-      return NULL;
-
-  n2 = n->right; /* point to the actual value */
-  err = _ksba_sigval_to_sexp (crl->signer_info.image + n->off,
-                              n->nhdr + n->len
-                              + ((!n2||n2->off == -1)? 0:(n2->nhdr+n2->len)),
-                              &string);
-  if (err)
-      return NULL;
-#endif
-  return string;
+  
+  p = crl->sigval;
+  crl->sigval = NULL;
+  return p;
 }
 
 
@@ -375,13 +396,13 @@ parse_to_next_update (KsbaCRL crl)
     return KSBA_Object_Too_Short; 
 
   /* read the tbs sequence */
-  /* fixme: we need to keep a copy of those bytes for hashing */
   err = _ksba_ber_read_tl (crl->reader, &ti);
   if (err)
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
     return KSBA_Invalid_CRL_Object;
+  HASH (ti.buf, ti.nhdr);
   if (!outer_ndef)
     {
       if (outer_len < ti.nhdr)
@@ -405,6 +426,7 @@ parse_to_next_update (KsbaCRL crl)
     {
       if ( ti.is_constructed || !ti.length )
         return KSBA_Invalid_CRL_Object; 
+      HASH (ti.buf, ti.nhdr);
       if (!tbs_ndef)
         {
           if (tbs_len < ti.nhdr)
@@ -423,6 +445,10 @@ parse_to_next_update (KsbaCRL crl)
         return KSBA_Read_Error;
       if ( !(c == 0 || c == 1) )
         return KSBA_Unsupported_CRL_Version;
+      { 
+        unsigned char tmp = c;
+        HASH (&tmp, 1);
+      }
       crl->crl_version = c;
       err = _ksba_ber_read_tl (crl->reader, &ti);
       if (err)
@@ -448,7 +474,8 @@ parse_to_next_update (KsbaCRL crl)
   err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
   if (err)
     return err;
-  
+  HASH (tmpbuf, ti.nhdr+ti.length);
+
   xfree (crl->algo.oid); crl->algo.oid = NULL;
   xfree (crl->algo.parm); crl->algo.parm = NULL;
   err = _ksba_parse_algorithm_identifier2 (tmpbuf, ti.nhdr+ti.length, &nread,
@@ -461,14 +488,25 @@ parse_to_next_update (KsbaCRL crl)
   if (nread < ti.nhdr + ti.length)
     return KSBA_Object_Too_Short;
 
+  
   /* read the name */
-  err = create_and_run_decoder (crl->reader, 
-                                "TMTTv2.CertificateList.tbsCertList.issuer",
-                                &crl->issuer.root,
-                                &crl->issuer.image,
-                                &crl->issuer.imagelen);
-  if (err)
-    return err;
+  {
+    unsigned long n = ksba_reader_tell (crl->reader);
+    err = create_and_run_decoder (crl->reader, 
+                                  "TMTTv2.CertificateList.tbsCertList.issuer",
+                                  &crl->issuer.root,
+                                  &crl->issuer.image,
+                                  &crl->issuer.imagelen);
+    if (err)
+      return err;
+    /* imagelen might be larger than the valid data (due to read ahead).
+       So we need to get the count from the reader */
+    n = ksba_reader_tell (crl->reader) - n;
+    if (n > crl->issuer.imagelen)
+      return KSBA_Bug;
+    HASH (crl->issuer.image, n);
+  }
+
   if (!tbs_ndef)
     {
       if (tbs_len < crl->issuer.imagelen)
@@ -500,6 +538,7 @@ parse_to_next_update (KsbaCRL crl)
   err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
   if (err)
     return err;
+  HASH (tmpbuf, ti.nhdr+ti.length);
   crl->this_update = _ksba_asntime_to_epoch (tmpbuf+ti.nhdr, ti.length);
 
   /* read the optional nextUpdate time */
@@ -525,6 +564,7 @@ parse_to_next_update (KsbaCRL crl)
       err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
       if (err)
         return err;
+      HASH (tmpbuf, ti.nhdr+ti.length);
       crl->next_update = _ksba_asntime_to_epoch (tmpbuf+ti.nhdr, ti.length);
       err = _ksba_ber_read_tl (crl->reader, &ti);
       if (err)
@@ -535,6 +575,7 @@ parse_to_next_update (KsbaCRL crl)
   if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
       && ti.is_constructed )
     { /* yes, there is one */
+      HASH (ti.buf, ti.nhdr);
       if (!tbs_ndef)
         {
           if (tbs_len < ti.nhdr)
@@ -565,7 +606,7 @@ parse_to_next_update (KsbaCRL crl)
 }
 
 
-/* Parse the revokedCertificates SEQEUNCE of SEQUENCE using a custom
+/* Parse the revokedCertificates SEQUENCE of SEQUENCE using a custom
    parser for efficiency and return after each entry */
 static KsbaError
 parse_crl_entry (KsbaCRL crl, int *got_entry)
@@ -576,7 +617,7 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
   int seqseq_ndef         = crl->state.seqseq_ndef;
   unsigned long len;
   int ndef;
-  unsigned char tmpbuf[500]; /* for time and serial number */
+  unsigned char tmpbuf[4096]; /* for time, serial number and extensions */
   char numbuf[22];
   int numbuflen;
 
@@ -592,6 +633,7 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
     return KSBA_Invalid_CRL_Object;
+  HASH (ti.buf, ti.nhdr);
   if (!seqseq_ndef)
     {
       if (seqseq_len < ti.nhdr)
@@ -626,6 +668,7 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
   err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
   if (err)
     return err;
+  HASH (tmpbuf, ti.nhdr+ti.length);
 
   xfree (crl->item.serial);
   sprintf (numbuf,"(%u:", (unsigned int)ti.length);
@@ -661,14 +704,57 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
   err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
   if (err)
     return err;
+  HASH (tmpbuf, ti.nhdr+ti.length);
   crl->item.revocation_date =
     _ksba_asntime_to_epoch (tmpbuf+ti.nhdr, ti.length);
 
   /* if there is still space we must parse the optional entryExtensions */
-  if (!ndef && len)
+  if (ndef)
+    return KSBA_Unsupported_Encoding;
+  else if (len)
     {
-      /* fixme */
+      /* read the outer sequence */
+      err = _ksba_ber_read_tl (crl->reader, &ti);
+      if (err)
+        return err;
+      if ( !(ti.class == CLASS_UNIVERSAL
+             && ti.tag == TYPE_SEQUENCE && ti.is_constructed) )
+        return KSBA_Invalid_CRL_Object;
+      if (ti.ndef)
+        return KSBA_Unsupported_Encoding;
+      HASH (ti.buf, ti.nhdr);
+      if (len < ti.nhdr)
+        return KSBA_BER_Error;
+      len -= ti.nhdr;
+      if (len < ti.length)
+        return KSBA_BER_Error;
 
+      /* now loop over the extensions */
+      while (len)
+        {
+          err = _ksba_ber_read_tl (crl->reader, &ti);
+          if (err)
+            return err;
+          if ( !(ti.class == CLASS_UNIVERSAL
+                 && ti.tag == TYPE_SEQUENCE && ti.is_constructed) )
+            return KSBA_Invalid_CRL_Object;
+          if (ti.ndef)
+            return KSBA_Unsupported_Encoding;
+          if (len < ti.nhdr)
+            return KSBA_BER_Error;
+          len -= ti.nhdr;
+          if (len < ti.length)
+            return KSBA_BER_Error;
+          len -= ti.length;
+          if (ti.nhdr + ti.length >= DIM(tmpbuf))
+            return KSBA_Object_Too_Large;
+          memcpy (tmpbuf, ti.buf, ti.nhdr);
+          err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
+          if (err)
+            return err;
+          HASH (tmpbuf, ti.nhdr+ti.length);
+          /* fixme: handle extension */
+        }
     }
 
   /* read ahead */
@@ -692,14 +778,70 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
 static KsbaError 
 parse_crl_extensions (KsbaCRL crl)
 { 
+  KsbaError err;
   struct tag_info ti = crl->state.ti;
+  unsigned long ext_len, len;
+  unsigned char tmpbuf[4096]; /* for extensions */
 
   /* if we do not have a tag [0] we are done with this */
   if (!(ti.class == CLASS_CONTEXT && ti.tag == 0 && ti.is_constructed))
     return 0;
-  
-  /* fixme XXXX */
+  if (ti.ndef)
+    return KSBA_Unsupported_Encoding;
+  HASH (ti.buf, ti.nhdr);
+  ext_len = ti.length;
 
+  /* read the outer sequence */
+  err = _ksba_ber_read_tl (crl->reader, &ti);
+  if (err)
+    return err;
+  if ( !(ti.class == CLASS_UNIVERSAL
+         && ti.tag == TYPE_SEQUENCE && ti.is_constructed) )
+    return KSBA_Invalid_CRL_Object;
+  if (ti.ndef)
+    return KSBA_Unsupported_Encoding;
+  HASH (ti.buf, ti.nhdr);
+  if (ext_len < ti.nhdr)
+    return KSBA_BER_Error;
+  ext_len -= ti.nhdr;
+  if (ext_len < ti.length)
+    return KSBA_BER_Error;
+  len = ti.length;
+
+  /* now loop over the extensions */
+  while (len)
+    {
+      err = _ksba_ber_read_tl (crl->reader, &ti);
+      if (err)
+        return err;
+      if ( !(ti.class == CLASS_UNIVERSAL
+             && ti.tag == TYPE_SEQUENCE && ti.is_constructed) )
+        return KSBA_Invalid_CRL_Object;
+      if (ti.ndef)
+        return KSBA_Unsupported_Encoding;
+      if (len < ti.nhdr)
+        return KSBA_BER_Error;
+      len -= ti.nhdr;
+      if (len < ti.length)
+        return KSBA_BER_Error;
+      len -= ti.length;
+      if (ti.nhdr + ti.length >= DIM(tmpbuf))
+        return KSBA_Object_Too_Large;
+      /* fixme use a larger buffer if the extsion does not fit into tmpbuf */
+      memcpy (tmpbuf, ti.buf, ti.nhdr);
+      err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
+      if (err)
+        return err;
+      HASH (tmpbuf, ti.nhdr+ti.length);
+      /* fixme: handle extension */
+    }
+
+  /* read ahead */
+  err = _ksba_ber_read_tl (crl->reader, &ti);
+  if (err)
+    return err;
+
+  crl->state.ti = ti;
   return 0;
 }
 
@@ -707,9 +849,46 @@ parse_crl_extensions (KsbaCRL crl)
 static KsbaError
 parse_signature (KsbaCRL crl)
 {
-  /* fixme XXXX */
+  KsbaError err;
+  struct tag_info ti = crl->state.ti;
+  unsigned char tmpbuf[2048]; /* for the sig algo and bitstr */
+  size_t n, n2;
 
-  return 0;
+  /* We do read the stuff into a temporary buffer so that we can apply
+     our parsing function for this structure */
+
+  /* read the algorithmIdentifier sequence */
+  if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+         && ti.is_constructed) )
+    return KSBA_Invalid_CRL_Object;
+  if (ti.ndef)
+    return KSBA_Unsupported_Encoding;
+  n = ti.nhdr + ti.length;
+  if (n >= DIM(tmpbuf))
+    return KSBA_Object_Too_Large;
+  memcpy (tmpbuf, ti.buf, ti.nhdr);
+  err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
+  if (err)
+    return err;
+  
+  /* and append the bit string */
+  err = _ksba_ber_read_tl (crl->reader, &ti);
+  if (err)
+    return err;
+  if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_BIT_STRING
+         && !ti.is_constructed) )
+    return KSBA_Invalid_CRL_Object;
+  n2 = ti.nhdr + ti.length;
+  if (n + n2 >= DIM(tmpbuf))
+    return KSBA_Object_Too_Large;
+  memcpy (tmpbuf+n, ti.buf, ti.nhdr);
+  err = read_buffer (crl->reader, tmpbuf+n+ti.nhdr, ti.length);
+  if (err)
+    return err;
+
+  /* now parse it */
+  xfree (crl->sigval); crl->sigval = NULL;
+  return _ksba_sigval_to_sexp (tmpbuf, n + n2, &crl->sigval);
 }
 
 
@@ -774,7 +953,13 @@ ksba_crl_parse (KsbaCRL crl, KsbaStopReason *r_stopreason)
     case sCRLEXT:
       err = parse_crl_extensions (crl);
       if (!err)
-        err = parse_signature (crl);
+        {
+          if (crl->hash_fnc && crl->hashbuf.used)
+            crl->hash_fnc (crl->hash_fnc_arg,
+                           crl->hashbuf.buffer, crl->hashbuf.used);
+          crl->hashbuf.used = 0;
+          err = parse_signature (crl);
+        }
       break;
     default:
       err = KSBA_Invalid_State;

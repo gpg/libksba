@@ -242,6 +242,9 @@ KsbaError ksba_cms_set_enc_val (KsbaCMS cms, int idx, KsbaConstSexp encval);
 KsbaCRL   ksba_crl_new (void);
 void      ksba_crl_release (KsbaCRL crl);
 KsbaError ksba_crl_set_reader (KsbaCRL crl, KsbaReader r);
+void      ksba_crl_set_hash_function (KsbaCRL crl,
+                            void (*hash_fnc)(void *, const void *, size_t),
+                            void *hash_fnc_arg);
 const char *ksba_crl_get_digest_algo (KsbaCRL crl);
 KsbaError ksba_crl_get_issuer (KsbaCRL crl, char **r_issuer);
 KsbaError ksba_crl_get_update_times (KsbaCRL crl, time_t *this, time_t *next);

@@ -64,12 +64,13 @@ struct ksba_crl_s {
     KsbaCRLReason reason;
   } item;
 
+  KsbaSexp sigval;
 
   struct {
-    char *algo;
-    unsigned char *value;
-    size_t valuelen;
-  } sig_val;
+    int used;
+    char buffer[8192]; 
+  } hashbuf;
+
 };
 
 

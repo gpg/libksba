@@ -878,8 +878,8 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
   return 0;
 }
 
-/* Assume that der is a buffer of length DERLEN with a DER encoded
-  Asn.1 structure like this:
+/* Assume that DER is a buffer of length DERLEN with a DER encoded
+   Asn.1 structure like this:
  
      SEQUENCE { 
         algorithm    OBJECT IDENTIFIER,
