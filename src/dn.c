@@ -35,7 +35,7 @@ struct {
   const char *name;
   int allowed_by_rfc2253;
   const char *description;
-  int                  oidlen;
+  size_t      oidlen;
   const unsigned char *oid;
 } oid_name_tbl[] = { /* see rfc2256 for a list of them */
 {"CN", 1, "CommonName",            3, "\x55\x04\x03"}, /* 2.5.4.3 */
@@ -847,7 +847,7 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
   char *oidbuf = NULL;
   unsigned char *valuebuf = NULL;
   const unsigned char *oid = NULL;
-  int oidlen;
+  size_t oidlen;
   const unsigned char *value = NULL;
   int valuelen;
   int valuetype;

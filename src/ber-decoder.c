@@ -233,7 +233,9 @@ dump_tlv (const struct tag_info *ti, FILE *fp)
              ti->class == CLASS_APPLICATION? "APPLICATION" :
              ti->class == CLASS_CONTEXT? "CONTEXT-SPECIFIC" : "PRIVATE",
              ti->tag);
-  fprintf (fp, " %c hdr=%u len=", ti->is_constructed? 'c':'p', ti->nhdr);
+  fprintf (fp, " %c hdr=%lu len=",
+           ti->is_constructed? 'c':'p',
+           (unsigned long)ti->nhdr);
   if (ti->ndef)
     fputs ("ndef", fp);
   else

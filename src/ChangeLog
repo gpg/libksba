@@ -1,3 +1,10 @@
+2003-10-21  Werner Koch  <wk@gnupg.org>
+
+	* dn.c (oid_name_tbl): Changed OIDLEN to size_t.
+	(parse_rdn): Ditto.
+	* ber-decoder.c (dump_tlv): Fixed format specifier for NHDR.
+	Reported by Stephane Corthesy.
+
 2003-08-20  Marcus Brinkmann  <marcus@g10code.de>
  
 	* ber-decoder.c (new_decoder_state): Initialize DS->cur.in_any.
