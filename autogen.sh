@@ -15,7 +15,7 @@ PGM=libksba
 
 # Required version of autoconf.  Keep it in sync with the AC_PREREQ
 # macro at the top of configure.ac.
-autoconf_vers=2.57.1
+autoconf_vers=2.57
 
 # Required version of automake. 
 automake_vers=1.7.7
