@@ -1,5 +1,5 @@
 /* cert-basic.c - basic test for the certificate management.
- *      Copyright (C) 2001, 2002 g10 Code GmbH
+ *      Copyright (C) 2001, 2002, 2004 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -241,6 +241,27 @@ list_extensions (ksba_cert_t cert)
         fputs (" decipherOnly", stdout);
       putchar ('\n');
     }
+  err = ksba_cert_get_ext_key_usages (cert, &string);
+  if (gpg_err_code (err) == GPG_ERR_NO_DATA)
+    printf ("ExtKeyUsages: none\n");
+  else if (err)
+    { 
+      fprintf (stderr, "%s:%d: ksba_cert_ext_key_usages failed: %s\n", 
+               __FILE__, __LINE__, gpg_strerror (err));
+      errorcount++;
+    } 
+  else
+    {
+      /* for display purposes we replace the linefeeds by commas */
+      for (p=string; *p; p++)
+        {
+          if (*p == '\n')
+            *p = ',';
+        }
+      printf ("ExtKeyUsages: %s\n", string);
+      xfree (string);
+    }
+
 
   err = ksba_cert_get_cert_policies (cert, &string);
   if (gpg_err_code (err) == GPG_ERR_NO_DATA)

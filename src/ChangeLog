@@ -1,3 +1,9 @@
+2004-02-20  Werner Koch  <wk@gnupg.org>
+
+	* cert.c (ksba_cert_get_ext_key_usages): New.
+	(ksba_cert_get_auth_key_id): Fix for the case that there is only
+	the KeyIdentifier.
+
 2004-02-13  Werner Koch  <wk@gnupg.org>
 
 	* reader.c, ksba.h (ksba_reader_clear): New.

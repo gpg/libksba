@@ -1,3 +1,7 @@
+2004-02-20  Werner Koch  <wk@gnupg.org>
+
+	* cert-basic.c (list_extensions): Print extKeyUsages.
+
 2003-11-28  Werner Koch  <wk@gnupg.org>
 
 	* t-common.h (print_sexp): Print alphanumeric tokens if possible.

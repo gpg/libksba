@@ -283,6 +283,7 @@ gpg_error_t ksba_cert_get_extension (ksba_cert_t cert, int idx,
 gpg_error_t ksba_cert_is_ca (ksba_cert_t cert, int *r_ca, int *r_pathlen);
 gpg_error_t ksba_cert_get_key_usage (ksba_cert_t cert, unsigned int *r_flags);
 gpg_error_t ksba_cert_get_cert_policies (ksba_cert_t cert, char **r_policies);
+gpg_error_t ksba_cert_get_ext_key_usages (ksba_cert_t cert, char **result);
 gpg_error_t ksba_cert_get_crl_dist_point (ksba_cert_t cert, int idx,
                                           ksba_name_t *r_distpoint,
                                           ksba_name_t *r_issuer,

@@ -1,5 +1,5 @@
 /* cert.c - main function for the certificate handling
- *      Copyright (C) 2001, 2002, 2003 g10 Code GmbH
+ *      Copyright (C) 2001, 2002, 2003, 2004 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -39,6 +39,7 @@ static const char oidstr_basicConstraints[] = "2.5.29.19";
 static const char oidstr_crlDistributionPoints[] = "2.5.29.31";
 static const char oidstr_certificatePolicies[] = "2.5.29.32";
 static const char oidstr_authorityKeyIdentifier[] = "2.5.29.35";
+static const char oidstr_extKeyUsage[] = "2.5.29.37";
 
 /**
  * ksba_cert_new:
@@ -1046,6 +1047,7 @@ ksba_cert_get_key_usage (ksba_cert_t cert, unsigned int *r_flags)
 
 
 
+/* Note, that this helper is also used for ext_key_usage. */
 static gpg_error_t
 append_cert_policy (char **policies, const char *oid, int crit)
 {
@@ -1203,6 +1205,98 @@ ksba_cert_get_cert_policies (ksba_cert_t cert, char **r_policies)
     }
   return err;
 }
+
+
+/* Return a string with the extendedKeyUsageOIDs delimited by
+   linefeeds.  The return values may be extended to carry more
+   information per line, so the caller should only use the first
+   white-space delimited token per line.  The function returns
+   GPG_ERR_NO_DATA when this extension is not used.  Caller must free
+   the returned value.  */
+gpg_error_t
+ksba_cert_get_ext_key_usages (ksba_cert_t cert, char **result)
+{
+  gpg_error_t err;
+  const char *oid;
+  int idx, crit;
+  size_t off, derlen;
+  const unsigned char *der;
+  struct tag_info ti;
+
+  if (!cert || !result)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  *result = NULL;
+
+  for (idx=0; !(err=ksba_cert_get_extension (cert, idx, &oid, &crit,
+                                             &off, &derlen)); idx++)
+    {
+      if (!strcmp (oid, oidstr_extKeyUsage))
+        {
+          char *suboid;
+
+          der = cert->image + off;
+ 
+          err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+          if (err)
+            goto leave;
+          if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+                 && ti.is_constructed) )
+            {
+              err = gpg_error (GPG_ERR_INV_CERT_OBJ);
+              goto leave;
+            }
+          if (ti.ndef)
+            {
+              err = gpg_error (GPG_ERR_NOT_DER_ENCODED);
+              goto leave;
+            }
+          if (ti.length > derlen)
+            {
+              err = gpg_error (GPG_ERR_BAD_BER);
+              goto leave;
+            }
+          while (derlen)
+            {
+              err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+              if (err)
+                goto leave;
+              if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OBJECT_ID))
+                {
+                  err = gpg_error (GPG_ERR_INV_CERT_OBJ);
+                  goto leave;
+                }
+              
+              suboid = ksba_oid_to_str (der, ti.length);
+              if (!suboid)
+                {
+                  err = gpg_error (GPG_ERR_ENOMEM);
+                  goto leave;
+                }
+              der       += ti.length;
+              derlen    -= ti.length;
+
+              err = append_cert_policy (result, suboid, crit);
+              xfree (suboid);
+              if (err)
+                goto leave;
+            }
+        }
+    }
+
+  if (gpg_err_code (err) == GPG_ERR_EOF)
+    err = 0;
+  if (!*result)
+    err = gpg_error (GPG_ERR_NO_DATA);
+
+ leave:
+  if (err)
+    {
+      xfree (*result);
+      *result = NULL;
+    }
+  return err;
+}
+
 
 
 
@@ -1530,10 +1624,13 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
     return gpg_error (GPG_ERR_BAD_BER);
 
   if (ti.tag == 0)
-    { /* we do not support the keyIdentifier method yet, but we need
+    { /* We do not support the keyIdentifier method yet, but we need
          to skip it. */
       der += ti.length;
       derlen -= ti.length;
+      if (!derlen)
+        return gpg_error (GPG_ERR_NO_DATA); /* not available */
+        
       err = _ksba_ber_parse_tl (&der, &derlen, &ti);
       if (err)
         return err;
