@@ -1,7 +1,6 @@
                                                               -*- outline -*-
 
 * src/cert.c:
-** retrieve CRL distribution point
 ** DSA has not been tested
 
 * src/dn.c:
@@ -55,6 +54,7 @@ However, they are not allowed in Sphinx.
 
 * src/crl.c
 ** We don't support CRL entry extensions
+** Reason is not correctly retruned - check it.
 
 * src/keyinfo.c
 ** Extract DSA parameters
