@@ -6,6 +6,7 @@
 	sigs.
 	(build_enveloped_data_header): Fix doc; it is an explicit octect
 	string.
+	(read_encrypted_cont): Read constructed octet strings.
 
 2002-06-12  Werner Koch  <wk@gnupg.org>
 

@@ -195,6 +195,8 @@ read_encrypted_cont (KsbaCMS cms)
     {
       struct tag_info ti;
 
+      /* fixme: this ist mostly a duplicate of the code in
+         read_and_hash_cont(). */
       for (;;)
         {
           err = _ksba_ber_read_tl (cms->reader, &ti);
@@ -215,6 +217,39 @@ read_encrypted_cont (KsbaCMS cms)
                   err = ksba_writer_write (cms->writer, buffer, nread);
                   if (err)
                     return err;
+                }
+            }
+          else if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OCTET_STRING
+                   && ti.is_constructed)
+            { /* next chunk is constructed */
+              for (;;)
+                {
+                  err = _ksba_ber_read_tl (cms->reader, &ti);
+                  if (err)
+                    return err;
+                  if (ti.class == CLASS_UNIVERSAL
+                      && ti.tag == TYPE_OCTET_STRING
+                      && !ti.is_constructed)
+                    {
+                      nleft = ti.length;
+                      while (nleft)
+                        {
+                          n = nleft < sizeof (buffer)? nleft : sizeof (buffer);
+                          err = ksba_reader_read (cms->reader, buffer, n, &nread);
+                          if (err)
+                            return err;
+                          nleft -= nread;
+                          if (cms->writer)
+                            err = ksba_writer_write (cms->writer, buffer, nread);
+                          if (err)
+                            return err;
+                        }
+                    }
+                  else if (ti.class == CLASS_UNIVERSAL && !ti.tag
+                           && !ti.is_constructed)
+                    break; /* ready with this chunk */ 
+                  else
+                    return KSBA_Encoding_Error;
                 }
             }
           else if (ti.class == CLASS_UNIVERSAL && !ti.tag
@@ -278,7 +313,8 @@ KsbaContentType
 ksba_cms_identify (KsbaReader reader) 
 {
   struct tag_info ti;
-  unsigned char buffer[20], *p;
+  unsigned char buffer[20];
+  const unsigned char*p;
   size_t n;
   char *oid;
   int i;
@@ -2499,8 +2535,10 @@ ct_build_enveloped_data (KsbaCMS cms)
     {
       /* SPHINX does not allow for unprotectedAttributes */
 
-      /* Write 4 end tags */
+      /* Write 5 end tags */
       err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
+      if (!err)
+        err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
       if (!err)
         err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
       if (!err)
