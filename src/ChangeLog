@@ -1,3 +1,16 @@
+2002-08-21  Werner Koch  <wk@gnupg.org>
+
+	* der-encoder.c (_ksba_der_copy_tree)
+	* crl.c (ksba_crl_get_issuer)
+	* cms.c (ksba_cms_get_issuer_serial)
+	(ksba_cms_get_sig_val)
+	(ksba_cms_get_enc_val) 
+	* cert.c (ksba_cert_get_image)
+	(ksba_cert_hash)
+	(ksba_cert_get_serial)
+	(ksba_cert_get_sig_val): Removed all debugging output for encoding
+	errors.
+
 2002-08-13  Werner Koch  <wk@gnupg.org>
 
 	* ksba.m4: New.

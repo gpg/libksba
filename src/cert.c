@@ -196,8 +196,8 @@ ksba_cert_get_image (KsbaCert cert, size_t *r_length )
 
   if (n->off == -1)
     {
-      fputs ("ksba_cert_get_image problem at node:\n", stderr);
-      _ksba_asn_node_dump_all (n, stderr);
+/*        fputs ("ksba_cert_get_image problem at node:\n", stderr); */
+/*        _ksba_asn_node_dump_all (n, stderr); */
       return NULL;
     }
 
@@ -246,8 +246,8 @@ ksba_cert_hash (KsbaCert cert, int what,
     return KSBA_No_Value; /* oops - should be there */
   if (n->off == -1)
     {
-      fputs ("ksba_cert_hash problem at node:\n", stderr);
-      _ksba_asn_node_dump_all (n, stderr);
+/*        fputs ("ksba_cert_hash problem at node:\n", stderr); */
+/*        _ksba_asn_node_dump_all (n, stderr); */
       return KSBA_No_Value;
     }
 
@@ -333,8 +333,8 @@ ksba_cert_get_serial (KsbaCert cert)
 
   if (n->off == -1)
     {
-      fputs ("get_serial problem at node:\n", stderr);
-      _ksba_asn_node_dump_all (n, stderr);
+/*        fputs ("get_serial problem at node:\n", stderr); */
+/*        _ksba_asn_node_dump_all (n, stderr); */
       return NULL;
     }
   
@@ -627,8 +627,8 @@ ksba_cert_get_sig_val (KsbaCert cert)
     }
   if (n->off == -1)
     {
-      fputs ("ksba_cert_get_sig_val problem at node:\n", stderr);
-      _ksba_asn_node_dump_all (n, stderr);
+/*        fputs ("ksba_cert_get_sig_val problem at node:\n", stderr); */
+/*        _ksba_asn_node_dump_all (n, stderr); */
       cert->last_error = KSBA_No_Value;
       return NULL;
     }

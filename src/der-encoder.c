@@ -218,10 +218,10 @@ _ksba_der_copy_tree (AsnNode dst_root,
 
   if (s || d)
     {
-      fputs ("ksba_der_copy_tree: trees don't match\nSOURCE TREE:\n", stderr);
-      _ksba_asn_node_dump_all (src_root, stderr);
-      fputs ("DESTINATION TREE:\n", stderr);
-      _ksba_asn_node_dump_all (dst_root, stderr);
+/*        fputs ("ksba_der_copy_tree: trees don't match\nSOURCE TREE:\n", stderr); */
+/*        _ksba_asn_node_dump_all (src_root, stderr); */
+/*        fputs ("DESTINATION TREE:\n", stderr); */
+/*        _ksba_asn_node_dump_all (dst_root, stderr); */
       return KSBA_Encoding_Error;
     }
   return 0;

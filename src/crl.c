@@ -189,8 +189,8 @@ ksba_crl_get_issuer (KsbaCRL crl, char **r_issuer)
       
   if (n->off == -1)
     {
-      fputs ("get_issuer problem at node:\n", stderr);
-      _ksba_asn_node_dump_all (n, stderr);
+/*        fputs ("get_issuer problem at node:\n", stderr); */
+/*        _ksba_asn_node_dump_all (n, stderr); */
       return KSBA_General_Error;
     }
   err = _ksba_dn_to_str (image, n, r_issuer);

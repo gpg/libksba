@@ -708,8 +708,8 @@ ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
       
       if (n->off == -1)
         {
-          fputs ("get_issuer problem at node:\n", stderr);
-          _ksba_asn_node_dump_all (n, stderr);
+/*            fputs ("get_issuer problem at node:\n", stderr); */
+/*            _ksba_asn_node_dump_all (n, stderr); */
           return KSBA_General_Error;
         }
       err = _ksba_dn_to_str (image, n, r_issuer);
@@ -730,8 +730,8 @@ ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
       
       if (n->off == -1)
         {
-          fputs ("get_serial problem at node:\n", stderr);
-          _ksba_asn_node_dump_all (n, stderr);
+/*            fputs ("get_serial problem at node:\n", stderr); */
+/*            _ksba_asn_node_dump_all (n, stderr); */
           return KSBA_General_Error;
         }
 
@@ -980,8 +980,8 @@ ksba_cms_get_sig_val (KsbaCMS cms, int idx)
       return NULL;
   if (n->off == -1)
     {
-      fputs ("ksba_cms_get_sig_val problem at node:\n", stderr);
-      _ksba_asn_node_dump_all (n, stderr);
+/*        fputs ("ksba_cms_get_sig_val problem at node:\n", stderr); */
+/*        _ksba_asn_node_dump_all (n, stderr); */
       return NULL;
     }
 
@@ -1035,8 +1035,8 @@ ksba_cms_get_enc_val (KsbaCMS cms, int idx)
       return NULL;
   if (n->off == -1)
     {
-      fputs ("ksba_cms_get_enc_val problem at node:\n", stderr);
-      _ksba_asn_node_dump_all (n, stderr);
+/*        fputs ("ksba_cms_get_enc_val problem at node:\n", stderr); */
+/*        _ksba_asn_node_dump_all (n, stderr); */
       return NULL;
     }
 
