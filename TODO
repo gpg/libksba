@@ -2,7 +2,8 @@
 
 * src/dn.c:
 
-  * Implement utf8 conversion. 
+  * Check that error handling of bad utf-8 encoding is correct
+  * Implemnetd UCS-4 and UCS-2 to UTF-8 conversion 
 
 * src/der-decoder.c:  
 

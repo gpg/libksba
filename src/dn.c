@@ -118,7 +118,6 @@ put_stringbuf (struct stringbuf *sb, const char *text)
   sb->len += n;
 }
 
-/* FIXME: This function is a temporary kludge */
 static void
 put_stringbuf_mem (struct stringbuf *sb, const char *text, size_t n)
 {
@@ -161,6 +160,43 @@ get_stringbuf (struct stringbuf *sb)
 }
 
 
+/* This function is used for 1 byte encodings to insert any required
+   quoting.  It does not do the quoting for a space or hash mark at
+   the beginning of a string or a space as the last character of a
+   string */
+static void
+append_quoted (struct stringbuf *sb, const unsigned char *value, size_t length)
+{
+  unsigned char tmp[4];
+  const unsigned char *s = value;
+  size_t n = 0;
+
+  for (;;)
+    {
+      for (value = s; n < length; n++, s++)
+        {
+          if (*s < ' ' || *s > 126 || strchr (",+\"\\<>;", *s) )
+            break;
+        }
+
+      if (s != value)
+        put_stringbuf_mem (sb, value, s-value);
+      if (n==length)
+        return; /* ready */
+      if ( *s < ' ' || *s > 126 )
+        {
+          sprintf (tmp, "\\%02X", *s);
+          put_stringbuf_mem (sb, tmp, 3);
+        }
+      else
+        {
+          tmp[0] = '\\';
+          tmp[1] = *s;
+          put_stringbuf_mem (sb, tmp, 2);
+        }
+      n++; s++;
+    }
+}
 
 
 /* Append VALUE of LENGTH and TYPE to SB.  Do the required quoting. */
@@ -168,8 +204,63 @@ static void
 append_utf8_value (const unsigned char *value, size_t length,
                    struct stringbuf *sb)
 {
-  /* FIXME */
-  put_stringbuf_mem (sb, value, length);
+  unsigned char tmp[6];
+  const unsigned char *s;
+  size_t n;
+  int i, nmore;
+
+  if (length && (*value == ' ' || *value == '#'))
+    {
+      tmp[0] = '\\';
+      tmp[1] = *value;
+      put_stringbuf_mem (sb, tmp, 2);
+      value++;
+      length--;
+    }
+  if (length && value[length-1] == ' ')
+    {
+      tmp[0] = '\\';
+      tmp[1] = ' ';
+      put_stringbuf_mem (sb, tmp, 2);
+      length--;
+    }
+
+  /* FIXME: check that the invalid encoding handling is correct */
+  for (s=value, n=0;;)
+    {
+      for (value = s; n < length && !(*s & 0x80); n++, s++)
+        ;
+      if (s != value)
+        append_quoted (sb, value, s-value);
+      if (n==length)
+        return; /* ready */
+      assert ((*s & 0x80));
+      if ( (*s & 0xe0) == 0xc0 )      /* 110x xxxx */
+        nmore = 1;
+      else if ( (*s & 0xf0) == 0xe0 ) /* 1110 xxxx */
+        nmore = 2;
+      else if ( (*s & 0xf8) == 0xf0 ) /* 1111 0xxx */
+        nmore = 3;
+      else if ( (*s & 0xfc) == 0xf8 ) /* 1111 10xx */
+        nmore = 4;
+      else if ( (*s & 0xfe) == 0xfc ) /* 1111 110x */
+        nmore = 5;
+      else /* invalid encoding */
+        nmore = 5;  /* we will reduce the check length anyway */
+
+      if (n+nmore > length)
+        nmore = length - n; /* oops, encoding to short */ 
+
+      tmp[0] = *s++; n++;
+      for (i=1; i <= nmore; i++)
+        {
+          if ( (*s & 0xc0) != 0x80)
+            break; /* invalid encoding - stop */
+          tmp[i] = *s++;
+          n++;
+        }
+      put_stringbuf_mem (sb, tmp, i);
+    }
 }
 
 /* Append VALUE of LENGTH and TYPE to SB.  Do character set conversion
@@ -179,15 +270,31 @@ append_latin1_value (const unsigned char *value, size_t length,
                      struct stringbuf *sb)
 {
   unsigned char tmp[2];
-  const unsigned char *s = value;
-  size_t n = 0;
+  const unsigned char *s;
+  size_t n;
 
-  for (;;)
+  if (length && (*value == ' ' || *value == '#'))
+    {
+      tmp[0] = '\\';
+      tmp[1] = *value;
+      put_stringbuf_mem (sb, tmp, 2);
+      value++;
+      length--;
+    }
+  if (length && value[length-1] == ' ')
+    {
+      tmp[0] = '\\';
+      tmp[1] = ' ';
+      put_stringbuf_mem (sb, tmp, 2);
+      length--;
+    }
+
+  for (s=value, n=0;;)
     {
       for (value = s; n < length && !(*s & 0x80); n++, s++)
         ;
       if (s != value)
-        put_stringbuf_mem (sb, value, s-value);
+        append_quoted (sb, value, s-value);
       if (n==length)
         return; /* ready */
       assert ((*s & 0x80));
@@ -197,6 +304,87 @@ append_latin1_value (const unsigned char *value, size_t length,
       n++; s++;
     }
 }
+
+/* Append VALUE of LENGTH and TYPE to SB.  Do UCS-4 to utf conversion
+   and and quoting */
+static void
+append_ucs4_value (const unsigned char *value, size_t length,
+                   struct stringbuf *sb)
+{
+  unsigned char tmp[2];
+  const unsigned char *s;
+  size_t n;
+
+  if (length>3 && !value[0] && !value[1] && !value[2]
+      && (value[3] == ' ' || value[3] == '#'))
+    {
+      tmp[0] = '\\';
+      tmp[1] = *value;
+      put_stringbuf_mem (sb, tmp, 2);
+      value += 4;
+      length -= 4;
+    }
+  if (length>3 && !value[0] && !value[1] && !value[2] && value[3] == ' ')
+    {
+      tmp[0] = '\\';
+      tmp[1] = ' ';
+      put_stringbuf_mem (sb, tmp, 2);
+      length -= 4;
+    }
+
+  for (s=value, n=0;;)
+    {
+      for (value = s; n+3 < length
+             && !s[0] && !s[1] && !s[2] && !(s[3] & 0x80); n += 4, s += 4)
+        ;
+      if (s != value)
+        append_quoted (sb, value, s-value);
+      if (n>=length)
+        return; /* ready */
+      /* fixme: need to do the actual conversion */
+      n++; s++;
+    }
+}
+
+/* Append VALUE of LENGTH and TYPE to SB.  Do UCS-2 to utf conversion
+   and and quoting */
+static void
+append_ucs2_value (const unsigned char *value, size_t length,
+                   struct stringbuf *sb)
+{
+  unsigned char tmp[2];
+  const unsigned char *s;
+  size_t n;
+
+  if (length>1 && !value[0] && (value[1] == ' ' || value[1] == '#'))
+    {
+      tmp[0] = '\\';
+      tmp[1] = *value;
+      put_stringbuf_mem (sb, tmp, 2);
+      value += 2;
+      length -= 2;
+    }
+  if (length>3 && !value[0] && value[1] == ' ')
+    {
+      tmp[0] = '\\';
+      tmp[1] = ' ';
+      put_stringbuf_mem (sb, tmp, 2);
+      length -=2;
+    }
+
+  for (s=value, n=0;;)
+    {
+      for (value = s; n+1 < length && !s[0] && !(s[1] & 0x80); n += 2, s += 2)
+        ;
+      if (s != value)
+        append_quoted (sb, value, s-value);
+      if (n>=length)
+        return; /* ready */
+      /* fixme: need to do the actual conversion */
+      n++; s++;
+    }
+}
+
 
 /* Append attribute and value.  ROOT is the sequence */
 static KsbaError
@@ -247,17 +435,16 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
     case TYPE_PRINTABLE_STRING:
     case TYPE_IA5_STRING:
       /* we assume that wrong encodings are latin-1 */
-    case TYPE_TELETEX_STRING: /* most likely latin-1 */
+    case TYPE_TELETEX_STRING: /* Not correct, but mostly used as latin-1 */
       append_latin1_value (image+node->off+node->nhdr, node->len, sb);
       break;
 
-/*      case TYPE_TELETEX_STRING: */
-/*      case TYPE_GRAPHIC_STRING: */
-/*      case TYPE_VISIBLE_STRING: */
-/*      case TYPE_GENERAL_STRING: */
-/*      case TYPE_UNIVERSAL_STRING: */
-/*      case TYPE_CHARACTER_STRING: */
-/*      case TYPE_BMP_STRING: */
+    case TYPE_UNIVERSAL_STRING: 
+      append_ucs4_value (image+node->off+node->nhdr, node->len, sb);
+      break;
+
+    case TYPE_BMP_STRING: 
+      append_ucs2_value (image+node->off+node->nhdr, node->len, sb);
       break;
 
     case 0: /* forced usage of hex */
