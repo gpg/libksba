@@ -153,10 +153,9 @@ make_flagged_int (unsigned long value, char *buf, size_t buflen)
  * The caller must free the returned buffer using ksba_free() or the
  * function he has registered as a replacement.
  * 
- * Return value: Number of bytes scanned from string, or -1 in case of
- * an error.
+ * Return value: 0 on success or an error value
  **/
-int
+KsbaError
 ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength)
 {
   unsigned char *buf;

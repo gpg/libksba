@@ -282,7 +282,7 @@ KsbaError ksba_certreq_set_writer (KsbaCertreq cr, KsbaWriter w);
 void      ksba_certreq_set_hash_function (KsbaCertreq cr,
                                void (*hash_fnc)(void *, const void *, size_t),
                                void *hash_fnc_arg);
-KsbaError ksba_certreq_set_subject (KsbaCertreq cr, const char *name);
+KsbaError ksba_certreq_add_subject (KsbaCertreq cr, const char *name);
 KsbaError ksba_certreq_set_public_key (KsbaCertreq cr, KsbaConstSexp key);
 KsbaError ksba_certreq_set_sig_val (KsbaCertreq cr, KsbaConstSexp sigval);
 KsbaError ksba_certreq_build (KsbaCertreq cr, KsbaStopReason *r_stopreason);

@@ -32,6 +32,10 @@
 #include "ber-help.h"
 #include "certreq.h"
 
+static const char oidstr_subjectAltName[] = "2.5.29.17";
+static const char oidstr_extensionReq[] = "1.2.840.113549.1.9.14";
+
+
 
 /**
  * ksba_cms_new:
@@ -68,6 +72,13 @@ ksba_certreq_release (KsbaCertreq cr)
   xfree (cr->cri.der);
   xfree (cr->sig_val.algo);
   xfree (cr->sig_val.value);
+  while (cr->extn_list)
+    {
+      struct extn_list_s *e = cr->extn_list->next;
+      xfree (cr->extn_list);
+      cr->extn_list = e;
+    }
+
   xfree (cr);
 }
 
@@ -97,16 +108,65 @@ ksba_certreq_set_hash_function (KsbaCertreq cr,
 
 
 /* Store the subject's name.  Does perform some syntactic checks on
-   the name */
+   the name.  The first added subject is the real one, all subsequent
+   calls add subjectAltNames.
+   
+   NAME must be a valid RFC-2253 encoded DN name for the first one or an
+   emal address encolosed in angle brackets for all further calls.
+ */
 KsbaError
-ksba_certreq_set_subject (KsbaCertreq cr, const char *name)
+ksba_certreq_add_subject (KsbaCertreq cr, const char *name)
 {
-  
-  if (!cr)
+  unsigned long namelen;
+  size_t n, n1, n2;
+  struct extn_list_s *e;
+  unsigned char *der;
+
+  if (!cr || !name)
     return KSBA_Invalid_Value;
-  xfree (cr->subject.der);
-  cr->subject.der = NULL;
-  return _ksba_dn_from_str (name, &cr->subject.der, &cr->subject.derlen);
+  if (!cr->subject.der)
+    return _ksba_dn_from_str (name, &cr->subject.der, &cr->subject.derlen);
+  /* this is assumed to be an subjectAltName */
+
+  /* We only support email addresses for now, do soem very basic
+     checks.  Note that the way we pass the name should match waht
+     ksba_cert_get_subject() returns */
+  namelen = strlen (name);
+  if (*name != '<' || name[namelen-1] != '>'
+      || namelen < 4 || !strchr (name, '@'))
+    return KSBA_Invalid_Value;
+  name++;
+  namelen -= 2;
+
+  /* fixme: it is probably better to put all altNames into one sequence */
+
+  n1  = _ksba_ber_count_tl (1, CLASS_CONTEXT, 0, namelen);
+  n1 += namelen;
+  n2  = _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n1);
+  n2 += n1;
+  
+  e = xtrymalloc (sizeof *e + n2 - 1);
+  if (!e)
+    return KSBA_Out_Of_Core;
+  e->oid = oidstr_subjectAltName;
+  e->critical = 0;
+  e->derlen = n2;
+  der = e->der;
+  n = _ksba_ber_encode_tl (der, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n1);
+  if (!n)
+    return KSBA_Bug; /* (no need to cleanup after a bug) */
+  der += n;
+  n = _ksba_ber_encode_tl (der, 1, CLASS_CONTEXT, 0, namelen);
+  if (!n)
+    return KSBA_Bug; 
+  der += n;
+  memcpy (der, name, namelen);
+  assert (der+namelen-e->der == n2);
+  
+  e->next = cr->extn_list;
+  cr->extn_list = e;
+
+  return 0;
 }
 
 /* Store the subject's name.  Does perform some syntactic checks on
@@ -225,6 +285,157 @@ ksba_certreq_set_sig_val (KsbaCertreq cr, KsbaConstSexp sigval)
 
 
 
+/* build the extension block and return it in R_DER and R_DERLEN */
+static KsbaError
+build_extensions (KsbaCertreq cr, void **r_der, size_t *r_derlen)
+{
+  KsbaError err;
+  KsbaWriter writer, w=NULL;
+  struct extn_list_s *e;
+  unsigned char *value = NULL;
+  size_t valuelen;
+  char *p;
+  size_t n;
+
+  *r_der = NULL;
+  *r_derlen = 0;
+  if (!(writer = ksba_writer_new ()))
+    err = KSBA_Out_Of_Core;
+  else
+    err = ksba_writer_set_mem (writer, 2048);
+  if (err)
+    goto leave;
+  if (!(w = ksba_writer_new ()))
+    {
+      err = KSBA_Out_Of_Core;
+      goto leave;
+    }
+
+  for (e=cr->extn_list; e; e = e->next)
+    {
+      err = ksba_writer_set_mem (w, e->derlen + 100);
+      if (err)
+        goto leave;
+
+      err = ksba_oid_from_str (e->oid, &p, &n);
+      if(err)
+        goto leave;
+      err = _ksba_ber_write_tl (w, TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, n);
+      if (!err)
+        err = ksba_writer_write (w, p, n);
+      xfree (p);
+      
+      if (e->critical)
+        {
+          err = _ksba_ber_write_tl (w, TYPE_BOOLEAN, CLASS_UNIVERSAL, 0, 1);
+          if (!err)
+            err = ksba_writer_write (w, "\xff", 1);
+          if(err)
+            goto leave;
+        }
+
+      err = _ksba_ber_write_tl (w, TYPE_OCTET_STRING, CLASS_UNIVERSAL,
+                                0, e->derlen);
+      if (!err)
+        err = ksba_writer_write (w, e->der, e->derlen);
+      if(err)
+        goto leave;
+      
+      p = ksba_writer_snatch_mem (w, &n);
+      if (!p)
+        {
+          err = KSBA_Out_Of_Core;
+          goto leave;
+        }
+      err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL,
+                                1, n);
+      if (!err)
+        err = ksba_writer_write (writer, p, n);
+      xfree (p); p = NULL;
+      if (err)
+        goto leave;
+    }
+
+  /* Embed all the sequences into another sequence */
+  value = ksba_writer_snatch_mem (writer, &valuelen);
+  if (!value)
+    {
+      err = KSBA_Out_Of_Core;
+      goto leave;
+    }
+  err = ksba_writer_set_mem (writer, valuelen+10);
+  if (err)
+    goto leave;
+  err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL,
+                            1, valuelen);
+  if (!err)
+    err = ksba_writer_write (writer, value, valuelen);
+  if (err)
+    goto leave;
+
+  xfree (value);
+  value = ksba_writer_snatch_mem (writer, &valuelen);
+  if (!value)
+    {
+      err = KSBA_Out_Of_Core;
+      goto leave;
+    }
+
+  /* Now create the extension request sequence content */
+  err = ksba_writer_set_mem (writer, valuelen+100);
+  if (err)
+    goto leave;
+  err = ksba_oid_from_str (oidstr_extensionReq, &p, &n);
+  if(err)
+    goto leave;
+  err = _ksba_ber_write_tl (writer, TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, n);
+  if (!err)
+    err = ksba_writer_write (writer, p, n);
+  xfree (p); p = NULL;
+  if (err)
+    return err;
+  err = _ksba_ber_write_tl (writer, TYPE_SET, CLASS_UNIVERSAL, 1, valuelen);
+  if (!err)
+    err = ksba_writer_write (writer, value, valuelen);
+
+  /* put this all into a SEQUENCE */
+  xfree (value);
+  value = ksba_writer_snatch_mem (writer, &valuelen);
+  if (!value)
+    {
+      err = KSBA_Out_Of_Core;
+      goto leave;
+    }
+  err = ksba_writer_set_mem (writer, valuelen+10);
+  if (err)
+    goto leave;
+  err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL,
+                            1, valuelen);
+  if (!err)
+    err = ksba_writer_write (writer, value, valuelen);
+  if (err)
+    goto leave;
+
+  xfree (value);
+  value = ksba_writer_snatch_mem (writer, &valuelen);
+  if (!value)
+    {
+      err = KSBA_Out_Of_Core;
+      goto leave;
+    }
+  *r_der = value;
+  *r_derlen = valuelen;
+  value = NULL;
+
+
+ leave:
+  ksba_writer_release (writer);
+  ksba_writer_release (w);
+  xfree (value);
+  return err;
+}
+
+
 /* Build a value tree from the already stored values. */
 static KsbaError
 build_cri (KsbaCertreq cr)
@@ -271,10 +482,31 @@ build_cri (KsbaCertreq cr)
   if (err)
     goto leave;
   
-  /* FIXME: store the attributes */
+  /* Write the extensions.  Note that the implicit SET OF is REQUIRED */
+  xfree (value); value = NULL;
+  valuelen = 0;
+  if (cr->extn_list)
+    {
+      err = build_extensions (cr, &value, &valuelen);
+      if (err)
+        goto leave;
+      err = _ksba_ber_write_tl (writer, 0, CLASS_CONTEXT, 1, valuelen);
+      if (!err)
+        err = ksba_writer_write (writer, value, valuelen);
+      if (err)
+        goto leave;
+    }
+  else
+    { /* We can't write an object of length zero using our ber_write
+         function.  So we must open encode it. */
+      err = ksba_writer_write (writer, "\xa0\x02\x30", 4);
+      if (err)
+        goto leave;
+    }
 
 
   /* pack it into the sequence */
+  xfree (value); 
   value = ksba_writer_snatch_mem (writer, &valuelen);
   if (!value)
     {

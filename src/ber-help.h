@@ -43,6 +43,11 @@ KsbaError _ksba_ber_write_tl (KsbaWriter writer,
                               enum tag_class class,
                               int constructed,
                               unsigned long length);
+size_t _ksba_ber_encode_tl (unsigned char *buffer, 
+                            unsigned long tag,
+                            enum tag_class class,
+                            int constructed,
+                            unsigned long length);
 size_t _ksba_ber_count_tl (unsigned long tag,
                            enum tag_class class,
                            int constructed,

@@ -28,6 +28,15 @@ typedef struct asn_node_struct *AsnNode;  /* FIXME: should not go here */
 #define HAVE_TYPEDEFD_ASNNODE
 #endif
 
+struct extn_list_s {
+  struct extn_list_s *next;
+  const char *oid;
+  int critical;
+  int derlen;
+  unsigned char der[1];
+};
+
+
 struct ksba_certreq_s {
   KsbaError last_error;
 
@@ -46,6 +55,9 @@ struct ksba_certreq_s {
     unsigned char *der;
     size_t derlen;
   } key;
+
+  struct extn_list_s *extn_list;
+
   struct {
     unsigned char *der;
     size_t derlen;

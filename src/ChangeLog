@@ -1,3 +1,15 @@
+2002-01-28  Werner Koch  <wk@gnupg.org>
+
+	* oid.c (ksba_oid_from_str): Fixed docs and return type.
+
+	* certreq.c (ksba_certreq_set_subject): Renamed to..
+	(ksba_certreq_add_subject): this and added logic to store
+	subjectAltNames.
+	(build_extensions): New.
+	(build_cri): Write the extensions.
+
+	* ber-help.c (_ksba_ber_encode_tl): New.
+
 2002-01-25  Werner Koch  <wk@gnupg.org>
 
 	* cms.c (build_signed_data_attributes): Write the optional certs.

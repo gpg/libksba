@@ -335,6 +335,65 @@ _ksba_ber_write_tl (KsbaWriter writer,
   return ksba_writer_write (writer, buf, buflen);
 }
 
+/* Encode TAG of CLASS in BUFFER.  CONSTRUCTED is a flag telling
+   whether the value is a constructed one.  LENGTH gives the length of
+   the value, if it is 0 undefinite length is assumed.  LENGTH is
+   ignored for the NULL tag. It is assumed that the provide buffer is
+   large enough for storing the result - this is usually achieved by
+   using _ksba_ber_count_tl() in advance.  Returns 0 in case of an
+   error or the length of the encoding.*/
+size_t
+_ksba_ber_encode_tl (unsigned char *buffer, 
+                     unsigned long tag,
+                     enum tag_class class,
+                     int constructed,
+                     unsigned long length)
+{
+  unsigned char *buf = buffer;
+
+  if (tag < 0x1f)
+    {
+      *buf = (class << 6) | tag;
+      if (constructed)
+        *buf |= 0x20;
+      buf++;
+    }
+  else
+    {
+      return 0; /*Not implemented*/
+    }
+
+  if (!tag && !class)
+    *buf++ = 0; /* end tag */
+  else if (tag == TYPE_NULL && !class)
+    *buf++ = 0; /* NULL tag */
+  else if (!length)
+    *buf++ = 0x80; /* indefinite length */
+  else if (length < 128)
+    *buf++ = length; 
+  else 
+    {
+      int i;
+
+      /* fixme: if we know the sizeof an ulong we could support larger
+         objetcs - however this is pretty ridiculous */
+      i = (length <= 0xff ? 1:
+           length <= 0xffff ? 2: 
+           length <= 0xffffff ? 3: 4);
+      
+      *buf++ = (0x80 | i);
+      if (i > 3)
+        *buf++ = length >> 24;
+      if (i > 2)
+        *buf++ = length >> 16;
+      if (i > 1)
+        *buf++ = length >> 8;
+      *buf++ = length;
+    }        
+
+  return buf - buffer;
+}
+
 
 /* calculate the length of the TL needed to encode a TAG of CLASS.
    constructed is a flag telling
