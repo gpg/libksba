@@ -174,10 +174,18 @@ one_file (const char *fname)
 int 
 main (int argc, char **argv)
 {
-
-  one_file ("root-cert-1.der"); 
-  one_file ("root-cert-2.der"); 
-  one_file ("pers-cert-1.der");
+  if (argc > 1)
+    {
+      for (argc--, argv++; argc; argc--, argv++)
+        one_file (*argv);
+    }
+  else
+    {
+      one_file ("root-cert-1.der"); 
+      one_file ("root-cert-2.der"); 
+      one_file ("pers-cert-1.der");
+      one_file ("cert_g10code_test1.der");
+    }
 
   return 0;
 }

@@ -21,7 +21,8 @@
 
 TESTS_ENVIRONMENT = 
 
-test_certs = root-cert-1.der root-cert-2.der pers-cert-1.der
+test_certs = root-cert-1.der root-cert-2.der pers-cert-1.der \
+	     cert_g10code_test1.der
 
 EXTRA_DIST = $(test_certs)
 
