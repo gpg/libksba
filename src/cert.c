@@ -60,6 +60,9 @@ ksba_cert_new (void)
 void
 ksba_cert_release (KsbaCert cert)
 {
+  if (!cert)
+    return;
+  xfree (cert->cache.digest_algo);
   /* FIXME: release cert->root, ->asn_tree */
   xfree (cert);
 }
@@ -206,41 +209,40 @@ ksba_cert_hash (KsbaCert cert, int what,
  * @cert: Initialized certificate object
  * 
  * Figure out the the digest algorithm used for the signature and
- * return it as a number suitable to be used to identify a digest
- * algorithm in Libgcrypt.
+ * return its OID
  *
  * This function is intended as a helper for the ksba_cert_hash().
  * 
- * Return value: 0 for error or unknown algoritm, otherwise a
- * GCRY_MD_xxx constant.
+ * Return value: NULL for error otherwise a constant string with the OID.
+ * This string is valid as long the certificate object is valid.
  **/
-int
+const char *
 ksba_cert_get_digest_algo (KsbaCert cert)
 {
   AsnNode n;
-  int algo;
+  char *algo;
 
   if (!cert)
     {
        cert->last_error = KSBA_Invalid_Value;
-       return 0;
+       return NULL;
     }
   if (!cert->initialized)
     {
        cert->last_error = KSBA_No_Data;
-       return 0;
+       return NULL;
     }
 
+  if (cert->cache.digest_algo)
+    return cert->cache.digest_algo;
+  
   n = _ksba_asn_find_node (cert->root,
                            "Certificate.signatureAlgorithm.algorithm");
-  algo = _ksba_node_with_oid_to_digest_algo (cert->image, n);
+  algo = _ksba_oid_node_to_str (cert->image, n);
   if (!algo)
     cert->last_error = KSBA_Unknown_Algorithm;
-  else if (algo == -1)
-    {
-      cert->last_error = KSBA_No_Value;
-      algo = 0;
-    }
+  else 
+    cert->cache.digest_algo = algo;
 
   return algo;
 }

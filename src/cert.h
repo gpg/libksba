@@ -30,6 +30,9 @@ struct ksba_cert_s {
   unsigned char *image;
   size_t imagelen;
   KsbaError last_error;
+  struct {
+    char *digest_algo;
+  } cache;
 };
 
 

@@ -147,7 +147,7 @@ one_file (const char *fname)
   ksba_free (dn);
   putchar ('\n');
 
-  printf ("hash algo: %d\n", ksba_cert_get_digest_algo (cert));
+  printf ("hash algo: %s\n", ksba_cert_get_digest_algo (cert));
 
 
   ksba_cert_release (cert);

@@ -30,8 +30,8 @@ time_t _ksba_asntime_to_epoch (const char *buffer, size_t length);
 KsbaError _ksba_dn_to_str (const unsigned char *image, AsnNode node,
                            char **r_string);
 
-/*-- keyinfo.c but should go into oid.c --*/
-int _ksba_oid_to_digest_algo (const char *oid);
+/*-- oid.c --*/
+char *_ksba_oid_node_to_str (const unsigned char *image, AsnNode node);
 
 
 #endif /*CONVERT_H*/

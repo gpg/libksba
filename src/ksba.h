@@ -134,7 +134,7 @@ KsbaError ksba_cert_hash (KsbaCert cert, int what,
                                          const void *,
                                          size_t length), 
                           void *hasher_arg);
-int  ksba_cert_get_digest_algo (KsbaCert cert);
+const char *ksba_cert_get_digest_algo (KsbaCert cert);
 unsigned char *ksba_cert_get_serial (KsbaCert cert);
 char *ksba_cert_get_issuer (KsbaCert cert);
 time_t ksba_cert_get_validity (KsbaCert cert, int what);
@@ -152,11 +152,11 @@ KsbaError ksba_cms_parse (KsbaCMS cms, KsbaStopReason *r_stopreason);
 
 KsbaContentType ksba_cms_get_content_type (KsbaCMS cms, int what);
 const char *ksba_cms_get_content_oid (KsbaCMS cms, int what);
-int ksba_cms_get_digest_algo_list (KsbaCMS cms, int idx);
+const char *ksba_cms_get_digest_algo_list (KsbaCMS cms, int idx);
 KsbaError ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
                                       char **r_issuer,
                                       unsigned char **r_serial);
-int ksba_cms_get_digest_algo (KsbaCMS cms, int idx);
+const char *ksba_cms_get_digest_algo (KsbaCMS cms, int idx);
 KsbaCert ksba_cms_get_cert (KsbaCMS cms, int idx);
 KsbaError ksba_cms_get_message_digest (KsbaCMS cms, int idx,
                                        char **r_digest, size_t *r_digest_len);

@@ -88,7 +88,8 @@ one_file (const char *fname)
   KsbaReader r;
   KsbaWriter w;
   KsbaCMS cms;
-  int i, algo;
+  int i;
+  const char *algoid;
   KsbaStopReason stopreason;
   const char *s;
   size_t n;
@@ -136,8 +137,8 @@ one_file (const char *fname)
   s = ksba_cms_get_content_oid (cms, 1);
   printf ("EncapsulatedContentType: %s\n", s?s:"none");
   printf ("DigestAlgorithms:");
-  for (i=0; (algo = ksba_cms_get_digest_algo_list (cms, i)) >= 0; i++)
-    printf (" %d", algo);
+  for (i=0; (algoid = ksba_cms_get_digest_algo_list (cms, i)); i++)
+    printf (" %s", algoid);
   putchar('\n');
 
   if (stopreason == KSBA_SR_NEED_HASH)
@@ -167,8 +168,8 @@ one_file (const char *fname)
       ksba_free (dn);
       putchar ('\n');
 
-      algo = ksba_cms_get_digest_algo (cms, signer);
-      printf ("signer %d - digest algo: %d\n", signer, algo);
+      algoid = ksba_cms_get_digest_algo (cms, signer);
+      printf ("signer %d - digest algo: %s\n", signer, algoid?algoid:"?");
 
       dn = ksba_cms_get_sig_val (cms, signer);
       printf ("signer %d - signature: `%s'\n", signer, dn? dn: "[ERROR]");

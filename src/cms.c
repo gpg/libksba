@@ -102,6 +102,7 @@ ksba_cms_release (KsbaCMS cms)
   xfree (cms->data.digest);
   _ksba_asn_release_nodes (cms->signer_info.root);
   xfree (cms->signer_info.image);
+  xfree (cms->signer_info.cache.digest_algo);
   xfree (cms);
 }
 
@@ -212,30 +213,25 @@ ksba_cms_get_content_oid (KsbaCMS cms, int what)
  * @idx: enumerator
  * 
  * Figure out the the digest algorithm used for the signature and
- * return it as a number suitable to be used to identify a digest
- * algorithm in Libgcrypt.  Note that the algos returned are just
- * hints on what to hash.
+ * return its OID.  Note that the algos returned are just hints on
+ * what to hash.
  *
- * Return value: 0 for error or unknown algoritm, -1 for invalid index
- * (no more algorithms), otherwise a GCRY_MD_xxx constant.
+ * Return value: NULL for no more algorithms or a string valid as long
+ * as the the cms object is valid.
  **/
-int
+const char *
 ksba_cms_get_digest_algo_list (KsbaCMS cms, int idx)
 {
   struct oidlist_s *ol;
-  int algo;
 
   if (!cms)
-    return -1;
+    return NULL;
 
   for (ol=cms->digest_algos; ol && idx; ol = ol->next, idx-- )
     ;
   if (!ol)
-    return -1;
-  algo = _ksba_oid_to_digest_algo (ol->oid);
-  if (algo == -1)
-    algo = 0;
-  return algo;
+    return NULL;
+  return ol->oid;
 }
 
 
@@ -310,31 +306,35 @@ ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
  * @idx: index of signer
  * 
  * Figure out the the digest algorithm used by the signer @idx return
- * it as a number suitable to be used to identify a digest algorithm
- * in Libgcrypt.  This is the algorithm acually used to calculate the
+ * its OID This is the algorithm acually used to calculate the
  * signature.
  *
- * Return value: 0 for error or unknown algoritm, -1 for no such signer
- * otherwise a GCRY_MD_xxx constant.
+ * Return value: NULL for no such signer or a constn string valid as
+ * long as the CMS object lives.
  **/
-int
+const char *
 ksba_cms_get_digest_algo (KsbaCMS cms, int idx)
 {
   AsnNode n;
-  int algo;
+  char *algo;
 
   if (!cms)
-    return -1;
+    return NULL;
   if (!cms->signer_info.root)
-    return -1;
+    return NULL;
   if (idx)
-    return -1; /* fixme: we can only handle one signer for now */
+    return NULL; /* fixme: we can only handle one signer for now */
+
+  if (cms->signer_info.cache.digest_algo)
+    return cms->signer_info.cache.digest_algo;
   
   n = _ksba_asn_find_node (cms->signer_info.root,
                            "SignerInfos..digestAlgorithm.algorithm");
-  algo = _ksba_node_with_oid_to_digest_algo (cms->signer_info.image, n);
-  if (algo == -1)
-    algo = 0;
+  algo = _ksba_oid_node_to_str (cms->signer_info.image, n);
+  if (algo)
+    {
+      cms->signer_info.cache.digest_algo = algo;
+    }
   return algo;
 }
 

@@ -25,7 +25,8 @@
 #include <assert.h>
 
 #include "util.h"
-
+#include "asn1-func.h"
+#include "convert.h"
 
 /**
  * ksba_oid_to_str:
@@ -98,6 +99,16 @@ ksba_oid_to_str (const char *buffer, size_t length)
     
   *p = 0;
   return string;
+}
+
+
+/* Take the OID at the given and return it in string format */
+char *
+_ksba_oid_node_to_str (const unsigned char *image, AsnNode node) 
+{
+  if (!node || node->type != TYPE_OBJECT_ID || node->off == -1)
+    return NULL;
+  return ksba_oid_to_str (image+node->off + node->nhdr, node->len);
 }
 
 

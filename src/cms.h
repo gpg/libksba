@@ -75,6 +75,9 @@ struct ksba_cms_s {
     AsnNode root;  /* root of the tree with the values */
     unsigned char *image;
     size_t imagelen;
+    struct {
+      char *digest_algo;
+    } cache;
   } signer_info;  
 
 
