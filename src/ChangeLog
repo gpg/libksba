@@ -1,3 +1,7 @@
+2003-12-19  Werner Koch  <wk@gnupg.org>
+
+	* cms.c (build_signed_data_header): Fixed silly ==/= bug.
+
 2003-12-09  Werner Koch  <wk@gnupg.org>
 
 	* cms.c (ksba_cms_set_sig_val): Fixed a code cleanup I did on Nov

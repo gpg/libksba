@@ -1978,7 +1978,7 @@ build_signed_data_header (ksba_cms_t cms)
     size_t valuelen;
     ksba_writer_t tmpwrt;
 
-    err == ksba_writer_new (&tmpwrt);
+    err = ksba_writer_new (&tmpwrt);
     if (err)
       return err;
     err = ksba_writer_set_mem (tmpwrt, 512);
