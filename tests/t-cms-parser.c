@@ -126,6 +126,18 @@ one_file (const char *fname)
   err = ksba_reader_set_file (r, fp);
   fail_if_err (err);
 
+  switch (ksba_cms_identify (r))
+    {
+    case KSBA_CT_DATA:           s = "data"; break;
+    case KSBA_CT_SIGNED_DATA:    s = "signed data"; break;
+    case KSBA_CT_ENVELOPED_DATA: s = "enveloped data"; break;
+    case KSBA_CT_DIGESTED_DATA:  s = "digested data"; break;
+    case KSBA_CT_ENCRYPTED_DATA: s = "encrypted data"; break;
+    case KSBA_CT_AUTH_DATA:      s = "auth data"; break;
+    default:                     s = "unknown"; break;
+    }
+  printf ("identified as: %s\n", s);
+
   w = ksba_writer_new ();
   if (!w)
     fail_if_err (KSBA_Out_Of_Core);

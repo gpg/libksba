@@ -1,3 +1,14 @@
+2002-05-17  Werner Koch  <wk@gnupg.org>
+
+	* Makefile.am: Tweaked to avoid double compilations.
+
+	* cms.c (ksba_cms_identify): New.
+
+2002-05-16  Werner Koch  <wk@gnupg.org>
+
+	* cms-parser.c (_ksba_cms_parse_signed_data_part_1): Never
+	allocate 0 bytes - this is not defined.
+
 2002-05-04  Werner Koch  <wk@gnupg.org>
 
 	* dn.c (parse_rdn): Better detection of empty elements.

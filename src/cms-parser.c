@@ -527,8 +527,8 @@ _ksba_cms_parse_signed_data_part_1 (KsbaCMS cms)
   /* fixme: we are not able to read ndef length algorithm indentifiers. */
   if (algo_set_ndef)
     return KSBA_Unsupported_Encoding;
-  /* read the entire sequence into a buffer */
-  buffer = xtrymalloc (algo_set_len);
+  /* read the entire sequence into a buffer (add one to avoid malloc(0)) */
+  buffer = xtrymalloc (algo_set_len + 1);
   if (!buffer)
     return KSBA_Out_Of_Core;
   if (read_buffer (cms->reader, buffer, algo_set_len))

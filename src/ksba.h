@@ -222,6 +222,8 @@ KsbaError ksba_cert_get_auth_key_id (KsbaCert cert,
 
 
 /*-- cms.c --*/
+KsbaContentType ksba_cms_identify (KsbaReader reader);
+
 KsbaCMS ksba_cms_new (void);
 void    ksba_cms_release (KsbaCMS cms);
 KsbaError ksba_cms_set_reader_writer (KsbaCMS cms, KsbaReader r, KsbaWriter w);

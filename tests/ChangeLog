@@ -1,3 +1,7 @@
+2002-05-17  Werner Koch  <wk@gnupg.org>
+
+	* t-cms-parser.c (one_file): Use ksba_cms_identify.
+
 2002-05-04  Werner Koch  <wk@gnupg.org>
 
 	* t-dnparser.c (test_1): Add test on empty elements.

@@ -273,7 +273,57 @@ write_encrypted_cont (KsbaCMS cms)
   return err;
 }
 
+
+/* Figure out whether the data read from READER is a CMS object and
+   return its content type.  This function does only peek at the
+   READER and tries to identify the type with besto effort. */
+KsbaContentType
+ksba_cms_identify (KsbaReader reader) 
+{
+  struct tag_info ti;
+  unsigned char buffer[20], *p;
+  size_t n;
+  char *oid;
+  int i;
 
+  if (!reader)
+    return KSBA_CT_NONE; /* oops */
+
+  /* This is a common example of a CMS object - it is obvious that we
+     only need to read a few bytes to get to the OID:
+  30 82 0B 59 06 09 2A 86 48 86 F7 0D 01 07 02 A0 82 0B 4A 30 82 0B 46 02
+  ----------- ======--------------------------        
+  SEQUENCE          oid(signedData)
+  (2 byte len)
+  */
+  
+  if (ksba_reader_read (reader, buffer, sizeof buffer, &n))
+    return KSBA_CT_NONE; /* oops */
+  if (ksba_reader_unread (reader, buffer, n))
+    return KSBA_CT_NONE; /* oops */
+  p = buffer;
+  if (_ksba_ber_parse_tl (&p, &n, &ti))
+    return KSBA_CT_NONE;
+  if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+         && ti.is_constructed) )
+    return KSBA_CT_NONE;
+  if (_ksba_ber_parse_tl (&p, &n, &ti))
+    return KSBA_CT_NONE;
+  if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OBJECT_ID
+         && !ti.is_constructed && ti.length) || ti.length > n)
+    return KSBA_CT_NONE;
+  oid = ksba_oid_to_str (p, ti.length);
+  if (!oid)
+    return KSBA_CT_NONE; /* out of core */
+  for (i=0; content_handlers[i].oid; i++)
+    {
+      if (!strcmp (content_handlers[i].oid, oid))
+        break;
+    }
+  if (!content_handlers[i].oid)
+    return KSBA_CT_NONE; /* unknown */
+  return content_handlers[i].ct;
+}
 
 
 

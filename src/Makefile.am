@@ -52,24 +52,12 @@ libksba_la_SOURCES = \
 	version.c util.c util.h shared.h errors.c \
 	asn1-tables.c
 
-asn1_gentables_SOURCES = \
-	asn1-gentables.c \
-	asn1-parse.y asn1-parse.h \
-	asn1-func.c asn1-func.h \
-	oid.c \
-	util.c util.h
+asn1_gentables_SOURCES = asn1-gentables.c 
+asn1_gentables_LDADD = asn1-parse.o asn1-func.o oid.o util.o
 
-ber_dump_SOURCES = \
-	ber-dump.c \
-	ksba.h \
-	ber-decoder.c ber-decoder.h \
-	ber-help.c ber-help.h \
-	reader.c reader.h \
-	writer.c writer.h \
-	asn1-parse.y asn1-parse.h \
-	asn1-func.c asn1-func.h \
-	oid.c \
-	util.c util.h 
+ber_dump_SOURCES = ber-dump.c 
+ber_dump_LDADD = ber-decoder.o ber-help.o reader.o writer.o asn1-parse.o \
+	asn1-func.o oid.o util.o
 
 asn1-parse.c : asn1-func.h
 
