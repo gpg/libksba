@@ -19,6 +19,7 @@
 
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.57)
+min_automake_version="1.7.6"
 
 # Version number: Remember to change immediately *after* a release.
 #                 Append a "-cvs" for non-released versions.

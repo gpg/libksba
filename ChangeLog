@@ -1,10 +1,12 @@
 2003-12-08  Werner Koch  <wk@gnupg.org>
 
+	* README.CVS: Enhanced 
 	* autogen.sh: Reworked.
+	* configure.ac: Add version numbers for autogen.sh.
 
 2003-11-17  Werner Koch  <wk@gnupg.org>
 
-	Release 0.9.0.
+	Released 0.9.0.
 
 2003-11-12  Werner Koch  <wk@gnupg.org>
 
