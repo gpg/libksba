@@ -1,3 +1,9 @@
+2004-04-29  Werner Koch  <wk@gnupg.org>
+
+	Released 0.9.6.
+	
+	* configure.ac: Bumped LT version to C12/A4/R0.
+
 2004-04-02  Thomas Schwinge  <schwinge@nic-nac-project.de>
 
 	* autogen.sh: Added ACLOCAL_FLAGS.

@@ -1,7 +1,7 @@
-Noteworthy changes in version 0.9.6
+Noteworthy changes in version 0.9.6 (2004-04-29)
 ------------------------------------------------
 
-
+ * New API fucntions to support v2 CRLs.
 
  * Interface changes relative to the 0.9.5 release:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
