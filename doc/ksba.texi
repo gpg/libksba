@@ -14,7 +14,7 @@
 @syncodeindex pg fn
 
 @macro mycopyrightnotice
-Copyright @copyright{} 2002, 2003 g10 Code GmbH
+Copyright @copyright{} 2002, 2003, 2004 g10 Code GmbH
 @end macro
 @macro mypermissionnotice
 Permission is granted to copy, distribute and/or modify this document

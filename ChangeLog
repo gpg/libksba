@@ -1,3 +1,13 @@
+2004-09-27  Werner Koch  <wk@g10code.com>
+
+	Released 0.9.9.
+
+	* configure.ac: Bumbed LT version to C13/A5/R2.
+	
+	* configure.ac: AC_GNU_SOURCE instead of AH_TOP.
+	* config.guess, config.sub: Updated.
+	* ltmain.sh: Updated to 1.5.6
+
 2004-07-22  Werner Koch  <wk@g10code.de>
 
 	Released 0.9.8.
