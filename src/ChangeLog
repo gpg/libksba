@@ -1,3 +1,28 @@
+2002-08-06  Werner Koch  <wk@gnupg.org>
+
+	* cms.h (signer_info_s, sig_val_s): New.  Actually moved out of
+	ksba_cms_s and made it pointers there.
+	* cms.c (ksba_cms_release): Changed for new types of signer_info
+	and sig_val.
+	(ksba_cms_get_issuer_serial): Implemented index for signer_info.
+	(ksba_cms_get_digest_algo): Ditto.
+	(ksba_cms_get_message_digest): Ditto.
+	(ksba_cms_get_sig_val): Ditto.
+	(ksba_cms_hash_signed_attrs): Ditto.
+	(build_signed_data_attributes): Build the list of signer_infos.
+	(build_signed_data_rest): And process the list.
+	(ksba_cms_set_sig_val): Append values.
+	(build_signed_data_rest): Use the sig_val list.
+	(ct_build_signed_data): Changed check for set sig_val.
+	(build_signed_data_header): Fixed writing of more than one algo.
+	* cms-parser.c (_ksba_cms_parse_signed_data_part_2): Create a list
+	of signer_infos and not just one.
+
+2002-08-05  Werner Koch  <wk@gnupg.org>
+
+	* cms.c (ksba_cms_add_cert): Don't add duplicates.
+	* cert.c (_ksba_cert_cmp): New.
+
 2002-07-04  Werner Koch  <wk@gnupg.org>
 
 	* cms.c (ksba_cms_identify): Make sure to read the full first 20

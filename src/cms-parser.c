@@ -596,6 +596,7 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
 {
   struct tag_info ti;
   KsbaError err;
+  struct signer_info_s *si, **si_tail;
 
   /* read the next triplet which is either a [0], a [1] or a SET OF
      (signerInfo) */
@@ -666,7 +667,7 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
           parsing to a - not yet existing - ksba_crl module.  CRLs are
           quite important for other applications too so we should
           provide a nice interface */
-      fprintf (stderr,"WARNING: Can't handle CRLs yet\n");
+      /* fprintf (stderr,"WARNING: Can't handle CRLs yet\n");*/
 
       if (ti.ndef)
         return KSBA_Unsupported_Encoding;
@@ -701,15 +702,38 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
          && ti.tag == TYPE_SET && ti.is_constructed))
     return KSBA_Invalid_CMS_Object; 
 
-  err = create_and_run_decoder (cms->reader, 
-                                "CryptographicMessageSyntax.SignerInfos",
-                                &cms->signer_info.root,
-                                &cms->signer_info.image,
-                                &cms->signer_info.imagelen);
-  /* The signerInfo might be an empty set in the case of a certs-only
-     signature.  Thus we have to allow for EOF here */
-  if (err && err != -1)
-    return err;
+  si_tail = &cms->signer_info;
+  while (ti.length)
+    {
+      size_t off1, off2;
+      
+      off1 = ksba_reader_tell (cms->reader);
+      si = xtrycalloc (1, sizeof *si);
+      if (!si)
+        return KSBA_Out_Of_Core;
+
+      err = create_and_run_decoder (cms->reader, 
+                                    "CryptographicMessageSyntax.SignerInfo",
+                                    &si->root, &si->image, &si->imagelen);
+      /* The signerInfo might be an empty set in the case of a certs-only
+         signature.  Thus we have to allow for EOF here */
+      if (err == -1)
+        {
+          err = 0;
+          break;
+        }
+      if (err)
+        return err;
+
+      *si_tail = si;
+      si_tail = &si->next;
+
+      off2 = ksba_reader_tell (cms->reader);
+      if ( (off2 - off1) > ti.length )
+        ti.length = 0;
+      else
+        ti.length -= off2 - off1;
+    }
 
   return 0;
 }

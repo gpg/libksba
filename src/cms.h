@@ -64,6 +64,23 @@ struct certlist_s {
 };
 
 
+struct signer_info_s {
+  struct signer_info_s *next;
+  AsnNode root;  /* root of the tree with the values */
+  unsigned char *image;
+  size_t imagelen;
+  struct {
+    char *digest_algo;
+  } cache;
+};
+
+struct sig_val_s {
+  struct sig_val_s *next;
+  char *algo;
+  unsigned char *value;
+  size_t valuelen;
+};
+
 struct ksba_cms_s {
   KsbaError last_error;
 
@@ -104,22 +121,11 @@ struct ksba_cms_s {
   struct certlist_s *cert_info_list; /* A list with certificates intended
                                         to be send with a signed message */
 
-  struct {
-    AsnNode root;  /* root of the tree with the values */
-    unsigned char *image;
-    size_t imagelen;
-    struct {
-      char *digest_algo;
-    } cache;
-  } signer_info;  
+  struct signer_info_s *signer_info;
 
   struct value_tree_s *recp_info;
 
-  struct {
-    char *algo;
-    unsigned char *value;
-    size_t valuelen;
-  } sig_val;
+  struct sig_val_s *sig_val;
 
   struct enc_val_s *enc_val;
 };

@@ -440,12 +440,22 @@ ksba_cms_release (KsbaCMS cms)
   xfree (cms->encr_algo_oid);
   xfree (cms->encr_iv);
   xfree (cms->data.digest);
-  _ksba_asn_release_nodes (cms->signer_info.root);
-  xfree (cms->signer_info.image);
-  xfree (cms->signer_info.cache.digest_algo);
+  while (cms->signer_info)
+    {
+      struct signer_info_s *tmp = cms->signer_info->next;
+      _ksba_asn_release_nodes (cms->signer_info->root);
+       xfree (cms->signer_info->image);
+       xfree (cms->signer_info->cache.digest_algo);
+       cms->signer_info = tmp;
+    }
   release_value_tree (cms->recp_info);
-  xfree (cms->sig_val.algo);
-  xfree (cms->sig_val.value);
+  while (cms->sig_val)
+    {
+      struct sig_val_s *tmp = cms->sig_val->next;
+      xfree (cms->sig_val->algo);
+      xfree (cms->sig_val->value);
+      cms->sig_val = tmp;
+    }
   xfree (cms);
 }
 
@@ -656,16 +666,22 @@ ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
 
   if (!cms)
     return KSBA_Invalid_Value;
-  if (idx<0)
+  if (idx < 0)
     return KSBA_Invalid_Index;
-  if (cms->signer_info.root)
+
+  if (cms->signer_info)
     {
-      if (idx > 0)
-        return -1;  /* fixme: we should support multiple signers */
-      issuer_path = "SignerInfos..sid.issuerAndSerialNumber.issuer";
-      serial_path = "SignerInfos..sid.issuerAndSerialNumber.serialNumber";
-      root = cms->signer_info.root;
-      image = cms->signer_info.image;
+      struct signer_info_s *si;
+
+      for (si=cms->signer_info; si && idx; si = si->next, idx-- )
+        ;
+      if (!si)
+        return -1;
+
+      issuer_path = "SignerInfo.sid.issuerAndSerialNumber.issuer";
+      serial_path = "SignerInfo.sid.issuerAndSerialNumber.serialNumber";
+      root = si->root;
+      image = si->image;
     }
   else if (cms->recp_info)
     {
@@ -753,23 +769,28 @@ ksba_cms_get_digest_algo (KsbaCMS cms, int idx)
 {
   AsnNode n;
   char *algo;
+  struct signer_info_s *si;
 
   if (!cms)
     return NULL;
-  if (!cms->signer_info.root)
+  if (!cms->signer_info)
     return NULL;
-  if (idx)
-    return NULL; /* fixme: we can only handle one signer for now */
+  if (idx < 0)
+    return NULL; 
 
-  if (cms->signer_info.cache.digest_algo)
-    return cms->signer_info.cache.digest_algo;
+  for (si=cms->signer_info; si && idx; si = si->next, idx-- )
+    ;
+  if (!si)
+    return NULL;
+
+  if (si->cache.digest_algo)
+    return si->cache.digest_algo;
   
-  n = _ksba_asn_find_node (cms->signer_info.root,
-                           "SignerInfos..digestAlgorithm.algorithm");
-  algo = _ksba_oid_node_to_str (cms->signer_info.image, n);
+  n = _ksba_asn_find_node (si->root, "SignerInfo.digestAlgorithm.algorithm");
+  algo = _ksba_oid_node_to_str (si->image, n);
   if (algo)
     {
-      cms->signer_info.cache.digest_algo = algo;
+      si->cache.digest_algo = algo;
     }
   return algo;
 }
@@ -812,28 +833,34 @@ ksba_cms_get_message_digest (KsbaCMS cms, int idx,
                              char **r_digest, size_t *r_digest_len)
 { 
   AsnNode nsiginfo, n;
+  struct signer_info_s *si;
 
   if (!cms || !r_digest || !r_digest_len)
     return KSBA_Invalid_Value;
-  if (!cms->signer_info.root)
+  if (!cms->signer_info)
     return KSBA_No_Data;
-  if (idx)
-    return KSBA_Not_Implemented;
+  if (idx < 0)
+    return KSBA_Invalid_Index;
+
+  for (si=cms->signer_info; si && idx; si = si->next, idx-- )
+    ;
+  if (!si)
+    return -1;
+
   
   *r_digest = NULL;
   *r_digest_len = 0;
-  nsiginfo = _ksba_asn_find_node (cms->signer_info.root,
-                                  "SignerInfos..signedAttrs");
+  nsiginfo = _ksba_asn_find_node (si->root, "SignerInfo.signedAttrs");
   if (!nsiginfo)
     return KSBA_Bug;
 
-  n = _ksba_asn_find_type_value (cms->signer_info.image, nsiginfo, 0,
+  n = _ksba_asn_find_type_value (si->image, nsiginfo, 0,
                                  oid_messageDigest, DIM(oid_messageDigest));
   if (!n)
     return 0; /* this is okay, because the element is optional */
 
   /* check that there is only one */
-  if (_ksba_asn_find_type_value (cms->signer_info.image, nsiginfo, 1,
+  if (_ksba_asn_find_type_value (si->image, nsiginfo, 1,
                                  oid_messageDigest, DIM(oid_messageDigest)))
     return KSBA_Duplicate_Value;
 
@@ -850,7 +877,7 @@ ksba_cms_get_message_digest (KsbaCMS cms, int idx,
   *r_digest = xtrymalloc (n->len);
   if (!*r_digest)
     return KSBA_Out_Of_Core;
-  memcpy (*r_digest, cms->signer_info.image + n->off + n->nhdr, n->len);
+  memcpy (*r_digest, si->image + n->off + n->nhdr, n->len);
   return 0;
 }
 
@@ -863,27 +890,32 @@ ksba_cms_get_signing_time (KsbaCMS cms, int idx, time_t *r_sigtime)
 { 
   AsnNode nsiginfo, n;
   time_t t;
+  struct signer_info_s *si;
 
   if (!cms || !r_sigtime)
     return KSBA_Invalid_Value;
-  if (!cms->signer_info.root)
+  if (!cms->signer_info)
     return KSBA_No_Data;
-  if (idx)
-    return KSBA_Not_Implemented;
+  if (idx < 0)
+    return KSBA_Invalid_Index;
+
+  for (si=cms->signer_info; si && idx; si = si->next, idx-- )
+    ;
+  if (!si)
+    return -1;
   
   *r_sigtime = 0;
-  nsiginfo = _ksba_asn_find_node (cms->signer_info.root,
-                                  "SignerInfos..signedAttrs");
+  nsiginfo = _ksba_asn_find_node (si->root, "SignerInfo.signedAttrs");
   if (!nsiginfo)
     return 0; /* this is okay, because signedAttribs are optional */
 
-  n = _ksba_asn_find_type_value (cms->signer_info.image, nsiginfo, 0,
+  n = _ksba_asn_find_type_value (si->image, nsiginfo, 0,
                                  oid_signingTime, DIM(oid_signingTime));
   if (!n)
     return 0; /* signing time is optional */
 
   /* check that there is only one */
-  if (_ksba_asn_find_type_value (cms->signer_info.image, nsiginfo, 1,
+  if (_ksba_asn_find_type_value (si->image, nsiginfo, 1,
                                  oid_signingTime, DIM(oid_signingTime)))
     return KSBA_Duplicate_Value;
 
@@ -898,8 +930,7 @@ ksba_cms_get_signing_time (KsbaCMS cms, int idx, time_t *r_sigtime)
   if (n->off == -1)
     return KSBA_Bug;
 
-  t = _ksba_asntime_to_epoch (cms->signer_info.image + n->off + n->nhdr,
-                              n->len);
+  t = _ksba_asntime_to_epoch (si->image + n->off + n->nhdr, n->len);
   if (t == (time_t)-1)
     return KSBA_Invalid_Time;
   /* Because we use 0 as no signing time, we return an error if this
@@ -930,16 +961,21 @@ ksba_cms_get_sig_val (KsbaCMS cms, int idx)
   AsnNode n, n2;
   KsbaError err;
   KsbaSexp string;
+  struct signer_info_s *si;
 
   if (!cms)
     return NULL;
-  if (!cms->signer_info.root)
+  if (!cms->signer_info)
     return NULL;
-  if (idx)
-    return NULL; /* only one signer for now */
+  if (idx < 0)
+    return NULL; 
 
-  n = _ksba_asn_find_node (cms->signer_info.root,
-                           "SignerInfos..signatureAlgorithm");
+  for (si=cms->signer_info; si && idx; si = si->next, idx-- )
+    ;
+  if (!si)
+    return NULL;
+
+  n = _ksba_asn_find_node (si->root, "SignerInfo.signatureAlgorithm");
   if (!n)
       return NULL;
   if (n->off == -1)
@@ -950,7 +986,7 @@ ksba_cms_get_sig_val (KsbaCMS cms, int idx)
     }
 
   n2 = n->right; /* point to the actual value */
-  err = _ksba_sigval_to_sexp (cms->signer_info.image + n->off,
+  err = _ksba_sigval_to_sexp (si->image + n->off,
                               n->nhdr + n->len
                               + ((!n2||n2->off == -1)? 0:(n2->nhdr+n2->len)),
                               &string);
@@ -985,7 +1021,7 @@ ksba_cms_get_enc_val (KsbaCMS cms, int idx)
   if (!cms->recp_info)
     return NULL;
   if (idx < 0)
-    return NULL; /* we can only handle one recipient for now */
+    return NULL;
 
   for (vt=cms->recp_info; vt && idx; vt=vt->next, idx--)
     ;
@@ -1038,24 +1074,28 @@ KsbaError
 ksba_cms_hash_signed_attrs (KsbaCMS cms, int idx)
 {
   AsnNode n;
+  struct signer_info_s *si;
 
   if (!cms)
     return KSBA_Invalid_Value;
   if (!cms->hash_fnc)
     return KSBA_Missing_Action;
-  if (idx)
+  if (idx < 0)
+    return -1;
+
+  for (si=cms->signer_info; si && idx; si = si->next, idx-- )
+    ;
+  if (!si)
     return -1;
       
-
-  n = _ksba_asn_find_node (cms->signer_info.root,
-                           "SignerInfos..signedAttrs");
+  n = _ksba_asn_find_node (si->root, "SignerInfo.signedAttrs");
   if (!n || n->off == -1)
     return KSBA_No_Value; 
 
   /* We don't hash the implicit tag [0] but a SET tag */
   cms->hash_fnc (cms->hash_fnc_arg, "\x31", 1); 
   cms->hash_fnc (cms->hash_fnc_arg,
-                 cms->signer_info.image + n->off + 1, n->nhdr + n->len - 1);
+                 si->image + n->off + 1, n->nhdr + n->len - 1);
 
   return 0;
 }
@@ -1201,7 +1241,15 @@ ksba_cms_add_cert (KsbaCMS cms, KsbaCert cert)
 
   if (!cms || !cert)
     return KSBA_Invalid_Value;
-  
+
+  /* first check whether this is a duplicate. */
+  for (cl = cms->cert_info_list; cl; cl = cl->next)
+    {
+      if (!_ksba_cert_cmp (cert, cl->cert))
+        return 0; /* duplicate */
+    }
+
+  /* Okay, add it. */
   cl = xtrycalloc (1,sizeof *cl);
   if (!cl)
       return KSBA_Out_Of_Core;
@@ -1288,30 +1336,40 @@ ksba_cms_set_signing_time (KsbaCMS cms, int idx, time_t sigtime)
 }
 
 /*
- * r_sig  = (sig-val
- *	      (<algo>
- *		(<param_name1> <mpi>)
- *		...
- *		(<param_namen> <mpi>)
- *	      ))
- * The sexp must be in canocial form.
- * Note the <algo> must be given as a stringified OID or the special
- * string "rsa" */
+  r_sig  = (sig-val
+ 	      (<algo>
+ 		(<param_name1> <mpi>)
+ 		...
+ 		(<param_namen> <mpi>)
+ 	      ))
+  The sexp must be in canonical form.
+  Note the <algo> must be given as a stringified OID or the special
+  string "rsa".
+ 
+  Note that IDX is only used for consistency checks.
+ */
 KsbaError
 ksba_cms_set_sig_val (KsbaCMS cms, int idx, KsbaConstSexp sigval)
 {
   const char *s, *endp;
   unsigned long n;
+  struct sig_val_s *sv, **sv_tail;
+  int i;
 
   if (!cms)
     return KSBA_Invalid_Value;
-  if (idx)
+  if (idx < 0)
     return KSBA_Invalid_Index; /* only one signer for now */
 
   s = sigval;
   if (*s != '(')
     return KSBA_Invalid_Sexp;
   s++;
+
+  for (i=0, sv_tail=&cms->sig_val; *sv_tail; sv_tail=&(*sv_tail)->next, i++)
+    ;
+  if (i != idx)
+    return KSBA_Invalid_Index; 
 
   n = strtoul (s, (char**)&endp, 10);
   s = endp;
@@ -1331,20 +1389,29 @@ ksba_cms_set_sig_val (KsbaCMS cms, int idx, KsbaConstSexp sigval)
   if (!n || *s != ':')
     return KSBA_Invalid_Sexp; /* we don't allow empty lengths */
   s++;
-  xfree (cms->sig_val.algo);
+
+  sv = xtrycalloc (1, sizeof *sv);
+  if (!sv)
+    return KSBA_Out_Of_Core;
   if (n==3 && s[0] == 'r' && s[1] == 's' && s[2] == 'a')
     { /* kludge to allow "rsa" to be passed as algorithm name */
-      cms->sig_val.algo = xtrystrdup ("1.2.840.113549.1.1.1");
-      if (!cms->sig_val.algo)
-        return KSBA_Out_Of_Core;
+      sv->algo = xtrystrdup ("1.2.840.113549.1.1.1");
+      if (!sv->algo)
+        {
+          xfree (sv);
+          return KSBA_Out_Of_Core;
+        }
     }
   else
     {
-      cms->sig_val.algo = xtrymalloc (n+1);
-      if (!cms->sig_val.algo)
-        return KSBA_Out_Of_Core;
-      memcpy (cms->sig_val.algo, s, n);
-      cms->sig_val.algo[n] = 0;
+      sv->algo = xtrymalloc (n+1);
+      if (!sv->algo)
+        {
+          xfree (sv);
+          return KSBA_Out_Of_Core;
+        }
+      memcpy (sv->algo, s, n);
+      sv->algo[n] = 0;
     }
   s += n;
 
@@ -1356,16 +1423,28 @@ ksba_cms_set_sig_val (KsbaCMS cms, int idx, KsbaConstSexp sigval)
   n = strtoul (s, (char**)&endp, 10);
   s = endp;
   if (!n || *s != ':')
-    return KSBA_Invalid_Sexp; 
+    {
+      xfree (sv->algo);
+      xfree (sv);
+      return KSBA_Invalid_Sexp; 
+    }
   s++;
   s += n; /* ignore the name of the parameter */
   
   if (!digitp(s))
-    return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+    {
+      xfree (sv->algo);
+      xfree (sv);
+      return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+    }
   n = strtoul (s, (char**)&endp, 10);
   s = endp;
   if (!n || *s != ':')
-    return KSBA_Invalid_Sexp; 
+    {
+      xfree (sv->algo);
+      xfree (sv);
+      return KSBA_Invalid_Sexp; 
+    }
   s++;
   if (n > 1 && !*s)
     { /* We might have a leading zero due to the way we encode 
@@ -1373,22 +1452,36 @@ ksba_cms_set_sig_val (KsbaCMS cms, int idx, KsbaConstSexp sigval)
       s++;
       n--;
     }
-  xfree (cms->sig_val.value);
-  cms->sig_val.value = xtrymalloc (n);
-  if (!cms->sig_val.value)
-    return KSBA_Out_Of_Core;
-  memcpy (cms->sig_val.value, s, n);
-  cms->sig_val.valuelen = n;
+  sv->value = xtrymalloc (n);
+  if (!sv->value)
+    {
+      xfree (sv->algo);
+      xfree (sv);
+      return KSBA_Out_Of_Core;
+    }
+  memcpy (sv->value, s, n);
+  sv->valuelen = n;
   s += n;
   if ( *s != ')')
-    return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+    {
+      xfree (sv->value);
+      xfree (sv->algo);
+      xfree (sv);
+      return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+    }
   s++;
   /* fixme: end loop over parameters */
 
   /* we need 2 closing parenthesis */
   if ( *s != ')' || s[1] != ')')
-    return KSBA_Invalid_Sexp; 
+    {
+      xfree (sv->value);
+      xfree (sv->algo);
+      xfree (sv);
+      return KSBA_Invalid_Sexp; 
+    }
 
+  *sv_tail = sv;
   return 0;
 }
 
@@ -1796,16 +1889,59 @@ build_signed_data_header (KsbaCMS cms)
     return err;
   
   /* SET OF DigestAlgorithmIdentifier */
-  /* FIXME: We write a set with one element and assume a length of 11 !!*/
-  err = _ksba_ber_write_tl (cms->writer, TYPE_SET, CLASS_UNIVERSAL, 1, 11);
-  if (err)
-    return err;
-  for (i=0; (s = ksba_cms_get_digest_algo_list (cms, i)); i++)
-    {
-      err = _ksba_der_write_algorithm_identifier (cms->writer, s, NULL, 0);
-      if (err)
+  {
+    unsigned char *value;
+    size_t valuelen;
+    KsbaWriter tmpwrt = ksba_writer_new ();
+
+    if (!tmpwrt)
+      return KSBA_Out_Of_Core;
+    err = ksba_writer_set_mem (tmpwrt, 512);
+    if (err)
+      {
+        ksba_writer_release (tmpwrt);
         return err;
-    }
+      }
+    
+    for (i=0; (s = ksba_cms_get_digest_algo_list (cms, i)); i++)
+      {
+        int j;
+        const char *s2;
+
+        /* (make sure not to write duplicates) */
+        for (j=0; j < i && (s2=ksba_cms_get_digest_algo_list (cms, j)); j++)
+          {
+            if (!strcmp (s, s2))
+              break;
+          }
+        if (j == i)
+          {
+            err = _ksba_der_write_algorithm_identifier (tmpwrt, s, NULL, 0);
+            if (err)
+              {
+                ksba_writer_release (tmpwrt);
+                return err;
+              }
+          }
+      }
+      
+    value = ksba_writer_snatch_mem (tmpwrt, &valuelen);
+    ksba_writer_release (tmpwrt);
+    if (!value)
+      {
+        err = KSBA_Out_Of_Core;
+        return err;
+      }
+    err = _ksba_ber_write_tl (cms->writer, TYPE_SET, CLASS_UNIVERSAL,
+                              1, valuelen);
+    if (!err)
+      err = ksba_writer_write (cms->writer, value, valuelen);
+    xfree (value);
+    if (err)
+      return err;
+  }
+
+
 
   /* Write the (inner) encapsulatedContentInfo */
   /* if we have a detached signature we don't need to use undefinite
@@ -1881,11 +2017,15 @@ build_signed_data_attributes (KsbaCMS cms)
   KsbaAsnTree cms_tree;
   struct certlist_s *certlist;
   struct oidlist_s *digestlist;
+  struct signer_info_s *si, **si_tail;
 
   /* Write the End tag */
   err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
   if (err)
     return err;
+
+  if (cms->signer_info)
+    return KSBA_Conflict; /* This list must be empty at this point. */
 
   /* Write optional certificates */
   if (cms->cert_info_list)
@@ -1932,6 +2072,7 @@ build_signed_data_attributes (KsbaCMS cms)
   if (!digestlist)
     return KSBA_Missing_Value; /* oops */
 
+  si_tail = &cms->signer_info;
   for (signer=0; certlist;
        signer++, certlist = certlist->next, digestlist = digestlist->next)
     {
@@ -2007,11 +2148,11 @@ build_signed_data_attributes (KsbaCMS cms)
           attridx++;
         }
 
-      /* now copy them to an SignerInfos tree.  This tree is not
-         complete but suitable for ksba_cms_hash_igned_attributes() */
+      /* now copy them to an SignerInfo tree.  This tree is not
+         complete but suitable for ksba_cms_hash_signed_attributes() */
       root = _ksba_asn_expand_tree (cms_tree->parse_tree,  
-                                    "CryptographicMessageSyntax.SignerInfos"); 
-      n = _ksba_asn_find_node (root, "SignerInfos..signedAttrs");
+                                    "CryptographicMessageSyntax.SignerInfo"); 
+      n = _ksba_asn_find_node (root, "SignerInfo.signedAttrs");
       if (!n || !n->down) 
         return KSBA_Element_Not_Found; 
       /* This is another ugly hack to move to the element we want */
@@ -2019,8 +2160,6 @@ build_signed_data_attributes (KsbaCMS cms)
         ;
       if (!n) 
         return KSBA_Element_Not_Found; 
-
-
 
       for (i=0; i < attridx; i++)
         {
@@ -2034,13 +2173,16 @@ build_signed_data_attributes (KsbaCMS cms)
 
       err = _ksba_der_encode_tree (root, &image, NULL);
       if (err)
-          return err;
-
-      /* fixme: the signer_info structure can only save one signerinfo */
-      _ksba_asn_release_nodes (cms->signer_info.root);
-      xfree (cms->signer_info.image);
-      cms->signer_info.root = root;
-      cms->signer_info.image = image;
+        return err;
+      
+      si = xtrycalloc (1, sizeof *si);
+      if (!si)
+        return KSBA_Out_Of_Core;
+      si->root = root;
+      si->image = image;
+      /* Hmmm, we don't set the length of the image. */
+      *si_tail = si;
+      si_tail = &si->next;
     }
 
   return 0;
@@ -2059,6 +2201,9 @@ build_signed_data_rest (KsbaCMS cms)
   KsbaAsnTree cms_tree;
   struct certlist_s *certlist;
   struct oidlist_s *digestlist;
+  struct signer_info_s *si;
+  struct sig_val_s *sv;
+  KsbaWriter tmpwrt = NULL;
 
   /* Now we can really write the signer info */
   err = ksba_asn_create_tree ("cms", &cms_tree);
@@ -2069,27 +2214,40 @@ build_signed_data_rest (KsbaCMS cms)
   certlist = cms->cert_list;
   if (!certlist)
     return KSBA_Missing_Value; /* oops */
+
+  /* To construct the set we use a temporary writer object. */
+  tmpwrt = ksba_writer_new ();
+  if (!tmpwrt)
+    return KSBA_Out_Of_Core;
+  err = ksba_writer_set_mem (tmpwrt, 2048);
+  if (err)
+    return err;
+
   digestlist = cms->digest_algos;
-  if (!digestlist)
-    return KSBA_Missing_Value; /* oops */
+  si = cms->signer_info;
+  sv = cms->sig_val;
 
   for (signer=0; certlist;
-       signer++, certlist = certlist->next, digestlist = digestlist->next)
+       signer++,
+         certlist = certlist->next,
+         digestlist = digestlist->next,
+         si = si->next,
+         sv = sv->next)
     {
       AsnNode root, n, n2;
       unsigned char *image;
       size_t imagelen;
 
-      if (!digestlist)
+      if (!digestlist || !si || !sv)
         return KSBA_Missing_Value; /* oops */
       if (!certlist->cert || !digestlist->oid)
         return KSBA_Bug;
 
       root = _ksba_asn_expand_tree (cms_tree->parse_tree, 
-                                    "CryptographicMessageSyntax.SignerInfos");
+                                    "CryptographicMessageSyntax.SignerInfo");
 
       /* We store a version of 1 because we use the issuerAndSerialNumber */
-      n = _ksba_asn_find_node (root, "SignerInfos..version");
+      n = _ksba_asn_find_node (root, "SignerInfo.version");
       if (!n)
         return KSBA_Element_Not_Found;
       err = _ksba_der_store_integer (n, "\x00\x00\x00\x01\x01");
@@ -2097,7 +2255,7 @@ build_signed_data_rest (KsbaCMS cms)
         return err;
 
       /* Store the sid */
-      n = _ksba_asn_find_node (root, "SignerInfos..sid");
+      n = _ksba_asn_find_node (root, "SignerInfo.sid");
       if (!n)
         return KSBA_Element_Not_Found;
 
@@ -2106,13 +2264,13 @@ build_signed_data_rest (KsbaCMS cms)
         return err;
 
       /* store the digestAlgorithm */
-      n = _ksba_asn_find_node (root, "SignerInfos..digestAlgorithm.algorithm");
+      n = _ksba_asn_find_node (root, "SignerInfo.digestAlgorithm.algorithm");
       if (!n)
         return KSBA_Element_Not_Found;
       err = _ksba_der_store_oid (n, digestlist->oid);
       if (err)
         return err;
-      n = _ksba_asn_find_node (root, "SignerInfos..digestAlgorithm.parameters");
+      n = _ksba_asn_find_node (root, "SignerInfo.digestAlgorithm.parameters");
       if (!n)
         return KSBA_Element_Not_Found;
       err = _ksba_der_store_null (n);
@@ -2120,30 +2278,29 @@ build_signed_data_rest (KsbaCMS cms)
         return err;
 
       /* and the signed attributes */
-      n = _ksba_asn_find_node (root, "SignerInfos..signedAttrs");
+      n = _ksba_asn_find_node (root, "SignerInfo.signedAttrs");
       if (!n || !n->down) 
         return KSBA_Element_Not_Found; 
-      assert (cms->signer_info.root);
-      assert (cms->signer_info.image);
-      n2 = _ksba_asn_find_node (cms->signer_info.root,
-                                "SignerInfos..signedAttrs");
+      assert (si->root);
+      assert (si->image);
+      n2 = _ksba_asn_find_node (si->root, "SignerInfo.signedAttrs");
       if (!n2 || !n->down) 
         return KSBA_Element_Not_Found; 
-      err = _ksba_der_copy_tree (n, n2, cms->signer_info.image);
+      err = _ksba_der_copy_tree (n, n2, si->image);
       if (err)
         return err;
       image = NULL;
 
       /* store the signatureAlgorithm */
-      if (!cms->sig_val.algo || !cms->sig_val.value)
-        return KSBA_Missing_Value;
-      n = _ksba_asn_find_node (root, "SignerInfos..signatureAlgorithm.algorithm");
+      n = _ksba_asn_find_node (root, "SignerInfo.signatureAlgorithm.algorithm");
       if (!n)
         return KSBA_Element_Not_Found;
-      err = _ksba_der_store_oid (n, cms->sig_val.algo);
+      if (!sv->algo)
+        return KSBA_Missing_Value;
+      err = _ksba_der_store_oid (n, sv->algo);
       if (err)
         return err;
-      n = _ksba_asn_find_node (root, "SignerInfos..signatureAlgorithm.parameters");
+      n = _ksba_asn_find_node (root, "SignerInfo.signatureAlgorithm.parameters");
       if (!n)
         return KSBA_Element_Not_Found;
       err = _ksba_der_store_null (n);
@@ -2151,27 +2308,47 @@ build_signed_data_rest (KsbaCMS cms)
         return err;
 
       /* store the signature  */
-      if (!cms->sig_val.value)
+      if (!sv->value)
         return KSBA_Missing_Value;
-      n = _ksba_asn_find_node (root, "SignerInfos..signature");
+      n = _ksba_asn_find_node (root, "SignerInfo.signature");
       if (!n)
         return KSBA_Element_Not_Found;
-      err = _ksba_der_store_octet_string (n, cms->sig_val.value,
-                                          cms->sig_val.valuelen);
+      err = _ksba_der_store_octet_string (n, sv->value, sv->valuelen);
       if (err)
         return err;
 
-
-      /* Make the DER encoding and write it out */
+      /* Make the DER encoding and write it out. */
       err = _ksba_der_encode_tree (root, &image, &imagelen);
       if (err)
           return err;
 
-      err = ksba_writer_write (cms->writer, image, imagelen);
+      err = ksba_writer_write (tmpwrt, image, imagelen);
       if (err )
         return err;
       /* fixme: release what we don't need */
     }
+
+  /* Write out the SET filled with all signer infos */
+  {
+    unsigned char *value;
+    size_t valuelen;
+
+    value = ksba_writer_snatch_mem (tmpwrt, &valuelen);
+    if (!value)
+      {
+        return KSBA_Out_Of_Core;
+      }
+    err = _ksba_ber_write_tl (cms->writer, TYPE_SET, CLASS_UNIVERSAL,
+                              1, valuelen);
+    if (!err)
+      err = ksba_writer_write (cms->writer, value, valuelen);
+    xfree (value);
+    if (err)
+      return err;
+  }
+
+  /* FIXME: release tmpwrt on error */
+  ksba_writer_release (tmpwrt);
 
   /* Write 3 end tags */
   err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
@@ -2215,7 +2392,7 @@ ct_build_signed_data (KsbaCMS cms)
     state = sDATAREADY;
   else if (stop_reason == KSBA_SR_NEED_SIG)
     {
-      if (!cms->sig_val.algo)
+      if (!cms->sig_val)
         err = KSBA_Missing_Action; /* No ksba_cms_set_sig_val () called */
       state = sGOTSIG;
     }

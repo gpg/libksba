@@ -207,6 +207,25 @@ ksba_cert_get_image (KsbaCert cert, size_t *r_length )
   return cert->image + n->off;
 }
 
+/* Check whether certificates A and B are identical and return o in
+   this case. */
+int
+_ksba_cert_cmp (KsbaCert a, KsbaCert b)
+{
+  const unsigned char *img_a, *img_b;
+  size_t len_a, len_b;
+
+  img_a = ksba_cert_get_image (a, &len_a);
+  if (!img_a)
+    return 1;
+  img_b = ksba_cert_get_image (b, &len_b);
+  if (!img_b)
+    return 1;
+  return !(len_a == len_b && !memcmp (img_a, img_b, len_a));
+}
+
+
+
 
 KsbaError
 ksba_cert_hash (KsbaCert cert, int what,
@@ -237,6 +256,7 @@ ksba_cert_hash (KsbaCert cert, int what,
 
   return 0;
 }
+
 
 
 /**

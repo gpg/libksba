@@ -48,6 +48,8 @@ struct ksba_cert_s {
 };
 
 
+int _ksba_cert_cmp (KsbaCert a, KsbaCert b);
+
 
 #endif /*CERT_H*/
 
