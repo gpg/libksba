@@ -21,21 +21,19 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-void *_ksba_malloc (size_t n );
-void *_ksba_calloc (size_t n, size_t m );
-void *_ksba_realloc (void *p, size_t n);
-char *_ksba_strdup (const char *p);
-void  _ksba_free ( void *a );
+#include "ksba.h"  /* ksba_malloc() etc. */
+
 void *_ksba_xmalloc (size_t n );
 void *_ksba_xcalloc (size_t n, size_t m );
 void *_ksba_xrealloc (void *p, size_t n);
 char *_ksba_xstrdup (const char *p);
 
-#define xtrymalloc(a)    _ksba_malloc((a))
-#define xtrycalloc(a,b)  _ksba_calloc((a),(b))
-#define xtryrealloc(a,b) _ksba_realloc((a),(b))
-#define xtrystrdup(a)    _ksba_strdup((a))
-#define xfree(a)         _ksba_free((a))
+#define xtrymalloc(a)    ksba_malloc((a))
+#define xtrycalloc(a,b)  ksba_calloc((a),(b))
+#define xtryrealloc(a,b) ksba_realloc((a),(b))
+#define xtrystrdup(a)    ksba_strdup((a))
+#define xfree(a)         ksba_free((a))
+
 #define xmalloc(a)       _ksba_xmalloc((a))
 #define xcalloc(a,b)     _ksba_xcalloc((a),(b))
 #define xrealloc(a,b)    _ksba_xrealloc((a),(b))
@@ -72,6 +70,11 @@ char *_ksba_xstrdup (const char *p);
         fprintf (stderr, "%s:%d: oops; should never get here\n", \
                  __FILE__, __LINE__ );                         \
     } while (0)
+
+
+#ifndef HAVE_STPCPY
+char *stpcpy (char *a, const char *b);
+#endif
 
 
 #endif /* UTIL_H */

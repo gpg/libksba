@@ -28,6 +28,7 @@ extern "C" {
 #endif
 
 typedef enum {
+  KSBA_EOF = -1,
   KSBA_No_Error = 0,
   KSBA_General_Error = 1,
   KSBA_Out_Of_Core = 2,
@@ -93,6 +94,7 @@ KsbaError ksba_reader_set_cb (KsbaReader r,
 
 KsbaError ksba_reader_read (KsbaReader r,
                             char *buffer, size_t length, size_t *nread);
+unsigned long ksba_reader_tell (KsbaReader r);
 
 
 /*-- asn1-parse.y --*/
@@ -102,9 +104,22 @@ void ksba_asn_tree_release (KsbaAsnTree tree);
 /*-- asn1-func.c --*/
 void ksba_asn_tree_dump (KsbaAsnTree tree, const char *name, FILE *fp);
 
+/*-- oid.c --*/
+char *ksba_oid_to_str (const char *buffer, size_t length);
+int ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength);
+
+
+/*-- util.c --*/
+void *ksba_malloc (size_t n );
+void *ksba_calloc (size_t n, size_t m );
+void *ksba_realloc (void *p, size_t n);
+char *ksba_strdup (const char *p);
+void  ksba_free ( void *a );
 
 #ifdef __cplusplus
 }
 #endif
 #endif /*KSBA_H*/
+
+
 

@@ -35,6 +35,7 @@ enum reader_type {
 struct ksba_reader_s {
   int eof;
   int error;
+  unsigned long nread;
   enum reader_type type;
   union {
     struct {
@@ -55,4 +56,11 @@ struct ksba_reader_s {
 
 
 #endif /*READER_H*/
+
+
+
+
+
+
+
 

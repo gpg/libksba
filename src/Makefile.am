@@ -19,29 +19,31 @@
 
 ## Process this file with automake to produce Makefile.in
 
-#EXTRA_DIST = 
+EXTRA_DIST = ksba-config.in 
 BUILT_SOURCES = asn1-parse.c
-#bin_SCRIPTS = ksba-config
-#m4datadir = $(datadir)/aclocal
-#m4data_DATA = ksba.m4
-
+bin_SCRIPTS = ksba-config
+include_HEADERS = ksba.h
+lib_LTLIBRARIES = libksba.la
 noinst_PROGRAMS = asn1-gentables ber-dump
 
-#include_HEADERS = ksba.h
-#lib_LTLIBRARIES = libksba.la
+libksba_la_LDFLAGS = -version-info \
+      @LIBKSBA_LT_CURRENT@:@LIBKSBA_LT_REVISION@:@LIBKSBA_LT_AGE@
+libksba_la_INCLUDES = -I$(top_srcdir)/lib 
 
-#libksba_la_LDFLAGS = -version-info \
-#      @LIBKSBA_LT_CURRENT@:@LIBKSBA_LT_REVISION@:@LIBKSBA_LT_AGE@
-#libksba_la_INCLUDES = -I$(top_srcdir)/foo
-
-#libksba_la_SOURCES = \
-#	ksba.h \
-#	asn1-der.c asn1-der.h
+libksba_la_SOURCES = \
+	ksba.h \
+	ber-decoder.c ber-decoder.h \
+	reader.c reader.h \
+	asn1-parse.y asn1-parse.h \
+	asn1-func.c asn1-func.h \
+	oid.c \
+	util.c util.h	
 
 asn1_gentables_SOURCES = \
 	asn1-gentables.c \
 	asn1-parse.y asn1-parse.h \
 	asn1-func.c asn1-func.h \
+	oid.c \
 	util.c util.h	
 
 ber_dump_SOURCES = \
@@ -51,6 +53,7 @@ ber_dump_SOURCES = \
 	reader.c reader.h \
 	asn1-parse.y asn1-parse.h \
 	asn1-func.c asn1-func.h \
+	oid.c \
 	util.c util.h	
 
 

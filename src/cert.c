@@ -49,6 +49,12 @@ ksba_cert_new (void)
   return cert;
 }
 
+/**
+ * ksba_cert_release:
+ * @cert: A certificate object
+ * 
+ * Release a certificate object.
+ **/
 void
 ksba_cert_release (KsbaCert cert)
 {
@@ -56,6 +62,18 @@ ksba_cert_release (KsbaCert cert)
 }
 
 
+/**
+ * ksba_cert_read_der:
+ * @cert: An unitialized certificate object
+ * @reader: A KSBA Reader object
+ * 
+ * Read the next certificate from the reader and store it in the
+ * certificate object for future access.  The certificate is parsed
+ * and rejected if it has any syntactical or semantical error
+ * (i.e. does not match the ASN.1 description).
+ * 
+ * Return value: 0 on success or an error value
+ **/
 KsbaError
 ksba_cert_read_der (KsbaCert cert, KsbaReader reader)
 {
@@ -66,8 +84,9 @@ ksba_cert_read_der (KsbaCert cert, KsbaReader reader)
 
   /* FIXME: parse it and store it in our internal format */
 
-
+  return KSBA_Not_Implemented;
 }
+
 
 
 

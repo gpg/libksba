@@ -41,6 +41,7 @@
 #include "asn1-parse.h"
 #include "asn1-func.h"
 
+/*#define YYDEBUG 1*/
 #define YYERROR_VERBOSE = 1
 #define MAX_STRING_LENGTH 129
 
@@ -53,6 +54,7 @@ enum {
 struct parser_control_s {
   FILE *fp;
   int lineno;
+  int debug;
   int result_parse;
   AsnNode parse_tree;
   AsnNode all_nodes;
@@ -78,6 +80,7 @@ static AsnNode new_node (struct parser_control_s *parsectl, node_type_t type);
 #define NEW_NODE(a)  (new_node (PARSECTL, (a)))
 static void set_name (AsnNode node, const char *name);
 static void set_str_value (AsnNode node, const char *text);
+static void set_ulong_value (AsnNode node, const char *text);
 static void set_right (AsnNode node, AsnNode right);
 static void append_right (AsnNode node, AsnNode right);
 static void set_down (AsnNode node, AsnNode down);
@@ -125,6 +128,15 @@ static void yyerror (const char *s);
 %token FROM
 %token IMPORTS
 %token ENUMERATED
+%token UTF8STRING
+%token NUMERICSTRING
+%token PRINTABLESTRING
+%token TELETEXSTRING  
+%token IA5STRING
+%token UNIVERSALSTRING
+%token BMPSTRING
+
+
 
 %type <node> octet_string_def constant constant_list type_assig_right 
 %type <node> integer_def type_assig type_assig_list sequence_def type_def
@@ -133,7 +145,10 @@ static void yyerror (const char *s);
 %type <node> constant_def type_constant type_constant_list definitions
 %type <node> definitions_id Time bit_element bit_element_list set_def
 %type <node> identifier_list imports_def tag_type tag type_assig_right_tag
-%type <node> type_assig_right_tag_default enumerated_def
+%type <node> type_assig_right_tag_default enumerated_def string_def
+%type <node> utf8_string_def numeric_string_def printable_string_def
+%type <node> teletex_string_def ia5_string_def universal_string_def
+%type <node> bmp_string_def
 %type <str>  pos_num neg_num pos_neg_num pos_neg_identifier num_identifier 
 %type <constant> class explicit_implicit
 
@@ -235,13 +250,13 @@ tag_type :  '[' NUM ']'
                 {
                   $$ = NEW_NODE (TYPE_TAG); 
                   $$->flags.class = CLASS_CONTEXT;
-                  set_str_value ($$, $2);
+                  set_ulong_value ($$, $2);
                 }
           | '[' class NUM ']' 
                 {
                   $$ = NEW_NODE (TYPE_TAG);
                   $$->flags.class = $2;
-                  set_str_value ($$, $3);
+                  set_ulong_value ($$, $3);
                 }
 ;
 
@@ -305,12 +320,11 @@ boolean_def: BOOLEAN
 
 Time:   UTCTime       
           {
-            $$ = NEW_NODE (TYPE_TIME);
-            $$->flags.is_utc_time = 1;
+            $$ = NEW_NODE (TYPE_UTC_TIME);
           } 
       | GeneralizedTime  
           { 
-            $$ = NEW_NODE (TYPE_TIME);
+            $$ = NEW_NODE (TYPE_GENERALIZED_TIME);
           } 
 ;
 
@@ -350,6 +364,79 @@ octet_string_def : OCTET STRING
                        set_down ($$,$3);
                      }
 ;
+
+utf8_string_def:   UTF8STRING      { $$ = NEW_NODE (TYPE_UTF8_STRING); }
+                 | UTF8STRING size_def
+                     {
+                       $$ = NEW_NODE (TYPE_UTF8_STRING);
+                       $$->flags.has_size = 1;
+                       set_down ($$,$2);
+                     }
+;
+numeric_string_def:   NUMERICSTRING  { $$ = NEW_NODE (TYPE_NUMERIC_STRING); }
+                    | NUMERICSTRING size_def
+                     {
+                       $$ = NEW_NODE (TYPE_NUMERIC_STRING);
+                       $$->flags.has_size = 1;
+                       set_down ($$,$2);
+                     }
+;
+printable_string_def:  PRINTABLESTRING 
+                        { $$ = NEW_NODE (TYPE_PRINTABLE_STRING); }
+                     | PRINTABLESTRING size_def
+                        { 
+                          $$ = NEW_NODE (TYPE_PRINTABLE_STRING);
+                          $$->flags.has_size = 1;
+                          set_down ($$,$2);
+                        }
+;
+teletex_string_def:   TELETEXSTRING
+                       { $$ = NEW_NODE (TYPE_TELETEX_STRING); }
+                   | TELETEXSTRING size_def
+                     {
+                       $$ = NEW_NODE (TYPE_TELETEX_STRING);
+                       $$->flags.has_size = 1;
+                       set_down ($$,$2);
+                     }
+;
+ia5_string_def:   IA5STRING      { $$ = NEW_NODE (TYPE_IA5_STRING); }
+                | IA5STRING size_def
+                     {
+                       $$ = NEW_NODE (TYPE_IA5_STRING);
+                       $$->flags.has_size = 1;
+                       set_down ($$,$2);
+                     }
+;
+universal_string_def:   UNIVERSALSTRING
+                         { $$ = NEW_NODE (TYPE_UNIVERSAL_STRING); }
+                      | UNIVERSALSTRING size_def
+                         {
+                           $$ = NEW_NODE (TYPE_UNIVERSAL_STRING);
+                           $$->flags.has_size = 1;
+                           set_down ($$,$2);
+                         }
+;
+bmp_string_def:    BMPSTRING      { $$ = NEW_NODE (TYPE_BMP_STRING); }
+                 | BMPSTRING size_def
+                     {
+                       $$ = NEW_NODE (TYPE_BMP_STRING);
+                       $$->flags.has_size = 1;
+                       set_down ($$,$2);
+                     }
+;
+
+
+string_def:  utf8_string_def
+           | numeric_string_def
+           | printable_string_def
+           | teletex_string_def
+           | ia5_string_def
+           | universal_string_def
+           | bmp_string_def
+;
+
+
+
 
 bit_element :  IDENTIFIER'('NUM')'
                  {
@@ -411,6 +498,7 @@ type_assig_right: IDENTIFIER
                 | integer_def        {$$=$1;}
                 | enumerated_def     {$$=$1;}
                 | boolean_def        {$$=$1;}
+                | string_def         {$$=$1;}
                 | Time            
                 | octet_string_def   {$$=$1;}
                 | bit_string_def     {$$=$1;}
@@ -431,10 +519,12 @@ type_assig_right_tag :   type_assig_right
                            }
                        | tag type_assig_right
                            {
-                             $2->flags.has_tag = 1;
-                             $$ = $2;
-                             set_right ($1, $$->down );
-                             set_down ($$, $1);
+/*                               $2->flags.has_tag = 1; */
+/*                               $$ = $2; */
+/*                               set_right ($1, $$->down ); */
+/*                               set_down ($$, $1); */
+                             $$ = $1;
+                             set_down ($$, $2)
                            }
 ;
 
@@ -445,7 +535,8 @@ type_assig_right_tag_default : type_assig_right_tag
                              | type_assig_right_tag default  
                                  {
                                    $1->flags.has_default = 1;
-                                   set_right ($2, $$->down);
+                                   $$ = $1;
+                                   set_right ($2, $$->down); 
                                    set_down ($$, $2);
                                  }
                              | type_assig_right_tag OPTIONAL  
@@ -457,7 +548,7 @@ type_assig_right_tag_default : type_assig_right_tag
  
 type_assig : IDENTIFIER type_assig_right_tag_default
                {
-                 set_name ($2, $1);
+                 set_name ($2, $1); 
                  $$ = $2;
                }
 ;
@@ -642,20 +733,28 @@ definitions: definitions_id
 
 %%
 
-const char *key_word[]={"::=","OPTIONAL","INTEGER","SIZE","OCTET","STRING"
-                       ,"SEQUENCE","BIT","UNIVERSAL","PRIVATE","OPTIONAL"
-                       ,"DEFAULT","CHOICE","OF","OBJECT","IDENTIFIER"
-                       ,"BOOLEAN","TRUE","FALSE","APPLICATION","ANY","DEFINED"
-                       ,"SET","BY","EXPLICIT","IMPLICIT","DEFINITIONS","TAGS"
-                       ,"BEGIN","END","UTCTime","GeneralizedTime","FROM"
-                       ,"IMPORTS","NULL","ENUMERATED"};
-const int key_word_token[]={ASSIG,OPTIONAL,INTEGER,SIZE,OCTET,STRING
-                       ,SEQUENCE,BIT,UNIVERSAL,PRIVATE,OPTIONAL
-                       ,DEFAULT,CHOICE,OF,OBJECT,STR_IDENTIFIER
-                       ,BOOLEAN,TRUE,FALSE,APPLICATION,ANY,DEFINED
-                       ,SET,BY,EXPLICIT,IMPLICIT,DEFINITIONS,TAGS
-                       ,BEGIN,END,UTCTime,GeneralizedTime,FROM
-                       ,IMPORTS,TOKEN_NULL,ENUMERATED};
+const char *key_word[]={
+  "::=","OPTIONAL","INTEGER","SIZE","OCTET","STRING"
+  ,"SEQUENCE","BIT","UNIVERSAL","PRIVATE","OPTIONAL"
+  ,"DEFAULT","CHOICE","OF","OBJECT","IDENTIFIER"
+  ,"BOOLEAN","TRUE","FALSE","APPLICATION","ANY","DEFINED"
+  ,"SET","BY","EXPLICIT","IMPLICIT","DEFINITIONS","TAGS"
+  ,"BEGIN","END","UTCTime","GeneralizedTime","FROM"
+  ,"IMPORTS","NULL","ENUMERATED"
+  ,"UTF8String","NumericString","PrintableString","TeletexString"
+  ,"IA5String","UniversalString","BMPString"
+};
+const int key_word_token[]={
+   ASSIG,OPTIONAL,INTEGER,SIZE,OCTET,STRING
+  ,SEQUENCE,BIT,UNIVERSAL,PRIVATE,OPTIONAL
+  ,DEFAULT,CHOICE,OF,OBJECT,STR_IDENTIFIER
+  ,BOOLEAN,TRUE,FALSE,APPLICATION,ANY,DEFINED
+  ,SET,BY,EXPLICIT,IMPLICIT,DEFINITIONS,TAGS
+  ,BEGIN,END,UTCTime,GeneralizedTime,FROM
+  ,IMPORTS,TOKEN_NULL,ENUMERATED
+  ,UTF8STRING,NUMERICSTRING,PRINTABLESTRING,TELETEXSTRING  
+  ,IA5STRING,UNIVERSALSTRING,BMPSTRING
+};      
 
 
 /*************************************************************/
@@ -738,6 +837,9 @@ yylex (YYSTYPE *lvalp, void *parm)
       if (k>=counter)
         {
           strcpy (lvalp->str,string);  
+          if (PARSECTL->debug)
+            fprintf (stderr,"%d: yylex found number `%s'\n",
+                     PARSECTL->lineno, string);
           return NUM;
         }
       
@@ -745,11 +847,19 @@ yylex (YYSTYPE *lvalp, void *parm)
       for (k=0; k<(sizeof(key_word)/sizeof(char*));k++ )
         {
           if (!strcmp(string,key_word[k])) 
-            return key_word_token[k]; 
+            {
+              if (PARSECTL->debug)
+                fprintf (stderr,"%d: yylex found keyword `%s'\n",
+                         PARSECTL->lineno, string);
+              return key_word_token[k]; 
+            }
         }
       
       /* STRING is an IDENTIFIER */
       strcpy(lvalp->str,string);
+      if (PARSECTL->debug)
+        fprintf (stderr,"%d: yylex found identifier `%s'\n",
+                 PARSECTL->lineno, string);
       return IDENTIFIER;
     }
 }
@@ -812,6 +922,18 @@ set_str_value (AsnNode node, const char *text)
 }
 
 static void
+set_ulong_value (AsnNode node, const char *text)
+{
+  unsigned long val;
+
+  if (text && *text)
+    val = strtoul (text, NULL, 10);
+  else
+    val = 0;
+  _ksba_asn_set_value (node, VALTYPE_ULONG, &val, sizeof(val));
+}
+
+static void
 set_right (AsnNode node, AsnNode right)
 {
   return_if_fail (node);
@@ -867,11 +989,15 @@ ksba_asn_parse_file (const char *file_name, KsbaAsnTree *result)
     return ASN_FILE_NOT_FOUND;
 
   parsectl.lineno = 0;
+  parsectl.debug = 0;
   parsectl.result_parse = ASN_SYNTAX_ERROR;
   parsectl.parse_tree = NULL;
   parsectl.all_nodes = NULL;
+  /*yydebug = 1;*/
   if ( yyparse ((void*)&parsectl) || parsectl.result_parse != ASN_OK )
     { /* error */
+      fprintf (stderr, "%s:%d: parse error\n",
+               file_name?file_name:"-", parsectl.lineno ); 
       release_all_nodes (parsectl.all_nodes);
       parsectl.all_nodes = NULL;
     }
@@ -902,4 +1028,5 @@ ksba_asn_tree_release (KsbaAsnTree tree)
   tree->node_list = NULL;
   xfree (tree);
 }
+
 

@@ -138,7 +138,6 @@ create_static_structure (AsnNode pointer, const char *file_name)
       fputs (p->flags.is_true        ? ",1":",0", file);
       fputs (p->flags.has_default     ? ",1":",0", file);
       fputs (p->flags.is_optional    ? ",1":",0", file);
-      fputs (p->flags.is_utc_time    ? ",1":",0", file);
       fputs (p->flags.in_set         ? ",1":",0", file);
       fputs (p->flags.not_used       ? ",1":",0", file);
       fputs (p->flags.help_down      ? ",1":",0", file);
@@ -150,6 +149,8 @@ create_static_structure (AsnNode pointer, const char *file_name)
       else if (p->valuetype == VALTYPE_LONG
                && p->type == TYPE_INTEGER && p->flags.assignment)
         fprintf (file, ",\"%ld\"", p->value.v_long);
+      else if (p->valuetype == VALTYPE_ULONG)
+        fprintf (file, ",\"%lu\"", p->value.v_ulong);
       else
         {
           if (p->valuetype)
@@ -189,7 +190,7 @@ one_file (FILE *fp, const char *fname)
   else 
     {
       if (dump_only)
-        ksba_asn_tree_dump (tree, NULL, stdout);
+        ksba_asn_tree_dump (tree, dump_only==2? "<":NULL, stdout);
       else
         create_static_structure (tree->parse_tree, fname);
     }
@@ -202,7 +203,8 @@ main (int argc, char **argv)
   if (!argc || (argc > 1 &&
                 (!strcmp (argv[1],"--help") || !strcmp (argv[1],"-h"))) )
     {
-      fputs ("usage: asn1-gentables [--dump] [files.asn]\n", stderr);
+      fputs ("usage: asn1-gentables [--dump[-expanded]] [files.asn]\n",
+             stderr);
       return 0;
     }
   
@@ -212,6 +214,12 @@ main (int argc, char **argv)
       argc--; argv++;
       dump_only = 1;
     }
+  else if (argc && !strcmp (*argv,"--dump-expanded"))
+    {
+      argc--; argv++;
+      dump_only = 2;
+    }
+
 
   if (!argc)
     one_file (stdin, "-");
@@ -233,3 +241,4 @@ main (int argc, char **argv)
     }
   return error_counter? 1:0;
 }
+

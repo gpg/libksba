@@ -68,6 +68,12 @@ ksba_reader_error (KsbaReader r)
   return r? r->error : -1;
 }
 
+unsigned long
+ksba_reader_tell (KsbaReader r)
+{
+  return r? r->nread : 0;
+}
+
 
 /**
  * ksba_reader_set_mem:
@@ -256,6 +262,7 @@ ksba_reader_read (KsbaReader r, char *buffer, size_t length, size_t *nread)
         nbytes = length;
       memcpy (buffer, r->u.mem.buffer + r->u.mem.readpos, nbytes);
       *nread = nbytes;
+      r->nread += nbytes;
       r->u.mem.readpos += nbytes;
     }
   else if (r->type == READER_TYPE_FILE)
@@ -272,7 +279,13 @@ ksba_reader_read (KsbaReader r, char *buffer, size_t length, size_t *nread)
         }
 
       n = fread (buffer, 1, length, r->u.file);
-      *nread = n > 0? n: 0;
+      if (n > 0)
+        {
+          r->nread += n;
+          *nread = n;
+        }
+      else
+        *nread = 0;
       if (n < length)
         {
           if (ferror(r->u.file))
@@ -293,11 +306,12 @@ ksba_reader_read (KsbaReader r, char *buffer, size_t length, size_t *nread)
           r->eof = 1;
           return -1;
         }
+      r->nread += *nread;
     }
-    else 
-      return KSBA_Bug;
+  else 
+    return KSBA_Bug;
 
-    return 0;
+  return 0;
 } 
 
 

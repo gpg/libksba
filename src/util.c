@@ -27,39 +27,39 @@
 #include "util.h"
 
 /* Wrapper for the common memory allocation functions.  These are here
-   so that we can add hooks.  The corresponding macros shoudl be used.
+   so that we can add hooks.  The corresponding macros should be used.
    These macros are not named xfoo() because this name is commonly
    used for function which die on errror.  We use macronames like
    xtryfoo() instead. */
 
 void *
-_ksba_malloc (size_t n )
+ksba_malloc (size_t n )
 {
   return malloc (n);
 }
 
 void *
-_ksba_calloc (size_t n, size_t m )
+ksba_calloc (size_t n, size_t m )
 {
   return calloc (n, m);
 }
 
 void *
-_ksba_realloc (void *mem, size_t n)
+ksba_realloc (void *mem, size_t n)
 {
   return realloc (mem, n );
 }
 
 
 char *
-_ksba_strdup (const char *str)
+ksba_strdup (const char *str)
 {
   return strdup (str);
 }
 
 
 void 
-_ksba_free ( void *a )
+ksba_free ( void *a )
 {
   free (a);
 }
@@ -77,7 +77,7 @@ out_of_core(void)
 void *
 _ksba_xmalloc (size_t n )
 {
-  void *p = _ksba_malloc (n);
+  void *p = ksba_malloc (n);
   if (!p)
     out_of_core();
   return p;
@@ -86,7 +86,7 @@ _ksba_xmalloc (size_t n )
 void *
 _ksba_xcalloc (size_t n, size_t m )
 {
-  void *p = _ksba_calloc (n,m);
+  void *p = ksba_calloc (n,m);
   if (!p)
     out_of_core();
   return p;
@@ -95,7 +95,7 @@ _ksba_xcalloc (size_t n, size_t m )
 void *
 _ksba_xrealloc (void *mem, size_t n)
 {
-  void *p = _ksba_realloc (mem,n);
+  void *p = ksba_realloc (mem,n);
   if (!p)
     out_of_core();
   return p;
@@ -105,9 +105,22 @@ _ksba_xrealloc (void *mem, size_t n)
 char *
 _ksba_xstrdup (const char *str)
 {
-  char *p = _ksba_strdup (str);
+  char *p = ksba_strdup (str);
   if (!p)
     out_of_core();
   return p;
 }
+
+
+#ifndef HAVE_STPCPY
+char *
+stpcpy (char *a,const char *b)
+{
+  while (*b)
+    *a++ = *b++;
+  *a = 0;
+
+  return a;
+}
+#endif
 
