@@ -1,3 +1,13 @@
+2002-06-25  Werner Koch  <wk@gnupg.org>
+
+	Released 0.4.3.
+	
+	* configure.ac: Set LT version to 6/6/0.
+
+2002-06-17  Werner Koch  <wk@gnupg.org>
+
+	* configure.ac: Don't check for ranlib because it is done by libtool.
+
 2002-06-04  Werner Koch  <wk@gnupg.org>
 
         Released 0.4.2.

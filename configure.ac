@@ -24,9 +24,9 @@
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
 # Please remember to document interface changes in the NEWS file.
-AC_INIT(libksba, 0.4.3-cvs, gpa-dev@gnupg.org)
-LIBKSBA_LT_CURRENT=5
-LIBKSBA_LT_AGE=5
+AC_INIT(libksba, 0.4.3, gpa-dev@gnupg.org)
+LIBKSBA_LT_CURRENT=6
+LIBKSBA_LT_AGE=6
 LIBKSBA_LT_REVISION=0
 #-------------------
 
@@ -74,7 +74,6 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-AC_PROG_RANLIB
 #AC_ARG_PROGRAM
 AC_PROG_YACC
 
