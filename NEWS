@@ -1,12 +1,16 @@
-Noteworthy changes in version 0.9.4
+Noteworthy changes in version 0.9.4 (2004-02-20)
 ------------------------------------------------
 
+ * Support for Extended Key Usage.
 
+ * ksba_cms_identify may no return a pseudo content type for pkcs#12
+   files.
 
  * Interface changes relative to the 0.9.3 release:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ksba_reader_clear             NEW.
 ksba_cert_get_ext_key_usages  NEW.
+KSBA_CT_PKCS12                NEW.
 
 
 Noteworthy changes in version 0.9.3 (2004-01-30)
