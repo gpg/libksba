@@ -1,4 +1,4 @@
-Noteworthy changes in version 0.4.6 (unreleased)
+Noteworthy changes in version 0.4.6 (2002-12-04)
 ------------------------------------------------
 
  * DNs in pkcs#10 request are now created in reversed order as
