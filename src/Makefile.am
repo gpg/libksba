@@ -1,5 +1,5 @@
 # Makefile.am - for the KSBA ASN.1 and X.509 library
-#       Copyright (C) 2001, 2002, 2004 g10 Code GmbH
+#       Copyright (C) 2001, 2002, 2004, 2005 g10 Code GmbH
 # 	
 # This file is part of KSBA.
 # 
@@ -71,13 +71,17 @@ libksba_la_SOURCES = \
 	sexp-parse.h \
 	asn1-tables.c
 
-asn1_gentables_SOURCES = asn1-gentables.c 
-asn1_gentables_LDADD = asn1-parse.o asn1-func.o oid.o util.o @GPG_ERROR_LIBS@
+asn1_gentables_SOURCES = asn1-gentables.c asn1-parse.c asn1-func.c oid.c util.c
+asn1_gentables_LDADD = @GPG_ERROR_LIBS@
+# Note that we need to use per-target flags to force renaming of the 
+# object files to avoid clashes with libtool.
+asn1_gentables_CFLAGS = $(AM_CFLAGS)
 
-ber_dump_SOURCES = ber-dump.c 
-ber_dump_LDADD = ber-decoder.o ber-help.o reader.o writer.o asn1-parse.o \
-	asn1-func.o oid.o util.o @GPG_ERROR_LIBS@
-
+ber_dump_SOURCES = ber-dump.c \
+                   ber-decoder.c ber-help.c reader.c writer.c asn1-parse.c \
+                   asn1-func.c oid.c util.c
+ber_dump_LDADD = @GPG_ERROR_LIBS@
+ber_dump_CFLAGS = $(AM_CFLAGS)
 
 asn1-parse.c : asn1-func.h
 
