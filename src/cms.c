@@ -1,5 +1,5 @@
 /* cms.c - cryptographic message syntax main functions
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2003, 2004 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -2177,34 +2177,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       if (!certlist->cert || !digestlist->oid)
         return gpg_error (GPG_ERR_BUG);
 
-      /* the message digest is pretty important */
-      attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
-                                    "CryptographicMessageSyntax.Attribute");
-      if (!attr)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
-      n = _ksba_asn_find_node (attr, "Attribute.attrType");
-      if (!n)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
-      err = _ksba_der_store_oid (n, oidstr_messageDigest);
-      if (err)
-        return err;
-      n = _ksba_asn_find_node (attr, "Attribute.attrValues");
-      if (!n || !n->down)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
-      n = n->down; /* fixme: ugly hack */
-      assert (certlist && certlist->msg_digest_len);
-      err = _ksba_der_store_octet_string (n, certlist->msg_digest,
-                                          certlist->msg_digest_len);
-      if (err)
-        return err;
-      err = _ksba_der_encode_tree (attr, &image, NULL);
-      if (err)
-          return err;
-      attrarray[attridx].root = attr;
-      attrarray[attridx].image = image;
-      attridx++;
-
-      /* We are also required to include the content-type attribute. */
+      /* Include the content-type attribute. */
       attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
                                     "CryptographicMessageSyntax.Attribute");
       if (!attr)
@@ -2229,7 +2202,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       attrarray[attridx].image = image;
       attridx++;
 
-      /* insert the signing time */
+      /* Include the signing time */
       if (certlist->signing_time)
         {
           attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
@@ -2258,7 +2231,45 @@ build_signed_data_attributes (ksba_cms_t cms)
           attridx++;
         }
 
-      /* now copy them to an SignerInfo tree.  This tree is not
+      /* The message digest is pretty important; include it.
+
+         Note: We used to include this attribute first, but during an
+         interoperability tests with the proprietary Crypotovision
+         v2.1.1 software for MS Windows, it turned out that this
+         software somehow rebuilds the set of signed attributes in a
+         different way before calculating the hash - therefore the
+         signature always turned out to be bad.  To help those guys we
+         are really kind and sweap the attributes despite the fact
+         that there is - of course - no defined sequence of signed
+         attributes.
+      */
+      attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+                                    "CryptographicMessageSyntax.Attribute");
+      if (!attr)
+        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+      n = _ksba_asn_find_node (attr, "Attribute.attrType");
+      if (!n)
+        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+      err = _ksba_der_store_oid (n, oidstr_messageDigest);
+      if (err)
+        return err;
+      n = _ksba_asn_find_node (attr, "Attribute.attrValues");
+      if (!n || !n->down)
+        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+      n = n->down; /* fixme: ugly hack */
+      assert (certlist && certlist->msg_digest_len);
+      err = _ksba_der_store_octet_string (n, certlist->msg_digest,
+                                          certlist->msg_digest_len);
+      if (err)
+        return err;
+      err = _ksba_der_encode_tree (attr, &image, NULL);
+      if (err)
+          return err;
+      attrarray[attridx].root = attr;
+      attrarray[attridx].image = image;
+      attridx++;
+
+      /* Now copy them to an SignerInfo tree.  This tree is not
          complete but suitable for ksba_cms_hash_signed_attributes() */
       root = _ksba_asn_expand_tree (cms_tree->parse_tree,  
                                     "CryptographicMessageSyntax.SignerInfo"); 

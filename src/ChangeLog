@@ -1,3 +1,8 @@
+2004-01-19  Werner Koch  <wk@gnupg.org>
+
+	* cms.c (build_signed_data_attributes): Include the messageDigest
+	last for the sake of a buggy proprietary implementation.
+
 2003-12-19  Werner Koch  <wk@gnupg.org>
 
 	* cms.c (build_signed_data_header): Fixed silly ==/= bug.
