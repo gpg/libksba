@@ -28,13 +28,6 @@
 #include "util.h"
 #include "convert.h"
 
-#define digitp(p)   (*(p) >= 0 && *(p) <= '9')
-/* the atoi macros assume that the buffer has only valid digits */
-#define atoi_1(p)   (*(p) - '0' )
-#define atoi_2(p)   ((atoi_1(p) * 10) + atoi_1((p)+1))
-#define atoi_4(p)   ((atoi_2(p) * 100) + atoi_2((p)+2))
-
-
 
 /* Converts an UTCTime or GeneralizedTime to epoc.  Returns (time_t)-1
    on error. The function figures automagically the right format.

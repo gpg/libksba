@@ -98,6 +98,14 @@ AC_C_CONST
 # Checks for library functions.
 AC_CHECK_FUNCS([memmove strchr strtol strtoul stpcpy timegm])
 
+
+# To be used in ksba-config
+KSBA_LIBS="-L${libdir} -lksba"
+KSBA_CFLAGS=""
+AC_SUBST(KSBA_LIBS)
+AC_SUBST(KSBA_CFLAGS)
+
+
 AC_CONFIG_FILES([
 Makefile
 src/Makefile

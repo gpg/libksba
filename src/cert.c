@@ -272,20 +272,17 @@ ksba_cert_get_digest_algo (KsbaCert cert)
  * @cert: certificate object 
  * 
  * This function returnes the serial number of the certificate.  The
- * serial number is an integer returned in a buffer formatted in a
- * format like the one used by SSH: The first 4 bytes are to be
- * considered the length of the following integer bytes in network
- * byte order, the integer itself is in 2's complement.  This format
- * can be passed to gcry_mpi_scan() when a length of 0 is given.  The
- * caller must free the buffer.
+ * serial number is an integer returned as an concocal exnoded S-expression.
  * 
- * Return value: An allocated buffer or NULL for no value.
+ * Return value: An allocated S-Exp or NULL for no value.
  **/
-unsigned char *
+KsbaSexp
 ksba_cert_get_serial (KsbaCert cert)
 {
   AsnNode n;
   char *p;
+  char numbuf[21];
+  int numbuflen;
 
   if (!cert || !cert->initialized)
     return NULL;
@@ -302,14 +299,14 @@ ksba_cert_get_serial (KsbaCert cert)
       return NULL;
     }
   
-  p = xtrymalloc ( n->len + 4 );
-  return_null_if_fail (p);
-
-  p[0] = n->len >> 24;
-  p[1] = n->len >> 16;
-  p[2] = n->len >> 8;
-  p[3] = n->len;
-  memcpy (p+4, cert->image + n->off + n->nhdr, n->len);
+  sprintf (numbuf,"%u:", (unsigned int)n->len);
+  numbuflen = strlen (numbuf);
+  p = xtrymalloc (numbuflen + n->len + 1);
+  if (!p)
+    return NULL;
+  strcpy (p, numbuf);
+  memcpy (p+numbuflen, cert->image + n->off + n->nhdr, n->len);
+  p[numbuflen + n->len] = 0;
   return p;
 }
 
@@ -461,12 +458,12 @@ ksba_cert_get_subject (KsbaCert cert, int idx)
 }
 
 
-char *
+KsbaSexp
 ksba_cert_get_public_key (KsbaCert cert)
 {
   AsnNode n;
   KsbaError err;
-  char *string;
+  KsbaSexp string;
 
   if (!cert)
     return NULL;
@@ -493,12 +490,12 @@ ksba_cert_get_public_key (KsbaCert cert)
   return string;
 }
 
-char *
+KsbaSexp
 ksba_cert_get_sig_val (KsbaCert cert)
 {
   AsnNode n, n2;
   KsbaError err;
-  char *string;
+  KsbaSexp string;
 
   if (!cert)
     return NULL;

@@ -28,8 +28,6 @@
 #include "asn1-func.h"
 #include "convert.h"
 
-#define digitp(p)   (*(p) >= 0 && *(p) <= '9')
-
 
 
 /**

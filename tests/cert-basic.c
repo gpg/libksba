@@ -41,17 +41,24 @@
                            } while(0)
 
 static void
-print_integer (unsigned char *p)
+print_sexp (KsbaConstSexp p)
 {
-  unsigned long len;
+  unsigned long n;
+  KsbaConstSexp endp;
 
   if (!p)
     fputs ("none", stdout);
   else
     {
-      len = (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
-      for (p+=4; len; len--, p++)
-        printf ("%02X", *p);
+      n = strtoul (p, (char**)&endp, 10);
+      p = endp;
+      if (*p!=':')
+        fputs ("ERROR - invalid value", stdout);
+      else
+        {
+          for (p++; n; n--, p++)
+            printf ("%02X", *p);
+        }
     }
 }
 
@@ -93,10 +100,10 @@ one_file (const char *fname)
   FILE *fp;
   KsbaReader r;
   KsbaCert cert;
-  unsigned char *p;
   char *dn;
   time_t t;
   int idx;
+  KsbaSexp sexp;
 
   fp = fopen (fname, "r");
   if (!fp)
@@ -121,10 +128,10 @@ one_file (const char *fname)
 
   printf ("Certificate in `%s':\n", fname);
 
-  p = ksba_cert_get_serial (cert);
+  sexp = ksba_cert_get_serial (cert);
   fputs ("  serial....: ", stdout);
-  print_integer (p);
-  ksba_free (p);
+  print_sexp (sexp);
+  ksba_free (sexp);
   putchar ('\n');
 
   for (idx=0;(dn = ksba_cert_get_issuer (cert, idx));idx++) 

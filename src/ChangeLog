@@ -1,3 +1,17 @@
+2001-12-17  Werner Koch  <wk@gnupg.org>
+
+	* cert.c (ksba_cert_get_serial): Does now return a S-expression.
+	* cms.c (ksba_cms_get_issuer_serial): Ditto.
+
+	* keyinfo.c: Changed all functions to return canonical encoded S-Exp.
+
+	* Makefile.am (asn1-tables.c): Fixed rule to work with VPATH builds.
+
+2001-12-14  Werner Koch  <wk@gnupg.org>
+
+	* oid.c, time.c, cms.c : Moved atoi macros and digitp macro to ..
+	* util.h: .. here.  Fixed digitp macro.  Added hexdigitp.
+
 2001-12-13  Werner Koch  <wk@gnupg.org>
 
 	* cert.c (ksba_cert_get_issuer): Added an idx argument so that the

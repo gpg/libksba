@@ -32,8 +32,6 @@
 #include "ber-help.h"
 #include "cert.h" /* need to access cert->root and cert->image */
 
-#define digitp(p)   (*(p) >= 0 && *(p) <= '9')
-
 static KsbaError ct_parse_data (KsbaCMS cms);
 static KsbaError ct_parse_signed_data (KsbaCMS cms);
 static KsbaError ct_parse_enveloped_data (KsbaCMS cms);
@@ -363,7 +361,7 @@ ksba_cms_get_content_oid (KsbaCMS cms, int what)
   return NULL;
 }
 
-/* copy the initialization vector into iv and it'ss len into ivlen.
+/* copy the initialization vector into iv and its len into ivlen.
    The caller should provide a suitable large buffer */
 KsbaError
 ksba_cms_get_content_enc_iv (KsbaCMS cms, unsigned char *iv,
@@ -423,7 +421,7 @@ ksba_cms_get_digest_algo_list (KsbaCMS cms, int idx)
  **/
 KsbaError
 ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
-                            char **r_issuer, unsigned char **r_serial)
+                            char **r_issuer, KsbaSexp *r_serial)
 {
   KsbaError err;
   const char *issuer_path, *serial_path;
@@ -472,6 +470,8 @@ ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
 
   if (r_serial)
     {
+      char numbuf[21];
+      int numbuflen;
       unsigned char *p;
 
       /* fixme: we do not release the r_issuer stuff on error */
@@ -486,15 +486,14 @@ ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
           return KSBA_General_Error;
         }
 
-      p = xtrymalloc (n->len + 4);
+      sprintf (numbuf,"%u:", (unsigned int)n->len);
+      numbuflen = strlen (numbuf);
+      p = xtrymalloc (numbuflen + n->len + 1);
       if (!p)
         return KSBA_Out_Of_Core;
-
-      p[0] = n->len >> 24;
-      p[1] = n->len >> 16;
-      p[2] = n->len >> 8;
-      p[3] = n->len;
-      memcpy (p+4, image + n->off + n->nhdr, n->len);
+      strcpy (p, numbuf);
+      memcpy (p+numbuflen, image + n->off + n->nhdr, n->len);
+      p[numbuflen + n->len] = 0;
       *r_serial = p;
     }
 
@@ -509,7 +508,7 @@ ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
  * @idx: index of signer
  * 
  * Figure out the the digest algorithm used by the signer @idx return
- * its OID This is the algorithm acually used to calculate the
+ * its OID.  This is the algorithm acually used to calculate the
  * signature.
  *
  * Return value: NULL for no such signer or a constn string valid as
@@ -691,12 +690,12 @@ ksba_cms_get_signing_time (KsbaCMS cms, int idx, time_t *r_sigtime)
  * 
  * Return value: NULL or a string with a S-Exp.
  **/
-char *
+KsbaSexp
 ksba_cms_get_sig_val (KsbaCMS cms, int idx)
 {
   AsnNode n, n2;
   KsbaError err;
-  char *string;
+  KsbaSexp string;
 
   if (!cms)
     return NULL;
@@ -739,12 +738,12 @@ ksba_cms_get_sig_val (KsbaCMS cms, int idx)
  * 
  * Return value: NULL or a string with a S-Exp.
  **/
-char *
+KsbaSexp
 ksba_cms_get_enc_val (KsbaCMS cms, int idx)
 {
   AsnNode n, n2;
   KsbaError err;
-  char *string;
+  KsbaSexp string;
 
   if (!cms)
     return NULL;
@@ -1024,7 +1023,7 @@ ksba_cms_set_signing_time (KsbaCMS cms, int idx, time_t sigtime)
  * The sexp must be in canocial form 
 */
 KsbaError
-ksba_cms_set_sig_val (KsbaCMS cms, int idx, const char *sigval)
+ksba_cms_set_sig_val (KsbaCMS cms, int idx, KsbaConstSexp sigval)
 {
   const char *s, *endp;
   unsigned long n;
@@ -1146,7 +1145,7 @@ ksba_cms_set_content_enc_algo (KsbaCMS cms,
  * Note the <algo> must be given as a stringified OID or the special
  * string "rsa" */
 KsbaError
-ksba_cms_set_enc_val (KsbaCMS cms, int idx, const char *encval)
+ksba_cms_set_enc_val (KsbaCMS cms, int idx, KsbaConstSexp encval)
 {
   /*FIXME: This shares most code with ...set_sig_val */
   const char *s, *endp;

@@ -1,6 +1,7 @@
 2001-12-17  Werner Koch  <wk@gnupg.org>
 
-	* configure.ac (KSBA_LIBS,KSBA_CFLAGS): Set them.
+	* cert-basic.c, t-cms-parser.c (print_integer): Renamed to
+	(print_sexp): this and changed all callers.
 	
 
  Copyright 2001 g10 Code GmbH

@@ -130,6 +130,14 @@ typedef struct ksba_writer_s *KsbaWriter;
    create by ksba_asn_parse_file() */
 struct ksba_asn_tree_s;
 typedef struct ksba_asn_tree_s *KsbaAsnTree;
+
+/* KsbaSexp is just an unsigned char * which should be used for
+   documentation purpose.  The S-expressions returned by libksba are
+   always in canonical representation with an extra 0 byte at the end,
+   so that one can print the values in the debugger and at least see
+   the first bytes */
+typedef unsigned char *KsbaSexp;
+typedef const unsigned char *KsbaConstSexp;
    
 
 /*-- cert.c --*/
@@ -146,12 +154,12 @@ KsbaError ksba_cert_hash (KsbaCert cert, int what,
                                          size_t length), 
                           void *hasher_arg);
 const char *ksba_cert_get_digest_algo (KsbaCert cert);
-unsigned char *ksba_cert_get_serial (KsbaCert cert);
+KsbaSexp ksba_cert_get_serial (KsbaCert cert);
 char *ksba_cert_get_issuer (KsbaCert cert, int idx);
 time_t ksba_cert_get_validity (KsbaCert cert, int what);
 char *ksba_cert_get_subject (KsbaCert cert, int idx);
-char *ksba_cert_get_public_key (KsbaCert cert);
-char *ksba_cert_get_sig_val (KsbaCert cert);
+KsbaSexp ksba_cert_get_public_key (KsbaCert cert);
+KsbaSexp ksba_cert_get_sig_val (KsbaCert cert);
 
 
 /*-- cms.c --*/
@@ -169,14 +177,14 @@ KsbaError ksba_cms_get_content_enc_iv (KsbaCMS cms, unsigned char *iv,
 const char *ksba_cms_get_digest_algo_list (KsbaCMS cms, int idx);
 KsbaError ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
                                       char **r_issuer,
-                                      unsigned char **r_serial);
+                                      KsbaSexp *r_serial);
 const char *ksba_cms_get_digest_algo (KsbaCMS cms, int idx);
 KsbaCert ksba_cms_get_cert (KsbaCMS cms, int idx);
 KsbaError ksba_cms_get_message_digest (KsbaCMS cms, int idx,
                                        char **r_digest, size_t *r_digest_len);
 KsbaError ksba_cms_get_signing_time (KsbaCMS cms, int idx, time_t *r_sigtime);
-char *ksba_cms_get_sig_val (KsbaCMS cms, int idx);
-char *ksba_cms_get_enc_val (KsbaCMS cms, int idx);
+KsbaSexp ksba_cms_get_sig_val (KsbaCMS cms, int idx);
+KsbaSexp ksba_cms_get_enc_val (KsbaCMS cms, int idx);
 
 void
 ksba_cms_set_hash_function (KsbaCMS cms,
@@ -194,14 +202,14 @@ KsbaError ksba_cms_set_message_digest (KsbaCMS cms, int idx,
                                        const char *digest,
                                        size_t digest_len);
 KsbaError ksba_cms_set_signing_time (KsbaCMS cms, int idx, time_t sigtime);
-KsbaError ksba_cms_set_sig_val (KsbaCMS cms, int idx, const char *sigval);
+KsbaError ksba_cms_set_sig_val (KsbaCMS cms, int idx, KsbaConstSexp sigval);
 
 KsbaError ksba_cms_set_content_enc_algo (KsbaCMS cms,
                                          const char *oid,
                                          const unsigned char *iv,
                                          size_t ivlen);
 KsbaError ksba_cms_add_recipient (KsbaCMS cms, KsbaCert cert);
-KsbaError ksba_cms_set_enc_val (KsbaCMS cms, int idx, const char *encval);
+KsbaError ksba_cms_set_enc_val (KsbaCMS cms, int idx, KsbaConstSexp encval);
 
 
 

@@ -328,10 +328,8 @@ init_stringbuf (struct stringbuf *sb, int initiallen)
 }
 
 static void
-put_stringbuf (struct stringbuf *sb, const char *text)
+put_stringbuf_mem (struct stringbuf *sb, const char *text, size_t n)
 {
-  size_t n = strlen (text);
-
   if (sb->out_of_core)
     return;
 
@@ -351,6 +349,28 @@ put_stringbuf (struct stringbuf *sb, const char *text)
   memcpy (sb->buf+sb->len, text, n);
   sb->len += n;
 }
+
+static void
+put_stringbuf (struct stringbuf *sb, const char *text)
+{
+  put_stringbuf_mem (sb, text,strlen (text));
+}
+
+static void
+put_stringbuf_mem_sexp (struct stringbuf *sb, const char *text, size_t length)
+{
+  char buf[20];
+  sprintf (buf,"%u:", (unsigned int)length);
+  put_stringbuf (sb, buf);
+  put_stringbuf_mem (sb, text, length);
+}
+
+static void
+put_stringbuf_sexp (struct stringbuf *sb, const char *text)
+{
+  put_stringbuf_mem_sexp (sb, text, strlen (text));
+}
+
 
 static char *
 get_stringbuf (struct stringbuf *sb)
@@ -390,7 +410,7 @@ get_stringbuf (struct stringbuf *sb)
 
 KsbaError
 _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
-                       char **r_string)
+                       KsbaSexp *r_string)
 {
   KsbaError err;
   int c;
@@ -445,12 +465,12 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
   /* fixme: we should calculate the initial length form the size of the
      sequence, so that we don't neen a realloc later */
   init_stringbuf (&sb, 100);
-  put_stringbuf (&sb, "(public-key(");
+  put_stringbuf (&sb, "(10:public-key(");
 
   /* fixme: we can also use the oidstring here and prefix it with
      "oid." - this way we can pass more information into Libgcrypt or
      whatever library is used */
-  put_stringbuf (&sb, pk_algo_table[algoidx].algo_string);
+  put_stringbuf_sexp (&sb, pk_algo_table[algoidx].algo_string);
 
   /* FIXME: We don't release the stringbuf in case of error
      better let the macro jump to a label */
@@ -469,27 +489,15 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
       TLV_LENGTH ();
       if (is_int && *elem != '-')
         { /* take this integer */
-          char tmp[100];
-          int i, n;
-          
-          strcpy (tmp, "(. #"); 
-          tmp[1] = *elem;
-          put_stringbuf (&sb, tmp);
-          for (i=n=0; n < len; n++)
-            {
-              if (!derlen)
-                return KSBA_Invalid_Keyinfo;
-              c = *der++; derlen--;
-              sprintf (tmp+2*i, "%02X", c);
-              if ( !(++i%10) )
-                {
-                  put_stringbuf (&sb, tmp);
-                  i=0;
-                }
-            }
-          if (i)
-            put_stringbuf (&sb, tmp);
-          put_stringbuf (&sb, "#)");
+          char tmp[2];
+
+          put_stringbuf (&sb, "(");
+          tmp[0] = *elem; tmp[1] = 0;
+          put_stringbuf_sexp (&sb, tmp);
+          put_stringbuf_mem_sexp (&sb, der, len);
+          der += len;
+          derlen -= len;
+          put_stringbuf (&sb, ")");
         }
     }
   put_stringbuf (&sb, "))");
@@ -506,7 +514,7 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
    mode 1: work as described under _ksba_encval_to_sexp */
 static KsbaError
 cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
-                  char **r_string)
+                  KsbaSexp *r_string)
 {
   KsbaError err;
   struct algo_table_s *algo_table;
@@ -561,8 +569,8 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
   /* fixme: we should calculate the initial length form the size of the
      sequence, so that we don't neen a realloc later */
   init_stringbuf (&sb, 100);
-  put_stringbuf (&sb, mode? "(enc-val(":"(sig-val(");
-  put_stringbuf (&sb, algo_table[algoidx].algo_string);
+  put_stringbuf (&sb, mode? "(7:enc-val(":"(7:sig-val(");
+  put_stringbuf_sexp (&sb, algo_table[algoidx].algo_string);
 
   /* FIXME: We don't release the stringbuf in case of error
      better let the macro jump to a label */
@@ -589,27 +597,15 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
         }
       if (is_int && *elem != '-')
         { /* take this integer */
-          char tmp[100];
-          int i, n;
+          char tmp[2];
           
-          strcpy (tmp, "(. #"); 
-          tmp[1] = *elem;
-          put_stringbuf (&sb, tmp);
-          for (i=n=0; n < len; n++)
-            {
-              if (!derlen)
-                return KSBA_Invalid_Keyinfo;
-              c = *der++; derlen--;
-              sprintf (tmp+2*i, "%02X", c);
-              if ( !(++i%10) )
-                {
-                  put_stringbuf (&sb, tmp);
-                  i=0;
-                }
-            }
-          if (i)
-            put_stringbuf (&sb, tmp);
-          put_stringbuf (&sb, "#)");
+          put_stringbuf (&sb, "(");
+          tmp[0] = *elem; tmp[1] = 0;
+          put_stringbuf_sexp (&sb, tmp);
+          put_stringbuf_mem_sexp (&sb, der, len);
+          der += len;
+          derlen -= len;
+          put_stringbuf (&sb, ")");
         }
     }
   put_stringbuf (&sb, "))");
@@ -645,7 +641,7 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
  We don't pass an ASN.1 node here but a plain memory block.  */
 KsbaError
 _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
-                       char **r_string)
+                      KsbaSexp *r_string)
 {
   return cryptval_to_sexp (0, der, derlen, r_string);
 }
@@ -675,7 +671,7 @@ _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
  We don't pass an ASN.1 node here but a plain memory block.  */
 KsbaError
 _ksba_encval_to_sexp (const unsigned char *der, size_t derlen,
-                       char **r_string)
+                      KsbaSexp *r_string)
 {
   return cryptval_to_sexp (1, der, derlen, r_string);
 }

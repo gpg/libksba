@@ -33,11 +33,11 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
 
 
 KsbaError _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
-                                 char **r_string);
+                                 KsbaSexp *r_string);
 KsbaError _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
-                                char **r_string);
+                                KsbaSexp *r_string);
 KsbaError _ksba_encval_to_sexp (const unsigned char *der, size_t derlen,
-                                char **r_string);
+                                KsbaSexp *r_string);
 
 int _ksba_node_with_oid_to_digest_algo (const unsigned char *image,
                                         AsnNode node);

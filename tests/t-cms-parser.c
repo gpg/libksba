@@ -42,19 +42,27 @@
 
 
 static void
-print_integer (unsigned char *p)
+print_sexp (KsbaConstSexp p)
 {
-  unsigned long len;
+  unsigned long n;
+  KsbaConstSexp endp;
 
   if (!p)
     fputs ("none", stdout);
   else
     {
-      len = (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
-      for (p+=4; len; len--, p++)
-        printf ("%02X", *p);
+      n = strtoul (p, (char**)&endp, 10);
+      p = endp;
+      if (*p!=':')
+        fputs ("ERROR - invalid value", stdout);
+      else
+        {
+          for (p++; n; n--, p++)
+            printf ("%02X", *p);
+        }
     }
 }
+
 
 static void
 print_dn (char *p)
@@ -93,7 +101,7 @@ one_file (const char *fname)
   KsbaStopReason stopreason;
   const char *s;
   size_t n;
-  unsigned char *p;
+  KsbaSexp p;
   char *dn;
   int signer;
 
@@ -157,7 +165,7 @@ one_file (const char *fname)
       ksba_free (dn);
       putchar ('\n');
       printf ("signer %d - serial: ", signer);
-      print_integer (p);
+      print_sexp (p);
       ksba_free (p);
       putchar ('\n');
   

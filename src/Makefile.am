@@ -75,7 +75,9 @@ errors.c : ksba.h mkerrors
 	$(srcdir)/mkerrors < $(srcdir)/ksba.h > errors.c
 
 asn1-tables.c : asn1-gentables $(asn1_modules)
-	./asn1-gentables $(asn1_modules) > asn1-tables.c
+	@set -e; list=""; \
+	  for file in $(asn1_modules); do list="$$list $(srcdir)/$$file";done;\
+	  ./asn1-gentables $$list > asn1-tables.c	
 
 
 
