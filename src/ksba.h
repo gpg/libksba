@@ -68,6 +68,8 @@ typedef enum {
   KSBA_Invalid_State = 33,
   KSBA_Duplicate_Value = 34,
   KSBA_Missing_Action = 35,
+  KSBA_File_Error = 36,
+  KSBA_Module_Not_Found = 37,
 } KsbaError;
 
 
@@ -128,7 +130,7 @@ KsbaError ksba_cert_init_from_mem (KsbaCert cert,
 const unsigned char *ksba_cert_get_image (KsbaCert cert, size_t *r_length);
 KsbaError ksba_cert_hash (KsbaCert cert, int what,
                           void (*hasher)(void *,
-                                         const unsigned char *,
+                                         const void *,
                                          size_t length), 
                           void *hasher_arg);
 int  ksba_cert_get_digest_algo (KsbaCert cert);
@@ -206,6 +208,7 @@ void ksba_asn_tree_release (KsbaAsnTree tree);
 
 /*-- asn1-func.c --*/
 void ksba_asn_tree_dump (KsbaAsnTree tree, const char *name, FILE *fp);
+KsbaError ksba_asn_create_tree (const char *mod_name, KsbaAsnTree *result);
 
 /*-- oid.c --*/
 char *ksba_oid_to_str (const char *buffer, size_t length);

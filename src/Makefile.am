@@ -19,12 +19,15 @@
 
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST = ksba-config.in mkerrors
-BUILT_SOURCES = asn1-parse.c errors.c
+asn1_modules = tmttv2.asn cms.asn
+
+EXTRA_DIST = ksba-config.in mkerrors $(asn1_modules)
+BUILT_SOURCES = asn1-parse.c errors.c asn1-tables.c
 bin_SCRIPTS = ksba-config
 include_HEADERS = ksba.h
 lib_LTLIBRARIES = libksba.la
 noinst_PROGRAMS = asn1-gentables ber-dump
+
 
 libksba_la_LDFLAGS = -version-info \
       @LIBKSBA_LT_CURRENT@:@LIBKSBA_LT_REVISION@:@LIBKSBA_LT_AGE@
@@ -43,14 +46,16 @@ libksba_la_SOURCES = \
 	cms-parser.c \
 	keyinfo.c keyinfo.h \
 	oid.c dn.c time.c convert.h \
-	util.c util.h shared.h errors.c	
+	util.c util.h shared.h errors.c	\
+	asn1-tables.c
 
 asn1_gentables_SOURCES = \
 	asn1-gentables.c \
 	asn1-parse.y asn1-parse.h \
 	asn1-func.c asn1-func.h \
 	oid.c \
-	util.c util.h	
+	util.c util.h\
+	asn1-tables.c
 
 ber_dump_SOURCES = \
 	ber-dump.c \
@@ -62,7 +67,8 @@ ber_dump_SOURCES = \
 	asn1-parse.y asn1-parse.h \
 	asn1-func.c asn1-func.h \
 	oid.c \
-	util.c util.h	
+	util.c util.h \
+	asn1-tables.c
 
 
 asn1-parse.c : asn1-func.h
@@ -70,7 +76,8 @@ asn1-parse.c : asn1-func.h
 errors.c : ksba.h mkerrors
 	$(srcdir)/mkerrors < $(srcdir)/ksba.h > errors.c
 
-
+asn1-tables.c : asn1-gentables $(asn1_modules)
+	./asn1-gentables $(asn1_modules) > asn1-tables.c
 
 
 

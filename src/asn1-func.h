@@ -22,23 +22,6 @@
 #ifndef ASN1_FUNC_H
 #define ASN1_FUNC_H
 
-/* Error Codes */
-enum {
-  ASN_OK                  =  0,
-  ASN_FILE_NOT_FOUND      =  1,
-  ASN_ELEMENT_NOT_FOUND   =  2,
-  ASN_IDENTIFIER_NOT_FOUND=  3,
-  ASN_DER_ERROR           =  4,
-  ASN_VALUE_NOT_FOUND     =  5,
-  ASN_GENERIC_ERROR       =  6,
-  ASN_VALUE_NOT_VALID     =  7,
-  ASN_TAG_ERROR           =  8,
-  ASN_TAG_IMPLICIT        =  9,
-  ASN_ERROR_TYPE_ANY      = 10,
-  ASN_SYNTAX_ERROR        = 11,
-  ASN_MEM_ERROR           = 12
-};
-
 /* The values below 128 correspond to the  Universal tag values */
 typedef enum {
   TYPE_NONE = 0,
@@ -222,6 +205,8 @@ int ksba_asn1_create_tree (const static_asn *root,AsnNode*pointer);
 int ksba_asn_read_value(AsnNode root,const char *name,unsigned char *value,int *len);
 int ksba_asn_write_value(AsnNode root,char *name,unsigned char *value,int len);
 
+/*-- asn1-tables.c (generated) --*/
+const static_asn *_ksba_asn_lookup_table (const char *name);
 
 
 

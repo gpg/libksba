@@ -46,6 +46,11 @@ static int dump_only;
 /* option --check */
 static int check_only;
 
+struct name_list_s {
+  struct name_list_s *next;
+  char name[1];
+};
+
 
 static void print_error (const char *fmt, ... )  ATTR_PRINTF(1,2);
 
@@ -63,12 +68,11 @@ print_error (const char *fmt, ... )
   
 }
 
-static int
+static struct name_list_s *
 create_static_structure (AsnNode pointer, const char *file_name)
 {
-  FILE *file;
   AsnNode p;
-  char *structure_name, *file_out_name;
+  struct name_list_s *structure_name;
   const char *char_p, *slash_p, *dot_p;
 
   char_p = file_name;
@@ -88,27 +92,13 @@ create_static_structure (AsnNode pointer, const char *file_name)
       char_p++;
     }
 
-  structure_name = xmalloc ( dot_p - slash_p + 100 );
-  memcpy (structure_name, slash_p, dot_p - slash_p);
-  structure_name[dot_p - slash_p] = 0;
-  strcat (structure_name, "_asn1_tab");
+  structure_name = xmalloc (sizeof *structure_name + dot_p - slash_p + 100);
+  structure_name->next = NULL;
+  memcpy (structure_name->name, slash_p, dot_p - slash_p);
+  structure_name->name[dot_p - slash_p] = 0;
 
-  file_out_name = xmalloc (dot_p - file_name + 100);
-  memcpy (file_out_name, file_name, dot_p - file_name);
-  file_out_name[dot_p - file_name] = 0;
-  strcat (file_out_name, "_asn1_tab.c");
-  file = fopen (file_out_name, "w");
-  if (!file)
-    {
-      print_error ("error creating `%s': %s\n",
-                   file_out_name, strerror (errno));
-      xfree (structure_name);
-      xfree (file_out_name);
-      return ASN_FILE_NOT_FOUND;
-    }
-
-  fprintf (file, "\n#include \"asn1-func.h\"\n\n");
-  fprintf (file, "const static_asn %s[]={\n", structure_name);
+  printf ("static const static_asn %s_asn1_tab[] = {\n",
+          structure_name->name);
 
   for (p = pointer; p; p = _ksba_asn_walk_tree (pointer, p))
     {
@@ -117,75 +107,73 @@ create_static_structure (AsnNode pointer, const char *file_name)
       p->flags.help_right = !!p->right;
 
       /* write a structure line */
-      fputs ("  {", file);
+      fputs ("  {", stdout);
       if (p->name)
-	fprintf (file, "\"%s\",", p->name);
+	fprintf (stdout, "\"%s\"", p->name);
       else
-	fprintf (file, "0");
-      fprintf (file, ",%u", p->type);
+	fprintf (stdout, "NULL");
+      fprintf (stdout, ",%u", p->type);
 
-      fputs (", {", file);
-      fprintf (file, "%u", p->flags.class);
-      fputs (p->flags.explicit       ? ",1":",0", file);
-      fputs (p->flags.implicit       ? ",1":",0", file);
-      fputs (p->flags.has_imports    ? ",1":",0", file);
-      fputs (p->flags.assignment     ? ",1":",0", file);
-      fputs (p->flags.one_param      ? ",1":",0", file);
-      fputs (p->flags.has_tag        ? ",1":",0", file);
-      fputs (p->flags.has_size       ? ",1":",0", file);
-      fputs (p->flags.has_list       ? ",1":",0", file);
-      fputs (p->flags.has_min_max    ? ",1":",0", file);
-      fputs (p->flags.has_defined_by ? ",1":",0", file);
-      fputs (p->flags.is_false       ? ",1":",0", file);
-      fputs (p->flags.is_true        ? ",1":",0", file);
-      fputs (p->flags.has_default     ? ",1":",0", file);
-      fputs (p->flags.is_optional    ? ",1":",0", file);
-      fputs (p->flags.in_set         ? ",1":",0", file);
-      fputs (p->flags.not_used       ? ",1":",0", file);
-      fputs (p->flags.help_down      ? ",1":",0", file);
-      fputs (p->flags.help_right     ? ",1":",0", file);
-      fputs ("}", file);
+      fputs (", {", stdout);
+      fprintf (stdout, "%u", p->flags.class);
+      fputs (p->flags.explicit       ? ",1":",0", stdout);
+      fputs (p->flags.implicit       ? ",1":",0", stdout);
+      fputs (p->flags.has_imports    ? ",1":",0", stdout);
+      fputs (p->flags.assignment     ? ",1":",0", stdout);
+      fputs (p->flags.one_param      ? ",1":",0", stdout);
+      fputs (p->flags.has_tag        ? ",1":",0", stdout);
+      fputs (p->flags.has_size       ? ",1":",0", stdout);
+      fputs (p->flags.has_list       ? ",1":",0", stdout);
+      fputs (p->flags.has_min_max    ? ",1":",0", stdout);
+      fputs (p->flags.has_defined_by ? ",1":",0", stdout);
+      fputs (p->flags.is_false       ? ",1":",0", stdout);
+      fputs (p->flags.is_true        ? ",1":",0", stdout);
+      fputs (p->flags.has_default     ? ",1":",0", stdout);
+      fputs (p->flags.is_optional    ? ",1":",0", stdout);
+      fputs (p->flags.is_implicit    ? ",1":",0", stdout);
+      fputs (p->flags.in_set         ? ",1":",0", stdout);
+      fputs (p->flags.in_choice      ? ",1":",0", stdout);
+      fputs (p->flags.in_array       ? ",1":",0", stdout);
+      fputs (p->flags.not_used       ? ",1":",0", stdout);
+      fputs (p->flags.help_down      ? ",1":",0", stdout);
+      fputs (p->flags.help_right     ? ",1":",0", stdout);
+      fputs ("}", stdout);
 
       if (p->valuetype == VALTYPE_CSTR)
-	fprintf (file, ",\"%s\"", p->value.v_cstr);
+	fprintf (stdout, ",\"%s\"", p->value.v_cstr);
       else if (p->valuetype == VALTYPE_LONG
                && p->type == TYPE_INTEGER && p->flags.assignment)
-        fprintf (file, ",\"%ld\"", p->value.v_long);
+        fprintf (stdout, ",\"%ld\"", p->value.v_long);
       else if (p->valuetype == VALTYPE_ULONG)
-        fprintf (file, ",\"%lu\"", p->value.v_ulong);
+        fprintf (stdout, ",\"%lu\"", p->value.v_ulong);
       else
         {
           if (p->valuetype)
             print_error ("can't store a value of type %d\n", p->valuetype);
-          fprintf (file, ",0");
+          fprintf (stdout, ",0");
         }
-      fputs ("},\n", file);
+      fputs ("},\n", stdout);
     }
 
-  fprintf (file, "  {0,0}\n};\n");
+  fprintf (stdout, "  {0,0}\n};\n");
 
-  fclose (file);
-
-  xfree (structure_name);
-  xfree (file_out_name);
-  return ASN_OK;
+  return structure_name;
 }
 
 
 
-static void
-one_file (FILE *fp, const char *fname)
+static struct name_list_s *
+one_file (FILE *fp, const char *fname, int *count)
 {
   KsbaAsnTree tree;
   int rc;
-  
-  
+    
   rc = ksba_asn_parse_file (fname, &tree, check_only);
-  if (rc==ASN_SYNTAX_ERROR)
+  if (rc==KSBA_Syntax_Error)
       print_error ("error parsing `%s': syntax error\n", fname);
-  else if (rc==ASN_IDENTIFIER_NOT_FOUND)
+  else if (rc==KSBA_Identifier_Not_Found)
       print_error ("error parsing `%s': identifier not found\n", fname);
-  else if (rc==ASN_FILE_NOT_FOUND)
+  else if (rc==KSBA_File_Error)
       print_error ("error parsing `%s': file not found\n", fname);
   else if (rc)
       print_error ("error parsing `%s': unknown error %d\n", fname, rc);
@@ -194,14 +182,29 @@ one_file (FILE *fp, const char *fname)
       if (dump_only)
         ksba_asn_tree_dump (tree, dump_only==2? "<":NULL, stdout);
       else
-        create_static_structure (tree->parse_tree, fname);
+        {
+          if (!*count)
+            printf ("\n"
+                    "#include <config.h>\n"
+                    "#include <stdio.h>\n"
+                    "#include <string.h>\n"
+                    "#include \"ksba.h\"\n"
+                    "#include \"asn1-func.h\"\n"
+                    "\n");
+          ++*count;
+          return create_static_structure (tree->parse_tree, fname);
+        }
     }
+  return 0;
 }
 
 
 int
 main (int argc, char **argv)
 {
+  int count = 0;
+  struct name_list_s *all_names = NULL, *nl;
+
   if (!argc || (argc > 1 &&
                 (!strcmp (argv[1],"--help") || !strcmp (argv[1],"-h"))) )
     {
@@ -229,7 +232,7 @@ main (int argc, char **argv)
 
 
   if (!argc)
-    one_file (stdin, "-");
+    all_names = one_file (stdin, "-", &count);
   else
     {
       for (; argc; argc--, argv++) 
@@ -241,11 +244,28 @@ main (int argc, char **argv)
               print_error ("can't open `%s': %s\n", *argv, strerror (errno));
           else
             {
-              one_file (fp, *argv);
+              nl = one_file (fp, *argv, &count);
               fclose (fp);
+              if (nl)
+                {
+                  nl->next = all_names;
+                  all_names = nl;
+                }
             }
         }
     }
+
+  if (all_names && !error_counter)
+    { /* Write the lookup function */
+      printf ("\n\nconst static_asn *\n"
+              "_ksba_asn_lookup_table (const char *name)\n"
+              "{\n");
+      for (nl=all_names; nl; nl = nl->next)
+        printf ("  if (!strcmp (name, \"%s\"))\n"
+                "    return %s_asn1_tab;\n", nl->name, nl->name);
+      printf ("\n  return NULL;\n}\n");
+    }
+
   return error_counter? 1:0;
 }
 

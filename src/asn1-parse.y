@@ -988,15 +988,15 @@ ksba_asn_parse_file (const char *file_name, KsbaAsnTree *result, int debug)
   
   parsectl.fp = file_name? fopen (file_name, "r") : NULL;
   if ( !parsectl.fp )
-    return ASN_FILE_NOT_FOUND;
+    return KSBA_File_Error;
 
   parsectl.lineno = 0;
   parsectl.debug = debug;
-  parsectl.result_parse = ASN_SYNTAX_ERROR;
+  parsectl.result_parse = KSBA_Syntax_Error;
   parsectl.parse_tree = NULL;
   parsectl.all_nodes = NULL;
   /*yydebug = 1;*/
-  if ( yyparse ((void*)&parsectl) || parsectl.result_parse != ASN_OK )
+  if ( yyparse ((void*)&parsectl) || parsectl.result_parse )
     { /* error */
       fprintf (stderr, "%s:%d: parse error\n",
                file_name?file_name:"-", parsectl.lineno ); 

@@ -457,8 +457,7 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
     KsbaAsnTree cms_tree;
     BerDecoder decoder;
 
-    err = ksba_asn_parse_file ("/home/wk/work/libksba/src/cms.asn",
-                               &cms_tree, 0);
+    err = ksba_asn_create_tree ("cms", &cms_tree);
     if (err)
       return err;
 
