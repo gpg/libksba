@@ -252,7 +252,7 @@ parse_encrypted_content_info (KsbaReader reader,
   size_t algo_parmlen;
   size_t nread;
 
-  /* FIXME: release oids in case of errors */
+  /* Fixme: release oids in case of errors */
 
   /* read the sequence triplet */
   err = _ksba_ber_read_tl (reader, &ti);

@@ -123,7 +123,7 @@ make_flagged_int (unsigned long value, char *buf, size_t buflen)
 
   /* fixme: figure out the number of bits in an ulong and start with
      that value as shift (after making it a multiple of 7) a more
-     starigtforward implementation is to do it in reverse order using
+     straigtforward implementation is to do it in reverse order using
      a temporary buffer - saves a lot of compares */
   for (more=0, shift=28; shift > 0; shift -= 7)
     {

@@ -138,7 +138,7 @@ ksba_certreq_add_subject (KsbaCertreq cr, const char *name)
   name++;
   namelen -= 2;
 
-  /* fixme: it is probably better to put all altNames into one sequence */
+  /* Fixme: it is probably better to put all altNames into one sequence */
 
   n1  = _ksba_ber_count_tl (1, CLASS_CONTEXT, 0, namelen);
   n1 += namelen;

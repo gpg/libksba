@@ -142,7 +142,7 @@ _ksba_der_write_algorithm_identifier (KsbaWriter w, const char *oid,
 
   /* write the sequence */
   /* fixme: the the length to encode the TLV values are actually not
-     just 2 byte each but does pendend on the length of the values - for
+     just 2 byte each but does prendend on the length of the values - for
      our purposes the static values do work */
   err = _ksba_ber_write_tl (w, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1,
                             4 + len + (parm? parmlen:0));

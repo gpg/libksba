@@ -830,7 +830,7 @@ parse_crl_extensions (KsbaCRL crl)
       len -= ti.length;
       if (ti.nhdr + ti.length >= DIM(tmpbuf))
         return KSBA_Object_Too_Large;
-      /* fixme use a larger buffer if the extsion does not fit into tmpbuf */
+      /* fixme use a larger buffer if the extension does not fit into tmpbuf */
       memcpy (tmpbuf, ti.buf, ti.nhdr);
       err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
       if (err)

@@ -23,7 +23,7 @@
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
-AC_INIT(libksba, 0.2.2, gpa-dev@gnupg.org)
+AC_INIT(libksba, 0.2.3-cvs, gpa-dev@gnupg.org)
 LIBKSBA_LT_CURRENT=2
 LIBKSBA_LT_AGE=2
 LIBKSBA_LT_REVISION=1

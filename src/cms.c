@@ -219,8 +219,8 @@ write_encrypted_cont (KsbaCMS cms)
   /* we do it the simple way: the parts are made up from the chunks we
      got from the read function.
 
-     Fixme: We should write the tag here, and rite a definite length
-     header if everything fits into out local buffer. actually pretty
+     Fixme: We should write the tag here, and write a definite length
+     header if everything fits into our local buffer.  Actually pretty
      simple to do, but I am too lazy right now. */
   while (!(err = ksba_reader_read (cms->reader, buffer,
                                    sizeof buffer, &nread)) )

@@ -1,3 +1,8 @@
+2002-03-15  Werner Koch  <wk@gnupg.org>
+
+	* asn1-func.c (_ksba_asn_check_identifier): Better check against
+	overflow, also the data used is static.
+
 2002-03-13  Werner Koch  <wk@gnupg.org>
 
 	* cms.h (value_tree_s): New and use it for recp_info.

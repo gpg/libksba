@@ -122,7 +122,7 @@ ksba_cert_read_der (KsbaCert cert, KsbaReader reader)
   if (!cert || !reader)
     return KSBA_Invalid_Value;
   if (cert->initialized)
-    return KSBA_Conflict; /* FIXME: should remove the old one */
+    return KSBA_Conflict; /* Fixme: should remove the old one */
 
   /* fixme: clear old cert->root */
 
@@ -527,7 +527,7 @@ ksba_cert_get_validity (KsbaCert cert, int what)
   if (!n)
     return 0; /* no value available */
 
-  /* FIXME: We should remove the choice node and don't use this ugly hack */
+  /* Fixme: We should remove the choice node and don't use this ugly hack */
   for (n2=n->down; n2; n2 = n2->right)
     {
       if ((n2->type == TYPE_UTC_TIME || n2->type == TYPE_GENERALIZED_TIME)

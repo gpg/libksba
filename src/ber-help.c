@@ -101,7 +101,7 @@ _ksba_ber_read_tl (KsbaReader reader, struct tag_info *ti)
       tag = 0;
       do
         {
-          /* fixme: check for overflow of out datatype */
+          /* fixme: check for overflow of our datatype */
           tag <<= 7;
           c = read_byte (reader);
           if (c == -1)
@@ -317,7 +317,7 @@ _ksba_ber_write_tl (KsbaWriter writer,
       int i;
 
       /* fixme: if we know the sizeof an ulong we could support larger
-         objetcs - however this is pretty ridiculous */
+         objects - however this is pretty ridiculous */
       i = (length <= 0xff ? 1:
            length <= 0xffff ? 2: 
            length <= 0xffffff ? 3: 4);

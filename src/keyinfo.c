@@ -479,7 +479,7 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
     }
 
   /* fixme: we should calculate the initial length form the size of the
-     sequence, so that we don't neen a realloc later */
+     sequence, so that we don't need a realloc later */
   init_stringbuf (&sb, 100);
   put_stringbuf (&sb, "(10:public-key(");
 

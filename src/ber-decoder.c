@@ -305,7 +305,7 @@ _ksba_ber_decoder_release (BerDecoder d)
  * @module: ASN.1 Parse tree
  * 
  * Initialize the decoder with the ASN.1 module.  Note, that this is a
- * shallow copy of the module.  FIXME: What about ref-counting of
+ * shallow copy of the module.  Hmmm: What about ref-counting of
  * AsnNodes?
  * 
  * Return value: 0 on success or an error code
@@ -1044,7 +1044,7 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
 
   d->debug = !!getenv("DEBUG_BER_DECODER");
   d->honor_module_end = 1;
-  d->use_image = 1; /* FIXME: remove the old cruft as we are only
+  d->use_image = 1; /* fixme: remove the old cruft as we are only
                        using the image method. */
   d->image.buf = NULL;
 
@@ -1122,7 +1122,7 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
     {
       if (!d->image.buf)
         { /* Not even the first node available - return eof */
-          /* fixme: release d->root */
+          /* Fixme: release d->root */
           d->root = NULL;
           err = -1;
         }

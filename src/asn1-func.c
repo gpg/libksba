@@ -696,7 +696,9 @@ _ksba_asn_check_identifier (AsnNode node)
     {
       if (p->type == TYPE_IDENTIFIER && p->valuetype == VALTYPE_CSTR)
 	{
-          strcpy (name2, node->name); /* FIXME: check overflow */
+          if (strlen (node->name)+strlen(p->value.v_cstr)+2 > DIM(name2))
+            return KSBA_Bug; /* well identifier too long */
+          strcpy (name2, node->name); 
           strcat (name2, ".");
 	  strcat (name2, p->value.v_cstr);
 	  p2 = _ksba_asn_find_node (node, name2);
@@ -716,7 +718,10 @@ _ksba_asn_check_identifier (AsnNode node)
             {  
 	      if (p2->valuetype == VALTYPE_CSTR && !isdigit (p2->value.v_cstr[0]))
 		{ /* the first constand below is a reference */
-                  strcpy (name2, node->name); /* FIXME: check overflow */
+                  if (strlen (node->name)
+                      +strlen(p->value.v_cstr)+2 > DIM(name2))
+                    return KSBA_Bug; /* well identifier too long */
+                  strcpy (name2, node->name);
                   strcat (name2, ".");
 		  strcat (name2, p2->value.v_cstr);
 		  p2 = _ksba_asn_find_node (node, name2);
@@ -844,7 +849,7 @@ _ksba_asn_expand_object_id (AsnNode node)
   AsnNode p, p2, p3, p4, p5;
   char name_root[129], name2[129*2+1];
 
-  /* FIXME: Make a cleaner implementation */
+  /* Fixme: Make a cleaner implementation */
   if (!node)
     return KSBA_Element_Not_Found;
   if (!node->name)

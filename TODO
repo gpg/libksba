@@ -2,51 +2,83 @@
 
 * src/cert.c:
 ** retrieve CRL distribution point
-
+** DSA has not been tested
 
 * src/dn.c:
 
 ** Check that error handling of bad utf-8 encoding is correct
 ** Implemnetd UCS-4 and UCS-2 to UTF-8 conversion 
-** There is an ambiguity in rfc2253 related to the handling of spaces
-   around delimters.  At one place it talks about whitespace and few
-   lines later it talks about just the space characters which must be
-   ignored.   How should that be solved?  This is only related to
-   spaces at the beginning or end of a name part when old style quoting
-   is not used. 
+** There is an ambiguity in rfc2253.
+This is related to the handling of spaces around delimiters.  At one
+place it talks about whitespace and few lines later it talks about
+just the space characters which must be ignored.  How should that be
+solved?  This is only related to spaces at the beginning or end of a
+name part when old style quoting is not used.
+** The rfc2253 parser does not yet support '+' parts.
+However, they are not allowed in Sphinx.
 
 * src/der-decoder.c:  
 
-  * should work on a stripped down parse tree
+** should work on a stripped down parse tree
 
-  * Allow to specify the desired top element.  Or a list so that it
+** Allow to specify the desired top element.  Or a list so that it
     can detect the needed tree itself
 
-* src/asn1-*
-  
-  * Cleanup the used data structures and remove unneeded functions.
+* src/der-encoder.c
+** Setting default values is missing
+** Tags > 31 are not supported.
 
-  * Think about a public API to the Asn functions.
+* src/asn1-*
+** Cleanup the used data structures and remove unneeded functions.
+** Think about a public API to the Asn functions.
 
 * src/cms*
 
-  * split some stuff from cms.c into a new cms-build.c
+** split some stuff from cms.c into a new cms-build.c
 
-  * rework the datastructures so that we can cope with multiple
-    recipients and signers.
+** allow for multiple signers
+
+** can't handle CRL infos in certificates
+
+   This is not a problem within the Aegypten project as CRL are t be
+   retrieved by online means.
+
+** cant't handle unprotected attributes
+
+   e.g. for counter signatures.  Not needed in Aegypten.
+
+** Support DSA
+
+* src/certreq.c
+
+** It is probably better to put all altNames into one sequence
+
+* src/crl.c
+** We don't support CRL entry extensions
+
+* src/keyinfo.c
+** Extract DSA parameters
+** Do we need to support BER encoded stuff?
 
 * src/time.c
+** the usual problems with time_t.
+We need at least a custom mktime function capable of converting times
+later than 2038 on a 32 bit box.
+** Allow for other timezones
+** Write a configure test to seee wheter the time_t hack is needed.
 
-  * the usual problems with time_t; we need at least a custom mktime
-    function capable of converting times later than 2038 on a 32 bit
-    box. 
-
+* src/reader.c
+** ksba_reader_unread limited to 100 bytes
+actual the reader is limited to 100 bytes over the first unread size.
+Easy to fix.
 
 * Other modules
 
-  * Do we need p12 stuff?
+** Do we need p12 stuff?
 
-
+* General
+** The ASN.1 parse tree is not released in all places
+** Some memory is not released in case of errors.
 
 
 

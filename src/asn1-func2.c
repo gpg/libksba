@@ -190,7 +190,7 @@ ksba_asn_create_tree (const char *mod_name, KsbaAsnTree *result)
       else
         {
           tree->parse_tree = pointer;
-          tree->node_list = NULL; /* fixme */
+          tree->node_list = NULL; /* fixme: should release the memory */
           strcpy (tree->filename, mod_name);
           *result = tree;
           rc = 0;
