@@ -1,4 +1,4 @@
-Noteworthy changes in version 0.9.0 (unreleased)
+Noteworthy changes in version 0.9.0 (2003-11-17)
 ------------------------------------------------
 
  * The time is not any longer described by time_t but through the new

@@ -21,14 +21,12 @@
 
 # Version number: Remember to change immediately *after* a release.
 #                 Append a "-cvs" for non-released versions.
-AC_INIT(libksba, 0.9.0-cvs, gpa-dev@gnupg.org)
+AC_INIT(libksba, 0.9.0, gpa-dev@gnupg.org)
 # LT Version numbers: Remember to change them just *before* a release.
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
 # Please remember to document interface changes in the NEWS file.
-#  NOTE: Exceptionally the LT number have already beend updated for
-#  the next release 0-wk 2003-10-31
 LIBKSBA_LT_CURRENT=8
 LIBKSBA_LT_AGE=0
 LIBKSBA_LT_REVISION=0
