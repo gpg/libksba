@@ -48,7 +48,7 @@ libksba_la_SOURCES = \
 	crl.c crl.h \
 	certreq.c certreq.h \
 	keyinfo.c keyinfo.h \
-	oid.c dn.c time.c convert.h \
+	oid.c name.c dn.c time.c convert.h \
 	util.c util.h shared.h errors.c	\
 	asn1-tables.c
 

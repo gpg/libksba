@@ -225,13 +225,13 @@ ksba_crl_get_update_times (KsbaCRL crl, time_t *this, time_t *next)
  * @crl: CRL object
  * @r_serial: Returns a S-exp with the serial number; caller must free.
  * @r_revocation_date: Returns the recocation date
- * @r_reason: Retrun the reason for revocation
+ * @r_reason: Return the reason for revocation
  * 
  * Return the serial number, revocation time and reason of the current
  * item.  Any of these arguments may be passed as %NULL if the value
  * is not of interest.  This function should be used after the parse
  * function came back with %KSBA_SR_GOT_ITEM.  For efficiency reasons
- * the function shouild be called only once, the implementation may
+ * the function should be called only once, the implementation may
  * return an error for the second call.
  * 
  * Return value: 0 in success or an error code.

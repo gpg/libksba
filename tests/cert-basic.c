@@ -1,5 +1,5 @@
 /* cert-basic.c - basic test for the certificate management.
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2002 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -140,6 +140,26 @@ print_dn (char *p)
     printf ("`%s'", p);
 }
 
+static void
+print_names (int indent, KsbaName name)
+{
+  int idx;
+  const char *s;
+
+  if (!name)
+    {
+      fputs ("none\n", stdout);
+      return;
+    }
+  
+  for (idx=0; (s = ksba_name_enum (name, idx)); idx++)
+    {
+      char *p = ksba_name_get_uri (name, idx);
+      printf ("%*s%s\n", idx?indent:0, "", p?p:s);
+      xfree (p);
+    }
+}
+
 
 static void
 list_extensions (KsbaCert cert)
@@ -148,8 +168,9 @@ list_extensions (KsbaCert cert)
   const char *oid;
   int idx, crit, is_ca, pathlen;
   size_t off, len;
-  unsigned int usage;
+  unsigned int usage, reason;
   char *string, *p;
+  KsbaName name1, name2;
 
   for (idx=0; !(err=ksba_cert_get_extension (cert, idx,
                                              &oid, &crit, &off, &len));idx++)
@@ -219,7 +240,7 @@ list_extensions (KsbaCert cert)
     } 
   else
     {
-      /* for display purposes we repolace the linefeeds by commas */
+      /* for display purposes we replace the linefeeds by commas */
       for (p=string; *p; p++)
         {
           if (*p == '\n')
@@ -228,6 +249,43 @@ list_extensions (KsbaCert cert)
       printf ("CertificatePolicies: %s\n", string);
       xfree (string);
     }
+
+  /* CRL distribution point */
+  for (idx=0; !(err=ksba_cert_get_crl_dist_point (cert, idx,
+                                                  &name1, &name2,
+                                                  &reason));idx++)
+    {
+      fputs ("CRLDistPoint: ", stdout);
+      print_names (14, name1);
+      fputs ("     reasons:", stdout);
+      if ( !reason )
+        fputs (" none", stdout);
+      if ( (reason & KSBA_CRLREASON_UNSPECIFIED))
+        fputs (" unused", stdout);
+      if ( (reason & KSBA_CRLREASON_KEY_COMPROMISE))
+        fputs (" keyCompromise", stdout);
+      if ( (reason & KSBA_CRLREASON_CA_COMPROMISE))
+        fputs (" caCompromise", stdout);
+      if ( (reason & KSBA_CRLREASON_AFFILIATION_CHANGED))
+        fputs (" affiliationChanged", stdout);
+      if ( (reason & KSBA_CRLREASON_SUPERSEDED))
+        fputs (" superseded", stdout);
+      if ( (reason & KSBA_CRLREASON_CESSATION_OF_OPERATION))
+        fputs (" cessationOfOperation", stdout);
+      if ( (reason & KSBA_CRLREASON_CERTIFICATE_HOLD))
+        fputs (" certificateHold", stdout);
+      putchar ('\n');
+      fputs ("      issuer: ", stdout);
+      print_names (14, name2);
+      ksba_name_release (name1);
+      ksba_name_release (name2);
+    }
+  if (err && err != -1)
+    { 
+      fprintf (stderr, "%s:%d: ksba_cert_get_crl_dist_point failed: %s\n", 
+               __FILE__, __LINE__, ksba_strerror (err));
+      errorcount++;
+    } 
 
 }
 

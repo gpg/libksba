@@ -35,6 +35,12 @@ KsbaError _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength);
 char *_ksba_oid_node_to_str (const unsigned char *image, AsnNode node);
 
 
+/*-- name.c --*/
+KsbaError _ksba_name_new_from_der (KsbaName *r_name,
+                                   const unsigned char *image,
+                                   size_t imagelen);
+
+
 #endif /*CONVERT_H*/
 
 

@@ -1,5 +1,5 @@
 /* cert.c - main function for the certificate handling
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2002 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -381,7 +381,10 @@ get_name (KsbaCert cert, int idx, int use_subject, char **result)
       return err; /* no alt name or error*/
   
   der = cert->image + off;
- 
+
+
+  /* FIXME: We should use _ksba_name_new_from_der and ksba_name_enum here */ 
+
   err = _ksba_ber_parse_tl (&der, &derlen, &ti);
   if (err)
     return err;
@@ -411,6 +414,8 @@ get_name (KsbaCert cert, int idx, int use_subject, char **result)
       if (seqlen < ti.length)
         return KSBA_BER_Error;
       seqlen -= ti.length;
+      if (derlen < ti.length)
+        return KSBA_BER_Error;
       if (--idx)
         ; /* not yet at the desired index */
       else if (ti.tag == 1)
@@ -428,7 +433,7 @@ get_name (KsbaCert cert, int idx, int use_subject, char **result)
 
       /* advance pointer */
       der += ti.length;
-      der -= ti.length;
+      derlen -= ti.length;
     }
   
   return -1;     
@@ -1098,11 +1103,263 @@ ksba_cert_get_cert_policies (KsbaCert cert, char **r_policies)
   return err;
 }
 
-#if 0
+
 
-KsbaError
-ksba_cert_get_
-#endif
+/* Helper function for ksba_cert_get_crl_dist_point */
+static KsbaError
+parse_distribution_point (const unsigned char *der, size_t derlen, 
+                          KsbaName *distpoint, KsbaName *issuer,
+                          unsigned int *reason)
+{
+  KsbaError err;
+  struct tag_info ti;
+
+  err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+  if (err)
+    return err;
+  if (ti.class != CLASS_CONTEXT) 
+    return KSBA_Invalid_Cert_Object; /* we expected a tag */
+  if (ti.ndef)
+    return KSBA_Not_DER_Encoded;
+  if (derlen < ti.length)
+    return KSBA_BER_Error;
+
+  if (ti.tag == 0 && derlen)
+    { /* distributionPointName */
+      err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+      if (err)
+        return err;
+      if (ti.class != CLASS_CONTEXT) 
+        return KSBA_Invalid_Cert_Object; /* we expected a tag */
+      if (ti.ndef)
+        return KSBA_Not_DER_Encoded;
+      if (derlen < ti.nhdr)
+        return KSBA_BER_Error;
+      if (derlen < ti.length)
+        return KSBA_BER_Error;
+
+      if (ti.tag == 0)
+        {
+          if (distpoint)
+            {
+              err = _ksba_name_new_from_der (distpoint, der, ti.length);
+              if (err)
+                return err;
+            }
+        }
+      else
+        {
+          /* We don't support nameRelativeToCRLIssuer yet*/
+        }
+      der += ti.length;
+      derlen -= ti.length;
+
+      if (!derlen)
+        return 0;
+
+      /* read the next optional element */
+      err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+      if (err)
+        return err;
+      if (ti.class != CLASS_CONTEXT) 
+        return KSBA_Invalid_Cert_Object; /* we expected a tag */
+      if (ti.ndef)
+        return KSBA_Not_DER_Encoded;
+      if (derlen < ti.length)
+        return KSBA_BER_Error;
+    }
+
+  if (ti.tag == 1 && derlen)
+    { /* reasonFlags */
+      unsigned int bits, mask;
+      int i, unused, full;
+      
+      unused = *der++; derlen--;
+      ti.length--;
+      if ((!ti.length && unused) || unused/8 > ti.length)
+        return KSBA_Encoding_Error;
+
+      full = ti.length - (unused+7)/8;
+      unused %= 8;
+      mask = 0;
+      for (i=1; unused; i <<= 1, unused--)
+        mask |= i;
+      
+      /* we are only required to look at the first octect */
+      if (ti.length && reason)
+        {
+          bits = *der; 
+          if (full)
+            full--;
+          else {
+            bits &= ~mask;
+            mask = 0; 
+          }
+          
+          if (bits & 0x80)
+            *reason |= KSBA_CRLREASON_UNSPECIFIED;
+          if (bits & 0x40)
+            *reason |= KSBA_CRLREASON_KEY_COMPROMISE;
+          if (bits & 0x20)
+            *reason |= KSBA_CRLREASON_CA_COMPROMISE;
+          if (bits & 0x10)
+            *reason |= KSBA_CRLREASON_AFFILIATION_CHANGED;
+          if (bits & 0x08)
+            *reason |= KSBA_CRLREASON_SUPERSEDED;
+          if (bits & 0x04)
+            *reason |= KSBA_CRLREASON_CESSATION_OF_OPERATION;
+          if (bits & 0x02)
+            *reason |= KSBA_CRLREASON_CERTIFICATE_HOLD;
+        }
+        
+      der += ti.length;
+      derlen -= ti.length;
+
+      if (!derlen)
+        return 0;
+
+      /* read the next optional element */
+      err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+      if (err)
+        return err;
+      if (ti.class != CLASS_CONTEXT) 
+        return KSBA_Invalid_Cert_Object; /* we expected a tag */
+      if (ti.ndef)
+        return KSBA_Not_DER_Encoded;
+      if (derlen < ti.length)
+        return KSBA_BER_Error;
+    }
+
+  if (ti.tag == 2 && derlen)
+    { /* crlIssuer */
+      if (issuer)
+        {
+          err = _ksba_name_new_from_der (issuer, der, ti.length);
+          if (err)
+            return err;
+        }
+
+      der += ti.length;
+      derlen -= ti.length;
+    }
+
+  if (derlen)
+    return KSBA_Invalid_Cert_Object;
+
+  return 0;
+}
+
+/* Return the CRLDistPoints given in the cert extension.  IDX should
+   be iterated started from 0 until the function retruns -1.
+   R_DISTPOINT returns a KsbaName object with the distribution point
+   name(s) the return value may be NULL to indicate that this name is
+   not available.  R_ISSUER returns the CRL issuer; if the returned
+   value is NULL the caller should assume that the CRL issuer is the
+   same as the certificate issuer.  R_REASON returns the reason for
+   the CRL.  This is a bit encoded value with no bit set if this has
+   not been spciefied in the cert.
+
+   The caller may pass NULL to any of the pointer argumenst if he is
+   not interested in this value.  The return values for R_DISTPOINT
+   and R_ISSUER must be released bt the caller using
+   ksba_name_release(). */
+
+KsbaError 
+ksba_cert_get_crl_dist_point (KsbaCert cert, int idx,
+                              KsbaName *r_distpoint,
+                              KsbaName *r_issuer,
+                              unsigned int *r_reason)
+{
+  KsbaError err;
+  const char *oid;
+  size_t off, derlen;
+  int myidx, crit;
+
+  if (r_distpoint)
+    *r_distpoint = NULL;
+  if (r_issuer)
+    *r_issuer = NULL;
+  if (r_reason)
+    *r_reason = 0;
+
+  for (myidx=0; !(err=ksba_cert_get_extension (cert, myidx, &oid, &crit,
+                                               &off, &derlen)); myidx++)
+    {
+      if (!strcmp (oid, oidstr_crlDistributionPoints))
+        {
+          const unsigned char *der;
+          struct tag_info ti;
+           size_t seqlen;
+
+          der = cert->image + off;
+          
+          err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+          if (err)
+            return err;
+          if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+                 && ti.is_constructed) )
+            return KSBA_Invalid_Cert_Object;
+          if (ti.ndef)
+            return KSBA_Not_DER_Encoded;
+          seqlen = ti.length;
+          if (seqlen > derlen)
+            return KSBA_BER_Error;
+
+          /* Note: an empty sequence is actually not allowed but we
+             better don't care */
+
+          while (seqlen)
+            {
+              err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+              if (err)
+                return err;
+              if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+                     && ti.is_constructed) )
+                return KSBA_Invalid_Cert_Object;
+              if (derlen < ti.length)
+                return KSBA_BER_Error;
+              if (seqlen < ti.nhdr)
+                return KSBA_BER_Error;
+              seqlen -= ti.nhdr;
+              if (seqlen < ti.length)
+                return KSBA_BER_Error; 
+
+              if (idx)
+                { /* skip because we are not yet at the desired index */
+                  der    += ti.length;
+                  derlen -= ti.length;
+                  seqlen -= ti.length;
+                  idx--;
+                  continue;  
+                }
+              
+              if (!ti.length)
+                return 0;  
+
+              err = parse_distribution_point (der, ti.length, 
+                                              r_distpoint, r_issuer, r_reason);
+              if (err && r_distpoint)
+                {
+                  ksba_name_release (*r_distpoint);
+                  *r_distpoint = NULL;
+                }
+              if (err && r_issuer)
+                {
+                  ksba_name_release (*r_issuer);
+                  *r_issuer = NULL;
+                }
+              if (err && r_reason)
+                *r_reason = 0;
+              
+              return err;
+            }
+        }
+    }
+
+  return err;
+}
+
+
 
 
 

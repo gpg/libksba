@@ -112,14 +112,14 @@ typedef enum {
 } KsbaStopReason;
 
 typedef enum {
-  KSBA_CRLREASON_UNSPECIFIED = 0,
-  KSBA_CRLREASON_KEY_COMPROMISE = 1,
-  KSBA_CRLREASON_CA_COMPROMISE = 2,
-  KSBA_CRLREASON_AFFILIATION_CHANGED = 3,
-  KSBA_CRLREASON_SUPERSEEDED = 4,
-  KSBA_CRLREASON_CESSATION_OF_OPERATION = 5,
-  KSBA_CRLREASON_CERTIFICATE_HOLD = 6,
-  KSBA_CRLREASON_REMOVE_FROM_CRL = 8
+  KSBA_CRLREASON_UNSPECIFIED = 1,
+  KSBA_CRLREASON_KEY_COMPROMISE = 2,
+  KSBA_CRLREASON_CA_COMPROMISE = 4,
+  KSBA_CRLREASON_AFFILIATION_CHANGED = 8,
+  KSBA_CRLREASON_SUPERSEDED = 16,
+  KSBA_CRLREASON_CESSATION_OF_OPERATION = 32,
+  KSBA_CRLREASON_CERTIFICATE_HOLD = 64,
+  KSBA_CRLREASON_REMOVE_FROM_CRL = 256
 } KsbaCRLReason;
 
 typedef enum {
@@ -169,6 +169,11 @@ typedef struct ksba_writer_s *KsbaWriter;
 struct ksba_asn_tree_s;
 typedef struct ksba_asn_tree_s *KsbaAsnTree;
 
+/* This is an object to reference an General Name.  Such an object is
+   returned by several functions. */
+struct ksba_name_s;
+typedef struct ksba_name_s *KsbaName;
+
 /* KsbaSexp is just an unsigned char * which should be used for
    documentation purpose.  The S-expressions returned by libksba are
    always in canonical representation with an extra 0 byte at the end,
@@ -206,6 +211,10 @@ KsbaError ksba_cert_get_extension (KsbaCert cert, int idx,
 KsbaError ksba_cert_is_ca (KsbaCert cert, int *r_ca, int *r_pathlen);
 KsbaError ksba_cert_get_key_usage (KsbaCert cert, unsigned int *r_flags);
 KsbaError ksba_cert_get_cert_policies (KsbaCert cert, char **r_policies);
+KsbaError ksba_cert_get_crl_dist_point (KsbaCert cert, int idx,
+                                        KsbaName *r_distpoint,
+                                        KsbaName *r_issuer,
+                                        KsbaCRLReason *r_reason);
 
 
 /*-- cms.c --*/
@@ -276,7 +285,7 @@ KsbaError ksba_crl_get_item (KsbaCRL crl,
 KsbaSexp  ksba_crl_get_sig_val (KsbaCRL crl);
 KsbaError ksba_crl_parse (KsbaCRL crl, KsbaStopReason *r_stopreason);
 
-/*-- cetreq.c --*/
+/*-- certreq.c --*/
 KsbaCertreq ksba_certreq_new (void);
 void      ksba_certreq_release (KsbaCertreq cr);
 KsbaError ksba_certreq_set_writer (KsbaCertreq cr, KsbaWriter w);
@@ -342,6 +351,14 @@ KsbaError ksba_asn_create_tree (const char *mod_name, KsbaAsnTree *result);
 /*-- oid.c --*/
 char *ksba_oid_to_str (const char *buffer, size_t length);
 int ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength);
+
+
+/*-- name.c --*/
+KsbaName ksba_name_new (void);
+void ksba_name_ref (KsbaName name);
+void ksba_name_release (KsbaName name);
+const char *ksba_name_enum (KsbaName name, int idx);
+char *ksba_name_get_uri (KsbaName name, int idx);
 
 
 /*-- util.c --*/

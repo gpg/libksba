@@ -1,3 +1,13 @@
+2002-03-22  Werner Koch  <wk@gnupg.org>
+
+	* cert.c (get_name): Fixed enumering of alternate names.
+
+	* name.c: New.
+	* ksba.h (KsbaName): New.  Added defintions for the name functions.
+	(KsbaCRLReason): Changed values to allow use as bit flags.
+	* cert.c (parse_distribution_point): New. 
+	(ksba_cert_get_crl_dist_point): New.
+
 2002-03-15  Werner Koch  <wk@gnupg.org>
 
 	* asn1-func.c (_ksba_asn_check_identifier): Better check against
