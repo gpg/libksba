@@ -18,6 +18,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
+#undef ENABLE_HASH_LOGGING
+
+#ifdef ENABLE_HASH_LOGGING
+#define _GNU_SOURCE 1
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -141,6 +146,20 @@ print_time (time_t t)
 }
 
 
+static void
+my_hasher (void *arg, const void *buffer, size_t length)
+{
+  FILE *fp = arg;
+
+  if (fp)
+    {
+      if ( fwrite (buffer, length, 1, fp) != 1 )
+        fail ("error writing to-be-hashed data");
+    }
+}
+
+
+
 
 static void
 one_file (const char *fname)
@@ -151,6 +170,20 @@ one_file (const char *fname)
   KsbaCRL crl;
   KsbaStopReason stopreason;
   int count = 0;
+  FILE *hashlog = NULL;
+
+#ifdef ENABLE_HASH_LOGGING
+    {
+      char *buf;
+
+      if (asprintf (&buf, "%s.hash.log", fname) < 0)
+        fail ("asprintf failed");
+      hashlog = fopen (buf, "wb");
+      if (!hashlog)
+        fail ("can't create log file");
+      free (buf);
+    }
+#endif
 
   printf ("*** checking `%s' ***\n", fname);
   fp = fopen (fname, "r");
@@ -173,6 +206,9 @@ one_file (const char *fname)
 
   err = ksba_crl_set_reader (crl, r);
   fail_if_err (err);
+
+  if (hashlog)
+    ksba_crl_set_hash_function (crl, my_hasher, hashlog);
 
   do 
     {
@@ -254,6 +290,8 @@ one_file (const char *fname)
   ksba_crl_release (crl);
   ksba_reader_release (r);
   fclose (fp);
+  if (hashlog)
+    fclose (hashlog);
 }
 
 

@@ -1,3 +1,7 @@
+2002-01-11  Werner Koch  <wk@gnupg.org>
+
+	* t-crl-parser.c: Add commented test to write a hash log
+
 2002-01-10  Werner Koch  <wk@gnupg.org>
 
 	* cert-basic.c (print_sexp): Replaced with the one from the other
