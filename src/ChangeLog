@@ -1,3 +1,11 @@
+2003-03-17  Werner Koch  <wk@gnupg.org>
+
+	* dn.c (count_quoted_string): Fixed detection of nonprintable
+	chars for hex pairs. Use IA5STRING instead of UTF8 if the only
+	reason is an at-sign.
+	(parse_rdn): Fixed parsing of hash prefixed hex pairs.  Use
+	IA5STRING instead of UTF8 if the only reason is an at-sign.
+
 2002-12-12  Werner Koch  <wk@gnupg.org>
 
 	* keyinfo.c (sig_algo_table): Added sha-1WithRSAEncryption. 

@@ -717,6 +717,7 @@ count_quoted_string (const char *string, size_t *result,
   int nbytes = 0;
   int highbit = 0;
   int nonprint = 0;
+  int atsign = 0;
 
   *stringtype = 0;
   for (s=string; *s; s++)
@@ -737,7 +738,9 @@ count_quoted_string (const char *string, size_t *result,
               int c = xtoi_2 (s);
               if ((c & 0x80))
                 highbit = 1;
-              else if (!charclasses[*s])
+              else if (c == '@')
+                atsign = 1;
+              else if (!charclasses[c])
                 nonprint = 1;
 
               s++;
@@ -763,6 +766,8 @@ count_quoted_string (const char *string, size_t *result,
           nbytes++;
           if ((*s & 0x80))
             highbit = 1;
+          else if (*s == '@')
+            atsign = 1;
           else if (!charclasses[*s])
             nonprint = 1;
         }
@@ -773,6 +778,8 @@ count_quoted_string (const char *string, size_t *result,
 
   if (highbit || nonprint)
     *stringtype = TYPE_UTF8_STRING;
+  else if (atsign)
+    *stringtype = TYPE_IA5_STRING;
   else 
     *stringtype = TYPE_PRINTABLE_STRING;
 
@@ -923,8 +930,9 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
   if (*s == '#')
     { /* hexstring */
       int need_utf8 = 0;
+      int need_ia5 = 0;
 
-      string = s+1;
+      string = ++s;
       for (; hexdigitp (s); s++)
         s++;
       n = s - string;
@@ -948,9 +956,12 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
           for (p=valuebuf, s1=string; n; p++, s1 += 2, n--)
             {
               *p = xtoi_2 (s1);
-              if ((*p & 0x80) || !charclasses[*p])
+              if (*p == '@')
+                need_ia5 = 1;
+              else if ((*p & 0x80) || !charclasses[*p])
                 need_utf8 = 1;
             }
+          value = valuebuf;
         }
       else
         {
@@ -959,11 +970,14 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
               unsigned int c;
 
               c = xtoi_2 (s1);
-              if ((c & 0x80) || !charclasses[c])
+              if (c == '@')
+                need_ia5 = 1;
+              else if ((c & 0x80) || !charclasses[c])
                 need_utf8 = 1;
             }
         }
-      valuetype = need_utf8? TYPE_UTF8_STRING : TYPE_PRINTABLE_STRING;
+      valuetype = need_utf8? TYPE_UTF8_STRING :
+                  need_ia5 ? TYPE_IA5_STRING : TYPE_PRINTABLE_STRING;
     }
   else if (*s == '\"')
     { /* old style quotation */
@@ -1041,8 +1055,8 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
       
       /* the value.  Note that we don't need any conversion to the target
          characters set because the input is expected to be utf8 and the
-         target type is either utf8 or printable string where the latter
-         is a subset of utf8 */
+         target type is either utf8, IA5 or printable string where the last
+         two are subsets of utf8 */
       err = _ksba_ber_write_tl (writer, valuetype,
                                 CLASS_UNIVERSAL, 0, valuelen);
       if (!err)

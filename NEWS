@@ -1,5 +1,7 @@
-Noteworthy changes in version 0.4.7 (unreleased)
+Noteworthy changes in version 0.4.7 (2003-03-17)
 ------------------------------------------------
+
+ * Fixed type detection in creating DNs.
 
 
 Noteworthy changes in version 0.4.6 (2002-12-04)
