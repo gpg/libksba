@@ -3,6 +3,8 @@
 * src/cert.c:
 ** DSA has not been tested
 
+   Well, it can't work yet.
+
 * src/dn.c:
 
 ** Check that error handling of bad utf-8 encoding is correct
@@ -36,7 +38,7 @@ However, they are not allowed in Sphinx.
 
 ** can't handle CRL infos in certificates
 
-   This is not a problem within the Aegypten project as CRL are t be
+   This is not a problem within the Aegypten project as CRL aren't be
    retrieved by online means.
 
 ** cant't handle unprotected attributes
@@ -51,18 +53,14 @@ However, they are not allowed in Sphinx.
 
 * src/crl.c
 ** We don't support CRL entry extensions
-** Reason is not correctly retruned - check it.
+** Reason is not correctly returned - check it.
 
 * src/keyinfo.c
 ** Extract DSA parameters
 ** Do we need to support BER encoded stuff?
 
 * src/time.c
-** the usual problems with time_t.
-We need at least a custom mktime function capable of converting times
-later than 2038 on a 32 bit box.
 ** Allow for other timezones
-** Write a configure test to seee wheter the time_t hack is needed.
 
 * src/reader.c
 ** ksba_reader_unread limited to 100 bytes

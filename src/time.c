@@ -33,7 +33,7 @@
    returns string to empty on error and returns the error code. The
    function figures automagically the right format.  fixme: Currently
    we only zupport Zulu time and no timezone */
-KsbaError
+gpg_error_t
 _ksba_asntime_to_iso (const char *buffer, size_t length,
                       ksba_isotime_t timebuf)
 { 
@@ -45,7 +45,7 @@ _ksba_asntime_to_iso (const char *buffer, size_t length,
   for (s=buffer, n=0; n < length && digitp (s); n++, s++)
     ;
   if ((n != 12 && n != 14) || *s != 'Z')
-    return KSBA_Invalid_Time;
+    return gpg_error (GPG_ERR_INV_TIME);
   
   s = buffer;
   if (n==12)
@@ -70,25 +70,25 @@ _ksba_asntime_to_iso (const char *buffer, size_t length,
 
 
 /* Return 0 if ATIME has the proper format (e.g. "19660205T131415"). */
-KsbaError
+gpg_error_t
 _ksba_assert_time_format (const ksba_isotime_t atime)
 {
   int i;
   const char *s;
 
   if (!*atime)
-    return KSBA_No_Value;
+    return gpg_error (GPG_ERR_NO_VALUE);
   
   for (s=atime, i=0; i < 8; i++, s++)
     if (!digitp (s))
-      return KSBA_Bug;
+      return gpg_error (GPG_ERR_BUG);
   if (*s != 'T')
-      return KSBA_Bug;
+      return gpg_error (GPG_ERR_BUG);
   for (s++, i=9; i < 15; i++, s++)
     if (!digitp (s))
-      return KSBA_Bug;
+      return gpg_error (GPG_ERR_BUG);
   if (*s)
-      return KSBA_Bug;
+      return gpg_error (GPG_ERR_BUG);
   return 0;
 }
 

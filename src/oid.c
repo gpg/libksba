@@ -155,7 +155,7 @@ make_flagged_int (unsigned long value, char *buf, size_t buflen)
  * 
  * Return value: 0 on success or an error value
  **/
-KsbaError
+gpg_error_t
 ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength)
 {
   unsigned char *buf;
@@ -165,7 +165,7 @@ ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength)
   int arcno;
 
   if (!string || !rbuf || !rlength)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   *rbuf = NULL;
   *rlength = 0;
 
@@ -174,12 +174,12 @@ ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength)
     string += 4;
 
   if (!*string)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 
   /* we can safely assume that the encoded OID is shorter than the string */
   buf = xtrymalloc ( strlen(string) + 2);
   if (!buf)
-    return KSBA_Out_Of_Core;
+    return gpg_error (GPG_ERR_ENOMEM);
   buflen = 0;
 
   val1 = 0; /* avoid compiler warnings */
@@ -190,7 +190,7 @@ ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength)
     if (!digitp (string) || !(*endp == '.' || !*endp))
       {
         xfree (buf);
-        return KSBA_Invalid_OID_String;
+        return gpg_error (GPG_ERR_INV_OID_STRING);
       }
     if (*endp == '.')
       string = endp+1;
@@ -208,7 +208,7 @@ ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength)
             if (val > 39)
               {
                 xfree (buf);
-                return KSBA_Invalid_OID_String;
+                return gpg_error (GPG_ERR_INV_OID_STRING);
               }
             buf[buflen++] = val1*40 + val;
           }
@@ -227,7 +227,7 @@ ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength)
   if (arcno == 1)
     { /* it is not possible to encode only the first arc */
       xfree (buf);
-      return KSBA_Invalid_OID_String;
+      return gpg_error (GPG_ERR_INV_OID_STRING);
     }
 
   *rbuf = buf;

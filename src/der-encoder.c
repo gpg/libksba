@@ -33,7 +33,7 @@
 
 struct der_encoder_s {
   AsnNode module;    /* the ASN.1 structure */
-  KsbaWriter writer;
+  ksba_writer_t writer;
   const char *last_errdesc; /* string with the error description */
   AsnNode root;   /* of the expanded parse tree */
   int debug;
@@ -41,7 +41,7 @@ struct der_encoder_s {
 
 /* To be useful for the DER encoder we store all data direct as the
    binary image, so we use the VALTYPE_MEM */
-static KsbaError
+static gpg_error_t
 store_value (AsnNode node, const void *buffer, size_t length)
 {
   _ksba_asn_set_value (node, VALTYPE_MEM, buffer, length);
@@ -87,26 +87,26 @@ _ksba_der_encoder_release (DerEncoder d)
  * 
  * Return value: 0 on success or an error code
  **/
-KsbaError
-_ksba_der_encoder_set_module (DerEncoder d, KsbaAsnTree module)
+gpg_error_t
+_ksba_der_encoder_set_module (DerEncoder d, ksba_asn_tree_t module)
 {
   if (!d || !module)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   if (d->module)
-    return KSBA_Conflict; /* module already set */
+    return gpg_error (GPG_ERR_CONFLICT); /* module already set */
 
   d->module = module->parse_tree;
   return 0;
 }
 
 
-KsbaError
-_ksba_der_encoder_set_writer (DerEncoder d, KsbaWriter w)
+gpg_error_t
+_ksba_der_encoder_set_writer (DerEncoder d, ksba_writer_t w)
 {
   if (!d || !w)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   if (d->writer)
-    return KSBA_Conflict; /* reader already set */
+    return gpg_error (GPG_ERR_CONFLICT); /* reader already set */
   
   d->writer = w;
   return 0;
@@ -128,11 +128,11 @@ _ksba_der_encoder_set_writer (DerEncoder d, KsbaWriter w)
 
   where parameters will be set to NULL if parm is NULL or to an octet
   string conating the given parm */
-KsbaError
-_ksba_der_write_algorithm_identifier (KsbaWriter w, const char *oid,
+gpg_error_t
+_ksba_der_write_algorithm_identifier (ksba_writer_t w, const char *oid,
                                       const void *parm, size_t parmlen)
 {
-  KsbaError err;
+  gpg_error_t err;
   char *buf;
   size_t len;
 
@@ -184,7 +184,7 @@ _ksba_der_write_algorithm_identifier (KsbaWriter w, const char *oid,
 
 /* Copy all values from the tree SRC (with values store in SRCIMAGE)
    to the tree DST */
-KsbaError
+gpg_error_t
 _ksba_der_copy_tree (AsnNode dst_root,
                      AsnNode src_root, const unsigned char *src_image)
 {
@@ -202,7 +202,7 @@ _ksba_der_copy_tree (AsnNode dst_root,
       if (s->flags.in_array && s->right)
         {
           if (!_ksba_asn_insert_copy (d))
-            return KSBA_Out_Of_Core;
+            return gpg_error (GPG_ERR_ENOMEM);
         }
 
       if ( !_ksba_asn_is_primitive (s->type) )
@@ -222,7 +222,7 @@ _ksba_der_copy_tree (AsnNode dst_root,
 /*        _ksba_asn_node_dump_all (src_root, stderr); */
 /*        fputs ("DESTINATION TREE:\n", stderr); */
 /*        _ksba_asn_node_dump_all (dst_root, stderr); */
-      return KSBA_Encoding_Error;
+      return gpg_error (GPG_ERR_ENCODING_PROBLEM);
     }
   return 0;
 }
@@ -234,12 +234,12 @@ _ksba_der_copy_tree (AsnNode dst_root,
  *********************************************/
 
 
-KsbaError
+gpg_error_t
 _ksba_der_store_time (AsnNode node, const ksba_isotime_t atime)
 {
   char buf[50], *p;
   int need_gen;
-  KsbaError err;
+  gpg_error_t err;
 
   /* First check that ATIME is inddeed as formatted as expected. */
   err = _ksba_assert_time_format (atime);
@@ -277,11 +277,11 @@ _ksba_der_store_time (AsnNode node, const ksba_isotime_t atime)
       return store_value (node, p, strlen (p));
     }
   else
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 }
 
 /* Store the utf-8 STRING in NODE. */
-KsbaError
+gpg_error_t
 _ksba_der_store_string (AsnNode node, const char *string)
 {
   if (node->type == TYPE_CHOICE)
@@ -295,14 +295,14 @@ _ksba_der_store_string (AsnNode node, const char *string)
       return store_value (node, string, strlen (string));
     }
   else
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 }
 
 
 /* Store the integer VALUE in NODE.  VALUE is assumed to be a DER
    encoded integer prefixed with 4 bytes given its length in network
    byte order. */
-KsbaError
+gpg_error_t
 _ksba_der_store_integer (AsnNode node, const unsigned char *value)
 {
   if (node->type == TYPE_INTEGER)
@@ -313,13 +313,13 @@ _ksba_der_store_integer (AsnNode node, const unsigned char *value)
       return store_value (node, value+4, len);
     }
   else
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 }
 
-KsbaError
+gpg_error_t
 _ksba_der_store_oid (AsnNode node, const char *oid)
 {
-  KsbaError err;
+  gpg_error_t err;
 
   if (node->type == TYPE_ANY)
     node->type = TYPE_OBJECT_ID;
@@ -337,11 +337,11 @@ _ksba_der_store_oid (AsnNode node, const char *oid)
       return err;
     }
   else
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 }
 
 
-KsbaError
+gpg_error_t
 _ksba_der_store_octet_string (AsnNode node, const char *buf, size_t len)
 {
   if (node->type == TYPE_ANY)
@@ -352,10 +352,10 @@ _ksba_der_store_octet_string (AsnNode node, const char *buf, size_t len)
       return store_value (node, buf, len);
     }
   else
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 }
 
-KsbaError
+gpg_error_t
 _ksba_der_store_null (AsnNode node)
 {
   if (node->type == TYPE_ANY)
@@ -366,7 +366,7 @@ _ksba_der_store_null (AsnNode node)
       return store_value (node, "", 0);
     }
   else
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 }
 
 
@@ -510,7 +510,7 @@ sum_up_lengths (AsnNode root)
    The value tree is modified so that it can be used the same way as a
    parsed one, i.e the elements off, and len are set to point into
    image. */
-KsbaError
+gpg_error_t
 _ksba_der_encode_tree (AsnNode root,
                        unsigned char **r_image, size_t *r_imagelen)
 {
@@ -556,7 +556,7 @@ _ksba_der_encode_tree (AsnNode root,
   /* now we can create an encoding in image */
   image = xtrymalloc (imagelen);
   if (!image)
-    return KSBA_Out_Of_Core;
+    return gpg_error (GPG_ERR_ENOMEM);
   len = 0;
   for (n=root; n ; n = _ksba_asn_walk_tree (root, n))
     {

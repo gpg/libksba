@@ -24,29 +24,29 @@
 #include "asn1-func.h"
 
 /*-- time.c --*/
-KsbaError _ksba_asntime_to_iso (const char *buffer, size_t length,
+gpg_error_t _ksba_asntime_to_iso (const char *buffer, size_t length,
                                 ksba_isotime_t timebuf);
-KsbaError _ksba_assert_time_format (const ksba_isotime_t atime);
+gpg_error_t _ksba_assert_time_format (const ksba_isotime_t atime);
 void _ksba_copy_time (ksba_isotime_t d, const ksba_isotime_t s);
 int _ksba_cmp_time (const ksba_isotime_t a, const ksba_isotime_t b);
 void _ksba_current_time (ksba_isotime_t timebuf);
 
 
 /*-- dn.c --*/
-KsbaError _ksba_dn_to_str (const unsigned char *image, AsnNode node,
+gpg_error_t _ksba_dn_to_str (const unsigned char *image, AsnNode node,
                            char **r_string);
-KsbaError _ksba_derdn_to_str (const unsigned char *der, size_t derlen,
+gpg_error_t _ksba_derdn_to_str (const unsigned char *der, size_t derlen,
                               char **r_string);
-KsbaError _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength);
+gpg_error_t _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength);
 
 /*-- oid.c --*/
 char *_ksba_oid_node_to_str (const unsigned char *image, AsnNode node);
 
 
 /*-- name.c --*/
-KsbaError _ksba_name_new_from_der (KsbaName *r_name,
-                                   const unsigned char *image,
-                                   size_t imagelen);
+gpg_error_t _ksba_name_new_from_der (ksba_name_t *r_name,
+                                     const unsigned char *image,
+                                     size_t imagelen);
 
 
 #endif /*CONVERT_H*/

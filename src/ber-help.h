@@ -35,14 +35,14 @@ struct tag_info {
 };
 
 
-KsbaError _ksba_ber_read_tl (KsbaReader reader, struct tag_info *ti);
-KsbaError _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
-                              struct tag_info *ti);
-KsbaError _ksba_ber_write_tl (KsbaWriter writer, 
-                              unsigned long tag,
-                              enum tag_class class,
-                              int constructed,
-                              unsigned long length);
+gpg_error_t _ksba_ber_read_tl (ksba_reader_t reader, struct tag_info *ti);
+gpg_error_t _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
+                                struct tag_info *ti);
+gpg_error_t _ksba_ber_write_tl (ksba_writer_t writer, 
+                                unsigned long tag,
+                                enum tag_class class,
+                                int constructed,
+                                unsigned long length);
 size_t _ksba_ber_encode_tl (unsigned char *buffer, 
                             unsigned long tag,
                             enum tag_class class,

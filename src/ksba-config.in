@@ -10,8 +10,8 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 PGM=ksba-config
-libs="@KSBA_CONFIG_LIBS@"
-cflags="@KSBA_CONFIG_CFLAGS@"
+libs="@KSBA_CONFIG_LIBS@ @GPG_ERROR_LIBS@"
+cflags="@KSBA_CONFIG_CFLAGS@ @GPG_ERROR_CFLAGS@"
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 includes=""
@@ -98,7 +98,12 @@ if test "$echo_cflags" = "yes"; then
 	fi
       done
     fi
-    echo $includes $cflags
+    tmp=""
+    for i in $includes $cflags; do
+       if echo "$tmp" | fgrep -v -- "$i" >/dev/null; then
+           tmp="$tmp $i"
+       fi
+    done
 fi
 
 if test "$echo_libs" = "yes"; then
@@ -110,5 +115,11 @@ if test "$echo_libs" = "yes"; then
 	fi
       done
     fi
-    echo $libdirs $libs
+    tmp=""
+    for i in $libdirs $libs; do
+       if echo "$tmp" | fgrep -v -- "$i" >/dev/null; then
+           tmp="$tmp $i"
+       fi
+    done
+    echo $tmp
 fi

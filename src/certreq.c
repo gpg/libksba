@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
+
 #include "util.h"
 
 #include "cms.h"
@@ -42,18 +44,16 @@ static const char oidstr_extensionReq[] = "1.2.840.113549.1.9.14";
  * 
  * Create a new and empty CMS object
  * 
- * Return value: A CMS object or NULL in case of memory problems.
+ * Return value: A CMS object or an error code.
  **/
-KsbaCertreq
-ksba_certreq_new (void)
+gpg_error_t
+ksba_certreq_new (ksba_certreq_t *r_cr)
 {
-  KsbaCertreq cr;
+  *r_cr = xtrycalloc (1, sizeof **r_cr);
+  if (!*r_cr)
+    return gpg_error_from_errno (errno);
 
-  cr = xtrycalloc (1, sizeof *cr);
-  if (!cr)
-    return NULL;
-
-  return cr;
+  return 0;
 }
 
 /**
@@ -63,7 +63,7 @@ ksba_certreq_new (void)
  * Release a Certreq object.
  **/
 void
-ksba_certreq_release (KsbaCertreq cr)
+ksba_certreq_release (ksba_certreq_t cr)
 {
   if (!cr)
     return;
@@ -83,11 +83,11 @@ ksba_certreq_release (KsbaCertreq cr)
 }
 
 
-KsbaError
-ksba_certreq_set_writer (KsbaCertreq cr, KsbaWriter w)
+gpg_error_t
+ksba_certreq_set_writer (ksba_certreq_t cr, ksba_writer_t w)
 {
   if (!cr || !w)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   cr->writer = w;
   return 0;
 }
@@ -95,7 +95,7 @@ ksba_certreq_set_writer (KsbaCertreq cr, KsbaWriter w)
 
 /* Provide a hash function so that we are able to hash the data */
 void
-ksba_certreq_set_hash_function (KsbaCertreq cr,
+ksba_certreq_set_hash_function (ksba_certreq_t cr,
                                 void (*hash_fnc)(void *, const void *, size_t),
                                 void *hash_fnc_arg)
 {
@@ -114,8 +114,8 @@ ksba_certreq_set_hash_function (KsbaCertreq cr,
    NAME must be a valid RFC-2253 encoded DN name for the first one or an
    email address enclosed in angle brackets for all further calls.
  */
-KsbaError
-ksba_certreq_add_subject (KsbaCertreq cr, const char *name)
+gpg_error_t
+ksba_certreq_add_subject (ksba_certreq_t cr, const char *name)
 {
   unsigned long namelen;
   size_t n, n1, n2;
@@ -123,7 +123,7 @@ ksba_certreq_add_subject (KsbaCertreq cr, const char *name)
   unsigned char *der;
 
   if (!cr || !name)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   if (!cr->subject.der)
     return _ksba_dn_from_str (name, &cr->subject.der, &cr->subject.derlen);
   /* this is assumed to be an subjectAltName */
@@ -134,7 +134,7 @@ ksba_certreq_add_subject (KsbaCertreq cr, const char *name)
   namelen = strlen (name);
   if (*name != '<' || name[namelen-1] != '>'
       || namelen < 4 || !strchr (name, '@'))
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   name++;
   namelen -= 2;
 
@@ -147,18 +147,18 @@ ksba_certreq_add_subject (KsbaCertreq cr, const char *name)
   
   e = xtrymalloc (sizeof *e + n2 - 1);
   if (!e)
-    return KSBA_Out_Of_Core;
+    return gpg_error (GPG_ERR_ENOMEM);
   e->oid = oidstr_subjectAltName;
   e->critical = 0;
   e->derlen = n2;
   der = e->der;
   n = _ksba_ber_encode_tl (der, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n1);
   if (!n)
-    return KSBA_Bug; /* (no need to cleanup after a bug) */
+    return gpg_error (GPG_ERR_BUG); /* (no need to cleanup after a bug) */
   der += n;
   n = _ksba_ber_encode_tl (der, 1, CLASS_CONTEXT, 0, namelen);
   if (!n)
-    return KSBA_Bug; 
+    return gpg_error (GPG_ERR_BUG); 
   der += n;
   memcpy (der, name, namelen);
   assert (der+namelen-e->der == n2);
@@ -171,11 +171,11 @@ ksba_certreq_add_subject (KsbaCertreq cr, const char *name)
 
 /* Store the subject's name.  Does perform some syntactic checks on
    the name */
-KsbaError
-ksba_certreq_set_public_key (KsbaCertreq cr, KsbaConstSexp key)
+gpg_error_t
+ksba_certreq_set_public_key (ksba_certreq_t cr, ksba_const_sexp_t key)
 {
   if (!cr)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   xfree (cr->key.der);
   cr->key.der = NULL;
   return _ksba_keyinfo_from_sexp (key, &cr->key.der, &cr->key.derlen);
@@ -196,50 +196,50 @@ ksba_certreq_set_public_key (KsbaCertreq cr, KsbaConstSexp key)
  * Note, that <algo> must be given as a stringified OID or the special
  * string "rsa" which is translated to sha1WithRSAEncryption
 */
-KsbaError
-ksba_certreq_set_sig_val (KsbaCertreq cr, KsbaConstSexp sigval)
+gpg_error_t
+ksba_certreq_set_sig_val (ksba_certreq_t cr, ksba_const_sexp_t sigval)
 {
   const char *s, *endp;
   unsigned long n;
 
   if (!cr)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 
   s = sigval;
   if (*s != '(')
-    return KSBA_Invalid_Sexp;
+    return gpg_error (GPG_ERR_INV_SEXP);
   s++;
 
   n = strtoul (s, (char**)&endp, 10);
   s = endp;
   if (!n || *s!=':')
-    return KSBA_Invalid_Sexp; /* we don't allow empty lengths */
+    return gpg_error (GPG_ERR_INV_SEXP); /* we don't allow empty lengths */
   s++;
   if (n != 7 || memcmp (s, "sig-val", 7))
-    return KSBA_Unknown_Sexp;
+    return gpg_error (GPG_ERR_UNKNOWN_SEXP);
   s += 7;
   if (*s != '(')
-    return digitp (s)? KSBA_Unknown_Sexp : KSBA_Invalid_Sexp;
+    return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
   s++;
 
   /* break out the algorithm ID */
   n = strtoul (s, (char**)&endp, 10);
   s = endp;
   if (!n || *s != ':')
-    return KSBA_Invalid_Sexp; /* we don't allow empty lengths */
+    return gpg_error (GPG_ERR_INV_SEXP); /* we don't allow empty lengths */
   s++;
   xfree (cr->sig_val.algo);
   if (n==3 && s[0] == 'r' && s[1] == 's' && s[2] == 'a')
     { /* kludge to allow "rsa" to be passed as algorithm name */
       cr->sig_val.algo = xtrystrdup ("1.2.840.113549.1.1.5");
       if (!cr->sig_val.algo)
-        return KSBA_Out_Of_Core;
+        return gpg_error (GPG_ERR_ENOMEM);
     }
   else
     {
       cr->sig_val.algo = xtrymalloc (n+1);
       if (!cr->sig_val.algo)
-        return KSBA_Out_Of_Core;
+        return gpg_error (GPG_ERR_ENOMEM);
       memcpy (cr->sig_val.algo, s, n);
       cr->sig_val.algo[n] = 0;
     }
@@ -248,21 +248,21 @@ ksba_certreq_set_sig_val (KsbaCertreq cr, KsbaConstSexp sigval)
   /* And now the values - FIXME: For now we only support one */
   /* fixme: start loop */
   if (*s != '(')
-    return digitp (s)? KSBA_Unknown_Sexp : KSBA_Invalid_Sexp;
+    return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
   s++;
   n = strtoul (s, (char**)&endp, 10);
   s = endp;
   if (!n || *s != ':')
-    return KSBA_Invalid_Sexp; 
+    return gpg_error (GPG_ERR_INV_SEXP); 
   s++;
   s += n; /* ignore the name of the parameter */
   
   if (!digitp(s))
-    return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+    return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
   n = strtoul (s, (char**)&endp, 10);
   s = endp;
   if (!n || *s != ':')
-    return KSBA_Invalid_Sexp; 
+    return gpg_error (GPG_ERR_INV_SEXP); 
   s++;
   if (n > 1 && !*s)
     { /* We might have a leading zero due to the way we encode 
@@ -273,18 +273,18 @@ ksba_certreq_set_sig_val (KsbaCertreq cr, KsbaConstSexp sigval)
   xfree (cr->sig_val.value);
   cr->sig_val.value = xtrymalloc (n);
   if (!cr->sig_val.value)
-    return KSBA_Out_Of_Core;
+    return gpg_error (GPG_ERR_ENOMEM);
   memcpy (cr->sig_val.value, s, n);
   cr->sig_val.valuelen = n;
   s += n;
   if ( *s != ')')
-    return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+    return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
   s++;
   /* fixme: end loop over parameters */
 
   /* we need 2 closing parenthesis */
   if ( *s != ')' || s[1] != ')')
-    return KSBA_Invalid_Sexp; 
+    return gpg_error (GPG_ERR_INV_SEXP); 
 
   return 0;
 }
@@ -292,11 +292,11 @@ ksba_certreq_set_sig_val (KsbaCertreq cr, KsbaConstSexp sigval)
 
 
 /* build the extension block and return it in R_DER and R_DERLEN */
-static KsbaError
-build_extensions (KsbaCertreq cr, void **r_der, size_t *r_derlen)
+static gpg_error_t
+build_extensions (ksba_certreq_t cr, void **r_der, size_t *r_derlen)
 {
-  KsbaError err;
-  KsbaWriter writer, w=NULL;
+  gpg_error_t err;
+  ksba_writer_t writer, w=NULL;
   struct extn_list_s *e;
   unsigned char *value = NULL;
   size_t valuelen;
@@ -305,17 +305,15 @@ build_extensions (KsbaCertreq cr, void **r_der, size_t *r_derlen)
 
   *r_der = NULL;
   *r_derlen = 0;
-  if (!(writer = ksba_writer_new ()))
-    err = KSBA_Out_Of_Core;
-  else
-    err = ksba_writer_set_mem (writer, 2048);
+  err = ksba_writer_new (&writer);
   if (err)
     goto leave;
-  if (!(w = ksba_writer_new ()))
-    {
-      err = KSBA_Out_Of_Core;
-      goto leave;
-    }
+  err = ksba_writer_set_mem (writer, 2048);
+  if (err)
+    goto leave;
+  err = ksba_writer_new (&w);
+  if (err)
+    goto leave;
 
   for (e=cr->extn_list; e; e = e->next)
     {
@@ -350,7 +348,7 @@ build_extensions (KsbaCertreq cr, void **r_der, size_t *r_derlen)
       p = ksba_writer_snatch_mem (w, &n);
       if (!p)
         {
-          err = KSBA_Out_Of_Core;
+          err = gpg_error (GPG_ERR_ENOMEM);
           goto leave;
         }
       err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL,
@@ -366,7 +364,7 @@ build_extensions (KsbaCertreq cr, void **r_der, size_t *r_derlen)
   value = ksba_writer_snatch_mem (writer, &valuelen);
   if (!value)
     {
-      err = KSBA_Out_Of_Core;
+      err = gpg_error (GPG_ERR_ENOMEM);
       goto leave;
     }
   err = ksba_writer_set_mem (writer, valuelen+10);
@@ -383,7 +381,7 @@ build_extensions (KsbaCertreq cr, void **r_der, size_t *r_derlen)
   value = ksba_writer_snatch_mem (writer, &valuelen);
   if (!value)
     {
-      err = KSBA_Out_Of_Core;
+      err = gpg_error (GPG_ERR_ENOMEM);
       goto leave;
     }
 
@@ -409,7 +407,7 @@ build_extensions (KsbaCertreq cr, void **r_der, size_t *r_derlen)
   value = ksba_writer_snatch_mem (writer, &valuelen);
   if (!value)
     {
-      err = KSBA_Out_Of_Core;
+      err = gpg_error (GPG_ERR_ENOMEM);
       goto leave;
     }
   err = ksba_writer_set_mem (writer, valuelen+10);
@@ -426,7 +424,7 @@ build_extensions (KsbaCertreq cr, void **r_der, size_t *r_derlen)
   value = ksba_writer_snatch_mem (writer, &valuelen);
   if (!value)
     {
-      err = KSBA_Out_Of_Core;
+      err = gpg_error (GPG_ERR_ENOMEM);
       goto leave;
     }
   *r_der = value;
@@ -443,18 +441,18 @@ build_extensions (KsbaCertreq cr, void **r_der, size_t *r_derlen)
 
 
 /* Build a value tree from the already stored values. */
-static KsbaError
-build_cri (KsbaCertreq cr)
+static gpg_error_t
+build_cri (ksba_certreq_t cr)
 {
-  KsbaError err;
-  KsbaWriter writer;
+  gpg_error_t err;
+  ksba_writer_t writer;
   void *value = NULL;
   size_t valuelen;
 
-  if (!(writer = ksba_writer_new ()))
-    err = KSBA_Out_Of_Core;
-  else
-    err = ksba_writer_set_mem (writer, 2048);
+  err = ksba_writer_new (&writer);
+  if (err)
+    goto leave;
+  err = ksba_writer_set_mem (writer, 2048);
   if (err)
     goto leave;
 
@@ -471,7 +469,7 @@ build_cri (KsbaCertreq cr)
   /* store the subject */
   if (!cr->subject.der)
     {
-      err = KSBA_Missing_Value;
+      err = gpg_error (GPG_ERR_MISSING_VALUE);
       goto leave;
     }
   err = ksba_writer_write (writer, cr->subject.der, cr->subject.derlen);
@@ -481,7 +479,7 @@ build_cri (KsbaCertreq cr)
   /* store the public key info */
   if (!cr->key.der)
     {
-      err = KSBA_Missing_Value;
+      err = gpg_error (GPG_ERR_MISSING_VALUE);
       goto leave;
     }
   err = ksba_writer_write (writer, cr->key.der, cr->key.derlen);
@@ -516,7 +514,7 @@ build_cri (KsbaCertreq cr)
   value = ksba_writer_snatch_mem (writer, &valuelen);
   if (!value)
     {
-      err = KSBA_Out_Of_Core;
+      err = gpg_error (GPG_ERR_ENOMEM);
       goto leave;
     }
   /* reinitialize the buffer to create the outer sequence */
@@ -534,7 +532,7 @@ build_cri (KsbaCertreq cr)
   /* and store the final result */
   cr->cri.der = ksba_writer_snatch_mem (writer, &cr->cri.derlen);
   if (!cr->cri.der)
-    err = KSBA_Out_Of_Core;
+    err = gpg_error (GPG_ERR_ENOMEM);
 
  leave:
   ksba_writer_release (writer);
@@ -542,13 +540,13 @@ build_cri (KsbaCertreq cr)
   return err;
 }
 
-static KsbaError
-hash_cri (KsbaCertreq cr)
+static gpg_error_t
+hash_cri (ksba_certreq_t cr)
 {
   if (!cr->hash_fnc)
-    return KSBA_Missing_Action;
+    return gpg_error (GPG_ERR_MISSING_ACTION);
   if (!cr->cri.der)
-    return KSBA_Invalid_State;
+    return gpg_error (GPG_ERR_INV_STATE);
   cr->hash_fnc (cr->hash_fnc_arg, cr->cri.der, cr->cri.derlen);
   return 0;
 }
@@ -556,25 +554,25 @@ hash_cri (KsbaCertreq cr)
 
 /* The user has calculated the signatures and we can now write
    the signature */
-static KsbaError 
-sign_and_write (KsbaCertreq cr) 
+static gpg_error_t 
+sign_and_write (ksba_certreq_t cr) 
 {
-  KsbaError err;
-  KsbaWriter writer;
+  gpg_error_t err;
+  ksba_writer_t writer;
   void *value = NULL;
   size_t valuelen;
 
-  if (!(writer = ksba_writer_new ()))
-    err = KSBA_Out_Of_Core;
-  else
-    err = ksba_writer_set_mem (writer, 2048);
+  err = ksba_writer_new (&writer);
+  if (err)
+    goto leave;
+  err = ksba_writer_set_mem (writer, 2048);
   if (err)
     goto leave;
 
   /* store the cri */
   if (!cr->cri.der)
     {
-      err = KSBA_Missing_Value;
+      err = gpg_error (GPG_ERR_MISSING_VALUE);
       goto leave;
     }
   err = ksba_writer_write (writer, cr->cri.der, cr->cri.derlen);
@@ -583,7 +581,7 @@ sign_and_write (KsbaCertreq cr)
   
   /* store the signatureAlgorithm */
   if (!cr->sig_val.algo)
-    return KSBA_Missing_Value;
+    return gpg_error (GPG_ERR_MISSING_VALUE);
   err = _ksba_der_write_algorithm_identifier (writer, 
                                               cr->sig_val.algo, NULL, 0);
   if (err) 
@@ -603,7 +601,7 @@ sign_and_write (KsbaCertreq cr)
   value = ksba_writer_snatch_mem (writer, &valuelen);
   if (!value)
     {
-      err = KSBA_Out_Of_Core;
+      err = gpg_error (GPG_ERR_ENOMEM);
       goto leave;
     }
   err = ksba_writer_set_mem (writer, valuelen+10);
@@ -621,9 +619,9 @@ sign_and_write (KsbaCertreq cr)
   xfree (value);
   value = ksba_writer_snatch_mem (writer, &valuelen);
   if (!value)
-    err = KSBA_Out_Of_Core;
+    err = gpg_error (GPG_ERR_ENOMEM);
   else if (!cr->writer)
-    err = KSBA_Missing_Action;
+    err = gpg_error (GPG_ERR_MISSING_ACTION);
   else
     err = ksba_writer_write (cr->writer, value, valuelen);
 
@@ -637,8 +635,8 @@ sign_and_write (KsbaCertreq cr)
 
 /* The main function to build a certificate request.  It used used in
    a loop so allow for interaction between the function and the caller */
-KsbaError
-ksba_certreq_build (KsbaCertreq cr, KsbaStopReason *r_stopreason)
+gpg_error_t
+ksba_certreq_build (ksba_certreq_t cr, ksba_stop_reason_t *r_stopreason)
 {
   enum { 
     sSTART,
@@ -646,11 +644,11 @@ ksba_certreq_build (KsbaCertreq cr, KsbaStopReason *r_stopreason)
     sGOTSIG,
     sERROR
   } state = sERROR;
-  KsbaError err = 0;
-  KsbaStopReason stop_reason;
+  gpg_error_t err = 0;
+  ksba_stop_reason_t stop_reason;
 
   if (!cr || !r_stopreason)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 
   if (!cr->any_build_done)
     { /* first time initialization of the stop reason */
@@ -671,15 +669,15 @@ ksba_certreq_build (KsbaCertreq cr, KsbaStopReason *r_stopreason)
       break;
     case KSBA_SR_NEED_SIG:
       if (!cr->sig_val.algo)
-        err = KSBA_Missing_Action; 
+        err = gpg_error (GPG_ERR_MISSING_ACTION); 
       else
         state = sGOTSIG;
       break;
     case KSBA_SR_RUNNING:
-      err = KSBA_Invalid_State;
+      err = gpg_error (GPG_ERR_INV_STATE);
       break;
     default:
-      err = KSBA_Bug;
+      err = gpg_error (GPG_ERR_BUG);
       break;
     }
   if (err)
@@ -698,7 +696,7 @@ ksba_certreq_build (KsbaCertreq cr, KsbaStopReason *r_stopreason)
       err = sign_and_write (cr);
       break;
     default:
-      err = KSBA_Invalid_State;
+      err = gpg_error (GPG_ERR_INV_STATE);
       break;
     }
   if (err)

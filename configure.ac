@@ -34,6 +34,9 @@ LIBKSBA_LT_AGE=0
 LIBKSBA_LT_REVISION=0
 #-------------------
 
+NEED_GPG_ERROR_VERSION=0.6
+
+
 PACKAGE=$PACKAGE_NAME
 VERSION=$PACKAGE_VERSION
 
@@ -91,6 +94,16 @@ fi
 
 
 # Checks for libraries.
+
+AM_PATH_GPG_ERROR("$NEED_GPG_ERROR_VERSION")
+if test "x$GPG_ERROR_LIBS" = "x"; then
+  AC_MSG_ERROR([libgpg-error is needed.
+                See ftp://ftp.gnupg.org/gcrypt/libgpg-error/ .])
+fi
+AC_DEFINE(GPG_ERR_SOURCE_DEFAULT, GPG_ERR_SOURCE_KSBA,
+          [The default error source for libksba.])
+
+
 
 # Checks for header files.
 AC_HEADER_STDC

@@ -29,14 +29,14 @@ typedef struct ber_decoder_s *BerDecoder;
 BerDecoder _ksba_ber_decoder_new (void);
 void       _ksba_ber_decoder_release (BerDecoder d);
 
-KsbaError _ksba_ber_decoder_set_module (BerDecoder d, KsbaAsnTree module);
-KsbaError _ksba_ber_decoder_set_reader (BerDecoder d, KsbaReader r);
+gpg_error_t _ksba_ber_decoder_set_module (BerDecoder d, ksba_asn_tree_t module);
+gpg_error_t _ksba_ber_decoder_set_reader (BerDecoder d, ksba_reader_t r);
 
-KsbaError _ksba_ber_decoder_dump (BerDecoder d, FILE *fp);
-KsbaError _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
-                                    AsnNode *r_root,
-                                    unsigned char **r_image,
-                                    size_t *r_imagelen);
+gpg_error_t _ksba_ber_decoder_dump (BerDecoder d, FILE *fp);
+gpg_error_t _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
+                                      AsnNode *r_root,
+                                      unsigned char **r_image,
+                                      size_t *r_imagelen);
 
 
 

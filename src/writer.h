@@ -38,7 +38,7 @@ struct ksba_writer_s {
   enum writer_type type;
   int ndef_is_open;
 
-  KsbaError (*filter)(void*,
+  gpg_error_t (*filter)(void*,
                       const void *,size_t, size_t *,
                       void *, size_t, size_t *);
   void *filter_arg;

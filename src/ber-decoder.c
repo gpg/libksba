@@ -55,7 +55,7 @@ typedef struct decoder_state_s *DECODER_STATE;
 
 struct ber_decoder_s {
   AsnNode module;    /* the ASN.1 structure */
-  KsbaReader reader;
+  ksba_reader_t reader;
   const char *last_errdesc; /* string with the error description */
   int non_der;    /* set if the encoding is not DER conform */
   AsnNode root;   /* of the expanded parse tree */
@@ -159,7 +159,7 @@ set_error (BerDecoder d, AsnNode node, const char *text)
   fprintf (stderr,"ber-decoder: node `%s': %s\n", 
            node? node->name:"?", text);
   d->last_errdesc = text;
-  return KSBA_BER_Error;
+  return gpg_error (GPG_ERR_BAD_BER);
 }
 
 
@@ -169,7 +169,7 @@ eof_or_error (BerDecoder d, int premature)
   if (ksba_reader_error (d->reader))
     {
       set_error (d, NULL, "read error");
-      return KSBA_Read_Error;
+      return gpg_error (GPG_ERR_READ_ERROR);
     }
   if (premature)
     return set_error (d, NULL, "premature EOF");
@@ -313,26 +313,26 @@ _ksba_ber_decoder_release (BerDecoder d)
  * 
  * Return value: 0 on success or an error code
  **/
-KsbaError
-_ksba_ber_decoder_set_module (BerDecoder d, KsbaAsnTree module)
+gpg_error_t
+_ksba_ber_decoder_set_module (BerDecoder d, ksba_asn_tree_t module)
 {
   if (!d || !module)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   if (d->module)
-    return KSBA_Conflict; /* module already set */
+    return gpg_error (GPG_ERR_CONFLICT); /* module already set */
 
   d->module = module->parse_tree;
   return 0;
 }
 
 
-KsbaError
-_ksba_ber_decoder_set_reader (BerDecoder d, KsbaReader r)
+gpg_error_t
+_ksba_ber_decoder_set_reader (BerDecoder d, ksba_reader_t r)
 {
   if (!d || !r)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   if (d->reader)
-    return KSBA_Conflict; /* reader already set */
+    return gpg_error (GPG_ERR_CONFLICT); /* reader already set */
   
   d->reader = r;
   return 0;
@@ -344,7 +344,7 @@ _ksba_ber_decoder_set_reader (BerDecoder d, KsbaReader r)
  **********************************************/
 
 static int
-read_byte (KsbaReader reader)
+read_byte (ksba_reader_t reader)
 {
   unsigned char buf;
   size_t nread;
@@ -359,7 +359,7 @@ read_byte (KsbaReader reader)
 /* read COUNT bytes into buffer.  buffer may be NULL to skip over
    COUNT bytes.  Return 0 on success */
 static int 
-read_buffer (KsbaReader reader, char *buffer, size_t count)
+read_buffer (ksba_reader_t reader, char *buffer, size_t count)
 {
   size_t nread;
 
@@ -701,7 +701,7 @@ match_der (AsnNode root, const struct tag_info *ti,
 }
 
 
-static KsbaError 
+static gpg_error_t 
 decoder_init (BerDecoder d, const char *start_name)
 {
   d->ds = new_decoder_state ();
@@ -725,12 +725,12 @@ decoder_deinit (BerDecoder d)
 }
 
 
-static KsbaError
+static gpg_error_t
 decoder_next (BerDecoder d)
 {
   struct tag_info ti;
   AsnNode node;
-  KsbaError err;
+  gpg_error_t err;
   DECODER_STATE ds = d->ds;
   int debug = d->debug;
 
@@ -755,7 +755,7 @@ decoder_next (BerDecoder d)
           d->image.used = 0;
           d->image.buf = xtrymalloc (d->image.length);
           if (!d->image.buf)
-            return KSBA_Out_Of_Core;
+            return gpg_error (GPG_ERR_ENOMEM);
         }
 
       if (ti.nhdr + d->image.used >= d->image.length)
@@ -896,7 +896,7 @@ decoder_next (BerDecoder d)
   return 0;
 }
 
-static KsbaError
+static gpg_error_t
 decoder_skip (BerDecoder d)
 {
   if (d->val.primitive)
@@ -935,17 +935,17 @@ distance (AsnNode root, AsnNode node)
  * 
  * Return value: 
  **/
-KsbaError
+gpg_error_t
 _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
 {
-  KsbaError err;
+  gpg_error_t err;
   int depth = 0;
   AsnNode node;
   unsigned char *buf = NULL;
   size_t buflen = 0;;
 
   if (!d)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 
   d->debug = !!getenv("DEBUG_BER_DECODER");
   d->use_image = 0;
@@ -980,7 +980,7 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
               buflen = d->val.length + 100;
               buf = xtrymalloc (buflen);
               if (!buf)
-                err = KSBA_Out_Of_Core;
+                err = gpg_error (GPG_ERR_ENOMEM);
             }
 
           for (n=0; !err && n < d->val.length; n++)
@@ -1032,19 +1032,19 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
 
 
 
-KsbaError
+gpg_error_t
 _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
                           AsnNode *r_root,
                           unsigned char **r_image, size_t *r_imagelen)
 {
-  KsbaError err;
+  gpg_error_t err;
   AsnNode node;
   unsigned char *buf = NULL;
   size_t buflen = 0;
   unsigned long startoff;
 
   if (!d)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 
   if (r_root)
     *r_root = NULL;
@@ -1096,7 +1096,7 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
               buflen = d->val.length + 100;
               buf = xtrymalloc (buflen);
               if (!buf)
-                err = KSBA_Out_Of_Core;
+                err = gpg_error (GPG_ERR_ENOMEM);
             }
 
           for (n=0; !err && n < d->val.length; n++)

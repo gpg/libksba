@@ -34,11 +34,11 @@ struct cert_extn_info {
 struct ksba_cert_s {
   int initialized;
   int ref_count;
-  KsbaAsnTree asn_tree;
+  ksba_asn_tree_t asn_tree;
   AsnNode root;  /* root of the tree with the values */
   unsigned char *image;
   size_t imagelen;
-  KsbaError last_error;
+  gpg_error_t last_error;
   struct {
     char *digest_algo;
     int  extns_valid;
@@ -48,7 +48,7 @@ struct ksba_cert_s {
 };
 
 
-int _ksba_cert_cmp (KsbaCert a, KsbaCert b);
+int _ksba_cert_cmp (ksba_cert_t a, ksba_cert_t b);
 
 
 #endif /*CERT_H*/

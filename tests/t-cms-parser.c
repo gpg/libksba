@@ -29,23 +29,23 @@
 
 #define fail_if_err(a) do { if(a) {                                       \
                               fprintf (stderr, "%s:%d: KSBA error: %s\n", \
-                              __FILE__, __LINE__, ksba_strerror(a));   \
+                              __FILE__, __LINE__, gpg_strerror(a));   \
                               exit (1); }                              \
                            } while(0)
 
 
 #define fail_if_err2(f, a) do { if(a) {\
             fprintf (stderr, "%s:%d: KSBA error on file `%s': %s\n", \
-                       __FILE__, __LINE__, (f), ksba_strerror(a));   \
+                       __FILE__, __LINE__, (f), gpg_strerror(a));   \
                             exit (1); }                              \
                            } while(0)
 
 
 static void
-print_sexp (KsbaConstSexp p)
+print_sexp (ksba_const_sexp_t p)
 {
   unsigned long n;
-  KsbaConstSexp endp;
+  char *endp;
 
   if (!p)
     fputs ("none", stdout);
@@ -56,7 +56,7 @@ print_sexp (KsbaConstSexp p)
       else
         {
           p++;
-          n = strtoul (p, (char**)&endp, 10);
+          n = strtoul (p, &endp, 10);
           p = endp;
           if (*p!=':')
             fputs ("ERROR - invalid value", stdout);
@@ -97,17 +97,17 @@ print_hex (unsigned char *p, size_t n)
 static void
 one_file (const char *fname)
 {
-  KsbaError err;
+  gpg_error_t err;
   FILE *fp;
-  KsbaReader r;
-  KsbaWriter w;
-  KsbaCMS cms;
+  ksba_reader_t r;
+  ksba_writer_t w;
+  ksba_cms_t cms;
   int i;
   const char *algoid;
-  KsbaStopReason stopreason;
+  ksba_stop_reason_t stopreason;
   const char *s;
   size_t n;
-  KsbaSexp p;
+  ksba_sexp_t p;
   char *dn;
   int idx;
 
@@ -120,9 +120,9 @@ one_file (const char *fname)
       exit (1);
     }
 
-  r = ksba_reader_new ();
-  if (!r)
-    fail_if_err (KSBA_Out_Of_Core);
+  err = ksba_reader_new (&r);
+  if (err)
+    fail_if_err (err);
   err = ksba_reader_set_file (r, fp);
   fail_if_err (err);
 
@@ -138,13 +138,13 @@ one_file (const char *fname)
     }
   printf ("identified as: %s\n", s);
 
-  w = ksba_writer_new ();
-  if (!w)
-    fail_if_err (KSBA_Out_Of_Core);
+  err = ksba_writer_new (&w);
+  if (err)
+    fail_if_err (err);
 
-  cms = ksba_cms_new ();
-  if (!cms)
-    fail_if_err (KSBA_Out_Of_Core);
+  err = ksba_cms_new (&cms);
+  if (err)
+    fail_if_err (err);
 
   err = ksba_cms_set_reader_writer (cms, r, w);
   fail_if_err (err);
@@ -202,7 +202,7 @@ one_file (const char *fname)
       for (idx=0; idx < 1; idx++)
         {
           err = ksba_cms_get_issuer_serial (cms, idx, &dn, &p);
-          if (err == KSBA_No_Data && !idx)
+          if (gpg_err_code (err) == GPG_ERR_NO_DATA && !idx)
             {
               printf ("this is a certs-only message\n");
               break;

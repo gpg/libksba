@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 
 #include "util.h"
 #include "asn1-func.h"
@@ -39,21 +40,19 @@ struct ksba_name_s {
 
 /* Also this is a public function it is not yet usable becuase we
    don't have a way to set real information.  */
-KsbaName
-ksba_name_new (void)
+gpg_error_t
+ksba_name_new (ksba_name_t *r_name)
 {
-  KsbaName name;
+  *r_name = xtrycalloc (1, sizeof **r_name);
+  if (!*r_name)
+    return gpg_error_from_errno (errno);
+  (*r_name)->ref_count++;
 
-  name = xtrycalloc (1, sizeof *name);
-  if (!name)
-    return NULL;
-  name->ref_count++;
-
-  return name;
+  return 0;
 }
 
 void
-ksba_name_ref (KsbaName name)
+ksba_name_ref (ksba_name_t name)
 {
   if (!name)
     fprintf (stderr, "BUG: ksba_name_ref for NULL\n");
@@ -63,7 +62,7 @@ ksba_name_ref (KsbaName name)
 
 
 void
-ksba_name_release (KsbaName name)
+ksba_name_release (ksba_name_t name)
 {
   int i;
 
@@ -85,14 +84,14 @@ ksba_name_release (KsbaName name)
 }
 
 
-/* This is an internal function to create an KsbaName object from an
+/* This is an internal function to create an ksba_name_t object from an
    DER encoded image which must point to an GeneralNames object */
-KsbaError 
-_ksba_name_new_from_der (KsbaName *r_name,
+gpg_error_t 
+_ksba_name_new_from_der (ksba_name_t *r_name,
                          const unsigned char *image, size_t imagelen)
 {
-  KsbaError err;
-  KsbaName name;
+  gpg_error_t err;
+  ksba_name_t name;
   struct tag_info ti;
   const unsigned char *der;
   size_t derlen;
@@ -100,7 +99,7 @@ _ksba_name_new_from_der (KsbaName *r_name,
   char *p;
 
   if (!r_name || !image)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 
   *r_name = NULL;
 
@@ -115,11 +114,11 @@ _ksba_name_new_from_der (KsbaName *r_name,
       if (err)
         return err;
       if (ti.class != CLASS_CONTEXT) 
-        return KSBA_Invalid_Cert_Object; /* we expected a tag */
+        return gpg_error (GPG_ERR_INV_CERT_OBJ); /* we expected a tag */
       if (ti.ndef)
-        return KSBA_Not_DER_Encoded;
+        return gpg_error (GPG_ERR_NOT_DER_ENCODED);
       if (derlen < ti.length)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       switch (ti.tag)
         {
         case 1: /* rfc822Name - this is an imlicit IA5_STRING */
@@ -137,16 +136,16 @@ _ksba_name_new_from_der (KsbaName *r_name,
     }
 
   /* allocate array and set all slots to NULL for easier error recovery */
-  name = ksba_name_new ();
-  if (!name)
-    return KSBA_Out_Of_Core;
+  err = ksba_name_new (&name);
+  if (err)
+    return err;
   if (!n)
     return 0; /* empty GeneralNames */
   name->names = xtrycalloc (n, sizeof *name->names);
   if (!name->names)
     {
       ksba_name_release (name);
-      return KSBA_Out_Of_Core;
+      return gpg_error (GPG_ERR_ENOMEM);
     }
   name->n_names = n;
 
@@ -167,7 +166,7 @@ _ksba_name_new_from_der (KsbaName *r_name,
           if (!p)
             {
               ksba_name_release (name);
-              return KSBA_Out_Of_Core;
+              return gpg_error (GPG_ERR_ENOMEM);
             }
           *p++ = '<';
           memcpy (p, der, ti.length);
@@ -189,7 +188,7 @@ _ksba_name_new_from_der (KsbaName *r_name,
           if (!p)
             {
               ksba_name_release (name);
-              return KSBA_Out_Of_Core;
+              return gpg_error (GPG_ERR_ENOMEM);
             }
           p = stpcpy (p, "(3:uri");
           p = stpcpy (p, numbuf);
@@ -228,7 +227,7 @@ _ksba_name_new_from_der (KsbaName *r_name,
 
    The return string has the same lifetime as NAME. */
 const char *
-ksba_name_enum (KsbaName name, int idx)
+ksba_name_enum (ksba_name_t name, int idx)
 {
   if (!name || idx < 0)
     return NULL;
@@ -242,7 +241,7 @@ ksba_name_enum (KsbaName name, int idx)
    must free the return value.  Note that this function should not be
    used for enumeration */
 char *
-ksba_name_get_uri (KsbaName name, int idx)
+ksba_name_get_uri (ksba_name_t name, int idx)
 {
   const char *s = ksba_name_enum (name, idx);
   int n;

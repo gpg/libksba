@@ -52,7 +52,7 @@ struct oidlist_s {
 
 struct certlist_s {
   struct certlist_s *next;
-  KsbaCert cert;
+  ksba_cert_t cert;
   int  msg_digest_len;  /* used length of .. */
   char msg_digest[32];  /* enough space to store a SHA-256 hash */
   ksba_isotime_t signing_time;
@@ -82,22 +82,22 @@ struct sig_val_s {
 };
 
 struct ksba_cms_s {
-  KsbaError last_error;
+  gpg_error_t last_error;
 
-  KsbaReader reader;
-  KsbaWriter writer;
+  ksba_reader_t reader;
+  ksba_writer_t writer;
 
   void (*hash_fnc)(void *, const void *, size_t);
   void *hash_fnc_arg;
 
-  KsbaStopReason stop_reason;
+  ksba_stop_reason_t stop_reason;
   
   struct {
     char *oid;
     unsigned long length;
     int ndef;
-    KsbaContentType ct;
-    KsbaError (*handler)(KsbaCMS);
+    ksba_content_type_t ct;
+    gpg_error_t (*handler)(ksba_cms_t);
   } content;
 
   struct {
@@ -135,11 +135,11 @@ struct ksba_cms_s {
 
 
 /*-- cms-parser.c --*/
-KsbaError _ksba_cms_parse_content_info (KsbaCMS cms);
-KsbaError _ksba_cms_parse_signed_data_part_1 (KsbaCMS cms);
-KsbaError _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms);
-KsbaError _ksba_cms_parse_enveloped_data_part_1 (KsbaCMS cms);
-KsbaError _ksba_cms_parse_enveloped_data_part_2 (KsbaCMS cms);
+gpg_error_t _ksba_cms_parse_content_info (ksba_cms_t cms);
+gpg_error_t _ksba_cms_parse_signed_data_part_1 (ksba_cms_t cms);
+gpg_error_t _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms);
+gpg_error_t _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms);
+gpg_error_t _ksba_cms_parse_enveloped_data_part_2 (ksba_cms_t cms);
 
 
 

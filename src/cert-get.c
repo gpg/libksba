@@ -29,19 +29,19 @@
 #include "cert.h"
 
 
-KsbaError
-ksba_cert_get_string_attr (KsbaCert cert, KsbaAttr what, int idx,
+gpg_error_t
+ksba_cert_get_string_attr (ksba_cert_t cert, ksba_attr_t what, int idx,
                            const char **ret)
 {
   *ret = NULL; /* set a default value */
   if (!cert || idx < 0 )
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 
   switch (what)
     {
       
     default:
-      return KSBA_Invalid_Attr;
+      return gpg_error (GPG_ERR_INV_ATTR,);
     }
   
   return 0;
@@ -49,19 +49,19 @@ ksba_cert_get_string_attr (KsbaCert cert, KsbaAttr what, int idx,
 
 
 /* FIXME: This function is not yet used or published. */
-KsbaError
-ksba_cert_get_time_attr (KsbaCert cert, KsbaAttr what, int idx,
+gpg_error_t
+ksba_cert_get_time_attr (ksba_cert_t cert, ksba_attr_t what, int idx,
                          ksba_isotime_t ret)
 {
   *ret = 0; /* set a default value */
   if (!cert || idx < 0 )
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 
   switch (what)
     {
       
     default:
-      return KSBA_Invalid_Attr;
+      return gpg_error (GPG_ERR_INV_ATTR,);
     }
   
   return 0;

@@ -38,9 +38,9 @@ struct extn_list_s {
 
 
 struct ksba_certreq_s {
-  KsbaError last_error;
+  gpg_error_t last_error;
 
-  KsbaWriter writer;
+  ksba_writer_t writer;
 
   void (*hash_fnc)(void *, const void *, size_t);
   void *hash_fnc_arg;

@@ -28,7 +28,9 @@ EXTRA_DIST = $(test_certs)
 
 TESTS = cert-basic t-crl-parser
 
+AM_CFLAGS = @GPG_ERROR_CFLAGS@
+
 noinst_PROGRAMS = $(TESTS) t-cms-parser t-crl-parser t-dnparser
-LDADD = ../src/libksba.la
+LDADD = ../src/libksba.la @GPG_ERROR_LIBS@
 
 

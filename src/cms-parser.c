@@ -41,7 +41,7 @@
 #include "keyinfo.h"
 
 static int
-read_byte (KsbaReader reader)
+read_byte (ksba_reader_t reader)
 {
   unsigned char buf;
   size_t nread;
@@ -55,7 +55,7 @@ read_byte (KsbaReader reader)
 
 /* read COUNT bytes into buffer.  Return 0 on success */
 static int 
-read_buffer (KsbaReader reader, char *buffer, size_t count)
+read_buffer (ksba_reader_t reader, char *buffer, size_t count)
 {
   size_t nread;
 
@@ -70,13 +70,13 @@ read_buffer (KsbaReader reader, char *buffer, size_t count)
 }
 
 /* Create a new decoder and run it for the given element */
-static KsbaError
-create_and_run_decoder (KsbaReader reader, const char *elem_name,
+static gpg_error_t
+create_and_run_decoder (ksba_reader_t reader, const char *elem_name,
                         AsnNode *r_root,
                         unsigned char **r_image, size_t *r_imagelen)
 {
-  KsbaError err;
-  KsbaAsnTree cms_tree;
+  gpg_error_t err;
+  ksba_asn_tree_t cms_tree;
   BerDecoder decoder;
 
   err = ksba_asn_create_tree ("cms", &cms_tree);
@@ -87,7 +87,7 @@ create_and_run_decoder (KsbaReader reader, const char *elem_name,
   if (!decoder)
     {
       ksba_asn_tree_release (cms_tree);
-      return KSBA_Out_Of_Core;
+      return gpg_error (GPG_ERR_ENOMEM);
     }
 
   err = _ksba_ber_decoder_set_reader (decoder, reader);
@@ -130,13 +130,13 @@ create_and_run_decoder (KsbaReader reader, const char *elem_name,
    by the parameters.
 
 */
-static KsbaError
-parse_content_info (KsbaReader reader,
+static gpg_error_t
+parse_content_info (ksba_reader_t reader,
                     unsigned long *r_len, int *r_ndef,
                     char **r_oid, int *has_content)
 {
   struct tag_info ti;
-  KsbaError err;
+  gpg_error_t err;
   int content_ndef;
   unsigned long content_len;
   unsigned char oidbuf[100]; /* pretty large for an OID */
@@ -148,11 +148,11 @@ parse_content_info (KsbaReader reader,
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
-    return KSBA_Invalid_CMS_Object;
+    return gpg_error (GPG_ERR_INV_CMS_OBJ);
   content_len = ti.length; 
   content_ndef = ti.ndef;
   if (!content_ndef && content_len < 3)
-    return KSBA_Object_Too_Short; /* to encode an OID */
+    return gpg_error (GPG_ERR_TOO_SHORT); /* to encode an OID */
 
   /* read the OID */
   err = _ksba_ber_read_tl (reader, &ti);
@@ -160,25 +160,25 @@ parse_content_info (KsbaReader reader,
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OBJECT_ID
          && !ti.is_constructed && ti.length) )
-    return KSBA_Invalid_CMS_Object; 
+    return gpg_error (GPG_ERR_INV_CMS_OBJ); 
   if (!content_ndef)
     {
       if (content_len < ti.nhdr)
-        return KSBA_BER_Error; /* triplet header larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet header larger that sequence */
       content_len -= ti.nhdr;
       if (content_len < ti.length)
-        return KSBA_BER_Error; /* triplet larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet larger that sequence */
       content_len -= ti.length;
     }
 
   if (ti.length >= DIM(oidbuf))
-    return KSBA_Object_Too_Large;
+    return gpg_error (GPG_ERR_TOO_LARGE);
   err = read_buffer (reader, oidbuf, ti.length);
   if (err)
     return err;
   oid = ksba_oid_to_str (oidbuf, ti.length);
   if (!oid)
-    return KSBA_Out_Of_Core;
+    return gpg_error (GPG_ERR_ENOMEM);
 
   if (!content_ndef && !content_len)
     { /* no data */
@@ -204,15 +204,15 @@ parse_content_info (KsbaReader reader,
       else /* neither [0] nor NULL */
         {
           xfree (oid);
-          return KSBA_Invalid_CMS_Object; 
+          return gpg_error (GPG_ERR_INV_CMS_OBJ); 
         }
       if (!content_ndef)
         {
           if (content_len < ti.nhdr)
-            return KSBA_BER_Error; /* triplet header larger that sequence */
+            return gpg_error (GPG_ERR_BAD_BER); /* triplet header larger that sequence */
           content_len -= ti.nhdr;
           if (!ti.ndef && content_len < ti.length)
-            return KSBA_BER_Error; /* triplet larger that sequence */
+            return gpg_error (GPG_ERR_BAD_BER); /* triplet larger that sequence */
         }
     }
   *r_len = content_len;
@@ -234,15 +234,15 @@ parse_content_info (KsbaReader reader,
    Returns: 0 on success or an error code. Other values are returned
    by the parameters.
 */
-static KsbaError
-parse_encrypted_content_info (KsbaReader reader,
+static gpg_error_t
+parse_encrypted_content_info (ksba_reader_t reader,
                               unsigned long *r_len, int *r_ndef,
                               char **r_cont_oid, char **r_algo_oid,
                               char **r_algo_parm, size_t *r_algo_parmlen,
                               int *has_content)
 {
   struct tag_info ti;
-  KsbaError err;
+  gpg_error_t err;
   int content_ndef;
   unsigned long content_len;
   unsigned char tmpbuf[500]; /* for OID or algorithmIdentifier */
@@ -260,11 +260,11 @@ parse_encrypted_content_info (KsbaReader reader,
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
-    return KSBA_Invalid_CMS_Object;
+    return gpg_error (GPG_ERR_INV_CMS_OBJ);
   content_len = ti.length; 
   content_ndef = ti.ndef;
   if (!content_ndef && content_len < 3)
-    return KSBA_Object_Too_Short; /* to encode an OID */
+    return gpg_error (GPG_ERR_TOO_SHORT); /* to encode an OID */
 
   /* read the OID */
   err = _ksba_ber_read_tl (reader, &ti);
@@ -272,24 +272,24 @@ parse_encrypted_content_info (KsbaReader reader,
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OBJECT_ID
          && !ti.is_constructed && ti.length) )
-    return KSBA_Invalid_CMS_Object; 
+    return gpg_error (GPG_ERR_INV_CMS_OBJ); 
   if (!content_ndef)
     {
       if (content_len < ti.nhdr)
-        return KSBA_BER_Error; /* triplet header larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet header larger that sequence */
       content_len -= ti.nhdr;
       if (content_len < ti.length)
-        return KSBA_BER_Error; /* triplet larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet larger that sequence */
       content_len -= ti.length;
     }
   if (ti.length >= DIM(tmpbuf))
-    return KSBA_Object_Too_Large;
+    return gpg_error (GPG_ERR_TOO_LARGE);
   err = read_buffer (reader, tmpbuf, ti.length);
   if (err)
     return err;
   cont_oid = ksba_oid_to_str (tmpbuf, ti.length);
   if (!cont_oid)
-    return KSBA_Out_Of_Core;
+    return gpg_error (GPG_ERR_ENOMEM);
 
   /* read the algorithmIdentifier */
   err = _ksba_ber_read_tl (reader, &ti);
@@ -297,18 +297,18 @@ parse_encrypted_content_info (KsbaReader reader,
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
-    return KSBA_Invalid_CMS_Object;
+    return gpg_error (GPG_ERR_INV_CMS_OBJ);
   if (!content_ndef)
     {
       if (content_len < ti.nhdr)
-        return KSBA_BER_Error; /* triplet header larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet header larger that sequence */
       content_len -= ti.nhdr;
       if (content_len < ti.length)
-        return KSBA_BER_Error; /* triplet larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet larger that sequence */
       content_len -= ti.length;
     }
   if (ti.nhdr + ti.length >= DIM(tmpbuf))
-    return KSBA_Object_Too_Large;
+    return gpg_error (GPG_ERR_TOO_LARGE);
   memcpy (tmpbuf, ti.buf, ti.nhdr);
   err = read_buffer (reader, tmpbuf+ti.nhdr, ti.length);
   if (err)
@@ -320,7 +320,7 @@ parse_encrypted_content_info (KsbaReader reader,
     return err;
   assert (nread <= ti.nhdr + ti.length);
   if (nread < ti.nhdr + ti.length)
-    return KSBA_Object_Too_Short;
+    return gpg_error (GPG_ERR_TOO_SHORT);
 
   /* the optional encryptedDataInfo */
   *has_content = 0;
@@ -345,10 +345,10 @@ parse_encrypted_content_info (KsbaReader reader,
           if (!content_ndef)
             {
               if (content_len < ti.nhdr)
-                return KSBA_BER_Error; 
+                return gpg_error (GPG_ERR_BAD_BER); 
               content_len -= ti.nhdr;
               if (!ti.ndef && content_len < ti.length)
-                return KSBA_BER_Error; 
+                return gpg_error (GPG_ERR_BAD_BER); 
             }
         }
       else /* not what we want - push it back */
@@ -382,10 +382,10 @@ parse_encrypted_content_info (KsbaReader reader,
    Returns: 0 on success or an error code.  On success the OID and the
    length values are stored in the cms structure.
 */
-KsbaError
-_ksba_cms_parse_content_info (KsbaCMS cms)
+gpg_error_t
+_ksba_cms_parse_content_info (ksba_cms_t cms)
 {
-  KsbaError err;
+  gpg_error_t err;
   int has_content;
   int content_ndef;
   unsigned long content_len;
@@ -396,14 +396,16 @@ _ksba_cms_parse_content_info (KsbaCMS cms)
   if (err)
     { /* return a more meaningful error message.  This way the caller
          can pass arbitrary data to the function and get back an error
-         that this is not CMS instead of just an BER Error */
-      if (err == KSBA_BER_Error || err == KSBA_Invalid_CMS_Object
-          || err == KSBA_Object_Too_Short)
-        err = KSBA_No_CMS_Object;
+         that this is not CMS instead of the the not very detailed BER
+         Error. */
+      if (gpg_err_code (err) == GPG_ERR_BAD_BER
+          || gpg_err_code (err) == GPG_ERR_INV_CMS_OBJ
+          || gpg_err_code (err) == GPG_ERR_TOO_SHORT)
+        err = gpg_error (GPG_ERR_NO_CMS_OBJ);
       return err;
     }
   if (!has_content)
-    return KSBA_No_CMS_Object; /* It is not optional here */
+    return gpg_error (GPG_ERR_NO_CMS_OBJ); /* It is not optional here */
   cms->content.length = content_len;
   cms->content.ndef = content_ndef;
   xfree (cms->content.oid);
@@ -415,12 +417,12 @@ _ksba_cms_parse_content_info (KsbaCMS cms)
 
 /* parse a SEQUENCE and the first element which is expected to be the
    CMS version.  Return the version and the length info */
-static KsbaError
-parse_cms_version (KsbaReader reader, int *r_version,
+static gpg_error_t
+parse_cms_version (ksba_reader_t reader, int *r_version,
                    unsigned long *r_len, int *r_ndef)
 {
   struct tag_info ti;
-  KsbaError err;
+  gpg_error_t err;
   unsigned long data_len;
   int data_ndef;
   int c;
@@ -431,11 +433,11 @@ parse_cms_version (KsbaReader reader, int *r_version,
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
-    return KSBA_Invalid_CMS_Object;
+    return gpg_error (GPG_ERR_INV_CMS_OBJ);
   data_len = ti.length; 
   data_ndef = ti.ndef;
   if (!data_ndef && data_len < 3)
-    return KSBA_Object_Too_Short; /*to encode the version*/
+    return gpg_error (GPG_ERR_TOO_SHORT); /*to encode the version*/
 
   /* read the version integer */
   err = _ksba_ber_read_tl (reader, &ti);
@@ -443,22 +445,22 @@ parse_cms_version (KsbaReader reader, int *r_version,
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_INTEGER
          && !ti.is_constructed && ti.length) )
-    return KSBA_Invalid_CMS_Object; 
+    return gpg_error (GPG_ERR_INV_CMS_OBJ); 
   if (!data_ndef)
     {
       if (data_len < ti.nhdr)
-        return KSBA_BER_Error; /* triplet header larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet header larger that sequence */
       data_len -= ti.nhdr;
       if (data_len < ti.length)
-        return KSBA_BER_Error; /* triplet larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet larger that sequence */
       data_len -= ti.length;
     }
   if (ti.length != 1)
-    return KSBA_Unsupported_CMS_Version; 
+    return gpg_error (GPG_ERR_UNSUPPORTED_CMS_VERSION); 
   if ( (c=read_byte (reader)) == -1)
-    return KSBA_Read_Error;
+    return gpg_error (GPG_ERR_READ_ERROR);
   if ( !(c == 0 || c == 1 || c == 2 || c == 3 || c == 4) )
-    return KSBA_Unsupported_CMS_Version;
+    return gpg_error (GPG_ERR_UNSUPPORTED_CMS_VERSION);
   *r_version = c;
   *r_len = data_len;
   *r_ndef = data_ndef;
@@ -484,11 +486,11 @@ parse_cms_version (KsbaReader reader, int *r_version,
    }
 
 */
-KsbaError
-_ksba_cms_parse_signed_data_part_1 (KsbaCMS cms)
+gpg_error_t
+_ksba_cms_parse_signed_data_part_1 (ksba_cms_t cms)
 {
   struct tag_info ti;
-  KsbaError err;
+  gpg_error_t err;
   int signed_data_ndef;
   unsigned long signed_data_len;
   int algo_set_ndef;
@@ -511,14 +513,14 @@ _ksba_cms_parse_signed_data_part_1 (KsbaCMS cms)
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SET
          && ti.is_constructed) )
-    return KSBA_Invalid_CMS_Object;  /* not the expected SET tag */
+    return gpg_error (GPG_ERR_INV_CMS_OBJ);  /* not the expected SET tag */
   if (!signed_data_ndef)
     {
       if (signed_data_len < ti.nhdr)
-        return KSBA_BER_Error; /* triplet header larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet header larger that sequence */
       signed_data_len -= ti.nhdr;
       if (!ti.ndef && signed_data_len < ti.length)
-        return KSBA_BER_Error; /* triplet larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet larger that sequence */
       signed_data_len -= ti.length;
     }
   algo_set_len = ti.length; 
@@ -526,15 +528,15 @@ _ksba_cms_parse_signed_data_part_1 (KsbaCMS cms)
   
   /* fixme: we are not able to read ndef length algorithm indentifiers. */
   if (algo_set_ndef)
-    return KSBA_Unsupported_Encoding;
+    return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);
   /* read the entire sequence into a buffer (add one to avoid malloc(0)) */
   buffer = xtrymalloc (algo_set_len + 1);
   if (!buffer)
-    return KSBA_Out_Of_Core;
+    return gpg_error (GPG_ERR_ENOMEM);
   if (read_buffer (cms->reader, buffer, algo_set_len))
     {
       xfree (buffer);
-      return KSBA_Read_Error;
+      return gpg_error (GPG_ERR_READ_ERROR);
     }
   p = buffer;
   while (algo_set_len)
@@ -556,7 +558,7 @@ _ksba_cms_parse_signed_data_part_1 (KsbaCMS cms)
       if (!ol)
         {
           xfree (oid);
-          return KSBA_Out_Of_Core;
+          return gpg_error (GPG_ERR_ENOMEM);
         }
       ol->oid = oid;
       ol->next = cms->digest_algos;
@@ -579,10 +581,10 @@ _ksba_cms_parse_signed_data_part_1 (KsbaCMS cms)
     {
       len = ksba_reader_tell (cms->reader) - off;
       if (signed_data_len < len)
-        return KSBA_BER_Error; /* parsed content info larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* parsed content info larger that sequence */
       signed_data_len -= len;
       if (!encap_cont_ndef && signed_data_len < encap_cont_len)
-        return KSBA_BER_Error; /* triplet larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet larger that sequence */
     }
 
   /* We have to stop here so that the caller can set up the hashing etc. */
@@ -591,11 +593,11 @@ _ksba_cms_parse_signed_data_part_1 (KsbaCMS cms)
 
 /* Continue parsing of the structure we started to parse with the
    part_1 function.  We expect to be right at the certificates tag.  */
-KsbaError
-_ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
+gpg_error_t
+_ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
 {
   struct tag_info ti;
-  KsbaError err;
+  gpg_error_t err;
   struct signer_info_s *si, **si_tail;
 
   /* read the next triplet which is either a [0], a [1] or a SET OF
@@ -620,10 +622,10 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
           we assume the first choice which is a Certificate; all other
           choices are obsolete.  We are now parsing a set of
           certificates which we do by utilizing the ksba_cert code. */
-      KsbaCert cert;
+      ksba_cert_t cert;
 
       if (ti.ndef)
-        return KSBA_Unsupported_Encoding;
+        return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);
       
       for (;;)
         {
@@ -641,9 +643,9 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
           if (err)
             return err;
           /* Use the standard certificate parser */
-          cert = ksba_cert_new ();
-          if (!cert)
-            return KSBA_Out_Of_Core;
+          err = ksba_cert_new (&cert);
+          if (err)
+            return err;
           err = ksba_cert_read_der (cert, cms->reader);
           if (err)
             {
@@ -654,7 +656,7 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
           if (!cl)
             {
               ksba_cert_release (cert);
-              return KSBA_Out_Of_Core;
+              return gpg_error (GPG_ERR_ENOMEM);
             }
           cl->cert = cert;
           cl->next = cms->cert_list;
@@ -670,7 +672,7 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
       /* fprintf (stderr,"WARNING: Can't handle CRLs yet\n");*/
 
       if (ti.ndef)
-        return KSBA_Unsupported_Encoding;
+        return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);
 
       /* FIXME this is just dummy read code */
       for (;;)
@@ -700,7 +702,7 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
   /* expect a SET OF signerInfo */
   if ( !(ti.class == CLASS_UNIVERSAL
          && ti.tag == TYPE_SET && ti.is_constructed))
-    return KSBA_Invalid_CMS_Object; 
+    return gpg_error (GPG_ERR_INV_CMS_OBJ); 
 
   si_tail = &cms->signer_info;
   while (ti.length)
@@ -710,7 +712,7 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
       off1 = ksba_reader_tell (cms->reader);
       si = xtrycalloc (1, sizeof *si);
       if (!si)
-        return KSBA_Out_Of_Core;
+        return gpg_error (GPG_ERR_ENOMEM);
 
       err = create_and_run_decoder (cms->reader, 
                                     "CryptographicMessageSyntax.SignerInfo",
@@ -767,11 +769,11 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
  We stop parsing so that the next read will be the first byte of the
  encryptedContent or (if there is no content) the unprotectedAttrs.
 */
-KsbaError
-_ksba_cms_parse_enveloped_data_part_1 (KsbaCMS cms)
+gpg_error_t
+_ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
 {
   struct tag_info ti;
-  KsbaError err;
+  gpg_error_t err;
   int env_data_ndef;
   unsigned long env_data_len;
   int encr_cont_ndef;
@@ -799,13 +801,13 @@ _ksba_cms_parse_enveloped_data_part_1 (KsbaCMS cms)
   if (ti.class == CLASS_CONTEXT && ti.tag == 0 && ti.is_constructed)
     { /* originatorInfo - but we skip it for now */
       /* well, raise an error */
-      return KSBA_Unsupported_CMS_Object;
+      return gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
     }
 
   /* Next one is the SET OF recipientInfos */
   if ( !(ti.class == CLASS_UNIVERSAL
          && ti.tag == TYPE_SET && ti.is_constructed))
-    return KSBA_Invalid_CMS_Object; 
+    return gpg_error (GPG_ERR_INV_CMS_OBJ); 
 
   vtend = &cms->recp_info;
   while (ti.length)
@@ -815,7 +817,7 @@ _ksba_cms_parse_enveloped_data_part_1 (KsbaCMS cms)
       off1 = ksba_reader_tell (cms->reader);
       vt = xtrycalloc (1, sizeof *vt);
       if (!vt)
-        return KSBA_Out_Of_Core;
+        return gpg_error (GPG_ERR_ENOMEM);
 
       err = create_and_run_decoder (cms->reader,
                                     "CryptographicMessageSyntax.KeyTransRecipientInfo",
@@ -854,10 +856,10 @@ _ksba_cms_parse_enveloped_data_part_1 (KsbaCMS cms)
     {
       len = ksba_reader_tell (cms->reader) - off;
       if (env_data_len < len)
-        return KSBA_BER_Error; /* parsed content info larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* parsed content info larger that sequence */
       env_data_len -= len;
       if (!encr_cont_ndef && env_data_len < encr_cont_len)
-        return KSBA_BER_Error; /* triplet larger that sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet larger that sequence */
     }
 
   return 0;
@@ -865,8 +867,8 @@ _ksba_cms_parse_enveloped_data_part_1 (KsbaCMS cms)
 
 
 /* handle the unprotected attributes */
-KsbaError
-_ksba_cms_parse_enveloped_data_part_2 (KsbaCMS cms)
+gpg_error_t
+_ksba_cms_parse_enveloped_data_part_2 (ksba_cms_t cms)
 {
   /* FIXME */
   return 0;

@@ -96,11 +96,11 @@ find_up (AsnNode  node)
  * 
  * Return Value:
  *   0: structure created correctly. 
- *   KSBA_General_error: an error occured while structure creation.  
- *   KSBA_Module_Not_Found: No such module NAME
+ *   GPG_ERR_GENERAL: an error occured while structure creation.  
+ *   GPG_ERR_MODULE_NOT_FOUND: No such module NAME
  */
-KsbaError
-ksba_asn_create_tree (const char *mod_name, KsbaAsnTree *result)
+gpg_error_t
+ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result)
 {
   enum { DOWN, UP, RIGHT } move;
   const static_asn *root;
@@ -109,14 +109,14 @@ ksba_asn_create_tree (const char *mod_name, KsbaAsnTree *result)
   int rc;
 
   if (!result)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   *result = NULL;
 
   if (!mod_name)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   root = _ksba_asn_lookup_table (mod_name);
   if (!root)
-    return KSBA_Module_Not_Found;
+    return gpg_error (GPG_ERR_MODULE_NOT_FOUND);
 
   pointer = NULL;
   move = UP;
@@ -180,13 +180,13 @@ ksba_asn_create_tree (const char *mod_name, KsbaAsnTree *result)
 
   if (p_last == pointer)
     {
-      KsbaAsnTree tree;
+      ksba_asn_tree_t tree;
 
       _ksba_asn_change_integer_value (pointer);
       _ksba_asn_expand_object_id (pointer);
       tree = xtrymalloc (sizeof *tree + strlen (mod_name));
       if (!tree)
-        rc = KSBA_Out_Of_Core;
+        rc = gpg_error (GPG_ERR_ENOMEM);
       else
         {
           tree->parse_tree = pointer;
@@ -197,7 +197,7 @@ ksba_asn_create_tree (const char *mod_name, KsbaAsnTree *result)
         }
     }
   else
-      rc = KSBA_General_Error;
+      rc = gpg_error (GPG_ERR_GENERAL);
 
   if (rc)
     ksba_asn_delete_structure (pointer);

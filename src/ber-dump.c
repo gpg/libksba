@@ -70,14 +70,14 @@ fatal (const char *fmt, ... )
 
 
 static void
-one_file (FILE *fp, const char *fname, KsbaAsnTree asn_tree)
+one_file (FILE *fp, const char *fname, ksba_asn_tree_t asn_tree)
 {
-  KsbaError err;
-  KsbaReader r;
+  gpg_error_t err;
+  ksba_reader_t r;
   BerDecoder d;
 
-  r = ksba_reader_new ();
-  if (!r)
+  err = ksba_reader_new (&r);
+  if (err)
     fatal ("out of core\n");
   err = ksba_reader_set_file (r, fp);
   if (err)
@@ -117,7 +117,7 @@ int
 main (int argc, char **argv)
 {
   const char *asnfile = NULL;
-  KsbaAsnTree asn_tree = NULL;
+  ksba_asn_tree_t asn_tree = NULL;
   int rc;
 
   if (!argc || (argc > 1 &&

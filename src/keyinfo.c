@@ -127,12 +127,12 @@ struct stringbuf {
 
 #define TLV_LENGTH() do {         \
   if (!derlen)                    \
-    return KSBA_Invalid_Keyinfo;  \
+    return gpg_error (GPG_ERR_INV_KEYINFO);  \
   c = *der++; derlen--;           \
   if (c == 0x80)                  \
-    return KSBA_Not_DER_Encoded;  \
+    return gpg_error (GPG_ERR_NOT_DER_ENCODED);  \
   if (c == 0xff)                  \
-    return KSBA_BER_Error;        \
+    return gpg_error (GPG_ERR_BAD_BER);        \
                                   \
   if ( !(c & 0x80) )              \
     len = c;                      \
@@ -144,13 +144,13 @@ struct stringbuf {
         {                         \
           len <<= 8;              \
           if (!derlen)            \
-            return KSBA_BER_Error;\
+            return gpg_error (GPG_ERR_BAD_BER);\
           c = *der++; derlen--;   \
           len |= c & 0xff;        \
         }                         \
     }                             \
   if (len > derlen)               \
-    return KSBA_Invalid_Keyinfo;  \
+    return gpg_error (GPG_ERR_INV_KEYINFO);  \
 } while (0)
 
 
@@ -162,7 +162,7 @@ struct stringbuf {
            handle BER Encoding. 
    mode 1: as described.
  */
-static KsbaError
+static gpg_error_t
 get_algorithm (int mode, const unsigned char *der, size_t derlen,
                size_t *r_nread, size_t *r_pos, size_t *r_len, int *r_bitstr,
                size_t *r_parm_pos, size_t *r_parm_len)
@@ -175,20 +175,20 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
   *r_bitstr = 0;
   /* get the inner sequence */
   if (!derlen)
-    return KSBA_Invalid_Keyinfo;
+    return gpg_error (GPG_ERR_INV_KEYINFO);
   c = *der++; derlen--;
   if ( c != 0x30 )
-    return KSBA_Unexpected_Tag; /* not a SEQUENCE */
+    return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not a SEQUENCE */
   TLV_LENGTH(); 
   seqlen = len;
   startseq = der;
 
   /* get the object identifier */
   if (!derlen)
-    return KSBA_Invalid_Keyinfo;
+    return gpg_error (GPG_ERR_INV_KEYINFO);
   c = *der++; derlen--; 
   if ( c != 0x06 )
-    return KSBA_Unexpected_Tag; /* not an OBJECT IDENTIFIER */
+    return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not an OBJECT IDENTIFIER */
   TLV_LENGTH();
 
   /* der does now point to an oid of length LEN */
@@ -209,16 +209,16 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
       const unsigned char *startparm = der;
 
       if (!derlen)
-        return KSBA_Invalid_Keyinfo;
+        return gpg_error (GPG_ERR_INV_KEYINFO);
       c = *der++; derlen--;
       if ( c == 0x05 ) 
         {
           /*printf ("parameter: NULL \n"); the only correct thing */
           if (!derlen)
-            return KSBA_Invalid_Keyinfo;
+            return gpg_error (GPG_ERR_INV_KEYINFO);
           c = *der++; derlen--;
           if (c) 
-            return KSBA_BER_Error;  /* NULL must have a length of 0 */
+            return gpg_error (GPG_ERR_BAD_BER);  /* NULL must have a length of 0 */
           seqlen -= 2;
         }
       else if (r_parm_pos && r_parm_len && c == 0x04)
@@ -244,13 +244,13 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
     }
 
   if (seqlen)
-    return KSBA_Invalid_Keyinfo;
+    return gpg_error (GPG_ERR_INV_KEYINFO);
 
   if (mode)
     {
       /* move forward to the BIT_STR */
       if (!derlen)
-        return KSBA_Invalid_Keyinfo;
+        return gpg_error (GPG_ERR_INV_KEYINFO);
       c = *der++; derlen--;
       
       if (c == 0x03)
@@ -258,7 +258,7 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
       else if (c == 0x04)
         ; /* OCTECT STRING */
       else
-        return KSBA_Unexpected_Tag; /* not a BIT STRING */
+        return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not a BIT STRING */
       TLV_LENGTH();
     }
 
@@ -267,11 +267,11 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
 }
 
 
-KsbaError
+gpg_error_t
 _ksba_parse_algorithm_identifier (const unsigned char *der, size_t derlen,
                                   size_t *r_nread, char **r_oid)
 {
-  KsbaError err;
+  gpg_error_t err;
   int is_bitstr;
   size_t nread, off, len;
 
@@ -285,15 +285,15 @@ _ksba_parse_algorithm_identifier (const unsigned char *der, size_t derlen,
     return err;
   *r_nread = nread;
   *r_oid = ksba_oid_to_str (der+off, len);
-  return *r_oid? 0 : KSBA_Out_Of_Core;
+  return *r_oid? 0 : gpg_error (GPG_ERR_ENOMEM);
 }
 
-KsbaError
+gpg_error_t
 _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
                                    size_t *r_nread, char **r_oid,
                                    char **r_parm, size_t *r_parmlen)
 {
-  KsbaError err;
+  gpg_error_t err;
   int is_bitstr;
   size_t nread, off, len, off2, len2;
 
@@ -309,7 +309,7 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
   *r_nread = nread;
   *r_oid = ksba_oid_to_str (der+off, len);
   if (!*r_oid)
-    return KSBA_Out_Of_Core;
+    return gpg_error (GPG_ERR_ENOMEM);
   if (r_parm && r_parmlen)
     {
       if (off2 && len2)
@@ -319,7 +319,7 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
             {
               xfree (*r_oid); 
               *r_oid = NULL;
-              return KSBA_Out_Of_Core;
+              return gpg_error (GPG_ERR_ENOMEM);
             }
           memcpy (*r_parm, der+off2, len2);
           *r_parmlen = len2;
@@ -428,11 +428,11 @@ get_stringbuf (struct stringbuf *sb)
   
   We don't pass an ASN.1 node here but a plain memory block.  */
 
-KsbaError
+gpg_error_t
 _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
-                       KsbaSexp *r_string)
+                       ksba_sexp_t *r_string)
 {
-  KsbaError err;
+  gpg_error_t err;
   int c;
   size_t nread, off, len;
   int algoidx;
@@ -445,10 +445,10 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
 
   /* check the outer sequence */
   if (!derlen)
-    return KSBA_Invalid_Keyinfo;
+    return gpg_error (GPG_ERR_INV_KEYINFO);
   c = *der++; derlen--;
   if ( c != 0x30 )
-    return KSBA_Unexpected_Tag; /* not a SEQUENCE */
+    return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not a SEQUENCE */
   TLV_LENGTH();
   /* and now the inner part */
   err = get_algorithm (1, der, derlen, &nread, &off, &len, &is_bitstr,
@@ -464,9 +464,9 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
         break;
     }
   if (!pk_algo_table[algoidx].oid)
-    return KSBA_Unknown_Algorithm;
+    return gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
   if (!pk_algo_table[algoidx].supported)
-    return KSBA_Unsupported_Algorithm;
+    return gpg_error (GPG_ERR_UNSUPPORTED_ALGORITHM);
 
   der += nread;
   derlen -= nread;
@@ -476,7 +476,7 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
          CMS as an octet string - for ease of implementation we always
          allow both */
       if (!derlen)
-        return KSBA_Invalid_Keyinfo;
+        return gpg_error (GPG_ERR_INV_KEYINFO);
       c = *der++; derlen--;
       if (c) 
         fprintf (stderr, "warning: number of unused bits is not zero\n");
@@ -501,10 +501,10 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
       int is_int;
 
       if (!derlen)
-        return KSBA_Invalid_Keyinfo;
+        return gpg_error (GPG_ERR_INV_KEYINFO);
       c = *der++; derlen--;
       if ( c != *ctrl )
-        return KSBA_Unexpected_Tag; /* not the required tag */
+        return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not the required tag */
       is_int = c == 0x02;
       TLV_LENGTH ();
       if (is_int && *elem != '-')
@@ -524,7 +524,7 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
   
   *r_string = get_stringbuf (&sb);
   if (!*r_string)
-    return KSBA_Out_Of_Core;
+    return gpg_error (GPG_ERR_ENOMEM);
 
   return 0;
 }
@@ -574,12 +574,13 @@ oid_from_buffer (const unsigned char *buf, int buflen, int *oidlen)
 
 /* Take a public-key S-Exp and convert it into a DER encoded
    publicKeyInfo */
-KsbaError
-_ksba_keyinfo_from_sexp (KsbaConstSexp sexp,
+gpg_error_t
+_ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
                          unsigned char **r_der, size_t *r_derlen)
 {
-  KsbaError err;
-  const unsigned char *s, *endp;
+  gpg_error_t err;
+  const unsigned char *s;
+  char *endp;
   unsigned long n, n1;
   const unsigned char *oid;
   int oidlen;
@@ -591,86 +592,86 @@ _ksba_keyinfo_from_sexp (KsbaConstSexp sexp,
     int valuelen;
   } parm[3];
   int parmidx;
-  KsbaWriter writer = NULL;
+  ksba_writer_t writer = NULL;
   void *bitstr_value = NULL;
   size_t bitstr_len;
     
 
   if (!sexp)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 
   s = sexp;
   if (*s != '(')
-    return KSBA_Invalid_Sexp;
+    return gpg_error (GPG_ERR_INV_SEXP);
   s++;
 
-  n = strtoul (s, (char**)&endp, 10);
+  n = strtoul (s, &endp, 10);
   s = endp;
   if (!n || *s != ':')
-    return KSBA_Invalid_Sexp; /* we don't allow empty lengths */
+    return gpg_error (GPG_ERR_INV_SEXP); /* we don't allow empty lengths */
   s++;
   if (n != 10 || memcmp (s, "public-key", 10))
-    return KSBA_Unknown_Sexp;
+    return gpg_error (GPG_ERR_UNKNOWN_SEXP);
   s += 10;
   if (*s != '(')
-    return digitp (s)? KSBA_Unknown_Sexp : KSBA_Invalid_Sexp;
+    return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
   s++;
 
   /* break out the algorithm ID */
-  n = strtoul (s, (char**)&endp, 10);
+  n = strtoul (s, &endp, 10);
   s = endp;
   if (!n || *s != ':')
-    return KSBA_Invalid_Sexp; /* we don't allow empty lengths */
+    return gpg_error (GPG_ERR_INV_SEXP); /* we don't allow empty lengths */
   s++;
   oid = oid_from_buffer (s, n, &oidlen);
   if (!oid)
-    return KSBA_Unsupported_Algorithm;
+    return gpg_error (GPG_ERR_UNSUPPORTED_ALGORITHM);
   s += n;
 
   /* Collect all the values */
   for (parmidx = 0; *s != ')' ; parmidx++)
     {
       if (parmidx >= DIM(parm))
-        return KSBA_General_Error;
+        return gpg_error (GPG_ERR_GENERAL);
       if (*s != '(')
-        return digitp (s)? KSBA_Unknown_Sexp : KSBA_Invalid_Sexp;
+        return gpg_error (digitp(s)? GPG_ERR_UNKNOWN_SEXP:GPG_ERR_INV_SEXP);
       s++;
-      n = strtoul (s, (char**)&endp, 10);
+      n = strtoul (s, &endp, 10);
       s = endp;
       if (!n || *s != ':')
-        return KSBA_Invalid_Sexp; 
+        return gpg_error (GPG_ERR_INV_SEXP); 
       s++;
       parm[parmidx].name = s;
       parm[parmidx].namelen = n;
       s += n; 
       if (!digitp(s))
-        return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+        return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
 
-      n = strtoul (s, (char**)&endp, 10);
+      n = strtoul (s, &endp, 10);
       s = endp;
       if (!n || *s != ':')
-        return KSBA_Invalid_Sexp; 
+        return gpg_error (GPG_ERR_INV_SEXP); 
       s++;
       parm[parmidx].value = s;
       parm[parmidx].valuelen = n;
       s += n;
       if ( *s != ')')
-        return KSBA_Unknown_Sexp; /* but may also be an invalid one */
+        return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
       s++;
     }
   s++;
   /* we need another closing parenthesis */
   if ( *s != ')' )
-    return KSBA_Invalid_Sexp; 
+    return gpg_error (GPG_ERR_INV_SEXP); 
 
   /* check that the names match the requirements for RSA */
   s = "ne"; 
   if (parmidx != strlen (s))
-    return KSBA_Unknown_Sexp;
+    return gpg_error (GPG_ERR_UNKNOWN_SEXP);
   for (i=0; i < parmidx; i++)
     {
       if (parm[i].namelen != 1 || parm[i].name[0] != s[i])
-        return KSBA_Unknown_Sexp;
+        return gpg_error (GPG_ERR_UNKNOWN_SEXP);
     }
 
   
@@ -678,10 +679,10 @@ _ksba_keyinfo_from_sexp (KsbaConstSexp sexp,
      build the inner one and encapsulate it in bit string. 2. we
      create the outer sequence include the algorithm identifier and
      the bit string from step 1 */
-  if (!(writer = ksba_writer_new ()))
-    err = KSBA_Out_Of_Core;
-  else
-    err = ksba_writer_set_mem (writer, 1024);
+  err = ksba_writer_new (&writer);
+  if (err)
+    goto leave;
+  err = ksba_writer_set_mem (writer, 1024);
   if (err)
     goto leave;
 
@@ -725,7 +726,7 @@ _ksba_keyinfo_from_sexp (KsbaConstSexp sexp,
   bitstr_value = ksba_writer_snatch_mem (writer, &bitstr_len);
   if (!bitstr_value)
     {
-      err = KSBA_Out_Of_Core;
+      err = gpg_error (GPG_ERR_ENOMEM);
       goto leave;
     }
   /* reinitialize the buffer to create the outer sequence */
@@ -771,7 +772,7 @@ _ksba_keyinfo_from_sexp (KsbaConstSexp sexp,
   /* and get the result */
   *r_der = ksba_writer_snatch_mem (writer, r_derlen);
   if (!*r_der)
-      err = KSBA_Out_Of_Core;
+      err = gpg_error (GPG_ERR_ENOMEM);
 
  leave:
   ksba_writer_release (writer);
@@ -783,11 +784,11 @@ _ksba_keyinfo_from_sexp (KsbaConstSexp sexp,
 
 /* Mode 0: work as described under _ksba_sigval_to_sexp
    mode 1: work as described under _ksba_encval_to_sexp */
-static KsbaError
+static gpg_error_t
 cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
-                  KsbaSexp *r_string)
+                  ksba_sexp_t *r_string)
 {
-  KsbaError err;
+  gpg_error_t err;
   struct algo_table_s *algo_table;
   int c;
   size_t nread, off, len;
@@ -819,9 +820,9 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
         break;
     }
   if (!algo_table[algoidx].oid)
-    return KSBA_Unknown_Algorithm;
+    return gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
   if (!algo_table[algoidx].supported)
-    return KSBA_Unsupported_Algorithm;
+    return gpg_error (GPG_ERR_UNSUPPORTED_ALGORITHM);
 
   der += nread;
   derlen -= nread;
@@ -831,7 +832,7 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
          CMS as an octet string - for ease of implementation we always
          allow both */
       if (!derlen)
-        return KSBA_Invalid_Keyinfo;
+        return gpg_error (GPG_ERR_INV_KEYINFO);
       c = *der++; derlen--;
       if (c) 
         fprintf (stderr, "warning: number of unused bits is not zero\n");
@@ -859,10 +860,10 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
       else
         {
           if (!derlen)
-            return KSBA_Invalid_Keyinfo;
+            return gpg_error (GPG_ERR_INV_KEYINFO);
           c = *der++; derlen--;
           if ( c != *ctrl )
-            return KSBA_Unexpected_Tag; /* not the required tag */
+            return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not the required tag */
           is_int = c == 0x02;
           TLV_LENGTH ();
         }
@@ -883,7 +884,7 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
   
   *r_string = get_stringbuf (&sb);
   if (!*r_string)
-    return KSBA_Out_Of_Core;
+    return gpg_error (GPG_ERR_ENOMEM);
 
   return 0;
 }
@@ -910,9 +911,9 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
 
  The S-Exp will be returned in a string which the caller must free.
  We don't pass an ASN.1 node here but a plain memory block.  */
-KsbaError
+gpg_error_t
 _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
-                      KsbaSexp *r_string)
+                      ksba_sexp_t *r_string)
 {
   return cryptval_to_sexp (0, der, derlen, r_string);
 }
@@ -940,9 +941,9 @@ _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
 
  The S-Exp will be returned in a string which the caller must free.
  We don't pass an ASN.1 node here but a plain memory block.  */
-KsbaError
+gpg_error_t
 _ksba_encval_to_sexp (const unsigned char *der, size_t derlen,
-                      KsbaSexp *r_string)
+                      ksba_sexp_t *r_string)
 {
   return cryptval_to_sexp (1, der, derlen, r_string);
 }

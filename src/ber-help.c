@@ -33,7 +33,7 @@
    some work when using these parsers */
 
 static int
-read_byte (KsbaReader reader)
+read_byte (ksba_reader_t reader)
 {
   unsigned char buf;
   size_t nread;
@@ -50,18 +50,18 @@ static int
 premature_eof (struct tag_info *ti)
 {
   ti->err_string = "premature EOF";
-  return KSBA_BER_Error;
+  return gpg_error (GPG_ERR_BAD_BER);
 }
 
 
 
 static int
-eof_or_error (KsbaReader reader, struct tag_info *ti, int premature)
+eof_or_error (ksba_reader_t reader, struct tag_info *ti, int premature)
 {
   if (ksba_reader_error (reader))
     {
       ti->err_string = "read error";
-      return KSBA_Read_Error;
+      return gpg_error (GPG_ERR_READ_ERROR);
     }
   if (premature)
     return premature_eof (ti);
@@ -74,8 +74,8 @@ eof_or_error (KsbaReader reader, struct tag_info *ti, int premature)
 /*
    Read the tag and the length part from the TLV triplet. 
  */
-KsbaError
-_ksba_ber_read_tl (KsbaReader reader, struct tag_info *ti)
+gpg_error_t
+_ksba_ber_read_tl (ksba_reader_t reader, struct tag_info *ti)
 {
   int c;
   unsigned long tag;
@@ -109,7 +109,7 @@ _ksba_ber_read_tl (KsbaReader reader, struct tag_info *ti)
           if (ti->nhdr >= DIM (ti->buf))
             {
               ti->err_string = "tag+length header too large";
-              return KSBA_BER_Error;
+              return gpg_error (GPG_ERR_BAD_BER);
             }
           ti->buf[ti->nhdr++] = c;
           tag |= c & 0x7f;
@@ -125,7 +125,7 @@ _ksba_ber_read_tl (KsbaReader reader, struct tag_info *ti)
   if (ti->nhdr >= DIM (ti->buf))
     {
       ti->err_string = "tag+length header too large";
-      return KSBA_BER_Error;
+      return gpg_error (GPG_ERR_BAD_BER);
     }
   ti->buf[ti->nhdr++] = c;
 
@@ -139,7 +139,7 @@ _ksba_ber_read_tl (KsbaReader reader, struct tag_info *ti)
   else if (c == 0xff)
     {
       ti->err_string = "forbidden length value";
-      return KSBA_BER_Error;
+      return gpg_error (GPG_ERR_BAD_BER);
     }
   else
     {
@@ -156,7 +156,7 @@ _ksba_ber_read_tl (KsbaReader reader, struct tag_info *ti)
           if (ti->nhdr >= DIM (ti->buf))
             {
               ti->err_string = "tag+length header too large";
-              return KSBA_BER_Error;
+              return gpg_error (GPG_ERR_BAD_BER);
             }
           ti->buf[ti->nhdr++] = c;
           len |= c & 0xff;
@@ -175,7 +175,7 @@ _ksba_ber_read_tl (KsbaReader reader, struct tag_info *ti)
    Parse the buffer at the address BUFFER which of SIZE and return
    the tag and the length part from the TLV triplet.  Update BUFFER
    and SIZE on success. */
-KsbaError
+gpg_error_t
 _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
                     struct tag_info *ti)
 {
@@ -213,7 +213,7 @@ _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
           if (ti->nhdr >= DIM (ti->buf))
             {
               ti->err_string = "tag+length header too large";
-              return KSBA_BER_Error;
+              return gpg_error (GPG_ERR_BAD_BER);
             }
           ti->buf[ti->nhdr++] = c;
           tag |= c & 0x7f;
@@ -229,7 +229,7 @@ _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
   if (ti->nhdr >= DIM (ti->buf))
     {
       ti->err_string = "tag+length header too large";
-      return KSBA_BER_Error;
+      return gpg_error (GPG_ERR_BAD_BER);
     }
   ti->buf[ti->nhdr++] = c;
 
@@ -243,7 +243,7 @@ _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
   else if (c == 0xff)
     {
       ti->err_string = "forbidden length value";
-      return KSBA_BER_Error;
+      return gpg_error (GPG_ERR_BAD_BER);
     }
   else
     {
@@ -260,7 +260,7 @@ _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
           if (ti->nhdr >= DIM (ti->buf))
             {
               ti->err_string = "tag+length header too large";
-              return KSBA_BER_Error;
+              return gpg_error (GPG_ERR_BAD_BER);
             }
           ti->buf[ti->nhdr++] = c;
           len |= c & 0xff;
@@ -282,8 +282,8 @@ _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
    whether the value is a constructed one.  length gives the length of
    the value, if it is 0 undefinite length is assumed.  length is
    ignored for the NULL tag. */
-KsbaError
-_ksba_ber_write_tl (KsbaWriter writer, 
+gpg_error_t
+_ksba_ber_write_tl (ksba_writer_t writer, 
                     unsigned long tag,
                     enum tag_class class,
                     int constructed,
@@ -301,7 +301,7 @@ _ksba_ber_write_tl (KsbaWriter writer,
     }
   else
     {
-      return KSBA_Not_Implemented;
+      return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
     }
 
   if (!tag && !class)

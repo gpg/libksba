@@ -30,14 +30,14 @@
 
 #define fail_if_err(a) do { if(a) {                                       \
                               fprintf (stderr, "%s:%d: KSBA error: %s\n", \
-                              __FILE__, __LINE__, ksba_strerror(a));   \
+                              __FILE__, __LINE__, gpg_strerror(a));   \
                               exit (1); }                              \
                            } while(0)
 
 
 #define fail_if_err2(f, a) do { if(a) {\
             fprintf (stderr, "%s:%d: KSBA error on file `%s': %s\n", \
-                       __FILE__, __LINE__, (f), ksba_strerror(a));   \
+                       __FILE__, __LINE__, (f), gpg_strerror(a));   \
                             exit (1); }                              \
                            } while(0)
 
@@ -75,7 +75,7 @@ test_1 (void)
     "C=",
     NULL
   };
-  KsbaError err;
+  gpg_error_t err;
   int i;
   char *buf;
   size_t len;
@@ -83,7 +83,7 @@ test_1 (void)
   for (i=0; empty_elements[i]; i++)
     {
       err = _ksba_dn_from_str (empty_elements[i], &buf, &len);
-      if (err != KSBA_Syntax_Error)
+      if (gpg_err_code (err) != GPG_ERR_SYNTAX)
         fail ("empty element not detected");
       xfree (buf);
     }
@@ -99,7 +99,7 @@ main (int argc, char **argv)
   int inputlen;
   char *buf;
   size_t len;
-  KsbaError err;
+  gpg_error_t err;
   
   if (argc == 2 && !strcmp (argv[1], "--to-str") )
     { /* Read the DER encoed DN from stdin write the string to stdout */

@@ -24,27 +24,27 @@
 #include "asn1-func.h"
 
 
-KsbaError
+gpg_error_t
 _ksba_parse_algorithm_identifier (const unsigned char *der,
                                   size_t derlen,
                                   size_t *r_nread,
                                   char **r_oid);
-KsbaError
+gpg_error_t
 _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
                                    size_t *r_nread, char **r_oid,
                                    char **r_parm, size_t *r_parmlen);
 
 
-KsbaError _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
-                                 KsbaSexp *r_string);
+gpg_error_t _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
+                                 ksba_sexp_t *r_string);
 
-KsbaError _ksba_keyinfo_from_sexp (KsbaConstSexp sexp,
+gpg_error_t _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
                                    unsigned char **r_der, size_t *r_derlen);
 
-KsbaError _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
-                                KsbaSexp *r_string);
-KsbaError _ksba_encval_to_sexp (const unsigned char *der, size_t derlen,
-                                KsbaSexp *r_string);
+gpg_error_t _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
+                                ksba_sexp_t *r_string);
+gpg_error_t _ksba_encval_to_sexp (const unsigned char *der, size_t derlen,
+                                ksba_sexp_t *r_string);
 
 int _ksba_node_with_oid_to_digest_algo (const unsigned char *image,
                                         AsnNode node);

@@ -29,9 +29,9 @@ typedef struct asn_node_struct *AsnNode;  /* FIXME: should not go here */
 #endif
 
 struct ksba_crl_s {
-  KsbaError last_error;
+  gpg_error_t last_error;
 
-  KsbaReader reader;
+  ksba_reader_t reader;
   int any_parse_done;
 
   void (*hash_fnc)(void *, const void *, size_t);
@@ -59,12 +59,12 @@ struct ksba_crl_s {
   ksba_isotime_t next_update;
 
   struct {
-    KsbaSexp serial;
-    KsbaCRLReason reason;
+    ksba_sexp_t serial;
+    ksba_crl_reason_t reason;
     ksba_isotime_t revocation_date;
   } item;
 
-  KsbaSexp sigval;
+  ksba_sexp_t sigval;
 
   struct {
     int used;

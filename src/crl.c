@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
+
 #include "util.h"
 
 #include "convert.h"
@@ -34,7 +36,7 @@
 
 /* we better buffer the hashing */
 static inline void
-do_hash (KsbaCRL crl, const void *buffer, size_t length)
+do_hash (ksba_crl_t crl, const void *buffer, size_t length)
 {
   while (length)
     {
@@ -65,20 +67,17 @@ do_hash (KsbaCRL crl, const void *buffer, size_t length)
  * 
  * Create a new and empty CRL object
  * 
- * Return value: A CRL object or NULL in case of memory problems.
+ * Return value: A CRL object or an error code.
  **/
-KsbaCRL
-ksba_crl_new (void)
+gpg_error_t
+ksba_crl_new (ksba_crl_t *r_crl)
 {
-  KsbaCRL crl;
-
-  crl = xtrycalloc (1, sizeof *crl);
-  if (!crl)
-    return NULL;
-
-
-  return crl;
+  *r_crl = xtrycalloc (1, sizeof **r_crl);
+  if (!*r_crl)
+    return gpg_error_from_errno (errno);
+  return 0;
 }
+
 
 /**
  * ksba_crl_release:
@@ -87,7 +86,7 @@ ksba_crl_new (void)
  * Release a CRL object.
  **/
 void
-ksba_crl_release (KsbaCRL crl)
+ksba_crl_release (ksba_crl_t crl)
 {
   if (!crl)
     return;
@@ -104,11 +103,11 @@ ksba_crl_release (KsbaCRL crl)
 }
 
 
-KsbaError
-ksba_crl_set_reader (KsbaCRL crl, KsbaReader r)
+gpg_error_t
+ksba_crl_set_reader (ksba_crl_t crl, ksba_reader_t r)
 {
   if (!crl || !r)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   
   crl->reader = r;
   return 0;
@@ -116,7 +115,7 @@ ksba_crl_set_reader (KsbaCRL crl, KsbaReader r)
 
 /* Provide a hash function so that we are able to hash the data */
 void
-ksba_crl_set_hash_function (KsbaCRL crl,
+ksba_crl_set_hash_function (ksba_crl_t crl,
                             void (*hash_fnc)(void *, const void *, size_t),
                             void *hash_fnc_arg)
 {
@@ -147,7 +146,7 @@ ksba_crl_set_hash_function (KsbaCRL crl,
  * as long as the CRL object is valid.
  **/
 const char *
-ksba_crl_get_digest_algo (KsbaCRL crl)
+ksba_crl_get_digest_algo (ksba_crl_t crl)
 {
   if (!crl)
     return NULL;
@@ -168,30 +167,30 @@ ksba_crl_get_digest_algo (KsbaCRL crl)
  * 
  * Return value: 0 on success or an error code
  **/
-KsbaError
-ksba_crl_get_issuer (KsbaCRL crl, char **r_issuer)
+gpg_error_t
+ksba_crl_get_issuer (ksba_crl_t crl, char **r_issuer)
 {
-  KsbaError err;
+  gpg_error_t err;
   AsnNode n;
   const unsigned char *image;
 
   if (!crl || !r_issuer)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   if (!crl->issuer.root)
-    return KSBA_No_Data;
+    return gpg_error (GPG_ERR_NO_DATA);
 
   n = crl->issuer.root;
   image = crl->issuer.image;
   
   if (!n || !n->down)
-    return KSBA_No_Value; 
+    return gpg_error (GPG_ERR_NO_VALUE); 
   n = n->down; /* dereference the choice node */
       
   if (n->off == -1)
     {
 /*        fputs ("get_issuer problem at node:\n", stderr); */
 /*        _ksba_asn_node_dump_all (n, stderr); */
-      return KSBA_General_Error;
+      return gpg_error (GPG_ERR_GENERAL);
     }
   err = _ksba_dn_to_str (image, n, r_issuer);
 
@@ -207,8 +206,8 @@ ksba_crl_get_issuer (KsbaCRL crl, char **r_issuer)
  * THIS and NEXT may be given as NULL if the value is not required.
  * Return value: 0 on success or an error code
  **/
-KsbaError
-ksba_crl_get_update_times (KsbaCRL crl,
+gpg_error_t
+ksba_crl_get_update_times (ksba_crl_t crl,
                            ksba_isotime_t this,
                            ksba_isotime_t next)
 {
@@ -217,9 +216,9 @@ ksba_crl_get_update_times (KsbaCRL crl,
   if (next)
     *next = 0;
   if (!crl)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   if (!*crl->this_update || !*crl->next_update)
-    return KSBA_Invalid_Time;
+    return gpg_error (GPG_ERR_INV_TIME);
   if (this)
     _ksba_copy_time (this, crl->this_update);
   if (next)
@@ -243,21 +242,21 @@ ksba_crl_get_update_times (KsbaCRL crl,
  * 
  * Return value: 0 in success or an error code.
  **/
-KsbaError
-ksba_crl_get_item (KsbaCRL crl, KsbaSexp *r_serial,
+gpg_error_t
+ksba_crl_get_item (ksba_crl_t crl, ksba_sexp_t *r_serial,
                    ksba_isotime_t r_revocation_date,
-                   KsbaCRLReason *r_reason)
+                   ksba_crl_reason_t *r_reason)
 { 
   if (r_revocation_date)
     *r_revocation_date = 0;
 
   if (!crl)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 
   if (r_serial)
     {
       if (!crl->item.serial)
-        return KSBA_No_Data;
+        return gpg_error (GPG_ERR_NO_DATA);
       *r_serial = crl->item.serial;
       crl->item.serial = NULL;
     }
@@ -280,10 +279,10 @@ ksba_crl_get_item (KsbaCRL crl, KsbaSexp *r_serial,
  * 
  * Return value: NULL or a string with an S-Exp.
  **/
-KsbaSexp
-ksba_crl_get_sig_val (KsbaCRL crl)
+ksba_sexp_t
+ksba_crl_get_sig_val (ksba_crl_t crl)
 {
-  KsbaSexp p;
+  ksba_sexp_t p;
 
   if (!crl)
     return NULL;
@@ -304,7 +303,7 @@ ksba_crl_get_sig_val (KsbaCRL crl)
 
 /* read one byte */
 static int
-read_byte (KsbaReader reader)
+read_byte (ksba_reader_t reader)
 {
   unsigned char buf;
   size_t nread;
@@ -318,7 +317,7 @@ read_byte (KsbaReader reader)
 
 /* read COUNT bytes into buffer.  Return 0 on success */
 static int 
-read_buffer (KsbaReader reader, char *buffer, size_t count)
+read_buffer (ksba_reader_t reader, char *buffer, size_t count)
 {
   size_t nread;
 
@@ -334,13 +333,13 @@ read_buffer (KsbaReader reader, char *buffer, size_t count)
 
 /* Create a new decoder and run it for the given element */
 /* Fixme: this code is duplicated from cms-parser.c */
-static KsbaError
-create_and_run_decoder (KsbaReader reader, const char *elem_name,
+static gpg_error_t
+create_and_run_decoder (ksba_reader_t reader, const char *elem_name,
                         AsnNode *r_root,
                         unsigned char **r_image, size_t *r_imagelen)
 {
-  KsbaError err;
-  KsbaAsnTree crl_tree;
+  gpg_error_t err;
+  ksba_asn_tree_t crl_tree;
   BerDecoder decoder;
 
   err = ksba_asn_create_tree ("tmttv2", &crl_tree);
@@ -351,7 +350,7 @@ create_and_run_decoder (KsbaReader reader, const char *elem_name,
   if (!decoder)
     {
       ksba_asn_tree_release (crl_tree);
-      return KSBA_Out_Of_Core;
+      return gpg_error (GPG_ERR_ENOMEM);
     }
 
   err = _ksba_ber_decoder_set_reader (decoder, reader);
@@ -383,10 +382,10 @@ create_and_run_decoder (KsbaReader reader, const char *elem_name,
 /* Parse the fixed block at the beginning.  We use a custom parser
    here becuase out BEr-decoder is not yet able to stop at certain
    points */
-static KsbaError
-parse_to_next_update (KsbaCRL crl)
+static gpg_error_t
+parse_to_next_update (ksba_crl_t crl)
 {
-  KsbaError err;
+  gpg_error_t err;
   struct tag_info ti;
   unsigned long outer_len, tbs_len;
   int outer_ndef, tbs_ndef;
@@ -400,11 +399,11 @@ parse_to_next_update (KsbaCRL crl)
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
-    return KSBA_Invalid_CRL_Object;
+    return gpg_error (GPG_ERR_INV_CRL_OBJ);
   outer_len = ti.length; 
   outer_ndef = ti.ndef;
   if (!outer_ndef && outer_len < 10)
-    return KSBA_Object_Too_Short; 
+    return gpg_error (GPG_ERR_TOO_SHORT); 
 
   /* read the tbs sequence */
   err = _ksba_ber_read_tl (crl->reader, &ti);
@@ -412,21 +411,21 @@ parse_to_next_update (KsbaCRL crl)
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
-    return KSBA_Invalid_CRL_Object;
+    return gpg_error (GPG_ERR_INV_CRL_OBJ);
   HASH (ti.buf, ti.nhdr);
   if (!outer_ndef)
     {
       if (outer_len < ti.nhdr)
-        return KSBA_BER_Error; /* triplet header larger that outer sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet header larger that outer sequence */
       outer_len -= ti.nhdr;
       if (!ti.ndef && outer_len < ti.length)
-        return KSBA_BER_Error; /* triplet larger that outer sequence */
+        return gpg_error (GPG_ERR_BAD_BER); /* triplet larger that outer sequence */
       outer_len -= ti.length;
     }
   tbs_len = ti.length; 
   tbs_ndef = ti.ndef;
   if (!tbs_ndef && tbs_len < 10)
-    return KSBA_Object_Too_Short; 
+    return gpg_error (GPG_ERR_TOO_SHORT); 
 
   /* read the optional version integer */
   crl->crl_version = -1;
@@ -436,26 +435,26 @@ parse_to_next_update (KsbaCRL crl)
   if ( ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_INTEGER)
     {
       if ( ti.is_constructed || !ti.length )
-        return KSBA_Invalid_CRL_Object; 
+        return gpg_error (GPG_ERR_INV_CRL_OBJ); 
       HASH (ti.buf, ti.nhdr);
       if (!tbs_ndef)
         {
           if (tbs_len < ti.nhdr)
-            return KSBA_BER_Error;
+            return gpg_error (GPG_ERR_BAD_BER);
           tbs_len -= ti.nhdr;
           if (tbs_len < ti.length)
-            return KSBA_BER_Error; 
+            return gpg_error (GPG_ERR_BAD_BER); 
           tbs_len -= ti.length;
         }
       /* fixme: we should also check the outer data length here and in
          the follwing code.  It might however be easier to to thsi at
          the end of this sequence */
       if (ti.length != 1)
-        return KSBA_Unsupported_CRL_Version; 
+        return gpg_error (GPG_ERR_UNSUPPORTED_CRL_VERSION); 
       if ( (c=read_byte (crl->reader)) == -1)
-        return KSBA_Read_Error;
+        return gpg_error (GPG_ERR_READ_ERROR);
       if ( !(c == 0 || c == 1) )
-        return KSBA_Unsupported_CRL_Version;
+        return gpg_error (GPG_ERR_UNSUPPORTED_CRL_VERSION);
       { 
         unsigned char tmp = c;
         HASH (&tmp, 1);
@@ -469,18 +468,18 @@ parse_to_next_update (KsbaCRL crl)
   /* read the algorithm identifier */
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
-    return KSBA_Invalid_CRL_Object;
+    return gpg_error (GPG_ERR_INV_CRL_OBJ);
   if (!tbs_ndef)
     {
       if (tbs_len < ti.nhdr)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       tbs_len -= ti.nhdr;
       if (!ti.ndef && tbs_len < ti.length)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       tbs_len -= ti.length;
     }
   if (ti.nhdr + ti.length >= DIM(tmpbuf))
-    return KSBA_Object_Too_Large;
+    return gpg_error (GPG_ERR_TOO_LARGE);
   memcpy (tmpbuf, ti.buf, ti.nhdr);
   err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
   if (err)
@@ -497,7 +496,7 @@ parse_to_next_update (KsbaCRL crl)
     return err;
   assert (nread <= ti.nhdr + ti.length);
   if (nread < ti.nhdr + ti.length)
-    return KSBA_Object_Too_Short;
+    return gpg_error (GPG_ERR_TOO_SHORT);
 
   
   /* read the name */
@@ -514,13 +513,13 @@ parse_to_next_update (KsbaCRL crl)
        So we need to get the count from the reader */
     n = ksba_reader_tell (crl->reader) - n;
     if (n > crl->issuer.imagelen)
-      return KSBA_Bug;
+      return gpg_error (GPG_ERR_BUG);
     HASH (crl->issuer.image, n);
 
     if (!tbs_ndef)
       {
         if (tbs_len < n)
-          return KSBA_BER_Error;
+          return gpg_error (GPG_ERR_BAD_BER);
         tbs_len -= n;
       }
   }
@@ -534,18 +533,18 @@ parse_to_next_update (KsbaCRL crl)
   if ( !(ti.class == CLASS_UNIVERSAL
          && (ti.tag == TYPE_UTC_TIME || ti.tag == TYPE_GENERALIZED_TIME)
          && !ti.is_constructed) )
-    return KSBA_Invalid_CRL_Object;
+    return gpg_error (GPG_ERR_INV_CRL_OBJ);
   if (!tbs_ndef)
     {
       if (tbs_len < ti.nhdr)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       tbs_len -= ti.nhdr;
       if (!ti.ndef && tbs_len < ti.length)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       tbs_len -= ti.length;
     }
   if (ti.nhdr + ti.length >= DIM(tmpbuf))
-    return KSBA_Object_Too_Large;
+    return gpg_error (GPG_ERR_TOO_LARGE);
   memcpy (tmpbuf, ti.buf, ti.nhdr);
   err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
   if (err)
@@ -564,14 +563,14 @@ parse_to_next_update (KsbaCRL crl)
       if (!tbs_ndef)
         {
           if (tbs_len < ti.nhdr)
-            return KSBA_BER_Error;
+            return gpg_error (GPG_ERR_BAD_BER);
           tbs_len -= ti.nhdr;
           if (!ti.ndef && tbs_len < ti.length)
-            return KSBA_BER_Error;
+            return gpg_error (GPG_ERR_BAD_BER);
           tbs_len -= ti.length;
         }
       if (ti.nhdr + ti.length >= DIM(tmpbuf))
-        return KSBA_Object_Too_Large;
+        return gpg_error (GPG_ERR_TOO_LARGE);
       memcpy (tmpbuf, ti.buf, ti.nhdr);
       err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
       if (err)
@@ -593,10 +592,10 @@ parse_to_next_update (KsbaCRL crl)
           if (!tbs_ndef)
             {
               if (tbs_len < ti.nhdr)
-            return KSBA_BER_Error;
+            return gpg_error (GPG_ERR_BAD_BER);
               tbs_len -= ti.nhdr;
               if (!ti.ndef && tbs_len < ti.length)
-                return KSBA_BER_Error;
+                return gpg_error (GPG_ERR_BAD_BER);
               tbs_len -= ti.length; 
             }
           crl->state.have_seqseq = 1;
@@ -622,10 +621,10 @@ parse_to_next_update (KsbaCRL crl)
 
 /* Parse the revokedCertificates SEQUENCE of SEQUENCE using a custom
    parser for efficiency and return after each entry */
-static KsbaError
-parse_crl_entry (KsbaCRL crl, int *got_entry)
+static gpg_error_t
+parse_crl_entry (ksba_crl_t crl, int *got_entry)
 {
-  KsbaError err;
+  gpg_error_t err;
   struct tag_info ti = crl->state.ti;
   unsigned long seqseq_len= crl->state.seqseq_len;
   int seqseq_ndef         = crl->state.seqseq_ndef;
@@ -646,15 +645,15 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
   /* if this is not a SEQUENCE the CRL is invalid */
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
-    return KSBA_Invalid_CRL_Object;
+    return gpg_error (GPG_ERR_INV_CRL_OBJ);
   HASH (ti.buf, ti.nhdr);
   if (!seqseq_ndef)
     {
       if (seqseq_len < ti.nhdr)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       seqseq_len -= ti.nhdr;
       if (!ti.ndef && seqseq_len < ti.length)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       seqseq_len -= ti.length;
     }
   ndef = ti.ndef;
@@ -666,18 +665,18 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_INTEGER
          && !ti.is_constructed) )
-    return KSBA_Invalid_CRL_Object;
+    return gpg_error (GPG_ERR_INV_CRL_OBJ);
   if (!ndef)
     {
       if (len < ti.nhdr)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       len -= ti.nhdr;
       if (!ti.ndef && len < ti.length)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       len -= ti.length;
     }
   if (ti.nhdr + ti.length >= DIM(tmpbuf))
-    return KSBA_Object_Too_Large;
+    return gpg_error (GPG_ERR_TOO_LARGE);
   memcpy (tmpbuf, ti.buf, ti.nhdr);
   err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
   if (err)
@@ -689,7 +688,7 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
   numbuflen = strlen (numbuf);
   crl->item.serial = xtrymalloc (numbuflen + ti.length + 2);
   if (!crl->item.serial)
-    return KSBA_Out_Of_Core;
+    return gpg_error (GPG_ERR_ENOMEM);
   strcpy (crl->item.serial, numbuf);
   memcpy (crl->item.serial+numbuflen, tmpbuf+ti.nhdr, ti.length);
   crl->item.serial[numbuflen + ti.length] = ')';
@@ -702,18 +701,18 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
   if ( !(ti.class == CLASS_UNIVERSAL
          && (ti.tag == TYPE_UTC_TIME || ti.tag == TYPE_GENERALIZED_TIME)
          && !ti.is_constructed) )
-    return KSBA_Invalid_CRL_Object;
+    return gpg_error (GPG_ERR_INV_CRL_OBJ);
   if (!ndef)
     {
       if (len < ti.nhdr)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       len -= ti.nhdr;
       if (!ti.ndef && len < ti.length)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       len -= ti.length;
     }
   if (ti.nhdr + ti.length >= DIM(tmpbuf))
-    return KSBA_Object_Too_Large;
+    return gpg_error (GPG_ERR_TOO_LARGE);
   memcpy (tmpbuf, ti.buf, ti.nhdr);
   err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
   if (err)
@@ -725,7 +724,7 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
 
   /* if there is still space we must parse the optional entryExtensions */
   if (ndef)
-    return KSBA_Unsupported_Encoding;
+    return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);
   else if (len)
     {
       /* read the outer sequence */
@@ -734,15 +733,15 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
         return err;
       if ( !(ti.class == CLASS_UNIVERSAL
              && ti.tag == TYPE_SEQUENCE && ti.is_constructed) )
-        return KSBA_Invalid_CRL_Object;
+        return gpg_error (GPG_ERR_INV_CRL_OBJ);
       if (ti.ndef)
-        return KSBA_Unsupported_Encoding;
+        return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);
       HASH (ti.buf, ti.nhdr);
       if (len < ti.nhdr)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       len -= ti.nhdr;
       if (len < ti.length)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
 
       /* now loop over the extensions */
       while (len)
@@ -752,17 +751,17 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
             return err;
           if ( !(ti.class == CLASS_UNIVERSAL
                  && ti.tag == TYPE_SEQUENCE && ti.is_constructed) )
-            return KSBA_Invalid_CRL_Object;
+            return gpg_error (GPG_ERR_INV_CRL_OBJ);
           if (ti.ndef)
-            return KSBA_Unsupported_Encoding;
+            return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);
           if (len < ti.nhdr)
-            return KSBA_BER_Error;
+            return gpg_error (GPG_ERR_BAD_BER);
           len -= ti.nhdr;
           if (len < ti.length)
-            return KSBA_BER_Error;
+            return gpg_error (GPG_ERR_BAD_BER);
           len -= ti.length;
           if (ti.nhdr + ti.length >= DIM(tmpbuf))
-            return KSBA_Object_Too_Large;
+            return gpg_error (GPG_ERR_TOO_LARGE);
           memcpy (tmpbuf, ti.buf, ti.nhdr);
           err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
           if (err)
@@ -790,10 +789,10 @@ parse_crl_entry (KsbaCRL crl, int *got_entry)
 
 /* This function is used when a [0] tag was encountered to read the
    crlExtensions */
-static KsbaError 
-parse_crl_extensions (KsbaCRL crl)
+static gpg_error_t 
+parse_crl_extensions (ksba_crl_t crl)
 { 
-  KsbaError err;
+  gpg_error_t err;
   struct tag_info ti = crl->state.ti;
   unsigned long ext_len, len;
   unsigned char tmpbuf[4096]; /* for extensions */
@@ -802,7 +801,7 @@ parse_crl_extensions (KsbaCRL crl)
   if (!(ti.class == CLASS_CONTEXT && ti.tag == 0 && ti.is_constructed))
     return 0;
   if (ti.ndef)
-    return KSBA_Unsupported_Encoding;
+    return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);
   HASH (ti.buf, ti.nhdr);
   ext_len = ti.length;
 
@@ -812,15 +811,15 @@ parse_crl_extensions (KsbaCRL crl)
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL
          && ti.tag == TYPE_SEQUENCE && ti.is_constructed) )
-    return KSBA_Invalid_CRL_Object;
+    return gpg_error (GPG_ERR_INV_CRL_OBJ);
   if (ti.ndef)
-    return KSBA_Unsupported_Encoding;
+    return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);
   HASH (ti.buf, ti.nhdr);
   if (ext_len < ti.nhdr)
-    return KSBA_BER_Error;
+    return gpg_error (GPG_ERR_BAD_BER);
   ext_len -= ti.nhdr;
   if (ext_len < ti.length)
-    return KSBA_BER_Error;
+    return gpg_error (GPG_ERR_BAD_BER);
   len = ti.length;
 
   /* now loop over the extensions */
@@ -831,17 +830,17 @@ parse_crl_extensions (KsbaCRL crl)
         return err;
       if ( !(ti.class == CLASS_UNIVERSAL
              && ti.tag == TYPE_SEQUENCE && ti.is_constructed) )
-        return KSBA_Invalid_CRL_Object;
+        return gpg_error (GPG_ERR_INV_CRL_OBJ);
       if (ti.ndef)
-        return KSBA_Unsupported_Encoding;
+        return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);
       if (len < ti.nhdr)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       len -= ti.nhdr;
       if (len < ti.length)
-        return KSBA_BER_Error;
+        return gpg_error (GPG_ERR_BAD_BER);
       len -= ti.length;
       if (ti.nhdr + ti.length >= DIM(tmpbuf))
-        return KSBA_Object_Too_Large;
+        return gpg_error (GPG_ERR_TOO_LARGE);
       /* fixme use a larger buffer if the extension does not fit into tmpbuf */
       memcpy (tmpbuf, ti.buf, ti.nhdr);
       err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
@@ -861,10 +860,10 @@ parse_crl_extensions (KsbaCRL crl)
 }
 
 /* Parse the signatureAlgorithm and the signature */
-static KsbaError
-parse_signature (KsbaCRL crl)
+static gpg_error_t
+parse_signature (ksba_crl_t crl)
 {
-  KsbaError err;
+  gpg_error_t err;
   struct tag_info ti = crl->state.ti;
   unsigned char tmpbuf[2048]; /* for the sig algo and bitstr */
   size_t n, n2;
@@ -875,12 +874,12 @@ parse_signature (KsbaCRL crl)
   /* read the algorithmIdentifier sequence */
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
-    return KSBA_Invalid_CRL_Object;
+    return gpg_error (GPG_ERR_INV_CRL_OBJ);
   if (ti.ndef)
-    return KSBA_Unsupported_Encoding;
+    return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);
   n = ti.nhdr + ti.length;
   if (n >= DIM(tmpbuf))
-    return KSBA_Object_Too_Large;
+    return gpg_error (GPG_ERR_TOO_LARGE);
   memcpy (tmpbuf, ti.buf, ti.nhdr);
   err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
   if (err)
@@ -892,10 +891,10 @@ parse_signature (KsbaCRL crl)
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_BIT_STRING
          && !ti.is_constructed) )
-    return KSBA_Invalid_CRL_Object;
+    return gpg_error (GPG_ERR_INV_CRL_OBJ);
   n2 = ti.nhdr + ti.length;
   if (n + n2 >= DIM(tmpbuf))
-    return KSBA_Object_Too_Large;
+    return gpg_error (GPG_ERR_TOO_LARGE);
   memcpy (tmpbuf+n, ti.buf, ti.nhdr);
   err = read_buffer (crl->reader, tmpbuf+n+ti.nhdr, ti.length);
   if (err)
@@ -909,8 +908,8 @@ parse_signature (KsbaCRL crl)
 
 /* The actual parser which should be used with a new CRL object and
    run in a loop until the the KSBA_SR_READY is encountered */
-KsbaError 
-ksba_crl_parse (KsbaCRL crl, KsbaStopReason *r_stopreason)
+gpg_error_t 
+ksba_crl_parse (ksba_crl_t crl, ksba_stop_reason_t *r_stopreason)
 {
   enum { 
     sSTART,
@@ -918,12 +917,12 @@ ksba_crl_parse (KsbaCRL crl, KsbaStopReason *r_stopreason)
     sCRLEXT,
     sERROR
   } state = sERROR;
-  KsbaStopReason stop_reason;
-  KsbaError err = 0;
+  ksba_stop_reason_t stop_reason;
+  gpg_error_t err = 0;
   int got_entry = 0;
 
   if (!crl || !r_stopreason)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 
   if (!crl->any_parse_done)
     { /* first time initialization of the stop reason */
@@ -947,10 +946,10 @@ ksba_crl_parse (KsbaCRL crl, KsbaStopReason *r_stopreason)
       state = sCRLEXT;
       break;
     case KSBA_SR_RUNNING:
-      err = KSBA_Invalid_State;
+      err = gpg_error (GPG_ERR_INV_STATE);
       break;
     default:
-      err = KSBA_Bug;
+      err = gpg_error (GPG_ERR_BUG);
       break;
     }
   if (err)
@@ -977,7 +976,7 @@ ksba_crl_parse (KsbaCRL crl, KsbaStopReason *r_stopreason)
         }
       break;
     default:
-      err = KSBA_Invalid_State;
+      err = gpg_error (GPG_ERR_INV_STATE);
       break;
     }
   if (err)

@@ -476,7 +476,7 @@ append_ucs2_value (const unsigned char *value, size_t length,
 
 
 /* Append attribute and value.  ROOT is the sequence */
-static KsbaError
+static gpg_error_t
 append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
 {
   AsnNode node = root->down;
@@ -485,9 +485,9 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
   int i;
   
   if (!node || node->type != TYPE_OBJECT_ID)
-    return KSBA_Unexpected_Tag;
+    return gpg_error (GPG_ERR_UNEXPECTED_TAG);
   if (node->off == -1)
-    return KSBA_No_Value; /* Hmmm, this might lead to misunderstandings */
+    return gpg_error (GPG_ERR_NO_VALUE); /* Hmmm, this might lead to misunderstandings */
 
   name = NULL;
   for (i=0; oid_name_tbl[i].name; i++)
@@ -507,7 +507,7 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
     { /* No name in table: use the oid */
       char *p = ksba_oid_to_str (image+node->off+node->nhdr, node->len);
       if (!p)
-        return KSBA_Out_Of_Core;
+        return gpg_error (GPG_ERR_ENOMEM);
       put_stringbuf (sb, p);
       xfree (p);
       use_hex = 1;
@@ -515,7 +515,7 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
   put_stringbuf (sb, "=");
   node = node->right;
   if (!node || node->off == -1)
-    return KSBA_No_Value;
+    return gpg_error (GPG_ERR_NO_VALUE);
 
   switch (use_hex? 0 : node->type)
     {
@@ -552,10 +552,10 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
   return 0;
 }
 
-static KsbaError
+static gpg_error_t
 dn_to_str (const unsigned char *image, AsnNode root, struct stringbuf *sb)
 {
-  KsbaError err;
+  gpg_error_t err;
   AsnNode nset;
 
   if (!root )
@@ -564,7 +564,7 @@ dn_to_str (const unsigned char *image, AsnNode root, struct stringbuf *sb)
   if (!nset)
     return 0; /* consider this as empty */
   if (nset->type != TYPE_SET_OF)
-    return KSBA_Unexpected_Tag;
+    return gpg_error (GPG_ERR_UNEXPECTED_TAG);
 
   /* output in reverse order */
   while (nset->right)
@@ -575,11 +575,11 @@ dn_to_str (const unsigned char *image, AsnNode root, struct stringbuf *sb)
       AsnNode nseq;
 
       if (nset->type != TYPE_SET_OF)
-        return KSBA_Unexpected_Tag;
+        return gpg_error (GPG_ERR_UNEXPECTED_TAG);
       for (nseq = nset->down; nseq; nseq = nseq->right)
         {
           if (nseq->type != TYPE_SEQUENCE)
-            return KSBA_Unexpected_Tag;
+            return gpg_error (GPG_ERR_UNEXPECTED_TAG);
           if (nseq != nset->down)
             put_stringbuf (sb, "+");
           err = append_atv (image, nseq, sb);
@@ -596,15 +596,15 @@ dn_to_str (const unsigned char *image, AsnNode root, struct stringbuf *sb)
 }
 
 
-KsbaError
+gpg_error_t
 _ksba_dn_to_str (const unsigned char *image, AsnNode node, char **r_string)
 {
-  KsbaError err;
+  gpg_error_t err;
   struct stringbuf sb;
 
   *r_string = NULL;
   if (!node || node->type != TYPE_SEQUENCE_OF)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
 
   init_stringbuf (&sb, 100);
   err = dn_to_str (image, node, &sb);
@@ -612,7 +612,7 @@ _ksba_dn_to_str (const unsigned char *image, AsnNode node, char **r_string)
     {
       *r_string = get_stringbuf (&sb);
       if (!*r_string)
-        err = KSBA_Out_Of_Core;
+        err = gpg_error (GPG_ERR_ENOMEM);
     }
   deinit_stringbuf (&sb);
 
@@ -622,13 +622,13 @@ _ksba_dn_to_str (const unsigned char *image, AsnNode node, char **r_string)
 
 /* Create a new decoder and run it for the given element */
 /* Fixme: this code is duplicated from cms-parser.c */
-static KsbaError
-create_and_run_decoder (KsbaReader reader, const char *elem_name,
+static gpg_error_t
+create_and_run_decoder (ksba_reader_t reader, const char *elem_name,
                         AsnNode *r_root,
                         unsigned char **r_image, size_t *r_imagelen)
 {
-  KsbaError err;
-  KsbaAsnTree crl_tree;
+  gpg_error_t err;
+  ksba_asn_tree_t crl_tree;
   BerDecoder decoder;
 
   err = ksba_asn_create_tree ("tmttv2", &crl_tree);
@@ -639,7 +639,7 @@ create_and_run_decoder (KsbaReader reader, const char *elem_name,
   if (!decoder)
     {
       ksba_asn_tree_release (crl_tree);
-      return KSBA_Out_Of_Core;
+      return gpg_error (GPG_ERR_ENOMEM);
     }
 
   err = _ksba_ber_decoder_set_reader (decoder, reader);
@@ -667,18 +667,18 @@ create_and_run_decoder (KsbaReader reader, const char *elem_name,
 }
 
 
-KsbaError
+gpg_error_t
 _ksba_derdn_to_str (const unsigned char *der, size_t derlen, char **r_string)
 {
-  KsbaError err;
+  gpg_error_t err;
   AsnNode root; 
   unsigned char *image;
   size_t imagelen;
-  KsbaReader reader;
+  ksba_reader_t reader;
 
-  reader = ksba_reader_new ();
-  if (!reader)
-    return KSBA_Out_Of_Core;
+  err = ksba_reader_new (&reader);
+  if (err)
+    return err;
   err = ksba_reader_set_mem (reader, der, derlen);
   if (err)
     {
@@ -791,11 +791,11 @@ count_quoted_string (const char *string, size_t *result,
 /* Write out the data to W and do the required escaping.  Note that
    NBYTES is the number of bytes actually to be written, i.e. it is
    the result from count_quoted_string */
-static KsbaError
-write_escaped (KsbaWriter w, const unsigned char *buffer, size_t nbytes)
+static gpg_error_t
+write_escaped (ksba_writer_t w, const unsigned char *buffer, size_t nbytes)
 {
   const unsigned char *s;
-  KsbaError err;
+  gpg_error_t err;
 
   for (s=buffer; nbytes; s++)
     {
@@ -837,8 +837,8 @@ write_escaped (KsbaWriter w, const unsigned char *buffer, size_t nbytes)
    case of an error.  When NULL is passed as WRITER, the fucntion does
    not allocate any memory but just parses the string and returns the
    ENDP. */
-static KsbaError
-parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
+static gpg_error_t
+parse_rdn (const unsigned char *string, const char **endp, ksba_writer_t writer)
 {
   const unsigned char *s, *s1;
   size_t n, n1;
@@ -852,14 +852,14 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
   int valuelen;
   int valuetype;
   int need_escaping = 0;
-  KsbaError err = 0;
+  gpg_error_t err = 0;
 
   if (!string)
-    return KSBA_Invalid_Value;
+    return gpg_error (GPG_ERR_INV_VALUE);
   while (*string == ' ')
     string++;
   if (!*string)
-    return KSBA_Syntax_Error; /* empty elements are not allowed */
+    return gpg_error (GPG_ERR_SYNTAX); /* empty elements are not allowed */
   s = string;
 
   if ( ((*s == 'o' && s[1] == 'i' && s[2] == 'd')
@@ -877,13 +877,13 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
       while (*s == ' ')
         s++;
       if (*s != '=')
-        return KSBA_Syntax_Error;
+        return gpg_error (GPG_ERR_SYNTAX);
 
       if (writer)
         {
           p = xtrymalloc (n+1);
           if (!p)
-            return KSBA_Out_Of_Core;
+            return gpg_error (GPG_ERR_ENOMEM);
           memcpy (p, string, n);
           p[n] = 0;
           err = ksba_oid_from_str (p, &oidbuf, &oidlen);
@@ -902,7 +902,7 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
       while (*s == ' ')
         s++;
       if (*s != '=')
-        return KSBA_Syntax_Error; 
+        return gpg_error (GPG_ERR_SYNTAX); 
       
       for (i=0; oid_name_tbl[i].name; i++)
         {
@@ -911,7 +911,7 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
             break;
         }
       if (!oid_name_tbl[i].name)
-        return KSBA_Unknown_Name;
+        return gpg_error (GPG_ERR_UNKNOWN_NAME);
       oid = oid_name_tbl[i].oid;
       oidlen = oid_name_tbl[i].oidlen;
     }
@@ -923,7 +923,7 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
   /* parse attributeValue */
   if (!*s)
     {
-      err = KSBA_Syntax_Error; /* missing value */
+      err = gpg_error (GPG_ERR_SYNTAX); /* missing value */
       goto leave;
     }
 
@@ -938,7 +938,7 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
       n = s - string;
       if (!n || (n & 1))
         {
-          err = KSBA_Syntax_Error; /* no hex digits or odd number */
+          err = gpg_error (GPG_ERR_SYNTAX); /* no hex digits or odd number */
           goto leave;
         }
       while (*s == ' ')
@@ -950,7 +950,7 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
           valuebuf = xtrymalloc (valuelen);
           if (!valuebuf)
             {
-              err = KSBA_Out_Of_Core;
+              err = gpg_error (GPG_ERR_ENOMEM);
               goto leave;
             }
           for (p=valuebuf, s1=string; n; p++, s1 += 2, n--)
@@ -985,7 +985,7 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
       s = count_quoted_string (string, &n, 1, &valuetype);
       if (!s || *s != '\"')
         {
-          err = KSBA_Syntax_Error; /* error or quote not closed */
+          err = gpg_error (GPG_ERR_SYNTAX); /* error or quote not closed */
           goto leave;
         }
       s++;
@@ -1000,7 +1000,7 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
       s = count_quoted_string (string, &n, 0, &valuetype);
       if (!s)
         {
-          err = KSBA_Syntax_Error; /* error */
+          err = gpg_error (GPG_ERR_SYNTAX); /* error */
           goto leave;
         }
       while (*s == ' ')
@@ -1012,17 +1012,17 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
 
   if (!valuelen)
     {
-      err = KSBA_Syntax_Error; /* empty elements are not allowed */
+      err = gpg_error (GPG_ERR_SYNTAX); /* empty elements are not allowed */
       goto leave;
     }
   if ( *s && *s != ',' && *s != ';' && *s != '+')
     {
-      err = KSBA_Syntax_Error; /* invalid delimiter */
+      err = gpg_error (GPG_ERR_SYNTAX); /* invalid delimiter */
       goto leave;
     }
   if (*s == '+') /* fixme: implement this */
     {
-      err = KSBA_Not_Implemented; 
+      err = gpg_error (GPG_ERR_NOT_IMPLEMENTED); 
       goto leave;
     }
   *endp = *s? (s+1):s;
@@ -1072,11 +1072,11 @@ parse_rdn (const unsigned char *string, const char **endp, KsbaWriter writer)
 
 
 
-KsbaError
+gpg_error_t
 _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
 {
-  KsbaError err;
-  KsbaWriter writer;
+  gpg_error_t err;
+  ksba_writer_t writer;
   const char *s, *endp;
   void *buf = NULL;
   size_t buflen;
@@ -1085,9 +1085,8 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
 
   *rbuf = NULL; *rlength = 0;
   /* We are going to build the object using a writer object */
-  if (!(writer = ksba_writer_new ()))
-    err = KSBA_Out_Of_Core;
-  else
+  err = ksba_writer_new (&writer);
+  if (!err)
     err = ksba_writer_set_mem (writer, 1024);
   if (err)
     return err;
@@ -1109,7 +1108,7 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
                                 : xtrymalloc (part_array_size * sizeof *tmp);
           if (!tmp)
             {
-              err = KSBA_Out_Of_Core;
+              err = gpg_error (GPG_ERR_ENOMEM);
               goto leave;
             }
           part_array = tmp;
@@ -1119,7 +1118,7 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
     }
   if (!nparts)
     {
-      err = KSBA_Syntax_Error;
+      err = gpg_error (GPG_ERR_SYNTAX);
       goto leave;
     }
 
@@ -1134,7 +1133,7 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
   buf = ksba_writer_snatch_mem (writer, &buflen);
   if (!buf)
     {
-      err = KSBA_Out_Of_Core;
+      err = gpg_error (GPG_ERR_ENOMEM);
       goto leave;
     }
   /* reinitialize the buffer to create the outer sequence*/
@@ -1156,7 +1155,7 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
   *rbuf = ksba_writer_snatch_mem (writer, rlength);
   if (!*rbuf)
     {
-      err = KSBA_Out_Of_Core;
+      err = gpg_error (GPG_ERR_ENOMEM);
       goto leave;
     }
   

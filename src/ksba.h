@@ -1,5 +1,5 @@
 /* ksba.h - X509 library for the Aegypten project
- *      Copyright (C) 2001, 2002 g10 Code GmbH
+ *      Copyright (C) 2001, 2002, 2003 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -21,7 +21,7 @@
 #ifndef KSBA_H
 #define KSBA_H 1
 
-#include <time.h>
+#include <gpg-error.h>
 
 #ifdef __cplusplus
 extern "C" { 
@@ -36,9 +36,9 @@ extern "C" {
 #define _KSBA_GCC_VERSION (__GNUC__ * 10000 \
                             + __GNUC_MINOR__ * 100 \
                             + __GNUC_PATCHLEVEL__)
-/* #if _KSBA_GCC_VERSION > 30100 */
-/* #define _KSBA_DEPRECATED	__attribute__ ((__deprecated__)) */
-/* #endif */
+#if _KSBA_GCC_VERSION > 30100
+#define _KSBA_DEPRECATED	__attribute__ ((__deprecated__))
+#endif
 #endif /*__GNUC__*/
 
 #ifndef _KSBA_DEPRECATED
@@ -46,61 +46,62 @@ extern "C" {
 #endif
 
 
+/* For documentation: Mapping of the old error codes to the GPG codes.
+   Don't use this mapping; you have to use the gpg_error and
+   gpg_err_code functions anyway. */
+/* #define   KSBA_EOF          GPG_ERR_EOF */
+/* #define   KSBA_No_Error     GPG_ERR_NO_ERROR */
+/* #define   KSBA_General_Error GPG_ERR_GENERAL */
+/* #define   KSBA_Out_Of_Core   GPG_ERR_ENOMEM */
+/* #define   KSBA_Invalid_Value  GPG_ERR_INV_VALUE */
+/* #define   KSBA_Not_Implemented GPG_ERR_NOT_IMPLEMENTED */
+/* #define   KSBA_Conflict        GPG_ERR_CONFLICT */
+/* #define   KSBA_Read_Error      GPG_ERR_READ_ERROR   */
+/* #define   KSBA_Write_Error     GPG_ERR_WRITE_ERROR  */
+/* #define   KSBA_Invalid_Attr  GPG_ERR_INV_ATTR, */
+/* #define   KSBA_No_Data       GPG_ERR_NO_DATA */
+/* #define   KSBA_No_Value      GPG_ERR_NO_VALUE */
+/* #define   KSBA_Bug           GPG_ERR_BUG */
+/* #define   KSBA_BER_Error     GPG_ERR_BAD_BER */
+/* #define   KSBA_Element_Not_Found GPG_ERR_ELEMENT_NOT_FOUND */
+/* #define   KSBA_Identifier_Not_Found GPG_ERR_IDENTIFIER_NOT_FOUND */
+/* #define   KSBA_Value_Not_Found GPG_ERR_VALUE_NOT_FOUND */
+/* #define   KSBA_Syntax_Error   GPG_ERR_SYNTAX */
+/* #define   KSBA_Invalid_Tag   GPG_ERR_INV_TAG */
+/* #define   KSBA_Invalid_Length GPG_ERR_INV_LENGTH */
+/* #define   KSBA_Invalid_Keyinfo GPG_ERR_INV_KEYINFO */
+/* #define   KSBA_Unexpected_Tag  GPG_ERR_UNEXPECTED_TAG */
+/* #define   KSBA_Not_DER_Encoded GPG_ERR_NOT_DER_ENCODED */
+/* #define   KSBA_Unknown_Algorithm GPG_ERR_UNKNOWN_ALGORITHM */
+/* #define   KSBA_Unsupported_Algorithm GPG_ERR_UNSUPPORTED_ALGORITHM */
+/* #define   KSBA_Object_Too_Large GPG_ERR_TOO_LARGE */
+/* #define   KSBA_Object_Too_Short GPG_ERR_TOO_SHORT */
+/* #define   KSBA_No_CMS_Object  GPG_ERR_NO_CMS_OBJ */
+/* #define   KSBA_Unknown_CMS_Object GPG_ERR_UNKNOWN_CMS_OBJ */
+/* #define   KSBA_Unsupported_CMS_Object GPG_ERR_UNSUPPORTED_CMS_OBJ */
+/* #define   KSBA_Invalid_CMS_Object GPG_ERR_INV_CMS_OBJ */
+/* #define   KSBA_Unsupported_CMS_Version GPG_ERR_UNSUPPORTED_CMS_VERSION */
+/* #define   KSBA_Unsupported_Encoding GPG_ERR_UNSUPPORTED_ENCODING */
+/* #define   KSBA_Missing_Value GPG_ERR_MISSING_VALUE */
+/* #define   KSBA_Invalid_State GPG_ERR_INV_STATE */
+/* #define   KSBA_Duplicate_Value GPG_ERR_DUP_VALUE */
+/* #define   KSBA_Missing_Action GPG_ERR_MISSING_ACTION */
+/* #define   KSBA_File_Error     GPG_ERR_FILE_ERROR  */
+/* #define   KSBA_Module_Not_Found = GPG_ERR_MODULE_NOT_FOUND */
+/* #define   KSBA_Encoding_Error GPG_ERR_ENCODING_PROBLEM */
+/* #define   KSBA_Invalid_Index GPG_ERR_INV_INDEX */
+/* #define   KSBA_Invalid_OID_String GPG_ERR_INV_OID_STRING */
+/* #define   KSBA_Invalid_Sexp GPG_ERR_INV_SEXP */
+/* #define   KSBA_Unknown_Sexp  GPG_ERR_UNKNOWN_SEXP */
+/* #define   KSBA_Invalid_Time  GPG_ERR_INV_TIME */
+/* #define   KSBA_Buffer_Too_Short GPG_ERR_BUFFER_TOO_SHORT */
+/* #define   KSBA_Invalid_CRL_Object GPG_ERR_INV_CRL_OBJ. */
+/* #define   KSBA_Unsupported_CRL_Version GPG_ERR_UNSUPPORTED_CRL_VERSION */
+/* #define   KSBA_Unknown_Name GPG_ERR_UNKNOWN_NAME */
+/* #define   KSBA_Invalid_Cert_Object GPG_ERR_INV_CERT_OBJ */
 
-typedef enum {
-  KSBA_EOF = -1,
-  KSBA_No_Error = 0,
-  KSBA_General_Error = 1,
-  KSBA_Out_Of_Core = 2,
-  KSBA_Invalid_Value = 3,
-  KSBA_Not_Implemented = 4,
-  KSBA_Conflict = 5,
-  KSBA_Read_Error = 6,
-  KSBA_Write_Error = 7,
-  KSBA_Invalid_Attr = 8,
-  KSBA_No_Data = 9,
-  KSBA_No_Value = 10,
-  KSBA_Bug = 11,
-  KSBA_BER_Error = 12,
-  KSBA_Element_Not_Found = 13,
-  KSBA_Identifier_Not_Found = 14,
-  KSBA_Value_Not_Found = 15,  /* Note, that this is not the same as No Value */
-  KSBA_Syntax_Error = 16,
-  KSBA_Invalid_Tag = 17,
-  KSBA_Invalid_Length = 18,
-  KSBA_Invalid_Keyinfo = 19,
-  KSBA_Unexpected_Tag = 20,
-  KSBA_Not_DER_Encoded = 21,
-  KSBA_Unknown_Algorithm = 22,
-  KSBA_Unsupported_Algorithm = 23,
-  KSBA_Object_Too_Large = 24,
-  KSBA_Object_Too_Short = 25,
-  KSBA_No_CMS_Object = 26,
-  KSBA_Unknown_CMS_Object = 27,
-  KSBA_Unsupported_CMS_Object = 28,
-  KSBA_Invalid_CMS_Object = 29,
-  KSBA_Unsupported_CMS_Version = 30,
-  KSBA_Unsupported_Encoding = 31,
-  KSBA_Missing_Value = 32,
-  KSBA_Invalid_State = 33,
-  KSBA_Duplicate_Value = 34,
-  KSBA_Missing_Action = 35,
-  KSBA_File_Error = 36,
-  KSBA_Module_Not_Found = 37,
-  KSBA_Encoding_Error = 38,
-  KSBA_Invalid_Index = 39,
-  KSBA_Invalid_OID_String = 40,
-  KSBA_Invalid_Sexp = 41,
-  KSBA_Unknown_Sexp = 42,
-  KSBA_Invalid_Time = 43,
-  KSBA_User_Error = 44,        /* may be used by callbacks */
-  KSBA_Buffer_Too_Short = 45,
-  KSBA_Invalid_CRL_Object = 46,
-  KSBA_Unsupported_CRL_Version = 47,
-  KSBA_Unknown_Name = 48,
-  KSBA_Invalid_Cert_Object =49
-} KsbaError;
 
+typedef gpg_error_t KsbaError _KSBA_DEPRECATED;
 
 typedef enum {
   KSBA_CT_NONE = 0,
@@ -221,179 +222,180 @@ typedef const unsigned char *KsbaConstSexp _KSBA_DEPRECATED;
    
 
 /*-- cert.c --*/
-ksba_cert_t ksba_cert_new (void);
-void        ksba_cert_ref (ksba_cert_t cert);
+gpg_error_t ksba_cert_new (ksba_cert_t *acert);
+void         ksba_cert_ref (ksba_cert_t cert);
 void        ksba_cert_release (ksba_cert_t cert);
-KsbaError   ksba_cert_read_der (ksba_cert_t cert, ksba_reader_t reader);
-KsbaError   ksba_cert_init_from_mem (ksba_cert_t cert,
+gpg_error_t ksba_cert_read_der (ksba_cert_t cert, ksba_reader_t reader);
+gpg_error_t ksba_cert_init_from_mem (ksba_cert_t cert,
                                      const void *buffer, size_t length);
 const unsigned char *ksba_cert_get_image (ksba_cert_t cert, size_t *r_length);
-KsbaError ksba_cert_hash (ksba_cert_t cert, int what,
-                          void (*hasher)(void *,
-                                         const void *,
-                                         size_t length), 
-                          void *hasher_arg);
+gpg_error_t ksba_cert_hash (ksba_cert_t cert,
+                            int what,
+                            void (*hasher)(void *,
+                                           const void *,
+                                           size_t length), 
+                            void *hasher_arg);
 const char *ksba_cert_get_digest_algo (ksba_cert_t cert);
 ksba_sexp_t ksba_cert_get_serial (ksba_cert_t cert);
 char       *ksba_cert_get_issuer (ksba_cert_t cert, int idx);
-KsbaError   ksba_cert_get_validity (ksba_cert_t cert, int what,
+gpg_error_t ksba_cert_get_validity (ksba_cert_t cert, int what,
                                     ksba_isotime_t r_time);
 char       *ksba_cert_get_subject (ksba_cert_t cert, int idx);
-KsbaSexp    ksba_cert_get_public_key (ksba_cert_t cert);
-KsbaSexp    ksba_cert_get_sig_val (ksba_cert_t cert);
+ksba_sexp_t ksba_cert_get_public_key (ksba_cert_t cert);
+ksba_sexp_t ksba_cert_get_sig_val (ksba_cert_t cert);
 
-KsbaError ksba_cert_get_extension (ksba_cert_t cert, int idx,
-                                   char const **r_oid, int *r_crit,
-                                   size_t *r_deroff, size_t *r_derlen);
+gpg_error_t ksba_cert_get_extension (ksba_cert_t cert, int idx,
+                                     char const **r_oid, int *r_crit,
+                                     size_t *r_deroff, size_t *r_derlen);
 
-KsbaError ksba_cert_is_ca (ksba_cert_t cert, int *r_ca, int *r_pathlen);
-KsbaError ksba_cert_get_key_usage (ksba_cert_t cert, unsigned int *r_flags);
-KsbaError ksba_cert_get_cert_policies (ksba_cert_t cert, char **r_policies);
-KsbaError ksba_cert_get_crl_dist_point (ksba_cert_t cert, int idx,
-                                        ksba_name_t *r_distpoint,
-                                        ksba_name_t *r_issuer,
-                                        ksba_crl_reason_t *r_reason);
-KsbaError ksba_cert_get_auth_key_id (ksba_cert_t cert,
-                                     ksba_sexp_t *r_keyid,
-                                     ksba_name_t *r_name,
-                                     ksba_sexp_t *r_serial);
+gpg_error_t ksba_cert_is_ca (ksba_cert_t cert, int *r_ca, int *r_pathlen);
+gpg_error_t ksba_cert_get_key_usage (ksba_cert_t cert, unsigned int *r_flags);
+gpg_error_t ksba_cert_get_cert_policies (ksba_cert_t cert, char **r_policies);
+gpg_error_t ksba_cert_get_crl_dist_point (ksba_cert_t cert, int idx,
+                                          ksba_name_t *r_distpoint,
+                                          ksba_name_t *r_issuer,
+                                          ksba_crl_reason_t *r_reason);
+gpg_error_t ksba_cert_get_auth_key_id (ksba_cert_t cert,
+                                       ksba_sexp_t *r_keyid,
+                                       ksba_name_t *r_name,
+                                       ksba_sexp_t *r_serial);
 
 
 /*-- cms.c --*/
-KsbaContentType ksba_cms_identify (ksba_reader_t reader);
+ksba_content_type_t ksba_cms_identify (ksba_reader_t reader);
 
-KsbaCMS ksba_cms_new (void);
-void    ksba_cms_release (ksba_cms_t cms);
-KsbaError ksba_cms_set_reader_writer (ksba_cms_t cms, KsbaReader r, KsbaWriter w);
+gpg_error_t ksba_cms_new (ksba_cms_t *r_cms);
+void        ksba_cms_release (ksba_cms_t cms);
+gpg_error_t ksba_cms_set_reader_writer (ksba_cms_t cms,
+                                        ksba_reader_t r, ksba_writer_t w);
 
-KsbaError ksba_cms_parse (ksba_cms_t cms, KsbaStopReason *r_stopreason);
-KsbaError ksba_cms_build (ksba_cms_t cms, KsbaStopReason *r_stopreason);
+gpg_error_t ksba_cms_parse (ksba_cms_t cms, ksba_stop_reason_t *r_stopreason);
+gpg_error_t ksba_cms_build (ksba_cms_t cms, ksba_stop_reason_t *r_stopreason);
 
-KsbaContentType ksba_cms_get_content_type (ksba_cms_t cms, int what);
+ksba_content_type_t ksba_cms_get_content_type (ksba_cms_t cms, int what);
 const char *ksba_cms_get_content_oid (ksba_cms_t cms, int what);
-KsbaError ksba_cms_get_content_enc_iv (ksba_cms_t cms, unsigned char *iv,
-                                       size_t maxivlen, size_t *ivlen);
+gpg_error_t ksba_cms_get_content_enc_iv (ksba_cms_t cms, unsigned char *iv,
+                                         size_t maxivlen, size_t *ivlen);
 const char *ksba_cms_get_digest_algo_list (ksba_cms_t cms, int idx);
-KsbaError ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
-                                      char **r_issuer,
-                                      ksba_sexp_t *r_serial);
+gpg_error_t ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
+                                        char **r_issuer,
+                                        ksba_sexp_t *r_serial);
 const char *ksba_cms_get_digest_algo (ksba_cms_t cms, int idx);
 ksba_cert_t ksba_cms_get_cert (ksba_cms_t cms, int idx);
-KsbaError ksba_cms_get_message_digest (ksba_cms_t cms, int idx,
-                                       char **r_digest, size_t *r_digest_len);
-KsbaError ksba_cms_get_signing_time (ksba_cms_t cms, int idx,
-                                     ksba_isotime_t r_sigtime);
-KsbaError ksba_cms_get_sigattr_oids (ksba_cms_t cms, int idx,
-                                     const char *reqoid, char **r_value);
-KsbaSexp ksba_cms_get_sig_val (ksba_cms_t cms, int idx);
-KsbaSexp ksba_cms_get_enc_val (ksba_cms_t cms, int idx);
+gpg_error_t ksba_cms_get_message_digest (ksba_cms_t cms, int idx,
+                                         char **r_digest, size_t *r_digest_len);
+gpg_error_t ksba_cms_get_signing_time (ksba_cms_t cms, int idx,
+                                       ksba_isotime_t r_sigtime);
+gpg_error_t ksba_cms_get_sigattr_oids (ksba_cms_t cms, int idx,
+                                       const char *reqoid, char **r_value);
+ksba_sexp_t ksba_cms_get_sig_val (ksba_cms_t cms, int idx);
+ksba_sexp_t ksba_cms_get_enc_val (ksba_cms_t cms, int idx);
 
-void
-ksba_cms_set_hash_function (ksba_cms_t cms,
-                            void (*hash_fnc)(void *, const void *, size_t),
-                            void *hash_fnc_arg);
+void ksba_cms_set_hash_function (ksba_cms_t cms,
+                                 void (*hash_fnc)(void *, const void *, size_t),
+                                 void *hash_fnc_arg);
 
-KsbaError ksba_cms_hash_signed_attrs (ksba_cms_t cms, int idx);
+gpg_error_t ksba_cms_hash_signed_attrs (ksba_cms_t cms, int idx);
 
 
-KsbaError ksba_cms_set_content_type (ksba_cms_t cms, int what,
-                                     ksba_content_type_t type);
-KsbaError ksba_cms_add_digest_algo (ksba_cms_t cms, const char *oid);
-KsbaError ksba_cms_add_signer (ksba_cms_t cms, ksba_cert_t cert);
-KsbaError ksba_cms_add_cert (ksba_cms_t cms, ksba_cert_t cert);
-KsbaError ksba_cms_set_message_digest (ksba_cms_t cms, int idx,
-                                       const char *digest,
-                                       size_t digest_len);
-KsbaError ksba_cms_set_signing_time (ksba_cms_t cms, int idx,
-                                     const ksba_isotime_t sigtime);
-KsbaError ksba_cms_set_sig_val (ksba_cms_t cms,
-                                int idx, ksba_const_sexp_t sigval);
+gpg_error_t ksba_cms_set_content_type (ksba_cms_t cms, int what,
+                                       ksba_content_type_t type);
+gpg_error_t ksba_cms_add_digest_algo (ksba_cms_t cms, const char *oid);
+gpg_error_t ksba_cms_add_signer (ksba_cms_t cms, ksba_cert_t cert);
+gpg_error_t ksba_cms_add_cert (ksba_cms_t cms, ksba_cert_t cert);
+gpg_error_t ksba_cms_set_message_digest (ksba_cms_t cms, int idx,
+                                         const char *digest,
+                                         size_t digest_len);
+gpg_error_t ksba_cms_set_signing_time (ksba_cms_t cms, int idx,
+                                       const ksba_isotime_t sigtime);
+gpg_error_t ksba_cms_set_sig_val (ksba_cms_t cms,
+                                  int idx, ksba_const_sexp_t sigval);
 
-KsbaError ksba_cms_set_content_enc_algo (ksba_cms_t cms,
-                                         const char *oid,
-                                         const unsigned char *iv,
-                                         size_t ivlen);
-KsbaError ksba_cms_add_recipient (ksba_cms_t cms, ksba_cert_t cert);
-KsbaError ksba_cms_set_enc_val (ksba_cms_t cms,
-                                int idx, ksba_const_sexp_t encval);
+gpg_error_t ksba_cms_set_content_enc_algo (ksba_cms_t cms,
+                                           const char *oid,
+                                           const unsigned char *iv,
+                                           size_t ivlen);
+gpg_error_t ksba_cms_add_recipient (ksba_cms_t cms, ksba_cert_t cert);
+gpg_error_t ksba_cms_set_enc_val (ksba_cms_t cms,
+                                  int idx, ksba_const_sexp_t encval);
 
 
 /*-- crl.c --*/
-ksba_crl_t   ksba_crl_new (void);
-void      ksba_crl_release (ksba_crl_t crl);
-KsbaError ksba_crl_set_reader (ksba_crl_t crl, KsbaReader r);
-void      ksba_crl_set_hash_function (ksba_crl_t crl,
-                            void (*hash_fnc)(void *, const void *, size_t),
-                            void *hash_fnc_arg);
+gpg_error_t ksba_crl_new (ksba_crl_t *r_crl);
+void        ksba_crl_release (ksba_crl_t crl);
+gpg_error_t ksba_crl_set_reader (ksba_crl_t crl, ksba_reader_t r);
+void        ksba_crl_set_hash_function (ksba_crl_t crl,
+                                        void (*hash_fnc)(void *,
+                                                         const void *, size_t),
+                                        void *hash_fnc_arg);
 const char *ksba_crl_get_digest_algo (ksba_crl_t crl);
-KsbaError ksba_crl_get_issuer (ksba_crl_t crl, char **r_issuer);
-KsbaError ksba_crl_get_update_times (ksba_crl_t crl,
-                                     ksba_isotime_t this,
-                                     ksba_isotime_t next);
-KsbaError ksba_crl_get_item (ksba_crl_t crl,
-                             ksba_sexp_t *r_serial,
-                             ksba_isotime_t r_revocation_date,
-                             ksba_crl_reason_t *r_reason);
-KsbaSexp  ksba_crl_get_sig_val (ksba_crl_t crl);
-KsbaError ksba_crl_parse (ksba_crl_t crl, ksba_stop_reason_t *r_stopreason);
+gpg_error_t ksba_crl_get_issuer (ksba_crl_t crl, char **r_issuer);
+gpg_error_t ksba_crl_get_update_times (ksba_crl_t crl,
+                                       ksba_isotime_t this,
+                                       ksba_isotime_t next);
+gpg_error_t ksba_crl_get_item (ksba_crl_t crl,
+                               ksba_sexp_t *r_serial,
+                               ksba_isotime_t r_revocation_date,
+                               ksba_crl_reason_t *r_reason);
+ksba_sexp_t ksba_crl_get_sig_val (ksba_crl_t crl);
+gpg_error_t ksba_crl_parse (ksba_crl_t crl, ksba_stop_reason_t *r_stopreason);
 
 /*-- certreq.c --*/
-ksba_certreq_t ksba_certreq_new (void);
-void      ksba_certreq_release (ksba_certreq_t cr);
-KsbaError ksba_certreq_set_writer (ksba_certreq_t cr, KsbaWriter w);
-void      ksba_certreq_set_hash_function (
+gpg_error_t ksba_certreq_new (ksba_certreq_t *r_cr);
+void        ksba_certreq_release (ksba_certreq_t cr);
+gpg_error_t ksba_certreq_set_writer (ksba_certreq_t cr, ksba_writer_t w);
+void         ksba_certreq_set_hash_function (
                                ksba_certreq_t cr,
                                void (*hash_fnc)(void *, const void *, size_t),
                                void *hash_fnc_arg);
-KsbaError ksba_certreq_add_subject (ksba_certreq_t cr, const char *name);
-KsbaError ksba_certreq_set_public_key (ksba_certreq_t cr,
+gpg_error_t ksba_certreq_add_subject (ksba_certreq_t cr, const char *name);
+gpg_error_t ksba_certreq_set_public_key (ksba_certreq_t cr,
                                        ksba_const_sexp_t key);
-KsbaError ksba_certreq_set_sig_val (ksba_certreq_t cr,
+gpg_error_t ksba_certreq_set_sig_val (ksba_certreq_t cr,
                                     ksba_const_sexp_t sigval);
-KsbaError ksba_certreq_build (ksba_certreq_t cr,
+gpg_error_t ksba_certreq_build (ksba_certreq_t cr,
                               ksba_stop_reason_t *r_stopreason);
 
 
 /*-- reader.c --*/
-ksba_reader_t ksba_reader_new (void);
-void       ksba_reader_release (ksba_reader_t r);
-int        ksba_reader_error (ksba_reader_t r);
+gpg_error_t ksba_reader_new (ksba_reader_t *r_r);
+void        ksba_reader_release (ksba_reader_t r);
+int         ksba_reader_error (ksba_reader_t r);
 
-KsbaError ksba_reader_set_mem (ksba_reader_t r,
+gpg_error_t ksba_reader_set_mem (ksba_reader_t r,
                                const void *buffer, size_t length);
-KsbaError ksba_reader_set_fd (ksba_reader_t r, int fd);
-KsbaError ksba_reader_set_file (ksba_reader_t r, FILE *fp);
-KsbaError ksba_reader_set_cb (ksba_reader_t r, 
+gpg_error_t ksba_reader_set_fd (ksba_reader_t r, int fd);
+gpg_error_t ksba_reader_set_file (ksba_reader_t r, FILE *fp);
+gpg_error_t ksba_reader_set_cb (ksba_reader_t r, 
                               int (*cb)(void*,char *,size_t,size_t*),
                               void *cb_value );
 
-KsbaError ksba_reader_read (ksba_reader_t r,
+gpg_error_t ksba_reader_read (ksba_reader_t r,
                             char *buffer, size_t length, size_t *nread);
-KsbaError ksba_reader_unread (ksba_reader_t r, const void *buffer, size_t count);
+gpg_error_t ksba_reader_unread (ksba_reader_t r, const void *buffer, size_t count);
 unsigned long ksba_reader_tell (ksba_reader_t r);
 
 /*-- writer.c --*/
-ksba_writer_t ksba_writer_new (void);
-void       ksba_writer_release (ksba_writer_t r);
-int ksba_writer_error (ksba_writer_t w);
+gpg_error_t ksba_writer_new (ksba_writer_t *r_w);
+void        ksba_writer_release (ksba_writer_t w);
+int         ksba_writer_error (ksba_writer_t w);
 unsigned long ksba_writer_tell (ksba_writer_t w);
-KsbaError ksba_writer_set_fd (ksba_writer_t w, int fd);
-KsbaError ksba_writer_set_file (ksba_writer_t w, FILE *fp);
-KsbaError ksba_writer_set_cb (ksba_writer_t w, 
-                              int (*cb)(void*,const void *,size_t),
-                              void *cb_value);
-KsbaError ksba_writer_set_mem (ksba_writer_t w, size_t initial_size);
+gpg_error_t ksba_writer_set_fd (ksba_writer_t w, int fd);
+gpg_error_t ksba_writer_set_file (ksba_writer_t w, FILE *fp);
+gpg_error_t ksba_writer_set_cb (ksba_writer_t w, 
+                                int (*cb)(void*,const void *,size_t),
+                                void *cb_value);
+gpg_error_t ksba_writer_set_mem (ksba_writer_t w, size_t initial_size);
 const void *ksba_writer_get_mem (ksba_writer_t w, size_t *nbytes);
 void *      ksba_writer_snatch_mem (ksba_writer_t w, size_t *nbytes);
-KsbaError 
-ksba_writer_set_filter (ksba_writer_t w, 
-                        KsbaError (*filter)(void*,
-                                            const void *,size_t, size_t *,
-                                            void *, size_t, size_t *),
-                        void *filter_arg);
+gpg_error_t ksba_writer_set_filter (ksba_writer_t w, 
+                                    gpg_error_t (*filter)(void*,
+                                             const void *,size_t, size_t *,
+                                             void *, size_t, size_t *),
+                                    void *filter_arg);
 
-KsbaError ksba_writer_write (ksba_writer_t w, const void *buffer, size_t length);
-KsbaError ksba_writer_write_octet_string (ksba_writer_t w,
+gpg_error_t ksba_writer_write (ksba_writer_t w, const void *buffer, size_t length);
+gpg_error_t ksba_writer_write_octet_string (ksba_writer_t w,
                                           const void *buffer, size_t length,
                                           int flush);
 
@@ -404,19 +406,19 @@ void ksba_asn_tree_release (ksba_asn_tree_t tree);
 
 /*-- asn1-func.c --*/
 void ksba_asn_tree_dump (ksba_asn_tree_t tree, const char *name, FILE *fp);
-KsbaError ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result);
+gpg_error_t ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result);
 
 /*-- oid.c --*/
 char *ksba_oid_to_str (const char *buffer, size_t length);
-int ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength);
+gpg_error_t ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength);
 
 
 /*-- name.c --*/
-ksba_name_t ksba_name_new (void);
-void ksba_name_ref (ksba_name_t name);
-void ksba_name_release (ksba_name_t name);
+gpg_error_t ksba_name_new (ksba_name_t *r_name);
+void        ksba_name_ref (ksba_name_t name);
+void        ksba_name_release (ksba_name_t name);
 const char *ksba_name_enum (ksba_name_t name, int idx);
-char *ksba_name_get_uri (ksba_name_t name, int idx);
+char       *ksba_name_get_uri (ksba_name_t name, int idx);
 
 
 /*-- util.c --*/
@@ -432,13 +434,7 @@ void  ksba_free ( void *a );
 /*--version.c --*/
 const char *ksba_check_version (const char *req_version);
 
-/*-- errors.c (generated from this file) --*/
-const char *ksba_strerror (KsbaError err);
-
 #ifdef __cplusplus
 }
 #endif
 #endif /*KSBA_H*/
-
-
-

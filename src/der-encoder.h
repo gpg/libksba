@@ -29,31 +29,32 @@ typedef struct der_encoder_s *DerEncoder;
 DerEncoder _ksba_der_encoder_new (void);
 void       _ksba_der_encoder_release (DerEncoder d);
 
-KsbaError _ksba_der_encoder_set_module (DerEncoder d, KsbaAsnTree module);
-KsbaError _ksba_der_encoder_set_writer (DerEncoder d, KsbaWriter w);
+gpg_error_t _ksba_der_encoder_set_module (DerEncoder d, ksba_asn_tree_t module);
+gpg_error_t _ksba_der_encoder_set_writer (DerEncoder d, ksba_writer_t w);
 
 
-KsbaError _ksba_der_write_integer (KsbaWriter w, const unsigned char *value);
-KsbaError _ksba_der_write_algorithm_identifier (
-            KsbaWriter w, const char *oid, const void *parm, size_t parmlen);
+gpg_error_t _ksba_der_write_integer (ksba_writer_t w,
+                                     const unsigned char *value);
+gpg_error_t _ksba_der_write_algorithm_identifier (
+            ksba_writer_t w, const char *oid, const void *parm, size_t parmlen);
 
 
 
-KsbaError _ksba_der_copy_tree (AsnNode dst,
+gpg_error_t _ksba_der_copy_tree (AsnNode dst,
                                AsnNode src, const unsigned char *srcimage);
 
 
 
-KsbaError _ksba_der_store_time (AsnNode node, const ksba_isotime_t atime);
-KsbaError _ksba_der_store_string (AsnNode node, const char *string);
-KsbaError _ksba_der_store_integer (AsnNode node, const unsigned char *value);
-KsbaError _ksba_der_store_oid (AsnNode node, const char *oid);
-KsbaError _ksba_der_store_octet_string (AsnNode node,
+gpg_error_t _ksba_der_store_time (AsnNode node, const ksba_isotime_t atime);
+gpg_error_t _ksba_der_store_string (AsnNode node, const char *string);
+gpg_error_t _ksba_der_store_integer (AsnNode node, const unsigned char *value);
+gpg_error_t _ksba_der_store_oid (AsnNode node, const char *oid);
+gpg_error_t _ksba_der_store_octet_string (AsnNode node,
                                         const char *buf, size_t len);
-KsbaError _ksba_der_store_null (AsnNode node);
+gpg_error_t _ksba_der_store_null (AsnNode node);
 
 
-KsbaError _ksba_der_encode_tree (AsnNode root,
+gpg_error_t _ksba_der_encode_tree (AsnNode root,
                                  unsigned char **r_image, size_t *r_imagelen);
 
 

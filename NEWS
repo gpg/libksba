@@ -7,17 +7,29 @@ Noteworthy changes in version 0.9.0 (unreleased)
    UTC. This is to allow representation of dates beyond the year 2038.
    Comparing is a mere strcmp.
 
- * All type names are nom conforming to the GNU coding standards, tghe
+ * All type names are nom conforming to the GNU coding standards, the
    old names are still available as aliases but flagged as deprecated.       
+
+ * All error codes have been replaced by libgpg-error ones.  Libksba
+   now depends on this package.  Remember to use the gpg_err_code
+   function when testing for error values other than success.
 
  * Interface changes relative to the 0.4.7 release:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-ksba_isotime_t             NEW.
 ksba_cert_get_validity     CHANGED: Uses ksba_isotime_t instead of time_t.
 ksba_crl_get_update_times  CHANGED: Uses ksba_isotime_t instead of time_t.
 ksba_crl_get_item          CHANGED: Uses ksba_isotime_t instead of time_t.
 ksba_cms_get_signing_time  CHANGED: Uses ksba_isotime_t instead of time_t.
 ksba_cms_set_signing_time  CHANGED: Uses ksba_isotime_t instead of time_t.
+ksba_cert_new              CHANGED: Returns an error code now.
+ksba_cms_new               CHANGED: Returns an error code now.
+ksba_name_new              CHANGED: Returns an error code now.
+ksba_writer_new            CHANGED: Returns an error code now.
+ksba_reader_new            CHANGED: Returns an error code now.
+ksba_certreq_new           CHANGED: Returns an error code now.
+ksba_crl_new               CHANGED: Returns an error code now.
+ksba_isotime_t             NEW.
+ksba_error_t               NEW: Should be used instead of KsbaError.
 ksba_cert_t                NEW: Should be used instead of KsbaCert.
 ksba_certreq_t             NEW: Should be used instead of KsbaCertreq.
 ksba_cms_t                 NEW: Should be used instead of KsbaCMS.
@@ -26,7 +38,7 @@ ksba_name_t                NEW: Should be used instead of KsbaName.
 ksba_sexp_t                NEW: Should be used instead of KsbaSexp.
 ksba_reader_t              NEW: Should be used instead of KsbaReader.
 ksba_writer_t              NEW: Should be used instead of KsbaWriter.
-
+ksba_strerror              REMOVED: use gpg_strerror instead.
 
 Noteworthy changes in version 0.4.7 (2003-03-17)
 ------------------------------------------------

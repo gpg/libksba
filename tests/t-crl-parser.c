@@ -36,14 +36,14 @@
 
 #define fail_if_err(a) do { if(a) {                                       \
                               fprintf (stderr, "%s:%d: KSBA error: %s\n", \
-                              __FILE__, __LINE__, ksba_strerror(a));   \
+                              __FILE__, __LINE__, gpg_strerror(a));   \
                               exit (1); }                              \
                            } while(0)
 
 
 #define fail_if_err2(f, a) do { if(a) {\
             fprintf (stderr, "%s:%d: KSBA error on file `%s': %s\n", \
-                       __FILE__, __LINE__, (f), ksba_strerror(a));   \
+                       __FILE__, __LINE__, (f), gpg_strerror(a));   \
                             exit (1); }                              \
                            } while(0)
 
@@ -67,7 +67,7 @@ xmalloc (size_t n)
 
 
 static void
-print_sexp (KsbaConstSexp p)
+print_sexp (ksba_const_sexp_t p)
 {
   int level = 0;
 
@@ -96,10 +96,10 @@ print_sexp (KsbaConstSexp p)
             }
           else
             {
-              KsbaConstSexp endp;
+              char *endp;
               unsigned long n;
 
-              n = strtoul (p, (char**)&endp, 10);
+              n = strtoul (p, &endp, 10);
               p = endp;
               if (*p != ':')
                 {
@@ -154,11 +154,11 @@ my_hasher (void *arg, const void *buffer, size_t length)
 static void
 one_file (const char *fname)
 {
-  KsbaError err;
+  gpg_error_t err;
   FILE *fp;
-  KsbaReader r;
-  KsbaCRL crl;
-  KsbaStopReason stopreason;
+  ksba_reader_t r;
+  ksba_crl_t crl;
+  ksba_stop_reason_t stopreason;
   int count = 0;
   FILE *hashlog = NULL;
 
@@ -184,15 +184,15 @@ one_file (const char *fname)
       exit (1);
     }
 
-  r = ksba_reader_new ();
-  if (!r)
-    fail_if_err (KSBA_Out_Of_Core);
+  err = ksba_reader_new (&r);
+  if (err)
+    fail_if_err (err);
   err = ksba_reader_set_file (r, fp);
   fail_if_err (err);
 
-  crl = ksba_crl_new ();
-  if (!crl)
-    fail_if_err (KSBA_Out_Of_Core);
+  err = ksba_crl_new (&crl);
+  if (err)
+    fail_if_err (err);
 
   err = ksba_crl_set_reader (crl, r);
   fail_if_err (err);
@@ -222,7 +222,7 @@ one_file (const char *fname)
             xfree (issuer);
             putchar ('\n');
             err = ksba_crl_get_update_times (crl, this, next);
-            if (err != KSBA_Invalid_Time)
+            if (gpg_err_code (err) != GPG_ERR_INV_TIME)
               fail_if_err2 (fname, err);
             printf ("thisUpdate: ");
             print_time (this);
@@ -235,9 +235,9 @@ one_file (const char *fname)
 
         case KSBA_SR_GOT_ITEM:
           {
-            KsbaSexp serial;
+            ksba_sexp_t serial;
             ksba_isotime_t rdate;
-            KsbaCRLReason reason;
+            ksba_crl_reason_t reason;
 
             err = ksba_crl_get_item (crl, &serial, rdate, &reason);
             fail_if_err2 (fname, err);
@@ -267,7 +267,7 @@ one_file (const char *fname)
     fail ("digest algorithm mismatch");
 
   {
-    KsbaSexp sigval;
+    ksba_sexp_t sigval;
 
     sigval = ksba_crl_get_sig_val (crl);
     if (!sigval)

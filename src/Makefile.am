@@ -21,8 +21,8 @@
 
 asn1_modules = tmttv2.asn cms.asn
 
-EXTRA_DIST = ksba-config.in mkerrors $(asn1_modules) ksba.m4
-BUILT_SOURCES = asn1-parse.c errors.c asn1-tables.c
+EXTRA_DIST = ksba-config.in $(asn1_modules) ksba.m4
+BUILT_SOURCES = asn1-parse.c asn1-tables.c
 DISTCLEANFILES = asn1-tables.c
 bin_SCRIPTS = ksba-config
 include_HEADERS = ksba.h
@@ -31,6 +31,7 @@ noinst_PROGRAMS = asn1-gentables ber-dump
 m4datadir = $(datadir)/aclocal
 m4data_DATA = ksba.m4
 
+AM_CFLAGS = @GPG_ERROR_CFLAGS@
 
 libksba_la_LDFLAGS = -version-info \
       @LIBKSBA_LT_CURRENT@:@LIBKSBA_LT_REVISION@:@LIBKSBA_LT_AGE@
@@ -51,20 +52,18 @@ libksba_la_SOURCES = \
 	certreq.c certreq.h \
 	keyinfo.c keyinfo.h \
 	oid.c name.c dn.c time.c convert.h \
-	version.c util.c util.h shared.h errors.c \
+	version.c util.c util.h shared.h \
 	asn1-tables.c
 
 asn1_gentables_SOURCES = asn1-gentables.c 
-asn1_gentables_LDADD = asn1-parse.o asn1-func.o oid.o util.o
+asn1_gentables_LDADD = asn1-parse.o asn1-func.o oid.o util.o @GPG_ERROR_LIBS@
 
 ber_dump_SOURCES = ber-dump.c 
 ber_dump_LDADD = ber-decoder.o ber-help.o reader.o writer.o asn1-parse.o \
-	asn1-func.o oid.o util.o
+	asn1-func.o oid.o util.o @GPG_ERROR_LIBS@
+
 
 asn1-parse.c : asn1-func.h
-
-errors.c : ksba.h mkerrors
-	$(srcdir)/mkerrors < $(srcdir)/ksba.h > errors.c
 
 asn1-tables.c : asn1-gentables $(asn1_modules)
 	@set -e; list=""; \

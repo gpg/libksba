@@ -1,3 +1,24 @@
+2003-11-12  Werner Koch  <wk@gnupg.org>
+
+	* cms.c (ksba_cms_new): Changed Interface to return an error code.
+	* name.c (ksba_name_new): Ditto.
+	* writer.c (ksba_writer_new): Ditto.
+	* reader.c (ksba_reader_new): Ditto.
+	* certreq.c (ksba_certreq_new): Ditto.
+	* crl.c (ksba_crl_new): Ditto.
+
+	* ksba.h: Removed all KSBA_ error codes and replaced them all over
+	the package by the gpg-error.h codes. Include gpg-error.h
+	* mkerrors: Removed.
+	* Makefile.am: Removed generation of errors.c
+	* asn1-gentables.c (one_file): Simplified error printing
+	* ksba-config.in (libs,cflags): Add values for gpg-error.  Remove
+	duplicates.
+
+2003-11-11  Werner Koch  <wk@gnupg.org>
+
+	* cert.c (ksba_cert_new): Changed interface.
+
 2003-10-31  Werner Koch  <wk@gnupg.org>
 
 	Changed the representation of time.

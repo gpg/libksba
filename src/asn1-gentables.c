@@ -166,18 +166,12 @@ create_static_structure (AsnNode pointer, const char *file_name)
 static struct name_list_s *
 one_file (FILE *fp, const char *fname, int *count)
 {
-  KsbaAsnTree tree;
+  ksba_asn_tree_t tree;
   int rc;
     
   rc = ksba_asn_parse_file (fname, &tree, check_only);
-  if (rc==KSBA_Syntax_Error)
-      print_error ("error parsing `%s': syntax error\n", fname);
-  else if (rc==KSBA_Identifier_Not_Found)
-      print_error ("error parsing `%s': identifier not found\n", fname);
-  else if (rc==KSBA_File_Error)
-      print_error ("error parsing `%s': file not found\n", fname);
-  else if (rc)
-      print_error ("error parsing `%s': unknown error %d\n", fname, rc);
+  if (rc)
+      print_error ("error parsing `%s': %s\n", fname, gpg_strerror (rc) );
   else if (!check_only)
     {
       if (dump_only)
