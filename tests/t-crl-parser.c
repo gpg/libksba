@@ -80,6 +80,7 @@ print_sexp (KsbaConstSexp p)
             }
           else if (*p == ')')
             {
+              putchar (*p);
               if (--level <= 0 )
                 return;
             }
@@ -100,9 +101,10 @@ print_sexp (KsbaConstSexp p)
                   fputs ("[invalid s-exp]", stdout);
                   return;
                 }
-              
+              putchar('#');
               for (p++; n; n--, p++)
                 printf ("%02X", *p);
+              putchar('#');
             }
         }
     }
@@ -118,6 +120,27 @@ print_dn (char *p)
     printf ("`%s'", p);
 }
 
+static void
+print_time (time_t t)
+{
+
+  if (!t)
+    fputs ("none", stdout);
+  else if ( t == (time_t)(-1) )
+    fputs ("error", stdout);
+  else
+    {
+      struct tm *tp;
+
+      tp = gmtime (&t);
+      printf ("%04d-%02d-%02d %02d:%02d:%02d",
+              1900+tp->tm_year, tp->tm_mon+1, tp->tm_mday,
+              tp->tm_hour, tp->tm_min, tp->tm_sec);
+      assert (!tp->tm_isdst);
+    }
+}
+
+
 
 static void
 one_file (const char *fname)
@@ -127,6 +150,7 @@ one_file (const char *fname)
   KsbaReader r;
   KsbaCRL crl;
   KsbaStopReason stopreason;
+  int count = 0;
 
   printf ("*** checking `%s' ***\n", fname);
   fp = fopen (fname, "r");
@@ -154,13 +178,13 @@ one_file (const char *fname)
     {
       err = ksba_crl_parse (crl, &stopreason);
       fail_if_err2 (fname, err);
-      printf ("stop reason: %d\n", stopreason);
       switch (stopreason)
         {
         case KSBA_SR_BEGIN_ITEMS:
           {
             const char *algoid;
             char *issuer;
+            time_t this, next;
 
             algoid = ksba_crl_get_digest_algo (crl);
             printf ("digest algo: %s\n", algoid? algoid : "[none]");
@@ -171,12 +195,32 @@ one_file (const char *fname)
             print_dn (issuer);
             xfree (issuer);
             putchar ('\n');
+            err = ksba_crl_get_update_times (crl, &this, &next);
+            if (err != KSBA_Invalid_Time)
+              fail_if_err2 (fname, err);
+            printf ("thisUpdate: ");
+            print_time (this);
+            putchar ('\n');
+            printf ("nextUpdate: ");
+            print_time (next);
+            putchar ('\n');
           }
           break;
 
         case KSBA_SR_GOT_ITEM:
           {
-            printf ("got an CRL entry\n");
+            KsbaSexp serial;
+            time_t rdate;
+            KsbaCRLReason reason;
+
+            err = ksba_crl_get_item (crl, &serial, &rdate, &reason);
+            fail_if_err2 (fname, err);
+            printf ("CRL entry %d: s=", ++count);
+            print_sexp (serial);
+            printf (", t=");
+            print_time (rdate);
+            printf (", r=%d\n", reason);
+            xfree (serial);
           }
           break;
 
@@ -231,7 +275,7 @@ main (int argc, char **argv)
   else
     {
       const char *files[] = {
-        "crl_test01.der",
+        "testcrl.ber",
         NULL 
       };
       int idx;
