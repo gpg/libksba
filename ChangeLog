@@ -1,5 +1,7 @@
 2003-12-19  Werner Koch  <wk@gnupg.org>
 
+	Released 0.9.1.
+	
 	* configure.ac: Bumbed LT version to C9/A1/R0.
 
 2003-12-08  Werner Koch  <wk@gnupg.org>
