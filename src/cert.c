@@ -199,9 +199,10 @@ ksba_cert_get_image (KsbaCert cert, size_t *r_length )
       return NULL;
     }
 
+  assert (n->nhdr + n->len + n->off <= cert->imagelen);
   if (r_length)
-    *r_length = cert->imagelen;
-  return cert->image;
+    *r_length = n->nhdr + n->len;
+  return cert->image + n->off;
 }
 
 

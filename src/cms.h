@@ -84,6 +84,9 @@ struct ksba_cms_s {
   char *encr_iv;
   size_t encr_ivlen;
 
+  struct certlist_s *cert_info_list; /* A list with certificates intended
+                                        to be send with a signed message */
+
   struct {
     AsnNode root;  /* root of the tree with the values */
     unsigned char *image;

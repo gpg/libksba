@@ -1,3 +1,15 @@
+2002-01-25  Werner Koch  <wk@gnupg.org>
+
+	* cms.c (build_signed_data_attributes): Write the optional certs.
+	* cert.c (ksba_cert_get_image): Don't return the image length but
+	the parsed length.
+
+2002-01-24  Werner Koch  <wk@gnupg.org>
+
+	* cms.h: Add new member cert_info_list. 
+	* cms.c (ksba_cms_add_cert): New.
+	(ksba_cms_release): Release the cert info list.
+
 2002-01-23  Werner Koch  <wk@gnupg.org>
 
 	* crl.c (parse_to_next_update): Use measured length to fixup the

@@ -288,6 +288,13 @@ ksba_cms_release (KsbaCMS cms)
       xfree (cms->cert_list);
       cms->cert_list = cl;
     }
+  while (cms->cert_info_list)
+    {
+      struct certlist_s *cl = cms->cert_info_list->next;
+      ksba_cert_release (cms->cert_info_list->cert);
+      xfree (cms->cert_info_list);
+      cms->cert_info_list = cl;
+    }
   xfree (cms->inner_cont_oid);
   xfree (cms->encr_algo_oid);
   xfree (cms->encr_iv);
@@ -993,9 +1000,6 @@ ksba_cms_add_digest_algo (KsbaCMS cms, const char *oid)
  * This functions starts assembly of a new signed data content or adds
  * another signer to the list of signers.
  *
- * Note: after successful completion of this function ownership of
- * @cert is transferred to @cms.  
- * 
  * Return value: 0 on success or an error code.
  **/
 KsbaError
@@ -1014,6 +1018,36 @@ ksba_cms_add_signer (KsbaCMS cms, KsbaCert cert)
   cl->cert = cert;
   cl->next = cms->cert_list;
   cms->cert_list = cl;
+  return 0;
+}
+
+/**
+ * ksba_cms_add_cert:
+ * @cms: A CMS object
+ * @cert: A certificate to be send along with the signed data.
+ * 
+ * This functions adds a certificate to the list of certificates send
+ * along with the signed data.  Using this is optional but it is very
+ * common to include at least the certificate of the signer it self.
+ *
+ * Return value: 0 on success or an error code.
+ **/
+KsbaError
+ksba_cms_add_cert (KsbaCMS cms, KsbaCert cert)
+{
+  struct certlist_s *cl;
+
+  if (!cms || !cert)
+    return KSBA_Invalid_Value;
+  
+  cl = xtrycalloc (1,sizeof *cl);
+  if (!cl)
+      return KSBA_Out_Of_Core;
+
+  ksba_cert_ref (cert);
+  cl->cert = cert;
+  cl->next = cms->cert_info_list;
+  cms->cert_info_list = cl;
   return 0;
 }
 
@@ -1320,7 +1354,7 @@ ksba_cms_set_enc_val (KsbaCMS cms, int idx, KsbaConstSexp encval)
  * @cms: A CMS object
  * @cert: A certificate used to describe the recipient.
  * 
- * This functions starts assembly of a new enevloped data content or adds
+ * This functions starts assembly of a new enveloped data content or adds
  * another recipient to the list of recipients.
  *
  * Note: after successful completion of this function ownership of
@@ -1664,13 +1698,39 @@ build_signed_data_attributes (KsbaCMS cms)
   if (err)
     return err;
 
-  /* FIXME: Write optional certificates */
+  /* Write optional certificates */
+  if (cms->cert_info_list)
+    {
+      unsigned long totallen = 0;
+      const unsigned char *der;
+      size_t n;
+      
+      for (certlist = cms->cert_info_list; certlist; certlist = certlist->next)
+        {
+          if (!ksba_cert_get_image (certlist->cert, &n))
+            return KSBA_General_Error; /* user passed an unitialized cert */
+          totallen += n;
+        }
 
-  /* FIXME: Write the optional CRLs */
+      err = _ksba_ber_write_tl (cms->writer, 0, CLASS_CONTEXT, 1, totallen);
+      if (err)
+        return err;
 
+      for (certlist = cms->cert_info_list; certlist; certlist = certlist->next)
+        {
+          if (!(der=ksba_cert_get_image (certlist->cert, &n)))
+            return KSBA_Bug; 
+          err = ksba_writer_write (cms->writer, der, n);
+          if (err )
+            return err;
+        }
+    }
+
+  /* If we ever support it, here is the right place to do it:
+     Write the optional CRLs */
 
   /* Now we have to prepare the signer info.  For now we will just build the
-     signedAttributes, so that the suer can do the signature calculation */
+     signedAttributes, so that the user can do the signature calculation */
   err = ksba_asn_create_tree ("cms", &cms_tree);
   if (err)
     return err;

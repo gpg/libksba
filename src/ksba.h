@@ -243,6 +243,7 @@ KsbaError ksba_cms_set_content_type (KsbaCMS cms, int what,
                                      KsbaContentType type);
 KsbaError ksba_cms_add_digest_algo (KsbaCMS cms, const char *oid);
 KsbaError ksba_cms_add_signer (KsbaCMS cms, KsbaCert cert);
+KsbaError ksba_cms_add_cert (KsbaCMS cms, KsbaCert cert);
 KsbaError ksba_cms_set_message_digest (KsbaCMS cms, int idx,
                                        const char *digest,
                                        size_t digest_len);
