@@ -123,6 +123,7 @@ _ksba_name_new_from_der (KsbaName *r_name,
       switch (ti.tag)
         {
         case 1: /* rfc822Name - this is an imlicit IA5_STRING */
+        case 4: /* Name */
         case 6: /* URI */
           n++;
           break;
@@ -174,6 +175,12 @@ _ksba_name_new_from_der (KsbaName *r_name,
           *p++ = '>';
           *p = 0;
           n++;
+          break;
+        case 4: /* Name */
+          err = _ksba_derdn_to_str (der, ti.length, &p);
+          if (err)
+            return err; /* FIXME: we need to release some of the memory */
+          name->names[n++] = p;
           break;
         case 6: /* URI */
           sprintf (numbuf, "%u:", (unsigned int)ti.length);

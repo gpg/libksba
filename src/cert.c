@@ -37,6 +37,7 @@ static const char oidstr_issuerAltName[]    = "2.5.29.18";
 static const char oidstr_basicConstraints[] = "2.5.29.19";
 static const char oidstr_crlDistributionPoints[] = "2.5.29.31";
 static const char oidstr_certificatePolicies[] = "2.5.29.32";
+static const char oidstr_authorityKeyIdentifier[] = "2.5.29.35";
 
 /**
  * ksba_cert_new:
@@ -1357,6 +1358,116 @@ ksba_cert_get_crl_dist_point (KsbaCert cert, int idx,
     }
 
   return err;
+}
+
+
+/* Return the authorityKeyIdentifier in r_name and r_serial or in
+   r_keyID.  Note that r_keyID is not yet supported and must be passed
+   as NULL.  KSBA_No_Data is returnen if no authorityKeyIdentifier or
+   only one using the keyIdentifier method is available. */
+KsbaError 
+ksba_cert_get_auth_key_id (KsbaCert cert,
+                           KsbaSexp *r_keyid,
+                           KsbaName *r_name,
+                           KsbaSexp *r_serial)
+{
+  KsbaError err;
+  const char *oid;
+  size_t off, derlen;
+  const unsigned char *der;
+  int idx, crit;
+  struct tag_info ti;
+  char numbuf[30];
+  size_t numbuflen;
+ 
+  if (r_keyid)
+    return KSBA_Not_Implemented;
+  if (!r_name || !r_serial)
+    return KSBA_Invalid_Value;
+  *r_name = NULL;
+  *r_serial = NULL;
+
+  for (idx=0; !(err=ksba_cert_get_extension (cert, idx, &oid, &crit,
+                                             &off, &derlen)); idx++)
+    {
+      if (!strcmp (oid, oidstr_authorityKeyIdentifier))
+        break;
+    }
+  if (err == -1)
+    return KSBA_No_Data; /* not available */
+  if (err)
+    return err;
+    
+  /* check that there is only one */
+  for (idx++; !(err=ksba_cert_get_extension (cert, idx, &oid, NULL,
+                                             NULL, NULL)); idx++)
+    {
+      if (!strcmp (oid, oidstr_authorityKeyIdentifier))
+        return KSBA_Duplicate_Value; 
+    }
+  
+  der = cert->image + off;
+
+  err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+  if (err)
+    return err;
+  if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+         && ti.is_constructed) )
+    return KSBA_Invalid_Cert_Object;
+  if (ti.ndef)
+    return KSBA_Not_DER_Encoded;
+  if (ti.length > derlen)
+    return KSBA_BER_Error;
+
+  err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+  if (err)
+    return err;
+  if (ti.class != CLASS_CONTEXT) 
+    return KSBA_Invalid_Cert_Object; /* we expected a tag */
+  if (ti.ndef)
+    return KSBA_Not_DER_Encoded;
+  if (derlen < ti.length)
+    return KSBA_BER_Error;
+
+  if (ti.tag == 0)
+    return KSBA_No_Data; /* we do not support the keyIdentifier method yet */
+  
+  if (ti.tag != 1 || !derlen)
+    return KSBA_Invalid_Cert_Object;
+
+  err = _ksba_name_new_from_der (r_name, der, ti.length);
+  if (err)
+    return err;
+
+  der += ti.length;
+  derlen -= ti.length;
+
+  /* fixme: we should release r_name before returning on error */
+  err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+  if (err)
+    return err;
+  if (ti.class != CLASS_CONTEXT) 
+    return KSBA_Invalid_Cert_Object; /* we expected a tag */
+  if (ti.ndef)
+    return KSBA_Not_DER_Encoded;
+  if (derlen < ti.length)
+    return KSBA_BER_Error;
+
+  if (ti.tag != 2 || !derlen)
+    return KSBA_Invalid_Cert_Object;
+ 
+  sprintf (numbuf,"(%u:", (unsigned int)ti.length);
+  numbuflen = strlen (numbuf);
+  *r_serial = xtrymalloc (numbuflen + ti.length + 2);
+  if (!*r_serial)
+    return KSBA_Out_Of_Core;
+  strcpy (*r_serial, numbuf);
+  memcpy (*r_serial+numbuflen, der, ti.length);
+  (*r_serial)[numbuflen + ti.length] = ')';
+  (*r_serial)[numbuflen + ti.length + 1] = 0;
+
+
+  return 0;
 }
 
 

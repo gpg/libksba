@@ -21,7 +21,7 @@
 
 # Version numbers (Remember to change them just before a release)
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
-#   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
+# x (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
 AC_INIT(libksba, 0.2.4-cvs, gpa-dev@gnupg.org)
 LIBKSBA_LT_CURRENT=3

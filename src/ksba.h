@@ -215,6 +215,10 @@ KsbaError ksba_cert_get_crl_dist_point (KsbaCert cert, int idx,
                                         KsbaName *r_distpoint,
                                         KsbaName *r_issuer,
                                         KsbaCRLReason *r_reason);
+KsbaError ksba_cert_get_auth_key_id (KsbaCert cert,
+                                     KsbaSexp *r_keyid,
+                                     KsbaName *r_name,
+                                     KsbaSexp *r_serial);
 
 
 /*-- cms.c --*/

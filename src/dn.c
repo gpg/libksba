@@ -29,6 +29,7 @@
 #include "util.h"
 #include "asn1-func.h"
 #include "ber-help.h"
+#include "ber-decoder.h"
 
 struct {
   const char *name;
@@ -545,6 +546,85 @@ _ksba_dn_to_str (const unsigned char *image, AsnNode node, char **r_string)
     }
   deinit_stringbuf (&sb);
 
+  return err;
+}
+
+
+/* Create a new decoder and run it for the given element */
+/* Fixme: this code is duplicated from cms-parser.c */
+static KsbaError
+create_and_run_decoder (KsbaReader reader, const char *elem_name,
+                        AsnNode *r_root,
+                        unsigned char **r_image, size_t *r_imagelen)
+{
+  KsbaError err;
+  KsbaAsnTree crl_tree;
+  BerDecoder decoder;
+
+  err = ksba_asn_create_tree ("tmttv2", &crl_tree);
+  if (err)
+    return err;
+
+  decoder = _ksba_ber_decoder_new ();
+  if (!decoder)
+    {
+      ksba_asn_tree_release (crl_tree);
+      return KSBA_Out_Of_Core;
+    }
+
+  err = _ksba_ber_decoder_set_reader (decoder, reader);
+  if (err)
+    {
+      ksba_asn_tree_release (crl_tree);
+      _ksba_ber_decoder_release (decoder);
+      return err;
+    }
+
+  err = _ksba_ber_decoder_set_module (decoder, crl_tree);
+  if (err)
+    {
+      ksba_asn_tree_release (crl_tree);
+      _ksba_ber_decoder_release (decoder);
+      return err;
+    }
+  
+  err = _ksba_ber_decoder_decode (decoder, elem_name,
+                                  r_root, r_image, r_imagelen);
+  
+  _ksba_ber_decoder_release (decoder);
+  ksba_asn_tree_release (crl_tree);
+  return err;
+}
+
+
+KsbaError
+_ksba_derdn_to_str (const unsigned char *der, size_t derlen, char **r_string)
+{
+  KsbaError err;
+  AsnNode root; 
+  unsigned char *image;
+  size_t imagelen;
+  KsbaReader reader;
+
+  reader = ksba_reader_new ();
+  if (!reader)
+    return KSBA_Out_Of_Core;
+  err = ksba_reader_set_mem (reader, der, derlen);
+  if (err)
+    {
+      ksba_reader_release (reader);
+      return err;
+    }
+  err = create_and_run_decoder (reader, 
+                                "TMTTv2.CertificateList.tbsCertList.issuer",
+                                &root, &image, &imagelen);
+  ksba_reader_release (reader);
+  if (!err)
+    {
+      err = _ksba_dn_to_str (image, root->down, r_string);
+      _ksba_asn_release_nodes (root);
+      xfree (image);
+    }
   return err;
 }
 

@@ -171,6 +171,7 @@ list_extensions (KsbaCert cert)
   unsigned int usage, reason;
   char *string, *p;
   KsbaName name1, name2;
+  KsbaSexp serial;
 
   for (idx=0; !(err=ksba_cert_get_extension (cert, idx,
                                              &oid, &crit, &off, &len));idx++)
@@ -185,6 +186,30 @@ list_extensions (KsbaCert cert)
                __FILE__, __LINE__, ksba_strerror (err));
       errorcount++;
     }
+
+  /* authorithyKeyIdentifier */
+  err = ksba_cert_get_auth_key_id (cert, NULL, &name1, &serial);
+  if (!err || err == KSBA_No_Data)
+    {
+      fputs ("AuthorithyKeyIdentifier: ", stdout);
+      if (err == KSBA_No_Data)
+        fputs ("none", stdout);
+      else
+        {
+          print_names (25, name1);
+          ksba_name_release (name1);
+          fputs ("                 serial: ", stdout);
+          print_sexp (serial);
+          ksba_free (serial);
+        }
+      putchar ('\n');
+    }
+  else
+    { 
+      fprintf (stderr, "%s:%d: ksba_cert_get_auth_key_id: %s\n", 
+               __FILE__, __LINE__, ksba_strerror (err));
+      errorcount++;
+    } 
 
   err = ksba_cert_is_ca (cert, &is_ca, &pathlen);
   if (err)
