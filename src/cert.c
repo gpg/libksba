@@ -1430,8 +1430,21 @@ ksba_cert_get_auth_key_id (KsbaCert cert,
     return KSBA_BER_Error;
 
   if (ti.tag == 0)
-    return KSBA_No_Data; /* we do not support the keyIdentifier method yet */
-  
+    { /* we do not support the keyIdentifier method yet, but we need
+         to skip it. */
+      der += ti.length;
+      derlen -= ti.length;
+      err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+      if (err)
+        return err;
+      if (ti.class != CLASS_CONTEXT) 
+        return KSBA_Invalid_Cert_Object; /* we expected a tag */
+      if (ti.ndef)
+        return KSBA_Not_DER_Encoded;
+      if (derlen < ti.length)
+        return KSBA_BER_Error;
+    }
+
   if (ti.tag != 1 || !derlen)
     return KSBA_Invalid_Cert_Object;
 
