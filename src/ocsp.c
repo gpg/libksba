@@ -345,7 +345,7 @@ issuer_name_hash (ksba_cert_t cert, unsigned char *sha1_buffer)
   const unsigned char *ptr;
   size_t length, dummy;
 
-  err = _ksba_cert_get_issuer_dn_ptr (cert, &ptr, &length);
+  err = _ksba_cert_get_subject_dn_ptr (cert, &ptr, &length);
   if (!err)
     {
       err = _ksba_hash_buffer (NULL, ptr, length, 20, sha1_buffer, &dummy);

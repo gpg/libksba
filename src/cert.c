@@ -378,18 +378,18 @@ _ksba_cert_get_serial_ptr (ksba_cert_t cert,
 
 
 
-/* Return a pointer to the DER encoding of the issuer's DN in CERT in
+/* Return a pointer to the DER encoding of the subject's DN in CERT in
    PTR and the length of that object in LENGTH.  */
 gpg_error_t
-_ksba_cert_get_issuer_dn_ptr (ksba_cert_t cert,
-                              unsigned char const **ptr, size_t *length)
+_ksba_cert_get_subject_dn_ptr (ksba_cert_t cert,
+                               unsigned char const **ptr, size_t *length)
 {
   asn_node_t n;
 
   if (!cert || !cert->initialized || !ptr || !length)
     return gpg_error (GPG_ERR_INV_VALUE);
 
-  n = _ksba_asn_find_node (cert->root, "Certificate.tbsCertificate.issuer");
+  n = _ksba_asn_find_node (cert->root, "Certificate.tbsCertificate.subject");
   if (!n || !n->down)
     return gpg_error (GPG_ERR_NO_VALUE); /* oops - should be there */
   n = n->down; /* dereference the choice node */

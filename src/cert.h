@@ -53,7 +53,7 @@ int _ksba_cert_cmp (ksba_cert_t a, ksba_cert_t b);
 gpg_error_t _ksba_cert_get_serial_ptr (ksba_cert_t cert,
                                        unsigned char const **ptr,
                                        size_t *length);
-gpg_error_t _ksba_cert_get_issuer_dn_ptr (ksba_cert_t cert,
+gpg_error_t _ksba_cert_get_subject_dn_ptr (ksba_cert_t cert,
                                           unsigned char const **ptr,
                                           size_t *length);
 gpg_error_t _ksba_cert_get_public_key_ptr (ksba_cert_t cert,

@@ -1,3 +1,12 @@
+2004-07-20  Werner Koch  <wk@gnupg.org>
+
+	* cert.c (_ksba_cert_get_issuer_dn_ptr): Renamed to ..
+	(_ksba_cert_get_subject_dn_ptr): .. this.  And return the
+	subject's DN.
+	* ocsp.c (issuer_name_hash): Use it here.  Thanks to Bernhard
+	Herzog for pointing this out.  It revealed itself only in a
+	multi-level certificate chain.
+
 2004-06-08  Werner Koch  <wk@gnupg.org>
 
 	* certreq.c (ksba_certreq_add_extension): Removed unused variable.
