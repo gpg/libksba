@@ -28,7 +28,7 @@ EXTRA_DIST = $(test_certs)
 
 TESTS = cert-basic t-crl-parser
 
-noinst_PROGRAMS = $(TESTS) t-cms-parser t-crl-parser
+noinst_PROGRAMS = $(TESTS) t-cms-parser t-crl-parser t-dnparser
 LDADD = ../src/libksba.la
 
 

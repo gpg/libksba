@@ -1,3 +1,11 @@
+2002-01-10  Werner Koch  <wk@gnupg.org>
+
+	* cert-basic.c (print_sexp): Replaced with the one from the other
+	tests.
+	(one_file): Add code to check the public key conversions.
+
+	* t-dnparser.c: New, but we need to define some test cases.
+
 2002-01-05  Werner Koch  <wk@gnupg.org>
 
 	* t-crl-parser.c: New.

@@ -26,6 +26,9 @@
 #include <errno.h>
 
 #include "../src/ksba.h"
+#include "../src/keyinfo.h"
+
+#define digitp(p)   (*(p) >= '0' && *(p) <= '9')
 
 #define fail_if_err(a) do { if(a) {                                       \
                               fprintf (stderr, "%s:%d: KSBA error: %s\n", \
@@ -39,6 +42,10 @@
                        __FILE__, __LINE__, (f), ksba_strerror(a));   \
                             exit (1); }                              \
                            } while(0)
+
+#define xfree(a)  ksba_free (a)
+
+static int errorcount = 0;
 
 
 static void *
@@ -54,25 +61,51 @@ xmalloc (size_t n)
 }
 
 
-
 static void
 print_sexp (KsbaConstSexp p)
 {
-  unsigned long n;
-  KsbaConstSexp endp;
+  int level = 0;
 
   if (!p)
-    fputs ("none", stdout);
+    fputs ("[none]", stdout);
   else
     {
-      n = strtoul (p, (char**)&endp, 10);
-      p = endp;
-      if (*p!=':')
-        fputs ("ERROR - invalid value", stdout);
-      else
+      for (;;)
         {
-          for (p++; n; n--, p++)
-            printf ("%02X", *p);
+          if (*p == '(')
+            {
+              putchar (*p);
+              p++;
+              level++;
+            }
+          else if (*p == ')')
+            {
+              putchar (*p);
+              if (--level <= 0 )
+                return;
+            }
+          else if (!digitp (p))
+            {
+              fputs ("[invalid s-exp]", stdout);
+              return;
+            }
+          else
+            {
+              KsbaConstSexp endp;
+              unsigned long n;
+
+              n = strtoul (p, (char**)&endp, 10);
+              p = endp;
+              if (*p != ':')
+                {
+                  fputs ("[invalid s-exp]", stdout);
+                  return;
+                }
+              putchar('#');
+              for (p++; n; n--, p++)
+                printf ("%02X", *p);
+              putchar('#');
+            }
         }
     }
 }
@@ -176,6 +209,69 @@ one_file (const char *fname)
 
   printf ("  hash algo.: %s\n", ksba_cert_get_digest_algo (cert));
 
+  /* check that the sexp to keyinfo conversion works */
+  {
+    KsbaSexp public;
+
+    public = ksba_cert_get_public_key (cert);
+    if (!public)
+      {
+        fprintf (stderr, "%s:%d: public key not found\n", 
+                 __FILE__, __LINE__);
+        errorcount++;
+      }
+    else
+      {
+        unsigned char *der;
+        size_t derlen;
+
+        err = _ksba_keyinfo_from_sexp (public, &der, &derlen);
+        if (err)
+          {
+            fprintf (stderr, "%s:%d: converting public key failed: %s\n", 
+                     __FILE__, __LINE__, ksba_strerror (err));
+            errorcount++;
+          }
+        else 
+          {
+            KsbaSexp tmp;
+
+            err = _ksba_keyinfo_to_sexp (der, derlen, &tmp);
+            if (err)
+              {
+                fprintf (stderr,
+                         "%s:%d: re-converting public key failed: %s\n", 
+                         __FILE__, __LINE__, ksba_strerror (err));
+                errorcount++;
+              }
+            else
+              {
+                unsigned char *der2;
+                size_t derlen2;
+
+                err = _ksba_keyinfo_from_sexp (tmp, &der2, &derlen2);
+                if (err)
+                  {
+                    fprintf (stderr, "%s:%d: re-re-converting "
+                             "public key failed: %s\n", 
+                             __FILE__, __LINE__, ksba_strerror (err));
+                    errorcount++;
+                  }
+                else if (derlen != derlen2 || memcmp (der, der2, derlen))
+                  {
+                    fprintf (stderr, "%s:%d: mismatch after "
+                             "re-re-converting public key\n", 
+                             __FILE__, __LINE__);
+                    errorcount++;
+                    xfree (der2);
+                  }
+                xfree (tmp);
+              }
+            xfree (der);
+          }
+      }
+  }
+
 
   ksba_cert_release (cert);
   cert = ksba_cert_new ();
@@ -187,7 +283,7 @@ one_file (const char *fname)
     {
       fprintf (stderr, "%s:%d: expected EOF but got: %s\n", 
                __FILE__, __LINE__, ksba_strerror (err));
-      exit (1);
+      errorcount++;
     }
 
   putchar ('\n');
@@ -235,11 +331,5 @@ main (int argc, char **argv)
         }
     }
 
-  return 0;
+  return !!errorcount;
 }
-
-
-
-
-
-
