@@ -1,5 +1,11 @@
 2001-12-20  Werner Koch  <wk@gnupg.org>
 
+	* cms.c (read_and_hash_cont): New.
+	(ct_parse_signed_data): Use it here for non-detached signatures.
+	* cms-parser.c (_ksba_cms_parse_signed_data_part_1): Store the
+	inner content length.
+	(_ksba_cms_parse_signed_data_part_2): Add dummy read code for CRLs.
+
 	* cert.c (ksba_cert_set_serial): Changed to return an entire S-Exp
 	and not just an octet string.
 	* cms.c (ksba_cms_get_issuer_serial): Ditto.

@@ -69,6 +69,83 @@ static char oidstr_signingTime[] = "1.2.840.113549.1.9.5";
 static char oid_signingTime[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x05";
 
 
+/* copy all the bytes from the reader to the writer and hash them if a
+   a hash fucntion has been set.  The writer may be NUNN to just do
+   the hashing */
+static KsbaError
+read_and_hash_cont (KsbaCMS cms)
+{
+  KsbaError err = 0;
+  unsigned long nleft;
+  char buffer[4096];
+  size_t n, nread;
+  struct tag_info ti;
+
+  if (cms->inner_cont_ndef)
+    {
+      for (;;)
+        {
+          err = _ksba_ber_read_tl (cms->reader, &ti);
+          if (err)
+            return err;
+          
+          if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OCTET_STRING
+              && !ti.is_constructed)
+            { /* next chunk */
+              nleft = ti.length;
+              while (nleft)
+                {
+                  n = nleft < sizeof (buffer)? nleft : sizeof (buffer);
+                  err = ksba_reader_read (cms->reader, buffer, n, &nread);
+                  if (err)
+                    return err;
+                  nleft -= nread;
+                  if (cms->hash_fnc)
+                    cms->hash_fnc (cms->hash_fnc_arg, buffer, nread); 
+                  if (cms->writer)
+                    err = ksba_writer_write (cms->writer, buffer, nread);
+                  if (err)
+                    return err;
+                }
+            }
+          else if (ti.class == CLASS_UNIVERSAL && !ti.tag
+                   && !ti.is_constructed)
+            return 0; /* ready */ 
+          else
+            return KSBA_Encoding_Error;
+        }
+    }
+  else
+    {
+      nleft = cms->inner_cont_len;
+      /* first read the octet string but allow all types here */
+      err = _ksba_ber_read_tl (cms->reader, &ti);
+      if (err)
+        return err;
+      if (nleft < ti.nhdr)
+        return KSBA_Encoding_Error;
+      nleft -= ti.nhdr;
+
+      while (nleft)
+        {
+          n = nleft < sizeof (buffer)? nleft : sizeof (buffer);
+          err = ksba_reader_read (cms->reader, buffer, n, &nread);
+          if (err)
+            return err;
+          nleft -= nread;
+          if (cms->hash_fnc)
+            cms->hash_fnc (cms->hash_fnc_arg, buffer, nread); 
+          if (cms->writer)
+            err = ksba_writer_write (cms->writer, buffer, nread);
+          if (err)
+            return err;
+        }
+    }
+  return 0;
+}
+
+
+
 /* copy all the encrypted bytes from the reader to the writer.
    Handles indefinite length encoding */
 static KsbaError
@@ -592,12 +669,12 @@ ksba_cms_get_message_digest (KsbaCMS cms, int idx,
   nsiginfo = _ksba_asn_find_node (cms->signer_info.root,
                                   "SignerInfos..signedAttrs");
   if (!nsiginfo)
-    return 0; /* this is okay, because the element is optional */
+    return KSBA_Bug;
 
   n = _ksba_asn_find_type_value (cms->signer_info.image, nsiginfo, 0,
                                  oid_messageDigest, DIM(oid_messageDigest));
   if (!n)
-    return KSBA_Value_Not_Found; /* message digest is required */
+    return 0; /* this is okay, because the element is optional */
 
   /* check that there is only one */
   if (_ksba_asn_find_type_value (cms->signer_info.image, nsiginfo, 1,
@@ -1320,7 +1397,7 @@ ct_parse_signed_data (KsbaCMS cms)
   else if (state == sGOT_HASH)
     err = _ksba_cms_parse_signed_data_part_2 (cms);
   else if (state == sIN_DATA)
-    ; /* start a parser part which does the hash job */
+    err = read_and_hash_cont (cms);
   else
     err = KSBA_Invalid_State;
 

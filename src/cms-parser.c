@@ -571,6 +571,8 @@ _ksba_cms_parse_signed_data_part_1 (KsbaCMS cms)
                             &oid, &has_content);
   if (err)
     return err;
+  cms->inner_cont_len = encap_cont_len;
+  cms->inner_cont_ndef = encap_cont_ndef;
   cms->inner_cont_oid = oid; 
   cms->detached_data = !has_content;
   if (!signed_data_ndef)
@@ -582,11 +584,6 @@ _ksba_cms_parse_signed_data_part_1 (KsbaCMS cms)
       if (!encap_cont_ndef && signed_data_len < encap_cont_len)
         return KSBA_BER_Error; /* triplet larger that sequence */
     }
-  
-  /* Fixme: Do we ween to skip the OCTECT STRING tag here or should we
-     just use whatever comes? */
-
-  /* FIXME: need to store the content length info */
 
   /* We have to stop here so that the caller can set up the hashing etc. */
   return 0;
@@ -656,13 +653,36 @@ _ksba_cms_parse_signed_data_part_2 (KsbaCMS cms)
   if (ti.class == CLASS_CONTEXT && ti.tag == 1 && ti.is_constructed)
     {  /* implicit SET OF certificateList.  We should delegate the
           parsing to a - not yet existing - ksba_crl module.  CRLs are
-          quite importatnt for other applications too so we should
+          quite important for other applications too so we should
           provide a nice interface */
-      fprintf (stderr,"ERROR: Can't handle CRLs yet\n");
+      fprintf (stderr,"WARNING: Can't handle CRLs yet\n");
 
-      err = _ksba_ber_read_tl (cms->reader, &ti);
-      if (err)
-        return err;
+      if (ti.ndef)
+        return KSBA_Unsupported_Encoding;
+
+      /* FIXME this is just dummy read code */
+      for (;;)
+        {
+          /* first see whether this is really a sequence */
+          err = _ksba_ber_read_tl (cms->reader, &ti);
+          if (err)
+            return err;
+          if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+                 && ti.is_constructed))
+            break; /* not a sequence, so we are ready with the set */
+          
+          while (ti.length)
+            {
+              size_t n, nread;
+              char dummy[256];
+
+              n = ti.length > DIM(dummy) ? DIM(dummy): ti.length;
+              err = ksba_reader_read (cms->reader, dummy, n, &nread);
+              if (err)
+                return err;
+              ti.length -= nread;
+            }
+        }
     }
 
   /* expect a SET OF signerInfo */
