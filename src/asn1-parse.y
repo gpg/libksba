@@ -524,7 +524,7 @@ type_assig_right_tag :   type_assig_right
 /*                               set_right ($1, $$->down ); */
 /*                               set_down ($$, $1); */
                              $$ = $1;
-                             set_down ($$, $2)
+                             set_down ($$, $2);
                            }
 ;
 

@@ -1,3 +1,7 @@
+2002-02-01  Marcus Brinkmann  <marcus@g10code.de>
+
+	* asn1-parse.y: Add missing colon at end of block.
+
 2002-02-01  Werner Koch  <wk@gnupg.org>
 
 	* cms.c (ksba_cms_set_sig_val): Add kludge to allow "rsa" instead
