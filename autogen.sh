@@ -15,11 +15,10 @@ PGM=libksba
 
 # Required version of autoconf.  Keep it in sync with the AC_PREREQ
 # macro at the top of configure.ac.
-autoconf_vers=2.57
+autoconf_vers=2.57.1
 
 # Required version of automake. 
-automake_vers=1.7.6
-
+automake_vers=1.7.7
 
 
 aclocal_vers="$automake_vers"
@@ -29,49 +28,30 @@ AUTOMAKE=${AUTOMAKE:-automake}
 AUTOHEADER=${AUTOHEADER:-autoheader}
 DIE=no
 
+cvtver () {
+    awk 'NR==1 {split($NF,A,".");X=1000000*A[1]+1000*A[2]+A[3];print X;exit 0}'
+}
 
-if ($AUTOCONF --version) < /dev/null > /dev/null 2>&1 ; then
-    if ($AUTOCONF --version | awk 'NR==1 { if( $3 >= "'$autoconf_vers'") \
-			       exit 1; exit 0; }');
-    then
-       echo "**Error**: "\`autoconf\'" is too old."
-       echo '           (version ' $autoconf_vers ' or newer is required)'
+chkver () {
+    expr `("$1" --version || echo "0") | cvtver` '>=' `echo "$2" | cvtver` \
+           >/dev/null
+}
+
+check_version () {
+    if ! chkver $1 $2 ; then
+       echo "**Error**: "\`$1\'" not installed or too old."
+       echo '           (version '$2' or newer is required)'
        DIE="yes"
+       return 1
+    else
+       return 0
     fi
-else
-    echo
-    echo "**Error**: You must have "\`autoconf\'" installed to compile $PGM."
-    echo '           (version ' $autoconf_vers ' or newer is required)'
-    DIE="yes"
-fi
+}
 
-if ($AUTOMAKE --version) < /dev/null > /dev/null 2>&1 ; then
-  if ($AUTOMAKE --version | awk 'NR==1 { if( $4 >= "'$automake_vers'") \
-			     exit 1; exit 0; }');
-     then
-     echo "**Error**: "\`automake\'" is too old."
-     echo '           (version ' $automake_vers ' or newer is required)'
-     DIE="yes"
-  fi
-  if ($ACLOCAL --version) < /dev/null > /dev/null 2>&1; then
-    if ($ACLOCAL --version | awk 'NR==1 { if( $4 >= "'$aclocal_vers'" ) \
-						exit 1; exit 0; }' );
-    then
-      echo "**Error**: "\`aclocal\'" is too old."
-      echo '           (version ' $aclocal_vers ' or newer is required)'
-      DIE="yes"
-    fi
-  else
-    echo
-    echo "**Error**: Missing "\`aclocal\'".  The version of "\`automake\'
-    echo "           installed doesn't appear recent enough."
-    DIE="yes"
-  fi
-else
-    echo
-    echo "**Error**: You must have "\`automake\'" installed to compile $PGM."
-    echo '           (version ' $automake_vers ' or newer is required)'
-    DIE="yes"
+
+check_version $AUTOCONF $autoconf_vers
+if check_version $AUTOMAKE $automake_vers ; then
+  check_version $ACLOCAL $aclocal_vers
 fi
 
 if test "$DIE" = "yes"; then
