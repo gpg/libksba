@@ -86,7 +86,8 @@ typedef struct ksba_asn_tree_s *KsbaAsnTree;
 KsbaCert ksba_cert_new (void);
 void     ksba_cert_release (KsbaCert cert);
 KsbaError ksba_cert_read_der (KsbaCert cert, KsbaReader reader);
-KsbaError ksba_cert_hash (KsbaCert cert,
+const unsigned char *ksba_cert_get_image (KsbaCert cert, size_t *r_length);
+KsbaError ksba_cert_hash (KsbaCert cert, int what,
                           void (*hasher)(void *,
                                          const unsigned char *,
                                          size_t length), 
@@ -132,6 +133,9 @@ int ksba_oid_from_str (const char *string, char **rbuf, size_t *rlength);
 
 
 /*-- util.c --*/
+void ksba_set_malloc_hooks ( void *(*new_alloc_func)(size_t n),
+                             void *(*new_realloc_func)(void *p, size_t n),
+                             void (*new_free_func)(void*) );
 void *ksba_malloc (size_t n );
 void *ksba_calloc (size_t n, size_t m );
 void *ksba_realloc (void *p, size_t n);

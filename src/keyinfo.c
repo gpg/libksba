@@ -159,11 +159,11 @@ get_algorithm (const unsigned char *der, size_t derlen,
   /* der does now point to an oid of length LEN */
   *r_pos = der - start;
   *r_len = len;
-  {
-    char *p = ksba_oid_to_str (der, len);
-    printf ("algorithm: %s\n", p);
-    xfree (p);
-  }
+/*    { */
+/*      char *p = ksba_oid_to_str (der, len); */
+/*      printf ("algorithm: %s\n", p); */
+/*      xfree (p); */
+/*    } */
   der += len;
   derlen -= len;
   seqlen -= der - startseq;;
@@ -171,7 +171,7 @@ get_algorithm (const unsigned char *der, size_t derlen,
   /* check that the parameter is NULL or not there */
   if (!seqlen)
     {
-      printf ("parameter: none\n");
+/*        printf ("parameter: none\n"); */
     }
   else
     {
@@ -182,7 +182,7 @@ get_algorithm (const unsigned char *der, size_t derlen,
       c = *der++; derlen--;
       if ( c == 0x05 ) 
         {
-          printf ("parameter: NULL \n"); /* the only correct thing */
+          /*printf ("parameter: NULL \n");*/ /* the only correct thing */
           if (!derlen)
             return KSBA_Invalid_Keyinfo;
           c = *der++; derlen--;
@@ -213,9 +213,6 @@ get_algorithm (const unsigned char *der, size_t derlen,
   if (c != 0x03)
     return KSBA_Unexpected_Tag; /* not a BIT STRING */
   TLV_LENGTH();
-
-  /* we are now inside the BIT STRING */
-  printf ("bit string of %lu bytes\n", len);
 
   *r_nread = der - start;
 

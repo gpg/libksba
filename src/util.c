@@ -26,6 +26,23 @@
 
 #include "util.h"
 
+static void *(*alloc_func)(size_t n) = malloc;
+static void *(*realloc_func)(void *p, size_t n) = realloc;
+static void (*free_func)(void*) = free;
+
+
+void
+ksba_set_malloc_hooks ( void *(*new_alloc_func)(size_t n),
+                        void *(*new_realloc_func)(void *p, size_t n),
+                        void (*new_free_func)(void*) )
+{
+  alloc_func	    = new_alloc_func;
+  realloc_func      = new_realloc_func;
+  free_func	    = new_free_func;
+}
+
+
+
 /* Wrapper for the common memory allocation functions.  These are here
    so that we can add hooks.  The corresponding macros should be used.
    These macros are not named xfoo() because this name is commonly
@@ -35,33 +52,40 @@
 void *
 ksba_malloc (size_t n )
 {
-  return malloc (n);
+  return alloc_func (n);
 }
 
 void *
 ksba_calloc (size_t n, size_t m )
 {
-  return calloc (n, m);
+  void *p = ksba_malloc (n*m);
+  if (p)
+    memset (p, 0, n*m);
+  return p;
 }
 
 void *
 ksba_realloc (void *mem, size_t n)
 {
-  return realloc (mem, n );
+  return realloc_func (mem, n );
 }
 
 
 char *
 ksba_strdup (const char *str)
 {
-  return strdup (str);
+  char *p = ksba_malloc (strlen(str)+1);
+  if (p)
+    strcpy (p, str);
+  return p;
 }
 
 
 void 
 ksba_free ( void *a )
 {
-  free (a);
+  if (a)
+    free_func (a);
 }
 
 
