@@ -192,7 +192,6 @@ ksba_certreq_add_extension (ksba_certreq_t cr,
                             const char *oid, int is_crit,
                             const unsigned char *der, size_t derlen)
 {
-  unsigned long namelen;
   size_t oidlen;
   struct extn_list_s *e;
 

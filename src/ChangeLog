@@ -1,3 +1,7 @@
+2004-06-08  Werner Koch  <wk@gnupg.org>
+
+	* certreq.c (ksba_certreq_add_extension): Removed unused variable.
+
 2004-06-06  Werner Koch  <wk@gnupg.org>
 
 	* ksba.h: Comment cleanups.
