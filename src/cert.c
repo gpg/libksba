@@ -40,6 +40,9 @@ static const char oidstr_crlDistributionPoints[] = "2.5.29.31";
 static const char oidstr_certificatePolicies[] = "2.5.29.32";
 static const char oidstr_authorityKeyIdentifier[] = "2.5.29.35";
 static const char oidstr_extKeyUsage[] = "2.5.29.37";
+static const char oidstr_authorityInfoAccess[] = "1.3.6.1.5.5.7.1.1";
+static const char oidstr_subjectInfoAccess[]   = "1.3.6.1.5.5.7.1.11";
+
 
 /**
  * ksba_cert_new:
@@ -1454,7 +1457,7 @@ parse_distribution_point (const unsigned char *der, size_t derlen,
    the CRL.  This is a bit encoded value with no bit set if this has
    not been specified in the cert.
 
-   The caller may pass NULL to any of the pointer argumenst if he is
+   The caller may pass NULL to any of the pointer arguments if he is
    not interested in this value.  The return values for R_DISTPOINT
    and R_ISSUER must be released bt the caller using
    ksba_name_release(). */
@@ -1682,5 +1685,160 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
 
 
 
+
+/* MODE 0 := authorityInfoAccess
+        1 := subjectInfoAccess
+
+   Caller must release METHOD and LOCATIOn if the fucntion retruned
+   with success; on error bot variables will point to NULL.
+ */   
+static gpg_error_t
+get_info_access (ksba_cert_t cert, int idx, int mode,
+                 char **method, ksba_name_t *location)
+{
+  gpg_error_t err;
+  const char *oid;
+  size_t off, derlen;
+  int myidx, crit;
+
+  *method = NULL;
+  *location = NULL;
+
+  if (!cert || !cert->initialized)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  if (idx < 0)
+    return gpg_error (GPG_ERR_INV_INDEX);
+
+  for (myidx=0; !(err=ksba_cert_get_extension (cert, myidx, &oid, &crit,
+                                               &off, &derlen)); myidx++)
+    {
+      if (!strcmp (oid,(mode == 0)? oidstr_authorityInfoAccess
+                                  : oidstr_subjectInfoAccess) )
+        {
+          const unsigned char *der;
+          struct tag_info ti;
+          size_t seqlen;
+
+          der = cert->image + off;
+
+          /* What we are going to parse is:
+           *   
+           *    AuthorityInfoAccessSyntax  ::=
+           *            SEQUENCE SIZE (1..MAX) OF AccessDescription
+           *   
+           *    AccessDescription  ::=  SEQUENCE {
+           *            accessMethod          OBJECT IDENTIFIER,
+           *            accessLocation        GeneralName  }
+           */
+          err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+          if (err)
+            return err;
+          if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+                 && ti.is_constructed) )
+            return gpg_error (GPG_ERR_INV_CERT_OBJ);
+          if (ti.ndef)
+            return gpg_error (GPG_ERR_NOT_DER_ENCODED);
+          seqlen = ti.length;
+          if (seqlen > derlen)
+            return gpg_error (GPG_ERR_BAD_BER);
+
+          /* Note: an empty sequence is actually not allowed but we
+             better don't care. */
+
+          while (seqlen)
+            {
+              err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+              if (err)
+                return err;
+              if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
+                     && ti.is_constructed) )
+                return gpg_error (GPG_ERR_INV_CERT_OBJ);
+              if (derlen < ti.length)
+                return gpg_error (GPG_ERR_BAD_BER);
+              if (seqlen < ti.nhdr)
+                return gpg_error (GPG_ERR_BAD_BER);
+              seqlen -= ti.nhdr;
+              if (seqlen < ti.length)
+                return gpg_error (GPG_ERR_BAD_BER); 
+
+              if (idx)
+                { /* Skip because we are not yet at the desired index. */
+                  der    += ti.length;
+                  derlen -= ti.length;
+                  seqlen -= ti.length;
+                  idx--;
+                  continue;  
+                }
+              
+              if (!ti.length)
+                return 0;  
+
+              err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+              if (err)
+                return err;
+
+              if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OBJECT_ID
+                     && !ti.is_constructed))
+                return gpg_error (GPG_ERR_INV_CERT_OBJ);
+              if (ti.ndef)
+                return gpg_error (GPG_ERR_NOT_DER_ENCODED);
+              if (derlen < ti.length)
+                return gpg_error (GPG_ERR_BAD_BER);
+
+              *method = ksba_oid_to_str (der, ti.length);
+              if (!*method)
+                return gpg_error (GPG_ERR_ENOMEM);
+              der       += ti.length;
+              derlen    -= ti.length;
+
+              err = _ksba_name_new_from_der (location, der, derlen);
+              if (err)
+                {
+                  ksba_free (*method);
+                  *method = NULL;
+                  return err;
+                }
+              return 0;
+            }
+        }
+    }
+
+  return err;
+}
+
+
+/* Return the authorityInfoAccess attributes. IDX should be iterated
+   starting from 0 until the function returns -1.  R_METHOD returns an
+   allocated string with the OID of one item and R_LOCATION return the
+   GeneralName for that OID.  The return values for R_METHOD and
+   R_LOCATION must be released by the caller unless the function
+   returned an error; the function will however make sure that
+   R_METHOD and R_LOCATION will point to NULL if the function retruns
+   an error.  See RFC 2459, section 4.2.2.1 */
+gpg_error_t
+ksba_cert_get_authority_info_access (ksba_cert_t cert, int idx,
+                                     char **r_method, ksba_name_t *r_location)
+{
+  if (!r_method || !r_location)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  return get_info_access (cert, idx, 0, r_method, r_location);
+}
+
+/* Return the subjectInfoAccess attributes. IDX should be iterated
+   starting from 0 until the function returns -1.  R_METHOD returns an
+   allocated string with the OID of one item and R_LOCATION return the
+   GeneralName for that OID.  The return values for R_METHOD and
+   R_LOCATION must be released by the caller unless the function
+   returned an error; the function will however make sure that
+   R_METHOD and R_LOCATION will point to NULL if the function retruns
+   an error.  See RFC 2459, section 4.2.2.2 */
+gpg_error_t
+ksba_cert_get_subject_info_access (ksba_cert_t cert, int idx,
+                                   char **r_method, ksba_name_t *r_location)
+{
+  if (!r_method || !r_location)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  return get_info_access (cert, idx, 1, r_method, r_location);
+}
 
 

@@ -292,6 +292,12 @@ gpg_error_t ksba_cert_get_auth_key_id (ksba_cert_t cert,
                                        ksba_sexp_t *r_keyid,
                                        ksba_name_t *r_name,
                                        ksba_sexp_t *r_serial);
+gpg_error_t ksba_cert_get_authority_info_access (ksba_cert_t cert, int idx,
+                                                 char **r_method,
+                                                 ksba_name_t *r_location);
+gpg_error_t ksba_cert_get_subject_info_access (ksba_cert_t cert, int idx,
+                                               char **r_method,
+                                               ksba_name_t *r_location);
 
 
 /*-- cms.c --*/

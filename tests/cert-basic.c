@@ -130,11 +130,16 @@ print_dn (char *p)
     printf ("`%s'", p);
 }
 
+
 static void
 print_names (int indent, ksba_name_t name)
 {
   int idx;
   const char *s;
+  int indent_all;
+
+  if ((indent_all = (indent < 0)))
+    indent = - indent;
 
   if (!name)
     {
@@ -145,7 +150,7 @@ print_names (int indent, ksba_name_t name)
   for (idx=0; (s = ksba_name_enum (name, idx)); idx++)
     {
       char *p = ksba_name_get_uri (name, idx);
-      printf ("%*s%s\n", idx?indent:0, "", p?p:s);
+      printf ("%*s%s\n", idx||indent_all?indent:0, "", p?p:s);
       xfree (p);
     }
 }
@@ -164,6 +169,52 @@ get_oid_desc (const char *oid)
         return oidtranstbl[i].desc;
   return NULL;
 }
+
+
+static void
+print_oid_and_desc (const char *oid, int with_lf)
+{
+  const char *s = get_oid_desc (oid);
+  printf ("%s%s%s%s",
+          oid, s?" (":"", s?s:"", s?")":"");
+  if (with_lf)
+    putchar ('\n');
+}
+
+
+static void
+print_oid_list (int indent, char *list)
+{
+  char *lf;
+  int indent_all, c;
+  size_t n;
+
+  if ((indent_all = (indent < 0)))
+    indent = - indent;
+
+  while (*list)
+    {
+      printf ("%*s", indent_all?indent:0, "");
+      indent_all = 1;
+      
+      if (!(lf = strchr (list, '\n')))
+        lf = list + strlen (list);
+
+      n = strspn (list, "0123456789.");
+      c = list[n];
+      list[n] = 0;
+      print_oid_and_desc (list, 0);
+      list[n] = c;
+
+      c = *lf;
+      *lf = 0;
+      printf ("  %s\n", list+n);
+      *lf = c;
+      list = *lf? (lf+1):lf;
+    }
+}
+
+          
 
 
 static void
@@ -194,16 +245,16 @@ list_extensions (ksba_cert_t cert)
       errorcount++;
     }
 
-  /* authorithyKeyIdentifier */
+  /* authorityKeyIdentifier */
   err = ksba_cert_get_auth_key_id (cert, NULL, &name1, &serial);
   if (!err || gpg_err_code (err) == GPG_ERR_NO_DATA)
     {
-      fputs ("AuthorithyKeyIdentifier: ", stdout);
+      fputs ("AuthorityKeyIdentifier: ", stdout);
       if (gpg_err_code (err) == GPG_ERR_NO_DATA)
         fputs ("none", stdout);
       else
         {
-          print_names (25, name1);
+          print_names (24, name1);
           ksba_name_release (name1);
           fputs ("                 serial: ", stdout);
           print_sexp (serial);
@@ -271,13 +322,8 @@ list_extensions (ksba_cert_t cert)
     } 
   else
     {
-      /* for display purposes we replace the linefeeds by commas */
-      for (p=string; *p; p++)
-        {
-          if (*p == '\n')
-            *p = ',';
-        }
-      printf ("ExtKeyUsages: %s\n", string);
+      fputs ("ExtKeyUsages: ", stdout);
+      print_oid_list (14, string);
       xfree (string);
     }
 
@@ -299,7 +345,8 @@ list_extensions (ksba_cert_t cert)
           if (*p == '\n')
             *p = ',';
         }
-      printf ("CertificatePolicies: %s\n", string);
+      fputs ("CertificatePolicies: ", stdout);
+      print_oid_list (21, string);
       xfree (string);
     }
 
@@ -336,6 +383,44 @@ list_extensions (ksba_cert_t cert)
   if (err && gpg_err_code (err) != GPG_ERR_EOF)
     { 
       fprintf (stderr, "%s:%d: ksba_cert_get_crl_dist_point failed: %s\n", 
+               __FILE__, __LINE__, gpg_strerror (err));
+      errorcount++;
+    } 
+
+  /* authorityInfoAccess. */
+  for (idx=0; !(err=ksba_cert_get_authority_info_access (cert, idx,
+                                                         &string, &name1))
+       ; idx++)
+    {
+      fputs ("authorityInfoAccess: ", stdout);
+      print_oid_and_desc (string, 1);
+      print_names (-21, name1);
+      ksba_name_release (name1);
+      ksba_free (string);
+    }
+  if (err && gpg_err_code (err) != GPG_ERR_EOF)
+    { 
+      fprintf (stderr, "%s:%d: "
+               "ksba_cert_get_authority_info_access failed: %s\n", 
+               __FILE__, __LINE__, gpg_strerror (err));
+      errorcount++;
+    } 
+
+  /* subjectInfoAccess. */
+  for (idx=0; !(err=ksba_cert_get_subject_info_access (cert, idx,
+                                                       &string, &name1))
+       ; idx++)
+    {
+      fputs ("subjectInfoAccess: ", stdout);
+      print_oid_and_desc (string, 1);
+      print_names (-19, name1);
+      ksba_name_release (name1);
+      ksba_free (string);
+    }
+  if (err && gpg_err_code (err) != GPG_ERR_EOF)
+    { 
+      fprintf (stderr, "%s:%d: "
+               "ksba_cert_get_subject_info_access failed: %s\n", 
                __FILE__, __LINE__, gpg_strerror (err));
       errorcount++;
     } 
@@ -493,7 +578,7 @@ one_file (const char *fname)
     fail_if_err (err);
 
   err = ksba_cert_read_der (cert, r);
-  if (gpg_err_code (err) != GPG_ERR_EOF)
+  if (err && gpg_err_code (err) != GPG_ERR_EOF)
     {
       fprintf (stderr, "%s:%d: expected EOF but got: %s\n", 
                __FILE__, __LINE__, gpg_strerror (err));

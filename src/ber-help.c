@@ -104,7 +104,8 @@ _ksba_ber_read_tl (ksba_reader_t reader, struct tag_info *ti)
       tag = 0;
       do
         {
-          /* fixme: check for overflow of our datatype */
+          /* We silently ignore an overflow in the tag value.  It is
+             not worth checking for it. */
           tag <<= 7;
           c = read_byte (reader);
           if (c == -1)
@@ -149,7 +150,9 @@ _ksba_ber_read_tl (ksba_reader_t reader, struct tag_info *ti)
       unsigned long len = 0;
       int count = c & 0x7f;
 
-      /* fixme: check for overflow of our length type */
+      if (count > sizeof (len) || count > sizeof (size_t))
+        return gpg_error (GPG_ERR_BAD_BER);
+
       for (; count; count--)
         {
           len <<= 8;
@@ -208,7 +211,8 @@ _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
       tag = 0;
       do
         {
-          /* fixme: check for overflow of our datatype */
+          /* We silently ignore an overflow in the tag value.  It is
+             not worth checking for it. */
           tag <<= 7;
           if (!length)
             return premature_eof (ti);
@@ -253,7 +257,9 @@ _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
       unsigned long len = 0;
       int count = c & 0x7f;
 
-      /* fixme: check for overflow of our length type */
+      if (count > sizeof (len) || count > sizeof (size_t))
+        return gpg_error (GPG_ERR_BAD_BER);
+
       for (; count; count--)
         {
           len <<= 8;

@@ -1,3 +1,8 @@
+2004-03-17  Werner Koch  <wk@gnupg.org>
+
+	* ber-help.c (_ksba_ber_parse_tl): Check for length overflow.
+	(_ksba_ber_read_tl): Ditto.
+
 2004-03-16  Werner Koch  <wk@gnupg.org>
 
 	* ocsp.c (ksba_ocsp_get_responder_id, ksba_ocsp_get_cert): New.

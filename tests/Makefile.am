@@ -48,7 +48,7 @@ LDADD = ../src/libksba.la @GPG_ERROR_LIBS@ -lgcrypt
 
 
 # Build the OID table: Note that the binary includes data from an
-# other rpogram and we may not be allowed to sdistribute this.  This
+# another program and we may not be allowed to distribute this.  This
 # ain't no problem as the programs using this generated data are not
 # installed and thus not distributed.
 oidtranstbl.h: Makefile mkoidtbl.awk 
@@ -56,5 +56,4 @@ oidtranstbl.h: Makefile mkoidtbl.awk
         for i in /usr/local/bin /usr/local/share /usr/bin /usr/share; do \
           if test -f $$i/dumpasn1.cfg; then f=$$i/dumpasn1.cfg; break; fi; \
         done; $(AWK) -f $(srcdir)/mkoidtbl.awk $$f >$@
-
 

@@ -125,11 +125,6 @@ Mastering the Cryptographic Message Syntax
 * CMS Basics::                  
 * CMS Parser::                  
 
-Error Handling
-
-* Error values::                A list of all error values used.
-* Error strings::               How to get a descriptive string from a value.
-
 @end detailmenu
 @end menu
 
@@ -321,7 +316,7 @@ The @code{KsbaCert} type is a handle for an X.509 certificate.
 This section explains how to create a certificate object, initialize it
 copy it and eventually destroy it. 
 
-@deftypefun KsbaCert ksba_cert_new (void)
+@deftypefun ksba_cert_tksba_cert_new (void)
 The function @code{ksba_cert_new} creates a new @code{KsbaCert}
 object and returns a handle for it.
 
@@ -329,20 +324,20 @@ The only reason why this function may fail is an out-of-memory condition in
 which case @code{NULL} is returned.
 @end deftypefun
 
-@deftypefun void ksba_cert_ref (KsbaCert cert)
+@deftypefun void ksba_cert_ref (ksba_cert_tcert)
 The function @code{ksba_cert_ref} bumps the reference counter of the
 certificate object up by one.  Thus an extra @code{ksba_cert_release} is
 required to actually release the memory used for the object.
 @end deftypefun
 
-@deftypefun void ksba_cert_release (@w{KsbaCert @var{cert}})
+@deftypefun void ksba_cert_release (@w{ksba_cert_t@var{cert}})
 The function @code{ksba_cert_release} destroys the certificate object with the
 handle @var{cert} and releases all associated resources.  Due to the use of
 reference counting no actual memory may be released.  It is okay to pass
 @code{NULL} to the function in which case nothing happens.
 @end deftypefun
 
-@deftypefun KsbaError ksba_cert_read_der (@w{KsbaCert @var{cert}}, @w{KsbaReader @var{reader}})
+@deftypefun gpg_error_t ksba_cert_read_der (@w{ksba_cert_t@var{cert}}, @w{KsbaReader @var{reader}})
 
 Read the next certificate from @var{reader} and store it in the
 certificate object @var{cert} for future access.  The certificate is parsed
@@ -353,7 +348,7 @@ The function returns zero if the operation was successfully performed or
 an error code.
 @end deftypefun
 
-@deftypefun KsbaError ksba_cert_init_from_mem (@w{KsbaCert @var{cert}}, @w{const void *@var{buffer}}, @w{size_t @var{length}})
+@deftypefun gpg_error_t ksba_cert_init_from_mem (@w{ksba_cert_t@var{cert}}, @w{const void *@var{buffer}}, @w{size_t @var{length}})
 
 Parse the @var{buffer} which should contain a @acronym{DER} encoded
 certificate of @var{length} and initialize the @var{cert}.  This
@@ -374,7 +369,7 @@ certificate in a well defined manner.  An error will be retruned if the
 certificate object has not yet been initialzied by means of
 @code{ksba_cert_read_der} or @code{ksba_cert_init_from_mem}.
 
-@deftypefun const unsigned char *ksba_cert_get_image (@w{KsbaCert @var{cert}}, @w{size_t *@var{r_length}}) 
+@deftypefun const unsigned char *ksba_cert_get_image (@w{ksba_cert_t@var{cert}}, @w{size_t *@var{r_length}}) 
 
 This function returns a pointer
 to the @acronym{DER} encoded buffer with the raw certificate as well as
@@ -385,7 +380,7 @@ The function returns @code{NULL} on error or a pointer which is valid as
 long as @var{cert} is valid.
 @end deftypefun
 
-@deftypefun KsbaError ksba_cert_hash (@w{KsbaCert @var{cert}}, @w{int @var{what}}, @w{void (*@var{hasher})(void *, const void *, size_t length)}, @w{void *@var{hasher_arg}})
+@deftypefun gpg_error_t ksba_cert_hash (@w{ksba_cert_t@var{cert}}, @w{int @var{what}}, @w{void (*@var{hasher})(void *, const void *, size_t length)}, @w{void *@var{hasher_arg}})
 
 This function feeds the data which is expected to be hashed into the
 given function @var{hasher}, where the first argument passed is
@@ -400,7 +395,7 @@ function is not expected to yiled errors anyway.
 @end deftypefun
 
 
-@deftypefun const char *ksba_cert_get_digest_algo (KsbaCert cert)
+@deftypefun const char *ksba_cert_get_digest_algo (ksba_cert_tcert)
 
 Figure out the the digest algorithm used for the signature and return
 its @acronym{OID} in dotted decimal format.  This function is most
@@ -411,7 +406,7 @@ string with the @acronym{OID}.  This string is valid as long the
 certificate object is valid.
 @end deftypefun
 
-@deftypefun KsbaSexp ksba_cert_get_serial (KsbaCert cert)
+@deftypefun KsbaSexp ksba_cert_get_serial (ksba_cert_tcert)
 
 The function returns the serial number of the certificate @var{cert}.
 The serial number is an integer returned as an cancnical encoded
@@ -419,7 +414,7 @@ S-expression with just one element.  The caller must free the returned
 value.  @code{NULL} is returned in case of error.
 @end deftypefun
 
-@deftypefun char *ksba_cert_get_issuer (KsbaCert cert, int idx)
+@deftypefun char *ksba_cert_get_issuer (ksba_cert_tcert, int idx)
 
 With @var{idx} given as @code{0}, this function returns the
 Distinguished Name (@acronym{DN}) of the certificate issuer which
@@ -446,7 +441,7 @@ The caller must free the returned string using @code{ksba_free} or
 whatever function has been registered as a replacement.
 @end deftypefun
 
-@deftypefun char *ksba_cert_get_subject (KsbaCert cert, int idx)
+@deftypefun char *ksba_cert_get_subject (ksba_cert_tcert, int idx)
 
 With @var{idx} given as @code{0}, this function returns the
 Distinguished Name (@acronym{DN}) of the certificate's subject.  The
@@ -472,7 +467,7 @@ whatever function has been registered as a replacement.
 @end deftypefun
 
 
-@deftypefun time_t ksba_cert_get_validity (KsbaCert @var{cert}, int @var{what})
+@deftypefun time_t ksba_cert_get_validity (ksba_cert_t@var{cert}, int @var{what})
 
 Return the validity dates from the certificate.  If no value is
 available @code{0} is returned because we can safely assume that the
@@ -483,26 +478,26 @@ To return the `notBefore' date, the value @code{0} must be supplied for
 @var{what};  @code{1} yields the `notAfter' value.
 @end deftypefun
 
-@deftypefun KsbaSexp ksba_cert_get_public_key (KsbaCert cert)
+@deftypefun KsbaSexp ksba_cert_get_public_key (ksba_cert_tcert)
 
 @c !FIXME!
 [This needs to get written - for now please see libksba/src/cert.c]
 
 @end deftypefun
 
-@deftypefun KsbaSexp ksba_cert_get_sig_val (KsbaCert cert)
+@deftypefun KsbaSexp ksba_cert_get_sig_val (ksba_cert_tcert)
 
 @c !FIXME!
 [This needs to get written - for now please see libksba/src/cert.c]
 @end deftypefun
 
-@deftypefun KsbaError ksba_cert_get_extension (KsbaCert cert, int idx, char const **r_oid, int *r_crit, size_t *r_deroff, size_t *r_derlen)
+@deftypefun gpg_error_t ksba_cert_get_extension (ksba_cert_tcert, int idx, char const **r_oid, int *r_crit, size_t *r_deroff, size_t *r_derlen)
 
 @c !FIXME!
 [This needs to get written - for now please see libksba/src/cert.c]
 @end deftypefun
 
-@deftypefun KsbaError ksba_cert_is_ca (KsbaCert cert, int *r_ca, int *r_pathlen)
+@deftypefun gpg_error_t ksba_cert_is_ca (ksba_cert_tcert, int *r_ca, int *r_pathlen)
 
 Return information on the basicConstraint (2.5.19.19) of CERT.  R_CA
 receives true if this is a CA and only in that case R_PATHLEN is set to
@@ -511,14 +506,14 @@ limitation
 
 @end deftypefun
 
-@deftypefun KsbaError ksba_cert_get_key_usage (KsbaCert cert, unsigned int *r_flags)
+@deftypefun gpg_error_t ksba_cert_get_key_usage (ksba_cert_tcert, unsigned int *r_flags)
 
 Get the key usage flags. The function returns Ksba_No_Data if no
 key usage is specified. 
 @end deftypefun
 
 
-@deftypefun KsbaError ksba_cert_get_cert_policies (KsbaCert cert, char **r_policies)
+@deftypefun gpg_error_t ksba_cert_get_cert_policies (ksba_cert_tcert, char **r_policies)
 
 Return a string with the certificatePolicies delimited by linefeeds.
 The return values may be extended to carry more information er line, so
@@ -529,12 +524,12 @@ Caller must free the returned value.
 @end deftypefun
 
 
-@deftypefun KsbaError ksba_cert_get_crl_dist_point (KsbaCert @var{cert}, int @var{idx}, KsbaName *@var{r_distpoint}, KsbaName *@var{r_issuer}, unsigned int *@var{r_reason})
+@deftypefun gpg_error_t ksba_cert_get_crl_dist_point (ksba_cert_t@var{cert}, int @var{idx}, ksba_name_t *@var{r_distpoint}, ksba_name_t *@var{r_issuer}, unsigned int *@var{r_reason})
 
 Return the CRLDistPoints given in the certificate extension of
 certificate @var{cert}.  @var{idx} should be iterated starting from 0
 until the function returns @code{-1}.  @var{r_distpoint} returns a
-KsbaName object with the distribution point name(s); the return value
+ksba_name_t object with the distribution point name(s); the return value
 may be @code{NULL} to indicate that this name is not available.
 @var{r_issuer} returns the CRL issuer; if the returned value is
 @code{NULL} the caller should assume that the CRL issuer is the same as
@@ -548,7 +543,7 @@ and @var{r_issuer} must be released by the caller using
 @code{ksba_name_release}.
 @end deftypefun
 
-@deftypefun KsbaError ksba_cert_get_auth_key_id (KsbaCert @var{cert}, KsbaSexp *@var{r_keyid}, KsbaName *@var{r_name}, KsbaSexp *@var{r_serial})
+@deftypefun gpg_error_t ksba_cert_get_auth_key_id (ksba_cert_t@var{cert}, KsbaSexp *@var{r_keyid}, ksba_name_t *@var{r_name}, KsbaSexp *@var{r_serial})
 
 Return the authorityKeyIdentifier in @var{r_name} and @var{r_serial} or
 in @var{r_keyid}.  @code{KSBA_No_Data} is returned if no
@@ -556,6 +551,37 @@ authorityKeyIdentifier or only one using the keyIdentifier method is
 available.
 
 Note that r_keyid is not yet implemented and @var{NULL} must be passed instead.
+@end deftypefun
+
+
+@deftypefun gpg_error_t ksba_cert_get_authority_info_access (ksba_cert_t @var{cert}, int @var{idx}, char **@var{r_method}, ksba_name_t *@var{r_location})
+
+Return the authorityInfoAccess attributes. @var{idx} should be
+iterated starting from 0 until this function returns
+@code{GPG_ERR_EOF}.  @var{r_method} returns an allocated string with
+the OID of one item and @var{r_location} returns the GeneralName for
+that OID.  The returned values for @var{r_method} and @var{r_location}
+must be released by the caller unless the function returned an error;
+the function will however make sure that @var{r_method} and
+@var{r_location} will point to @code{NULL} if the function retruns an
+error. 
+
+See RFC-2459, section 4.2.2.1 for the defintion of this attribute.
+@end deftypefun
+
+@deftypefun gpg_error_t ksba_cert_get_subject_info_access (ksba_cert_t @var{cert}, int @var{idx}, char **@var{r_method}, ksba_name_t *@var{r_location})
+
+Return the subjectInfoAccess attributes. @var{idx} should be
+iterated starting from 0 until this function returns
+@code{GPG_ERR_EOF}.  @var{r_method} returns an allocated string with
+the OID of one item and @var{r_location} returns the GeneralName for
+that OID.  The returned values for @var{r_method} and @var{r_location}
+must be released by the caller unless the function returned an error;
+the function will however make sure that @var{r_method} and
+@var{r_location} will point to @code{NULL} if the function retruns an
+error. 
+
+See RFC-2459, section 4.2.2.2 for the defintion of this attribute.
 @end deftypefun
 
 
@@ -610,7 +636,7 @@ perfectly okay to pass @code{NULL} to this function in which case
 nothing happens.
 @end deftypefun
 
-@deftypefun KsbaError ksba_cms_set_reader_writer (KsbaCMS @var{cms}, KsbaReader @var{r}, KsbaWriter @var{w})
+@deftypefun gpg_error_t ksba_cms_set_reader_writer (KsbaCMS @var{cms}, KsbaReader @var{r}, KsbaWriter @var{w})
 
 About all usages of the CMS framework require some input and output data
 (great surprise!).  Do accomplish this in the most abstract way, no
@@ -637,7 +663,7 @@ limited in size; e.g. it does not make sense to use a video clip as the
 @acronym{DN} despite the fact that the standard does not forbid it.
 
 
-@deftypefun KsbaError ksba_cms_parse (KsbaCMS @var{cms}, KsbaStopReason *@var{r_stopreason})
+@deftypefun gpg_error_t ksba_cms_parse (KsbaCMS @var{cms}, KsbaStopReason *@var{r_stopreason})
 
 This is the core function of the parser and commonly used in a loop.
 The parsing process is divided into serveral phases to allow the user to
@@ -762,17 +788,17 @@ This is an object to handle some of the names used in X.509.  We need
 this object approach because those names may come as a set and there is
 no other clean way to access them.
 
-@deftp {Data type} KsbaName
-The @code{KsbaName} type is an object to represent names sets.
+@deftp {Data type} ksba_name_t
+The @code{ksba_name_t} type is an object to represent names sets.
 @end deftp
 
 
-@deftypefun void ksba_name_release (KsbaName @var{name})
+@deftypefun void ksba_name_release (ksba_name_t @var{name})
 This function releases the object @var{name}.  Passing @code{NULL} is
 allowed.
 @end deftypefun
 
-@deftypefun const char *ksba_name_enum (KsbaName @var{name}, int @var{idx})
+@deftypefun const char *ksba_name_enum (ksba_name_t @var{name}, int @var{idx})
 
 By iterating @var{idx} up starting with 0, this function returns all
 General Names stored in @var{name}.  The format of the returned name is either
@@ -791,7 +817,7 @@ probably an Universal Resource Identifier which has the S-expression:
 The returned string has the same lifetime as @var{name}. 
 @end deftypefun
 
-@deftypefun char *ksba_name_get_uri (KsbaName @var{name}, int @var{idx})
+@deftypefun char *ksba_name_get_uri (ksba_name_t @var{name}, int @var{idx})
 Convenience function to return names representing an URI.  Caller
 must free the returned value.  Note that this function should not be
 used to enumerate the names.
@@ -801,7 +827,7 @@ Here is an example on how you can use this function to enumerate all
 
 @example
 void
-print_names (KsbaName name)
+print_names (ksba_name_t name)
 @{
   int idx;
   const char *s;
@@ -843,72 +869,32 @@ to access optional attributes of a certificate you get an appropriate error
 message.  Some error values have specific meanings if returned by a specific
 function.  Such cases are described in the documentation of those functions.
 
-@menu
-* Error values::                A list of all error values used.
-* Error strings::               How to get a descriptive string from a value.
-@end menu
+All error codes are defined by the library @code{libgpg-error}.  See
+there for ways to check the error values and print descriptive
+strings.  Please be aware that you can't check directly against an
+error code but have to do it like this:
+
+@example
+  err = ksba_foo ();
+  if (gpg_err_code (err) == GPG_ERR_EOF)
+    okay = 1;
+@end example
+
+The only exception is that success (i.e. no error) is defined to be
+@code{0}; thus you may directly test for success like:
+
+@example
+  if (!ksba_foo ())
+    okay = 1;
+@end example
 
 
-@node Error values
-@section Error values
-
-@deftp {Data type} {enum KsbaError}
-The @code{KsbaError} type specifies the set of all error values that are used
-by `KSBA'.  Except for the EOF and No_Error cases an application should always
-use the constants.  Possible values are:
-
-@table @code
-@item KSBA_EOF
-This value indicates the end of a list, buffer or file and is defined to have
-the value @code{-1}.
-
-@item KSBA_No_Error
-This value indicates success.  The value of this error is @code{0}.
-
-@item KSBA_General_Error
-This value means that something went wrong, but either there is not
-enough information about the problem to return a more useful error
-value, or there is no seperate error value for this type of problem.
-
-@item KSBA_Out_Of_Core
-This value means that an out-of-memory condition occured.  This might be a
-transient error and the application should not assume that it is not anymore
-poosible to allocate memory.
-
-@item KSBA_Invalid_Value
-This value means that some user provided data was out of range.  This
-can also refer to objects.  In most cases this indicates a bug.
-
-@item KSBA_Not_Implemented
-This value indicates that the specific function (or operation) is not
-implemented.  This error should never happen.  It can only occur if
-you use certain values or configuration options which do not work,
-but for which we think that they should work at some later time.
-
-@item KSBA_Read_Error
-This value means that an I/O read operation failed.
-
-@item KSBA_Write_Error
-This value means that an I/O write operation failed.
-
-@item KSBA_File_Error
-This value means that a file I/O operation failed.  The value of
-@code{errno} contains the system error value.
-
-@end table
-@end deftp
-
-
-
-@node Error strings
-@section Error strings
-
-@deftypefun {const char *} ksba_strerror (@w{KSbaError @var{err}})
-The function @code{ksba_strerror} returns a pointer to a statically
-allocated string containing a description of the error with the error
-value @var{err}.  This string can be used to output a diagnostic
-message to the user.
-@end deftypefun
+@c The following table lists the error codes as used by this library.
+@c 
+@c @table @code
+@c
+@c @end table
+@c
 
 @node Component Labels
 @appendix Component Labels

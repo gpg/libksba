@@ -35,6 +35,7 @@ KSBA_0.9 {
     ksba_cert_get_subject; ksba_cert_get_validity; ksba_cert_hash;
     ksba_cert_init_from_mem; ksba_cert_is_ca; ksba_cert_new;
     ksba_cert_read_der; ksba_cert_ref; ksba_cert_release;
+    ksba_cert_get_authority_info_access; ksba_cert_get_subject_info_access;
 
     ksba_certreq_add_subject; ksba_certreq_build; ksba_certreq_new;
     ksba_certreq_release; ksba_certreq_set_hash_function; 

@@ -1,3 +1,11 @@
+2004-03-23  Werner Koch  <wk@gnupg.org>
+
+	* cert-basic.c (print_oid_and_desc): New.
+	(list_extensions): Print info_access.
+	(print_names): Hack to optionally indent the first line too.
+	(print_oid_list): New.
+	(list_extensions): Use it.
+
 2004-03-16  Werner Koch  <wk@gnupg.org>
 
 	* cert-basic.c (one_file, get_oid_desc, list_extensions): Print a
