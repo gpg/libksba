@@ -315,6 +315,9 @@ _ksba_der_store_oid (AsnNode node, const char *oid)
 {
   KsbaError err;
 
+  if (node->type == TYPE_ANY)
+    node->type = TYPE_OBJECT_ID;
+
   if (node->type == TYPE_OBJECT_ID)
     {
       char *buf;

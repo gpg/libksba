@@ -1,3 +1,9 @@
+2002-11-25  Werner Koch  <wk@gnupg.org>
+
+	* cms.c (ksba_cms_get_sigattr_oids): New.
+	(build_signed_data_attributes): Store the content-type.
+	* der-encoder.c (_ksba_der_store_oid): Handle TYPE_ANY.
+
 2002-10-22  Werner Koch  <wk@gnupg.org>
 
 	* asn1-parse.y (yyparse): Prefix with _ksba_asn1_.
@@ -6,7 +12,7 @@
 
 	* dn.c (parse_rdn): Add a parse-only mode to determine the end os
 	a part.
-	(_ksba_dn_from_str): Parse the string in revereted order as
+	(_ksba_dn_from_str): Parse the string in reversed order as
 	specified by rfc2253.
 
 2002-08-23  Werner Koch  <wk@gnupg.org>

@@ -244,6 +244,8 @@ KsbaCert ksba_cms_get_cert (KsbaCMS cms, int idx);
 KsbaError ksba_cms_get_message_digest (KsbaCMS cms, int idx,
                                        char **r_digest, size_t *r_digest_len);
 KsbaError ksba_cms_get_signing_time (KsbaCMS cms, int idx, time_t *r_sigtime);
+KsbaError ksba_cms_get_sigattr_oids (KsbaCMS cms, int idx,
+                                     const char *reqoid, char **r_value);
 KsbaSexp ksba_cms_get_sig_val (KsbaCMS cms, int idx);
 KsbaSexp ksba_cms_get_enc_val (KsbaCMS cms, int idx);
 

@@ -4,6 +4,13 @@ Noteworthy changes in version 0.4.6 (unreleased)
  * DNs in pkcs#10 request are now created in reversed order as
    specified by rfc2253.
 
+ * The content-type signed attribute is created.
+
+ * Interface changes relative to the 0.4.3 release:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ksba_cms_get_sigattr_oids        NEW
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Noteworthy changes in version 0.4.5 (2002-08-23)
 ------------------------------------------------
 

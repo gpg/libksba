@@ -63,6 +63,8 @@ static struct {
   { NULL }
 };
 
+static char oidstr_contentType[] = "1.2.840.113549.1.9.3";
+/*static char oid_contentType[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x03";*/
 static char oidstr_messageDigest[] = "1.2.840.113549.1.9.4";
 static char oid_messageDigest[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x04";
 static char oidstr_signingTime[] = "1.2.840.113549.1.9.5";
@@ -944,6 +946,107 @@ ksba_cms_get_signing_time (KsbaCMS cms, int idx, time_t *r_sigtime)
 }
 
 
+/* Return a list of OIDs stored as signed attributes for the signature
+   number IDX.  All the values (OIDs) for the the requested OID REQOID
+   are returned delimited by a linefeed.  Caller must free that
+   list. -1 is returned when IDX is larger than the number of
+   signatures, KSBA_No_Data is returned when there is no such
+   attribute for the given signer. */
+KsbaError
+ksba_cms_get_sigattr_oids (KsbaCMS cms, int idx,
+                           const char *reqoid, char **r_value)
+{ 
+  KsbaError err;
+  AsnNode nsiginfo, n;
+  struct signer_info_s *si;
+  char *reqoidbuf;
+  size_t reqoidlen;
+  char *retstr = NULL;
+  int i;
+
+  if (!cms || !r_value)
+    return KSBA_Invalid_Value;
+  if (!cms->signer_info)
+    return KSBA_No_Data;
+  if (idx < 0)
+    return KSBA_Invalid_Index;
+  *r_value = NULL;
+
+  for (si=cms->signer_info; si && idx; si = si->next, idx-- )
+    ;
+  if (!si)
+    return -1; /* no more signers */
+  
+  nsiginfo = _ksba_asn_find_node (si->root, "SignerInfo.signedAttrs");
+  if (!nsiginfo)
+    return -1; /* this is okay, because signedAttribs are optional */
+
+  err = ksba_oid_from_str (reqoid, &reqoidbuf, &reqoidlen);
+  if(err)
+    return err;
+  
+  for (i=0; (n = _ksba_asn_find_type_value (si->image, nsiginfo,
+                                            i, reqoidbuf, reqoidlen)); i++)
+    {
+      char *line, *p;
+
+      /* the value is is a SET OF OBJECT ID but the set must have
+         excactly one OBJECT ID.  (rfc2630 11.1) */
+      if ( !(n->type == TYPE_SET_OF && n->down
+             && n->down->type == TYPE_OBJECT_ID && !n->down->right))
+        {
+          xfree (reqoidbuf);
+          xfree (retstr);
+          return KSBA_Invalid_CMS_Object;
+        }
+      n = n->down;
+      if (n->off == -1)
+        {
+          xfree (reqoidbuf);
+          xfree (retstr);
+          return KSBA_Bug;
+        }
+
+      p = _ksba_oid_node_to_str (si->image, n);
+      if (!p)
+        {
+          xfree (reqoidbuf);
+          xfree (retstr);
+          return KSBA_Invalid_CMS_Object;
+        }
+
+      if (!retstr)
+        line = retstr = xtrymalloc (strlen (p) + 2);
+      else
+        {
+          char *tmp = xtryrealloc (retstr,
+                                   strlen (retstr) + 1 + strlen (p) + 2);
+          if (!tmp)
+            line = NULL;
+          else
+            {
+              retstr = tmp;
+              line = stpcpy (retstr + strlen (retstr), "\n");
+            }
+        }
+      if (!line)
+        {
+          xfree (reqoidbuf);
+          xfree (retstr);
+          xfree (p);
+          return KSBA_Out_Of_Core;
+        }
+      strcpy (line, p);
+      xfree (p);
+    }
+  xfree (reqoidbuf);
+  if (!n && !i)
+    return -1; /* no such attribute */
+  *r_value = retstr;
+  return 0;
+}
+
+
 /**
  * ksba_cms_get_sig_val:
  * @cms: CMS object
@@ -1486,7 +1589,7 @@ ksba_cms_set_sig_val (KsbaCMS cms, int idx, KsbaConstSexp sigval)
 }
 
 
-/* Set the conetnt encryption algorithm to OID and optionally set the
+/* Set the content encryption algorithm to OID and optionally set the
    initialization vector to IV */
 KsbaError
 ksba_cms_set_content_enc_algo (KsbaCMS cms,
@@ -2083,7 +2186,7 @@ build_signed_data_attributes (KsbaCMS cms)
       struct {
         AsnNode root;
         unsigned char *image;
-      } attrarray[2]; 
+      } attrarray[3]; 
       int attridx = 0;
 
       if (!digestlist)
@@ -2110,6 +2213,31 @@ build_signed_data_attributes (KsbaCMS cms)
       assert (certlist && certlist->msg_digest_len);
       err = _ksba_der_store_octet_string (n, certlist->msg_digest,
                                           certlist->msg_digest_len);
+      if (err)
+        return err;
+      err = _ksba_der_encode_tree (attr, &image, NULL);
+      if (err)
+          return err;
+      attrarray[attridx].root = attr;
+      attrarray[attridx].image = image;
+      attridx++;
+
+      /* We are also required to include the content-type attribute. */
+      attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+                                    "CryptographicMessageSyntax.Attribute");
+      if (!attr)
+        return KSBA_Element_Not_Found;
+      n = _ksba_asn_find_node (attr, "Attribute.attrType");
+      if (!n)
+        return KSBA_Element_Not_Found;
+      err = _ksba_der_store_oid (n, oidstr_contentType);
+      if (err)
+        return err;
+      n = _ksba_asn_find_node (attr, "Attribute.attrValues");
+      if (!n || !n->down)
+        return KSBA_Element_Not_Found;
+      n = n->down; /* fixme: ugly hack */
+      err = _ksba_der_store_oid (n, cms->inner_cont_oid);
       if (err)
         return err;
       err = _ksba_der_encode_tree (attr, &image, NULL);
@@ -2163,8 +2291,11 @@ build_signed_data_attributes (KsbaCMS cms)
 
       for (i=0; i < attridx; i++)
         {
-          if (i && !_ksba_asn_insert_copy (n))
-            return KSBA_Out_Of_Core;
+          if (i)
+            {
+              if ( !(n=_ksba_asn_insert_copy (n)))
+                return KSBA_Out_Of_Core;
+            }
           err = _ksba_der_copy_tree (n, attrarray[i].root, attrarray[i].image);
           if (err)
             return err;
