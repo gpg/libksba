@@ -23,27 +23,36 @@
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
-PACKAGE="libksba"
-VERSION="0.0.0"
-# libksba:
+AC_INIT(libksba, 0.0.0, bug-$PACKAGE@g10code.com)
 LIBKSBA_LT_CURRENT=0
 LIBKSBA_LT_AGE=0
 LIBKSBA_LT_REVISION=0
+#-------------------
 
-AC_INIT($PACKAGE, $VERSION, bug-$PACKAGE@g10code.com)
+PACKAGE=$PACKAGE_NAME
+VERSION=$PACKAGE_VERSION
+
 AC_CONFIG_SRCDIR([src/ksba.h])
 AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
 AM_CONFIG_HEADER(config.h)
 
-AC_SUBST(LIBKSBA_LT_CURRENT)
-AC_SUBST(LIBKSBA_LT_AGE)
-AC_SUBST(LIBKSBA_LT_REVISION)
+AH_TOP([
+/* need this, because some autoconf tests rely on this (e.g. stpcpy)
+ * and it should be used for new programs  */
+#define _GNU_SOURCE  1
+])
+
+dnl AH_BOTTOM([
+dnl 
+dnl #])
+
 
 AM_MAINTAINER_MODE
 
-# Due to automake/autoconf incompatibilities we need this stuff
-#PACKAGE="$PACKAGE_NAME"
-#VERSION="$PACKAGE_VERSION"
+
+AC_SUBST(LIBKSBA_LT_CURRENT)
+AC_SUBST(LIBKSBA_LT_AGE)
+AC_SUBST(LIBKSBA_LT_REVISION)
 AC_SUBST(PACKAGE)
 AC_SUBST(VERSION)
 AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE", [Name of this package])
@@ -68,7 +77,6 @@ AC_PROG_RANLIB
 #AC_ARG_PROGRAM
 AC_PROG_YACC
 
-
 # Don't build shared libs for now.
 AM_DISABLE_SHARED
 AM_PROG_LIBTOOL
@@ -88,10 +96,11 @@ AC_CHECK_HEADERS([string.h])
 AC_C_CONST
 
 # Checks for library functions.
-AC_CHECK_FUNCS([memmove strchr strtol strtoul])
+AC_CHECK_FUNCS([memmove strchr strtol strtoul stpcpy])
 
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
+src/ksba-config
 ])
 AC_OUTPUT

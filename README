@@ -1,2 +1,5 @@
 KSBA = rot13(digit_to_letter(x509)) to be pronounced as Kasbah
 
+See ksba-overview.txt in the aegypten-specs module for a brief
+overview of the problem domain.  documentation should eventually
+appear in the doc directory.
