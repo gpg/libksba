@@ -59,7 +59,7 @@ ksba_reader_new (void)
 void
 ksba_reader_release (KsbaReader r)
 {
-  if (r)
+  if (!r)
     return;
   xfree (r->unread.buf);
   xfree (r);
