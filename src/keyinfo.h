@@ -21,12 +21,19 @@
 #ifndef KEYINFO_H
 #define KEYINFO_H
 
+KsbaError _ksba_parse_algorithm_identifier (const unsigned char *der,
+                                            size_t derlen,
+                                            size_t *r_nread,
+                                            char **r_oid);
+
+
 KsbaError _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
                                  char **r_string);
 KsbaError _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
                                 char **r_string);
 
-int _ksba_map_oid_to_digest_algo (const unsigned char *image, AsnNode node);
+int _ksba_node_with_oid_to_digest_algo (const unsigned char *image,
+                                        AsnNode node);
 
 
 

@@ -136,7 +136,7 @@ main (int argc, char **argv)
 
   if (asnfile)
     {
-      rc = ksba_asn_parse_file (asnfile, &asn_tree);
+      rc = ksba_asn_parse_file (asnfile, &asn_tree, 0);
       if (rc)
         {
           print_error ("parsing `%s' failed: rc=%d\n", asnfile, rc);

@@ -1,4 +1,4 @@
-/* reader.h - internl definitions for the reder object.
+/* writer.h - internl definitions for the writer object.
  *      Copyright (C) 2001 g10 Code GmbH
  *
  * This file is part of KSBA.
@@ -18,50 +18,42 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#ifndef READER_H
-#define READER_H 1
+#ifndef WRITER_H
+#define WRITER_H 1
 
 #include <stdio.h>
 
-enum reader_type {
-  READER_TYPE_NONE = 0,
-  READER_TYPE_MEM,
-  READER_TYPE_FD,
-  READER_TYPE_FILE,
-  READER_TYPE_CB
+enum writer_type {
+  WRITER_TYPE_NONE = 0,
+  WRITER_TYPE_FD,
+  WRITER_TYPE_FILE,
+  WRITER_TYPE_CB
 };
 
 
-struct ksba_reader_s {
-  int eof;
+struct ksba_writer_s {
   int error;
-  unsigned long nread;
-  struct {
-    unsigned char *buf;
-    size_t size;    /* allocated size */
-    size_t length;  /* used size */ 
-    size_t readpos; /* offset where to start the next read */
-  } unread;
-  enum reader_type type;
+  unsigned long nwritten;
+  enum writer_type type;
   union {
     struct {
       unsigned char *buffer;
       size_t size;
       size_t readpos;
-    } mem;   /* for READER_TYPE_MEM */
-    int fd;  /* for READER_TYPE_FD */
-    FILE *file; /* for READER_TYPE_FILE */
+    } mem;   /* for WRITER_TYPE_MEM */
+    int fd;  /* for WRITER_TYPE_FD */
+    FILE *file; /* for WRITER_TYPE_FILE */
     struct {
-      int (*fnc)(void*,char *,size_t,size_t*);
+      int (*fnc)(void*,const void *,size_t);
       void *value;
-    } cb;   /* for READER_TYPE_CB */
+    } cb;   /* for WRITER_TYPE_CB */
   } u;
 };
 
 
 
 
-#endif /*READER_H*/
+#endif /*WRITER_H*/
 
 
 

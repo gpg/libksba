@@ -973,13 +973,14 @@ set_down (AsnNode node, AsnNode down)
  * ksba_asn_parse_file:
  * @file_name: Filename with the ASN module
  * @pointer: Returns the syntax tree
- * 
+ * @debug: Enable debug output
+ *
  * Parse an ASN.1 file and return an syntax tree.
  * 
  * Return value: 0 for okay or an ASN_xx error code
  **/
 int 
-ksba_asn_parse_file (const char *file_name, KsbaAsnTree *result)
+ksba_asn_parse_file (const char *file_name, KsbaAsnTree *result, int debug)
 {
   struct parser_control_s parsectl;
      
@@ -990,7 +991,7 @@ ksba_asn_parse_file (const char *file_name, KsbaAsnTree *result)
     return ASN_FILE_NOT_FOUND;
 
   parsectl.lineno = 0;
-  parsectl.debug = 0;
+  parsectl.debug = debug;
   parsectl.result_parse = ASN_SYNTAX_ERROR;
   parsectl.parse_tree = NULL;
   parsectl.all_nodes = NULL;
@@ -1030,4 +1031,10 @@ ksba_asn_tree_release (KsbaAsnTree tree)
   xfree (tree);
 }
 
-
+void
+_ksba_asn_release_nodes (AsnNode node)
+{
+  /* FIXME: it does not work yet becuase the allocation function in
+     asn1-func.c does not link all nodes together */
+  release_all_nodes (node);
+}

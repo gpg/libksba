@@ -28,12 +28,14 @@
 #include <string.h>
 #include <assert.h>
 
+#include "ksba.h"
 #include "util.h"
 #include "asn1-func.h"
-
+#include "keyinfo.h"
 #include "shared.h"
 
 struct algo_table_s {
+  const char *oidstring;
   const unsigned char *oid;  /* NULL indicattes end of table */
   int                  oidlen;
   int supported;
@@ -45,19 +47,19 @@ struct algo_table_s {
 
 static struct algo_table_s pk_algo_table[] = {
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
-    /* 1.2.840.113549.1.1.1  rsaEncryption (RSAES-PKCA1-v1.5) */ 
+    "1.2.840.113549.1.1.1", /* rsaEncryption (RSAES-PKCA1-v1.5) */ 
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01", 9, 
     1, "rsa", "-ne", "\x30\x02\x02" },
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.7 */
-    /* 1.2.840.113549.1.1.7  RSAES-OAEP */ 
+    "1.2.840.113549.1.1.7", /* RSAES-OAEP */ 
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x07", 9, 
     0, "rsa", "-ne", "\x30\x02\x02"}, /* (patent problems) */
   { /* */
-    /* 2.5.8.1.1 rsa (ambiguous due to missing padding rules)*/
+    "2.5.8.1.1", /* rsa (ambiguous due to missing padding rules)*/
     "\x55\x08\x01\x01", 4, 
     1, "ambiguous-rsa", "-ne", "\x30\x02\x02" },
   { /* iso.member-body.us.x9-57.x9cm.1 */
-    /* 1.2.840.10040.4.1  dsa */
+    "1.2.840.10040.4.1", /*  dsa */
     "\x2a\x86\x48\xce\x38\x04\x01", 7, 
     1, "dsa"  "y", "\x02" }, 
   /* FIXME: Need code to extract p,q,g from the parameters */
@@ -68,21 +70,29 @@ static struct algo_table_s pk_algo_table[] = {
 
 static struct algo_table_s sig_algo_table[] = {
   {  /* iso.member-body.us.rsadsi.pkcs.pkcs-1.5 */
-    /* 1.2.840.113549.1.1.5  sha1WithRSAEncryption */ 
+    "1.2.840.113549.1.1.5", /* sha1WithRSAEncryption */ 
     "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x05", 9, 
     1, "rsa", "s", "\x82", GCRY_MD_SHA1 },
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.4 */
-    /* 1.2.840.113549.1.1.4  md5WithRSAEncryption */ 
+    "1.2.840.113549.1.1.4", /* md5WithRSAEncryption */ 
     "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x04", 9, 
     1, "rsa", "s", "\x82", GCRY_MD_MD5 },
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.2 */
-    /* 1.2.840.113549.1.1.2  md2WithRSAEncryption */ 
+    "1.2.840.113549.1.1.2", /* md2WithRSAEncryption */ 
     "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x02", 9, 
     0, "rsa", "s", "\x82", 0 },
   { /* iso.member-body.us.x9-57.x9cm.3 */
-    /* 1.2.840.10040.4.3  dsaWithSha1 */
+    "1.2.840.10040.4.3", /*  dsaWithSha1 */
     "\x2a\x86\x48\xce\x38\x04\x03", 7, 
     1, "dsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA1 }, 
+  { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
+    "1.2.840.113549.1.1.1", /* rsaEncryption used without hash algo*/ 
+    "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01", 9, 
+    1, "rsa", "s", "\x82" },
+  { /* from NIST's OIW - actually belongs in a pure hash table */
+    "1.3.14.3.2.26",  /* sha1 */
+    "\x2B\x0E\x03\x02\x1A", 5,
+    0, "sha-1", "", "", GCRY_MD_SHA1 },
 
   {NULL}
 };
@@ -127,17 +137,22 @@ struct stringbuf {
 
 /* Return the OFF and the LEN of algorithm within DER.  Do some checks
    and return the number of bytes read in r_nread, adding this to der
-   does point into the BIT STRING
+   does point into the BIT STRING.
+
+   mode 0: just get the algorithm identifier. FIXME: should be able to
+           handle BER Encoding. 
+   mode 1: as described.
  */
 static KsbaError
-get_algorithm (const unsigned char *der, size_t derlen,
-               size_t *r_nread, size_t *r_pos, size_t *r_len)
+get_algorithm (int mode, const unsigned char *der, size_t derlen,
+               size_t *r_nread, size_t *r_pos, size_t *r_len, int *r_bitstr)
 {
   int c;
   const unsigned char *start = der;
   const unsigned char *startseq;
   unsigned long seqlen, len;
 
+  *r_bitstr = 0;
   /* get the inner sequence */
   if (!derlen)
     return KSBA_Invalid_Keyinfo;
@@ -171,7 +186,7 @@ get_algorithm (const unsigned char *der, size_t derlen,
   /* check that the parameter is NULL or not there */
   if (!seqlen)
     {
-/*        printf ("parameter: none\n"); */
+      printf ("parameter: none\n");
     }
   else
     {
@@ -182,7 +197,7 @@ get_algorithm (const unsigned char *der, size_t derlen,
       c = *der++; derlen--;
       if ( c == 0x05 ) 
         {
-          /*printf ("parameter: NULL \n");*/ /* the only correct thing */
+          /*printf ("parameter: NULL \n"); the only correct thing */
           if (!derlen)
             return KSBA_Invalid_Keyinfo;
           c = *der++; derlen--;
@@ -192,7 +207,7 @@ get_algorithm (const unsigned char *der, size_t derlen,
         }
       else
         {
-          printf ("parameter: with tag %02x - ignored\n", c);
+/*            printf ("parameter: with tag %02x - ignored\n", c); */
           TLV_LENGTH();
           seqlen -= der - startparm;
           /* skip the value */
@@ -205,19 +220,47 @@ get_algorithm (const unsigned char *der, size_t derlen,
   if (seqlen)
     return KSBA_Invalid_Keyinfo;
 
-  /* move forward to the BIT_STR */
-  if (!derlen)
-    return KSBA_Invalid_Keyinfo;
-  c = *der++; derlen--;
-    
-  if (c != 0x03)
-    return KSBA_Unexpected_Tag; /* not a BIT STRING */
-  TLV_LENGTH();
+  if (mode)
+    {
+      /* move forward to the BIT_STR */
+      if (!derlen)
+        return KSBA_Invalid_Keyinfo;
+      c = *der++; derlen--;
+      
+      if (c == 0x03)
+        *r_bitstr = 1; /* BIT STRING */
+      else if (c == 0x04)
+        ; /* OCTECT STRING */
+      else
+        return KSBA_Unexpected_Tag; /* not a BIT STRING */
+      TLV_LENGTH();
+    }
 
   *r_nread = der - start;
-
   return 0;
 }
+
+
+KsbaError
+_ksba_parse_algorithm_identifier (const unsigned char *der, size_t derlen,
+                                  size_t *r_nread, char **r_oid)
+{
+  KsbaError err;
+  int is_bitstr;
+  size_t nread, off, len;
+
+  /* fixme: get_algorithm might return the error invalid keyinfo -
+     this should be invalid algorithm identifier */
+  *r_oid = NULL;
+  *r_nread = 0;
+  err = get_algorithm (0, der, derlen, &nread, &off, &len, &is_bitstr);
+  if (err)
+    return err;
+  *r_nread = nread;
+  *r_oid = ksba_oid_to_str (der+off, len);
+  return *r_oid? 0 : KSBA_Out_Of_Core;
+}
+
 
 
 static void
@@ -301,6 +344,7 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
   int c;
   size_t nread, off, len;
   int algoidx;
+  int is_bitstr;
   const unsigned char *ctrl;
   const char *elem;
   struct stringbuf sb;
@@ -315,7 +359,7 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
     return KSBA_Unexpected_Tag; /* not a SEQUENCE */
   TLV_LENGTH();
   /* and now the inner part */
-  err = get_algorithm (der, derlen, &nread, &off, &len);
+  err = get_algorithm (1, der, derlen, &nread, &off, &len, &is_bitstr);
   if (err)
     return err;
   
@@ -334,11 +378,16 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
   der += nread;
   derlen -= nread;
 
-  if (!derlen)
-    return KSBA_Invalid_Keyinfo;
-  c = *der++; derlen--;
-  if (c) 
-    fprintf (stderr, "warning: number of unused bits is not zero\n");
+  if (is_bitstr)
+    { /* Funny: X.509 defines the signature value as a bit string but
+         CMS as an octet string - for ease of implementation we always
+         allow both */
+      if (!derlen)
+        return KSBA_Invalid_Keyinfo;
+      c = *der++; derlen--;
+      if (c) 
+        fprintf (stderr, "warning: number of unused bits is not zero\n");
+    }
 
   /* fixme: we should calculate the initial length form the size of the
      sequence, so that we don't neen a realloc later */
@@ -426,6 +475,7 @@ _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
   int c;
   size_t nread, off, len;
   int algoidx;
+  int is_bitstr;
   const unsigned char *ctrl;
   const char *elem;
   struct stringbuf sb;
@@ -434,7 +484,7 @@ _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
 
   *r_string = NULL;
 
-  err = get_algorithm (der, derlen, &nread, &off, &len);
+  err = get_algorithm (1, der, derlen, &nread, &off, &len, &is_bitstr);
   if (err)
     return err;
   
@@ -453,11 +503,16 @@ _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
   der += nread;
   derlen -= nread;
 
-  if (!derlen)
-    return KSBA_Invalid_Keyinfo;
-  c = *der++; derlen--;
-  if (c) 
-    fprintf (stderr, "warning: number of unused bits is not zero\n");
+  if (is_bitstr)
+    { /* Funny: X.509 defines the signature value as a bit string but
+         CMS as an octet string - for ease of implementation we always
+         allow both */
+      if (!derlen)
+        return KSBA_Invalid_Keyinfo;
+      c = *der++; derlen--;
+      if (c) 
+        fprintf (stderr, "warning: number of unused bits is not zero\n");
+    }
 
   /* fixme: we should calculate the initial length form the size of the
      sequence, so that we don't neen a realloc later */
@@ -529,7 +584,7 @@ _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
    Fixme: This function belongs to another file, but as long as we
    don't have a generic OID registry we put it here.  */
 int
-_ksba_map_oid_to_digest_algo (const unsigned char *image, AsnNode node) 
+_ksba_node_with_oid_to_digest_algo (const unsigned char *image, AsnNode node) 
 {
   int algoidx;
   int off, len;
@@ -549,5 +604,34 @@ _ksba_map_oid_to_digest_algo (const unsigned char *image, AsnNode node)
     return 0;
 
   return sig_algo_table[algoidx].digest_algo;
+}
+
+/* Take the string with the OID and map it to a libgcrypt digest algo.
+   Return 0 if the algo is unknown, -1 for an invalid OID 
+   
+   Fixme: This function belongs to another file, but as long as we
+   don't have a generic OID registry we put it here.  */
+int
+_ksba_oid_to_digest_algo (const char *oid) 
+{
+  int algoidx;
+
+  if (!oid)
+    return -1;
+
+  /* try to find it from the signature algorithm table */
+  for (algoidx=0; sig_algo_table[algoidx].oid; algoidx++)
+    {
+      if ( !strcmp (oid, sig_algo_table[algoidx].oidstring))
+        return sig_algo_table[algoidx].digest_algo;
+    }
+  /* try to find it from the pk algorithm table */
+  for (algoidx=0; pk_algo_table[algoidx].oid; algoidx++)
+    {
+      if ( !strcmp (oid, pk_algo_table[algoidx].oidstring))
+        return pk_algo_table[algoidx].digest_algo;
+    }
+
+  return 0;
 }
 

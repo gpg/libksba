@@ -43,6 +43,8 @@ static int error_counter;
 
 /* option --dump */
 static int dump_only;
+/* option --check */
+static int check_only;
 
 
 static void print_error (const char *fmt, ... )  ATTR_PRINTF(1,2);
@@ -178,7 +180,7 @@ one_file (FILE *fp, const char *fname)
   int rc;
   
   
-  rc = ksba_asn_parse_file (fname, &tree);
+  rc = ksba_asn_parse_file (fname, &tree, check_only);
   if (rc==ASN_SYNTAX_ERROR)
       print_error ("error parsing `%s': syntax error\n", fname);
   else if (rc==ASN_IDENTIFIER_NOT_FOUND)
@@ -187,7 +189,7 @@ one_file (FILE *fp, const char *fname)
       print_error ("error parsing `%s': file not found\n", fname);
   else if (rc)
       print_error ("error parsing `%s': unknown error %d\n", fname, rc);
-  else 
+  else if (!check_only)
     {
       if (dump_only)
         ksba_asn_tree_dump (tree, dump_only==2? "<":NULL, stdout);
@@ -203,13 +205,18 @@ main (int argc, char **argv)
   if (!argc || (argc > 1 &&
                 (!strcmp (argv[1],"--help") || !strcmp (argv[1],"-h"))) )
     {
-      fputs ("usage: asn1-gentables [--dump[-expanded]] [files.asn]\n",
+      fputs ("usage: asn1-gentables [--check] [--dump[-expanded]] [files.asn]\n",
              stderr);
       return 0;
     }
   
   argc--; argv++;
-  if (argc && !strcmp (*argv,"--dump"))
+  if (argc && !strcmp (*argv,"--check"))
+    {
+      argc--; argv++;
+      check_only = 1;
+    }
+  else if (argc && !strcmp (*argv,"--dump"))
     {
       argc--; argv++;
       dump_only = 1;

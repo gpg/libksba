@@ -32,11 +32,15 @@ libksba_la_INCLUDES = -I$(top_srcdir)/lib
 
 libksba_la_SOURCES = \
 	ksba.h \
-	ber-decoder.c ber-decoder.h \
 	reader.c reader.h \
+	writer.c writer.h \
 	asn1-parse.y asn1-parse.h \
 	asn1-func.c asn1-func.h \
+	ber-help.c ber-help.h \
+	ber-decoder.c ber-decoder.h \
 	cert.c cert.h \
+	cms.c cms.h \
+	cms-parser.c \
 	keyinfo.c keyinfo.h \
 	oid.c dn.c time.c convert.h \
 	util.c util.h shared.h errors.c	
@@ -52,7 +56,9 @@ ber_dump_SOURCES = \
 	ber-dump.c \
 	ksba.h \
 	ber-decoder.c ber-decoder.h \
+	ber-help.c ber-help.h \
 	reader.c reader.h \
+	writer.c writer.h \
 	asn1-parse.y asn1-parse.h \
 	asn1-func.c asn1-func.h \
 	oid.c \
@@ -61,7 +67,7 @@ ber_dump_SOURCES = \
 
 asn1-parse.c : asn1-func.h
 
-errors.c : ksba.h
+errors.c : ksba.h mkerrors
 	$(srcdir)/mkerrors < $(srcdir)/ksba.h > errors.c
 
 

@@ -28,24 +28,14 @@
 #include "ksba.h"
 #include "asn1-func.h"
 #include "ber-decoder.h"
-
-
-
-struct tag_info {
-  enum tag_class class;
-  int is_constructed;
-  unsigned long tag;
-  unsigned long length; /* length part of the TLV */
-  int ndef;             /* It is an indefinite length */
-  size_t nhdr;          /* number of bytes in the TL */
-  unsigned char buf[10]; /* buffer for the TL */
-};
+#include "ber-help.h"
 
 
 struct decoder_state_item_s {
   AsnNode node;
   int went_up;
   int in_seq_of;
+  int in_any;    /* actually in a constructed any */
   int again;
   int next_tag;
   int length;  /* length of the value */
@@ -71,6 +61,7 @@ struct ber_decoder_s {
   AsnNode root;   /* of the expanded parse tree */
   DECODER_STATE ds;
   int bypass;
+  int honor_module_end; 
   int debug;
   int use_image;
   struct {
@@ -83,6 +74,7 @@ struct ber_decoder_s {
     int length;     /* length of the primitive one */
     int nhdr;       /* length of the header */
     int tag; 
+    int is_endtag;
     AsnNode node;   /* NULL or matching node */
   } val; 
 };
@@ -396,89 +388,41 @@ read_byte (KsbaReader reader)
   return rc? -1: buf;
 }
 
-/*
- * Read the tag and the length part from the TLV triplet. 
- */
-static KsbaError
-read_tl (BerDecoder d, struct tag_info *ti)
+/* read COUNT bytes into buffer.  buffer may be NULL to skip over
+   COUNT bytes.  Return 0 on success */
+static int 
+read_buffer (KsbaReader reader, char *buffer, size_t count)
 {
-  int c;
-  unsigned long tag;
+  size_t nread;
 
-  ti->length = 0;
-  ti->ndef = 0;
-  ti->nhdr = 0;
-  /* Get the tag */
-  c = read_byte (d->reader);
-  if (c==-1)
-    return eof_or_error (d, 0);
-  ti->buf[ti->nhdr++] = c;
-  ti->class = (c & 0xc0) >> 6;
-  ti->is_constructed = !!(c & 0x20);
-  tag = c & 0x1f;
-  if (tag == 0x1f)
+  if (buffer)
     {
-      tag = 0;
-      do
+      while (count)
         {
-          /* fixme: check for overflow of out datatype */
-          tag <<= 7;
-          c = read_byte (d->reader);
-          if (c == -1)
-            return eof_or_error (d, 1);
-          if (ti->nhdr >= DIM (ti->buf))
-            return set_error(d, NULL, "tag+length header too large");
-          ti->buf[ti->nhdr++] = c;
-          tag |= c & 0x7f;
+          if (ksba_reader_read (reader, buffer, count, &nread))
+            return -1;
+          buffer += nread;
+          count -= nread;
         }
-      while (c & 0x80);
     }
-  ti->tag = tag;
-
-  /* Get the length */
-  c = read_byte (d->reader);
-  if (c == -1)
-    return eof_or_error (d, 1);
-  if (ti->nhdr >= DIM (ti->buf))
-    return set_error(d, NULL, "tag+length header too large");
-  ti->buf[ti->nhdr++] = c;
-  if ( !(c & 0x80) )
-    ti->length = c;
-  else if (c == 0x80)
-    {
-      ti->ndef = 1;
-      d->non_der = 1;
-    }
-  else if (c == 0xff)
-      return set_error (d, NULL, "forbidden length value");
   else
     {
-      unsigned long len = 0;
-      int count = c & 0x7f;
+      char dummy[256];
+      size_t n;
 
-      /* fixme: check for overflow of our length type */
-      for (; count; count--)
+      while (count)
         {
-          len <<= 8;
-          c = read_byte (d->reader);
-          if (c == -1)
-            return eof_or_error (d, 1);
-          if (ti->nhdr >= DIM (ti->buf))
-            return set_error(d, NULL, "tag+length header too large");
-          ti->buf[ti->nhdr++] = c;
-          len |= c & 0xff;
+          n = count > DIM(dummy) ? DIM(dummy): count;
+          if (ksba_reader_read (reader, dummy, n, &nread))
+            return -1;
+          count -= nread;
         }
-      ti->length = len;
     }
-
-  /* Without this kludge some example certs can't be parsed */
-  if (ti->class == CLASS_UNIVERSAL && !ti->tag)
-    ti->length = 0;
-
   return 0;
 }
 
-
+/* Return 0 for no match, 1 for a match and 2 for an ANY match of an
+   constructed type */
 static int
 cmp_tag (AsnNode node, const struct tag_info *ti)
 {
@@ -497,8 +441,8 @@ cmp_tag (AsnNode node, const struct tag_info *ti)
         return 1;
       if (node->type == TYPE_SET_OF && ti->tag == TYPE_SET)
         return 1;
-      if (node->type == TYPE_ANY && is_primitive_type (ti->tag))
-        return 1; 
+      if (node->type == TYPE_ANY)
+        return is_primitive_type (ti->tag)? 1:2; 
     }
 
   return 0;
@@ -547,6 +491,7 @@ static int
 match_der (AsnNode root, const struct tag_info *ti,
            DECODER_STATE ds, AsnNode *retnode, int debug)
 {
+  int rc;
   AsnNode node;
 
   *retnode = NULL;
@@ -643,7 +588,7 @@ match_der (AsnNode root, const struct tag_info *ti,
           printf ("  cur: ("); _ksba_asn_node_dump (node, stdout);
           printf (")\n");
           if (ds->cur.node->flags.in_array)
-            puts ("  This is in an arrat!");
+            puts ("  This is in an array!");
           if (ds->cur.went_up)
             puts ("  And we going up!");
         }
@@ -658,7 +603,7 @@ match_der (AsnNode root, const struct tag_info *ti,
           if (node)
             prepare_copied_tree (node);
         }
-      else if (ds->cur.went_up || ds->cur.next_tag)
+      else if (ds->cur.went_up || ds->cur.next_tag || ds->cur.node->flags.skip_this)
         {
           if (node->right)
             node = node->right;
@@ -710,10 +655,17 @@ match_der (AsnNode root, const struct tag_info *ti,
       return 1;
     }
 
-  if ( cmp_tag (node, ti))
+  if (node->flags.is_implicit)
+    {
+      if (debug)
+        printf ("   dummy accept for implicit tag\n");
+      return 1; /* again */
+    }
+
+  if ( (rc=cmp_tag (node, ti)))
     {
       *retnode = node;
-      return 3;
+      return rc==2? 4:3;
     }
     
   if (node->type == TYPE_CHOICE)
@@ -729,7 +681,7 @@ match_der (AsnNode root, const struct tag_info *ti,
               printf (")\n");
             }
 
-          if (!node->flags.skip_this && cmp_tag (node, ti))
+          if (!node->flags.skip_this && cmp_tag (node, ti) == 1)
             {
               if (debug)
                 {
@@ -738,10 +690,11 @@ match_der (AsnNode root, const struct tag_info *ti,
                 }
               /* mark the remaining as done */
               for (node=node->right; node; node = node->right)
-                node->flags.skip_this = 1;
+                  node->flags.skip_this = 1;
               return 1;
             }
           node->flags.skip_this = 1;
+
         }
       node = ds->cur.node; /* reset */
     }
@@ -777,14 +730,15 @@ match_der (AsnNode root, const struct tag_info *ti,
 
 
 static KsbaError 
-decoder_init (BerDecoder d)
+decoder_init (BerDecoder d, const char *start_name)
 {
   d->ds = new_decoder_state ();
 
-  d->root = _ksba_asn_expand_tree (d->module);
+  d->root = _ksba_asn_expand_tree (d->module, start_name);
   clear_help_flags (d->root);
   d->bypass = 0;
-
+  if (d->debug)
+    printf ("DECODER_INIT for `%s'\n", start_name? start_name: "[root]");
   return 0;
 }
 
@@ -794,6 +748,8 @@ decoder_deinit (BerDecoder d)
   release_decoder_state (d->ds);
   d->ds = NULL;
   d->val.node = NULL;
+  if (d->debug)
+    printf ("DECODER_DEINIT\n");
 }
 
 
@@ -806,7 +762,7 @@ decoder_next (BerDecoder d)
   DECODER_STATE ds = d->ds;
   int debug = d->debug;
 
-  err = read_tl (d, &ti);
+  err = _ksba_ber_read_tl (d->reader, &ti);
   if (err)
     {
       return err;
@@ -821,6 +777,8 @@ decoder_next (BerDecoder d)
     {
       if (!d->image.buf)
         {
+          /* we need some extra bytes to store the stuff we read ahead
+             at the end of the module which is later pushed back */
           d->image.length = ti.length + 100;
           d->image.used = 0;
           d->image.buf = xtrymalloc (d->image.length);
@@ -837,19 +795,28 @@ decoder_next (BerDecoder d)
 
   if (!d->bypass)
     {
-      int again;
+      int again, endtag;
 
       do
         {
-          again = 0;
-          switch ( match_der (d->root, &ti, ds, &node, debug) )
+          again = endtag = 0;
+          switch ( ds->cur.in_any? 4 
+                   : (ti.class == CLASS_UNIVERSAL && !ti.tag)? (endtag=1,5)
+                   : match_der (d->root, &ti, ds, &node, debug))
             { 
             case -1:
               if (debug)
                 {
                   printf ("   FAIL <"); dump_tlv (&ti, stdout); printf (">\n");
                 }
-              d->bypass = 1;
+              if (d->honor_module_end)
+                {
+                  /* We must push back the stuff we already read */
+                  ksba_reader_unread (d->reader, ti.buf, ti.nhdr);
+                  return -1; 
+                }
+              else
+                d->bypass = 1;
               break;
             case 0:
               if (debug)
@@ -866,20 +833,23 @@ decoder_next (BerDecoder d)
                 printf ("  Using default\n");
               again = 1;
               break;
+            case 4: /* match of ANY on a constructed type */
+              if (debug)
+                  printf ("  ANY");
+              ds->cur.in_any = 1;
             case 3: /* match */ 
+            case 5: /* end tag */
               if (debug)
                 {
                   printf ("  Match <"); dump_tlv (&ti, stdout); printf (">\n");
+                  if (ti.tag == TYPE_OCTET_STRING && ti.length == 64)
+                    printf ("  DEBUG POINT\n");
                 }
               /* increment by the header length */
               ds->cur.nread += ti.nhdr;
-              /*inc_decoder_state (ds, ti.nhdr);*/
                   
               if (!ti.is_constructed)
-                { 
                   ds->cur.nread += ti.length;
-                  /*inc_decoder_state (ds, ti.length);*/
-                }
 
               ds->cur.went_up = 0;
               do
@@ -901,15 +871,17 @@ decoder_next (BerDecoder d)
                       ds->cur.nread = ds->cur.length;
                     }
                   if ( ds->idx
-                       && !ds->stack[ds->idx-1].ndef_length
-                       && (ds->cur.nread
-                           >= ds->stack[ds->idx-1].length)) 
+                       && (endtag
+                           || (!ds->stack[ds->idx-1].ndef_length
+                               && (ds->cur.nread
+                                   >= ds->stack[ds->idx-1].length)))) 
                     {
                       int n = ds->cur.nread;
                       pop_decoder_state (ds);
                       ds->cur.nread += n;
                       ds->cur.went_up++;
                     }
+                  endtag = 0;
                 }
               while ( ds->idx
                       && !ds->stack[ds->idx-1].ndef_length
@@ -944,6 +916,7 @@ decoder_next (BerDecoder d)
   d->val.length = ti.length;
   d->val.nhdr = ti.nhdr;
   d->val.tag  = ti.tag; /* kludge to fix TYPE_ANY probs */
+  d->val.is_endtag = (ti.class == CLASS_UNIVERSAL && !ti.tag); 
   d->val.node = d->bypass? NULL : node;
   if (debug)
     dump_decoder_state (ds);
@@ -956,11 +929,8 @@ decoder_skip (BerDecoder d)
 {
   if (d->val.primitive)
     { 
-      int n;
-      
-      for (n=0; n < d->val.length; n++)
-        if (read_byte (d->reader) == -1)
-          return eof_or_error (d, 1);
+      if (read_buffer (d->reader, NULL, d->val.length))
+        return eof_or_error (d, 1);
     }
   return 0;
 }
@@ -1008,7 +978,7 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
   d->debug = !!getenv("DEBUG_BER_DECODER");
   d->use_image = 0;
   d->image.buf = NULL;
-  err = decoder_init (d);
+  err = decoder_init (d, NULL);
   if (err)
     return err;
 
@@ -1091,13 +1061,15 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
 
 
 KsbaError
-_ksba_ber_decoder_decode (BerDecoder d, AsnNode *r_root,
+_ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
+                          AsnNode *r_root,
                           unsigned char **r_image, size_t *r_imagelen)
 {
   KsbaError err;
   AsnNode node;
   unsigned char *buf = NULL;
-  size_t buflen = 0;;
+  size_t buflen = 0;
+  unsigned long startoff;
 
   if (!d)
     return KSBA_Invalid_Value;
@@ -1105,10 +1077,14 @@ _ksba_ber_decoder_decode (BerDecoder d, AsnNode *r_root,
   if (r_root)
     *r_root = NULL;
 
+  d->debug = !!getenv("DEBUG_BER_DECODER");
+  d->honor_module_end = 1;
   d->use_image = 1;
   d->image.buf = NULL;
 
-  err = decoder_init (d);
+  startoff = ksba_reader_tell (d->reader);
+
+  err = decoder_init (d, start_name);
   if (err)
     return err;
 
@@ -1119,24 +1095,24 @@ _ksba_ber_decoder_decode (BerDecoder d, AsnNode *r_root,
       node = d->val.node;
       if (node && d->use_image)
         {
-          node->off = ksba_reader_tell (d->reader) - d->val.nhdr;
-          node->nhdr = d->val.nhdr;
-          node->len = d->val.length;
-          if (node->type == TYPE_ANY)
-            node->actual_type = d->val.tag;
+          if (!d->val.is_endtag)
+            { /* We don't have nodes for the end tag - so don't store it */
+              node->off = (ksba_reader_tell (d->reader)
+                           - d->val.nhdr - startoff);
+              node->nhdr = d->val.nhdr;
+              node->len = d->val.length;
+              if (node->type == TYPE_ANY)
+                node->actual_type = d->val.tag;
+            }
           if (d->image.used + d->val.length > d->image.length)
             err = set_error(d, NULL, "TLV length too large");
           else if (d->val.primitive)
             {
-              for (n=0; n < d->val.length; n++)
-                {
-                  if ( (c=read_byte (d->reader)) == -1)
-                    {
-                      err = eof_or_error (d, 1);
-                      break;
-                    }
-                  d->image.buf[d->image.used++] = c;
-                }
+              if( read_buffer (d->reader,
+                               d->image.buf + d->image.used, d->val.length))
+                err = eof_or_error (d, 1);
+              else
+                d->image.used += d->val.length;
             }
         }
       else if (node && d->val.primitive)
@@ -1178,15 +1154,24 @@ _ksba_ber_decoder_decode (BerDecoder d, AsnNode *r_root,
 
   if (r_root && !err)
     {
+      if (!d->image.buf)
+        { /* Not even the first node available - return eof */
+          /* fixme: release d->root */
+          d->root = NULL;
+          err = -1;
+        }
+      
       fixup_type_any (d->root);
       *r_root = d->root;
       d->root = NULL;
       *r_image = d->image.buf;
       d->image.buf = NULL;
       *r_imagelen = d->image.used;
-/*        fputs ("Value Tree:\n", stdout); */
-/*        _ksba_asn_node_dump_all (*r_root, stdout); */
-
+      if (d->debug)
+        {
+          fputs ("Value Tree:\n", stdout); 
+          _ksba_asn_node_dump_all (*r_root, stdout); 
+        }
     }
 
   decoder_deinit (d);

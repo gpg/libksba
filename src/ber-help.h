@@ -1,4 +1,4 @@
-/* ber-decoder.h - Definitions for the Basic Encoding Rules Decoder
+/* ber-help.h - Basic Encoding Rules helpers
  *      Copyright (C) 2001 g10 Code GmbH
  *
  * This file is part of KSBA.
@@ -18,26 +18,25 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#ifndef BER_DECODER_H
-#define BER_DECODER_H 1
-
-#include "asn1-func.h"
-
-struct ber_decoder_s;
-typedef struct ber_decoder_s *BerDecoder;
-
-BerDecoder _ksba_ber_decoder_new (void);
-void       _ksba_ber_decoder_release (BerDecoder d);
-
-KsbaError _ksba_ber_decoder_set_module (BerDecoder d, KsbaAsnTree module);
-KsbaError _ksba_ber_decoder_set_reader (BerDecoder d, KsbaReader r);
-
-KsbaError _ksba_ber_decoder_dump (BerDecoder d, FILE *fp);
-KsbaError _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
-                                    AsnNode *r_root,
-                                    unsigned char **r_image,
-                                    size_t *r_imagelen);
+#ifndef BER_HELP_H
+#define BER_HELP_H 1
 
 
+struct tag_info {
+  enum tag_class class;
+  int is_constructed;
+  unsigned long tag;
+  unsigned long length;  /* length part of the TLV */
+  int ndef;              /* It is an indefinite length */
+  size_t nhdr;           /* number of bytes in the TL */
+  unsigned char buf[10]; /* buffer for the TL */
+  const char *err_string;
+  int non_der;
+};
 
-#endif /*BER_DECODER_H*/
+
+KsbaError _ksba_ber_read_tl (KsbaReader reader, struct tag_info *ti);
+
+
+#endif /*BER_HELP_H*/
+

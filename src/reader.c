@@ -59,6 +59,9 @@ ksba_reader_new (void)
 void
 ksba_reader_release (KsbaReader r)
 {
+  if (r)
+    return;
+  xfree (r->unread.buf);
   xfree (r);
 }
 
@@ -235,15 +238,37 @@ ksba_reader_read (KsbaReader r, char *buffer, size_t length, size_t *nread)
   if (!r || !nread)
     return KSBA_Invalid_Value;
 
+
   if (!buffer)
     {
       if (r->type != READER_TYPE_MEM)
         return KSBA_Not_Implemented;
       *nread = r->u.mem.size - r->u.mem.readpos;
+      if (r->unread.buf)
+        *nread += r->unread.length - r->unread.readpos;
       return *nread? 0 :-1;
     }
 
   *nread = 0;
+
+  if (r->unread.buf && r->unread.length)
+    {
+      nbytes = r->unread.length - r->unread.readpos;
+      if (!nbytes)
+        return KSBA_Bug;
+      
+      if (nbytes > length)
+        nbytes = length;
+      memcpy (buffer, r->unread.buf + r->unread.readpos, nbytes);
+      r->unread.readpos += nbytes;
+      if (r->unread.readpos == r->unread.length)
+        r->unread.readpos = r->unread.length = 0;
+      *nread = nbytes;
+      r->nread += nbytes;
+      return 0;
+    }
+
+
   if (!r->type)
     {
       r->eof = 1;
@@ -314,7 +339,41 @@ ksba_reader_read (KsbaReader r, char *buffer, size_t length, size_t *nread)
   return 0;
 } 
 
+KsbaError
+ksba_reader_unread (KsbaReader r, const void *buffer, size_t count)
+{
+  if (!r || !buffer)
+    return KSBA_Invalid_Value;
+  if (!count)
+    return 0;
 
+  /* Make sure that we do not push more bytes back than we have read.
+     Otherwise r->nread won't have a clear semantic. */
+  if (r->nread < count)
+    return KSBA_Conflict;
+  
+  if (!r->unread.buf)
+    {
+      r->unread.size = count + 100;
+      r->unread.buf = xtrymalloc (r->unread.size);
+      if (!r->unread.buf)
+        return KSBA_Out_Of_Core;
+      r->unread.length = count;
+      r->unread.readpos = 0;
+      memcpy (r->unread.buf, buffer, count);
+      r->nread -= count;
+    }
+  else if (r->unread.length + count < r->unread.size)
+    {
+      memcpy (r->unread.buf+r->unread.length, buffer, count);
+      r->unread.length += count;
+      r->nread -= count;
+    }
+  else
+    return KSBA_Not_Implemented; /* fixme: easy to do */
+
+  return 0;
+}
 
 
 

@@ -302,7 +302,13 @@ _ksba_asn_find_node (AsnNode root, const char *name)
       buf[i] = 0;
       return_null_if_fail (i < DIM(buf)-1);
 
-      if (!strcmp (buf, "?LAST"))
+      if (!*buf)
+        {
+         /* a double dot can be used to get over an unnamed sequence
+            in a set - Actually a hack to workaround a bug.  We should
+            rethink the entire node naming issue */
+        }
+      else if (!strcmp (buf, "?LAST"))
 	{
 	  if (!p)
 	    return NULL;
@@ -519,6 +525,8 @@ _ksba_asn_node_dump (AsnNode p, FILE *fp)
     fputs (",explicit", fp);
   if (p->flags.implicit)
     fputs (",implicit", fp);
+  if (p->flags.is_implicit)
+    fputs (",is_implicit", fp);
   if (p->flags.has_tag)
     fputs (",tag", fp);
   if (p->flags.has_default)
@@ -551,6 +559,8 @@ _ksba_asn_node_dump (AsnNode p, FILE *fp)
     fputs (",in_array",fp);
   if (p->flags.not_used)
     fputs (",not_used",fp);
+  if (p->flags.skip_this)
+    fputs (",[skip]",fp);
   if (p->off != -1 )
     fprintf (fp, " %d.%d.%d", p->off, p->nhdr, p->len );
   
@@ -634,7 +644,7 @@ ksba_asn_tree_dump (KsbaAsnTree tree, const char *name, FILE *fp)
     return;
 
   if (expand)
-    root = _ksba_asn_expand_tree (root);
+    root = _ksba_asn_expand_tree (root, NULL);
 
   p = root;
   while (p)
@@ -1706,6 +1716,17 @@ _ksba_asn_set_default_tag (AsnNode node)
 	    p->flags.implicit = 1;
 	}
     }
+  /* now mark the nodes which are implicit */
+  for (p = node; p; p = _ksba_asn_walk_tree (node, p))
+    {
+      if ( p->type == TYPE_TAG && p->flags.implicit && p->down)
+	{
+	  if (p->down->type == TYPE_CHOICE)
+            ; /* a CHOICE is per se implicit */
+	  else if (p->down->type != TYPE_TAG)
+	    p->down->flags.is_implicit = 1;
+	}
+    }
 }
 
 /* Walk the tree and set the is_set and not_used flags for all nodes below
@@ -1734,7 +1755,6 @@ _ksba_asn_type_set_config (AsnNode node)
         {
           for (p2 = p->down; p2; p2 = p2->right)
             {
-              if (p2->type != TYPE_TAG)
                 p2->flags.in_choice = 1;
             }
         }
@@ -1792,9 +1812,13 @@ copy_tree (AsnNode src_root, AsnNode s)
 
 
 static AsnNode
-resolve_identifier (AsnNode root, AsnNode node)
+resolve_identifier (AsnNode root, AsnNode node, int nestlevel)
 {
   char *buf;
+  AsnNode n;
+
+  if (nestlevel > 20)
+    return NULL;
 
   return_null_if_fail (root);
   return_null_if_fail (node->valuetype == VALTYPE_CSTR);
@@ -1802,26 +1826,32 @@ resolve_identifier (AsnNode root, AsnNode node)
   buf = alloca (strlen(root->name)+strlen(node->value.v_cstr)+2);
   return_null_if_fail (buf);
   strcpy (stpcpy (stpcpy (buf, root->name), "."), node->value.v_cstr);
-  return _ksba_asn_find_node (root, buf);
+  n = _ksba_asn_find_node (root, buf);
+  /* we do just a simple indirection */
+  if (n && n->type == TYPE_IDENTIFIER)
+    n = resolve_identifier (root, n, nestlevel+1);
+  return n;
 }
 
 
 static AsnNode
-do_expand_tree (AsnNode src_root, AsnNode s)
+do_expand_tree (AsnNode src_root, AsnNode s, int depth)
 {
   AsnNode first=NULL, dprev=NULL, d, down, tmp;
 
-  for (; s; s=s->right )
+  /* On the very first level we do not follow the right pointer so that
+     we can break out a valid subtree. */
+  for (; s; s=depth?s->right:NULL )
     {
       down = s->down;
       if (s->type == TYPE_IDENTIFIER)
         {
           AsnNode s2, *dp;
 
-          d = resolve_identifier (src_root, s);
+          d = resolve_identifier (src_root, s, 0);
           if (!d)
             {
-              printf ("RESOLVING IDENTIFIER FAILED\n");
+              fprintf (stderr, "RESOLVING IDENTIFIER FAILED\n");
               continue;
             }
           down = d->down;
@@ -1832,6 +1862,8 @@ do_expand_tree (AsnNode src_root, AsnNode s)
             d->flags.in_choice = 1;
           if (s->flags.in_array)
             d->flags.in_array = 1;
+          if (s->flags.is_implicit)
+            d->flags.is_implicit = 1;
           /* we don't want the resolved name - change it back */
           _ksba_asn_set_name (d, s->name);
           /* copy the default and tag attributes */
@@ -1866,7 +1898,13 @@ do_expand_tree (AsnNode src_root, AsnNode s)
       dprev = d;
       if (down)
         {
-          tmp = do_expand_tree (src_root, down);
+          if (depth >= 1000)
+            {
+              fprintf (stderr, "ASN.1 TREE TOO TALL!\n");
+              tmp = NULL;
+            }
+          else
+            tmp = do_expand_tree (src_root, down, depth+1);
           if (d->down && tmp)
             { /* Need to merge it with the existing down */
               AsnNode x;
@@ -1895,10 +1933,12 @@ do_expand_tree (AsnNode src_root, AsnNode s)
    problems.  We use more memory of course, but this is negligible
    because the entire code wioll be simpler and faster */
 AsnNode
-_ksba_asn_expand_tree (AsnNode src_root)
+_ksba_asn_expand_tree (AsnNode parse_tree, const char *name)
 {
-  /* FIXME: add a too deep recursion check */
-  return do_expand_tree (src_root, src_root);
+  AsnNode root;
+
+  root = name? _ksba_asn_find_node (parse_tree, name) : parse_tree;
+  return do_expand_tree (parse_tree, root, 0);
 }
 
 
@@ -1918,6 +1958,46 @@ _ksba_asn_insert_copy (AsnNode node)
   
   return n;
 }
+
+
+/* Locate a type value sequence like
+
+  SEQUENCE { 
+     type    OBJECT IDENTIFIER
+     value   ANY
+  }
+
+  below root and return the 'value' node.  OIDBUF should contain the
+  DER encoding of an OID value.  idx is the number of OIDs to skip;
+  this can be used to enumerate structures with the same OID */
+AsnNode
+_ksba_asn_find_type_value (const unsigned char *image, AsnNode root, int idx,
+                           const void *oidbuf, size_t oidlen)
+{
+  AsnNode n, noid;
+
+  if (!image || !root)
+    return NULL;
+
+  for (n = root; n; n = _ksba_asn_walk_tree (root, n) )
+    {
+      if ( n->type == TYPE_SEQUENCE
+           && n->down && n->down->type == TYPE_OBJECT_ID)
+        {
+          noid = n->down;
+          if (noid->off != -1 && noid->len == oidlen
+              && !memcmp (image + noid->off + noid->nhdr, oidbuf, oidlen)
+              && noid->right)
+            {
+              if ( !idx-- )
+                return noid->right;
+            }
+          
+        }
+    }
+  return NULL;
+}
+
 
 
 

@@ -25,7 +25,7 @@ test_certs = root-cert-1.der root-cert-2.der pers-cert-1.der
 
 EXTRA_DIST = $(test_certs)
 
-TESTS = cert-basic
+TESTS = cert-basic t-cms-parser
 
 noinst_PROGRAMS = $(TESTS)
 LDADD = ../src/libksba.la

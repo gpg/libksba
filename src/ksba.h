@@ -47,7 +47,7 @@ typedef enum {
   KSBA_BER_Error = 12,
   KSBA_Element_Not_Found = 13,
   KSBA_Identifier_Not_Found = 14,
-  KSBA_Value_Not_Found = 15,  /* needed?*/
+  KSBA_Value_Not_Found = 15,  /* Note, that this is not the same as No Value */
   KSBA_Syntax_Error = 16,
   KSBA_Invalid_Tag = 17,
   KSBA_Invalid_Length = 18,
@@ -56,25 +56,62 @@ typedef enum {
   KSBA_Not_DER_Encoded = 21,
   KSBA_Unknown_Algorithm = 22,
   KSBA_Unsupported_Algorithm = 23,
+  KSBA_Object_Too_Large = 24,
+  KSBA_Object_Too_Short = 25,
+  KSBA_No_CMS_Object = 26,
+  KSBA_Unknown_CMS_Object = 27,
+  KSBA_Unsupported_CMS_Object = 28,
+  KSBA_Invalid_CMS_Object = 29,
+  KSBA_Unsupported_CMS_Version = 30,
+  KSBA_Unsupported_Encoding = 31,
+  KSBA_Missing_Value = 32,
+  KSBA_Invalid_State = 33,
+  KSBA_Duplicate_Value = 34,
+  KSBA_Missing_Action = 35,
 } KsbaError;
 
-typedef enum {
-  KSBA_ATTR_NONE = 0,
-  KSBA_ATTR_FOO = 1,
-} KsbaAttr;
 
-#define KSBA_SYM(a) ((sym_ ## a)? sym_ ## a:(sym_ ## a = ksba_make_sym (#a)))
+typedef enum {
+  KSBA_CT_NONE = 0,
+  KSBA_CT_SIGNED_DATA = 1,
+  KSBA_CT_ENVELOPED_DATA = 2,
+  KSBA_CT_DIGESTED_DATA = 3,
+  KSBA_CT_ENCRYPTED_DATA = 4
+} KsbaContentType;
+
+
+typedef enum {
+  KSBA_SR_NONE = 0,     /* never seen by libgcrypt user */
+  KSBA_SR_RUNNING = 1,  /* never seen by libgcrypt user */
+  KSBA_SR_GOT_CONTENT = 2,
+  KSBA_SR_NEED_HASH = 3,
+  KSBA_SR_BEGIN_DATA = 4,
+  KSBA_SR_END_DATA = 5,
+  KSBA_SR_READY = 6,
+
+} KsbaStopReason;
+
 
 
 /* X.509 certificates are represented by this object.
- * ksba_cert_new() creates such an object */
+   ksba_cert_new() creates such an object */
 struct ksba_cert_s;
 typedef struct ksba_cert_s *KsbaCert;
+
+/* CMS objects are controlled by this object.
+   ksba_cms_new() creates it */
+struct ksba_cms_s;
+typedef struct ksba_cms_s *KsbaCMS;
 
 /* This is a reader object vor various purposes
    see ksba_reader_new et al. */
 struct ksba_reader_s;
 typedef struct ksba_reader_s *KsbaReader;
+
+/* This is a writer object vor various purposes
+   see ksba_writer_new et al. */
+struct ksba_writer_s;
+typedef struct ksba_writer_s *KsbaWriter;
 
 /* This is an object to store an ASN.1 parse tree as
    create by ksba_asn_parse_file() */
@@ -86,6 +123,8 @@ typedef struct ksba_asn_tree_s *KsbaAsnTree;
 KsbaCert ksba_cert_new (void);
 void     ksba_cert_release (KsbaCert cert);
 KsbaError ksba_cert_read_der (KsbaCert cert, KsbaReader reader);
+KsbaError ksba_cert_init_from_mem (KsbaCert cert,
+                                   const void *buffer, size_t length);
 const unsigned char *ksba_cert_get_image (KsbaCert cert, size_t *r_length);
 KsbaError ksba_cert_hash (KsbaCert cert, int what,
                           void (*hasher)(void *,
@@ -100,6 +139,33 @@ char *ksba_cert_get_subject (KsbaCert cert);
 char *ksba_cert_get_public_key (KsbaCert cert);
 char *ksba_cert_get_sig_val (KsbaCert cert);
 
+
+/*-- cms.c --*/
+KsbaCMS ksba_cms_new (void);
+void    ksba_cms_release (KsbaCMS cms);
+KsbaError ksba_cms_set_reader_writer (KsbaCMS cms, KsbaReader r, KsbaWriter w);
+
+KsbaError ksba_cms_parse (KsbaCMS cms, KsbaStopReason *r_stopreason);
+
+KsbaContentType ksba_cms_get_content_type (KsbaCMS cms, int what);
+const char *ksba_cms_get_content_oid (KsbaCMS cms, int what);
+int ksba_cms_get_digest_algo_list (KsbaCMS cms, int idx);
+KsbaError ksba_cms_get_issuer_serial (KsbaCMS cms, int idx,
+                                      char **r_issuer,
+                                      unsigned char **r_serial);
+int ksba_cms_get_digest_algo (KsbaCMS cms, int idx);
+KsbaCert ksba_cms_get_cert (KsbaCMS cms, int idx);
+KsbaError ksba_cms_get_message_digest (KsbaCMS cms, int idx,
+                                       char **r_digest, size_t *r_digest_len);
+char *ksba_cms_get_sig_val (KsbaCMS cms, int idx);
+
+
+void
+ksba_cms_set_hash_function (KsbaCMS cms,
+                            void (*hash_fnc)(void *, const void *, size_t),
+                            void *hash_fnc_arg);
+
+KsbaError ksba_cms_hash_signed_attrs (KsbaCMS cms, int idx);
 
 
 /*-- reader.c --*/
@@ -117,11 +183,25 @@ KsbaError ksba_reader_set_cb (KsbaReader r,
 
 KsbaError ksba_reader_read (KsbaReader r,
                             char *buffer, size_t length, size_t *nread);
+KsbaError ksba_reader_unread (KsbaReader r, const void *buffer, size_t count);
 unsigned long ksba_reader_tell (KsbaReader r);
+
+/*-- writer.c --*/
+KsbaWriter ksba_writer_new (void);
+void       ksba_writer_release (KsbaWriter r);
+int ksba_writer_error (KsbaWriter w);
+unsigned long ksba_writer_tell (KsbaWriter w);
+KsbaError ksba_writer_set_fd (KsbaWriter w, int fd);
+KsbaError ksba_writer_set_file (KsbaWriter w, FILE *fp);
+KsbaError ksba_writer_set_cb (KsbaWriter w, 
+                              int (*cb)(void*,const void *,size_t),
+                              void *cb_value);
+
+
 
 
 /*-- asn1-parse.y --*/
-int ksba_asn_parse_file (const char *filename, KsbaAsnTree *result);
+int ksba_asn_parse_file (const char *filename, KsbaAsnTree *result, int debug);
 void ksba_asn_tree_release (KsbaAsnTree tree);
 
 /*-- asn1-func.c --*/

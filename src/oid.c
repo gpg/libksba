@@ -38,7 +38,7 @@
  * most cases.  This dotted-decimal notation is also known as LDAPOID
  * string and described in RFC-2251.
  *
- * The function returns an emtry string for an empty buffer and does
+ * The function returns an empty string for an empty buffer and does
  * no interpretation of the OID.  The caller must free the returned
  * string using ksba_free() or the function he has registered as a
  * replacement.

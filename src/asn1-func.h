@@ -108,6 +108,7 @@ struct node_flag_s {
   int is_true:1;
   int has_default:1;  /* node has a default value (fixme:needed???)*/
   int is_optional:1;
+  int is_implicit:1;
   int in_set:1;       
   int in_choice:1;
   int in_array:1;
@@ -142,7 +143,10 @@ union asn_value_u {
 /* Structure definition used for the node of the tree */
 /* that rappresent an ASN.1 DEFINITION.               */
 /******************************************************/
+#ifndef HAVE_TYPEDEFD_ASNNODE
 typedef struct asn_node_struct *AsnNode; 
+#define HAVE_TYPEDEFD_ASNNODE
+#endif
 struct asn_node_struct {
   char *name;                    /* Node name */
   node_type_t type;   
@@ -194,13 +198,20 @@ int _ksba_asn_delete_not_used(AsnNode node);
 int _ksba_asn_expand_object_id(AsnNode node);
 void _ksba_asn_set_default_tag (AsnNode node);
 void _ksba_asn_type_set_config (AsnNode node);
-AsnNode _ksba_asn_expand_tree (AsnNode src_root);
+AsnNode _ksba_asn_expand_tree (AsnNode parse_tree, const char *name);
 AsnNode _ksba_asn_insert_copy (AsnNode node);
+
+/*-- asn1-parse.y --*/
+void _ksba_asn_release_nodes (AsnNode node);
 
 
 /*-- asn1-func.c --*/
 void _ksba_asn_node_dump (AsnNode p, FILE *fp);
 void _ksba_asn_node_dump_all (AsnNode root, FILE *fp);
+
+AsnNode _ksba_asn_find_type_value (const unsigned char *image,
+                                   AsnNode root, int idx,
+                                   const void *oidbuf, size_t oidlen);
 
 
 

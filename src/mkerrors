@@ -44,6 +44,7 @@ ksba_strerror (KsbaError err)
 
   switch (err)
     {
+    case -1: s="EOF"; break;
 EOF
 
 awk '

@@ -1,4 +1,4 @@
-/* cert-basic.c - basic test for the certificate management.
+/* t-cms-parser.c - basic test for the CMS parser.
  *      Copyright (C) 2001 g10 Code GmbH
  *
  * This file is part of KSBA.
@@ -40,6 +40,7 @@
                             exit (1); }                              \
                            } while(0)
 
+
 static void
 print_integer (unsigned char *p)
 {
@@ -56,26 +57,6 @@ print_integer (unsigned char *p)
 }
 
 static void
-print_time (time_t t)
-{
-
-  if (!t)
-    fputs ("none", stdout);
-  else if ( t == (time_t)(-1) )
-    fputs ("error", stdout);
-  else
-    {
-      struct tm *tp;
-
-      tp = gmtime (&t);
-      printf ("%04d-%02d-%02d %02d:%02d:%02d",
-              1900+tp->tm_year, tp->tm_mon+1, tp->tm_mday,
-              tp->tm_hour, tp->tm_min, tp->tm_sec);
-      assert (!tp->tm_isdst);
-    }
-}
-
-static void
 print_dn (char *p)
 {
 
@@ -87,16 +68,35 @@ print_dn (char *p)
 
 
 static void
+print_hex (unsigned char *p, size_t n)
+{
+  if (!p)
+    fputs ("none", stdout);
+  else
+    {
+      for (; n; n--, p++)
+        printf ("%02X", *p);
+    }
+}
+
+
+static void
 one_file (const char *fname)
 {
   KsbaError err;
   FILE *fp;
   KsbaReader r;
-  KsbaCert cert;
+  KsbaWriter w;
+  KsbaCMS cms;
+  int i, algo;
+  KsbaStopReason stopreason;
+  const char *s;
+  size_t n;
   unsigned char *p;
   char *dn;
-  time_t t;
+  int signer;
 
+  printf ("*** checking `%s' ***\n", fname);
   fp = fopen (fname, "r");
   if (!fp)
     {
@@ -111,60 +111,73 @@ one_file (const char *fname)
   err = ksba_reader_set_file (r, fp);
   fail_if_err (err);
 
-  cert = ksba_cert_new ();
-  if (!cert)
+  w = ksba_writer_new ();
+  if (!w)
     fail_if_err (KSBA_Out_Of_Core);
 
-  err = ksba_cert_read_der (cert, r);
+  cms = ksba_cms_new ();
+  if (!cms)
+    fail_if_err (KSBA_Out_Of_Core);
+
+  err = ksba_cms_set_reader_writer (cms, r, w);
+  fail_if_err (err);
+
+  err = ksba_cms_parse (cms, &stopreason);
   fail_if_err2 (fname, err);
+  printf ("stop reason: %d\n", stopreason);
 
-  printf ("Certificate in `%s':\n", fname);
+  s = ksba_cms_get_content_oid (cms, 0);
+  printf ("ContentType: %s\n", s?s:"none");
 
-  p = ksba_cert_get_serial (cert);
-  fputs ("serial: ", stdout);
-  print_integer (p);
-  ksba_free (p);
-  putchar ('\n');
+  err = ksba_cms_parse (cms, &stopreason);
+  fail_if_err2 (fname, err);
+  printf ("stop reason: %d\n", stopreason);
 
-  t = ksba_cert_get_validity (cert, 0);
-  fputs ("notBefore: ", stdout);
-  print_time (t);
-  putchar ('\n');
-  t = ksba_cert_get_validity (cert, 1);
-  fputs ("notAfter: ", stdout);
-  print_time (t);
-  putchar ('\n');
+  s = ksba_cms_get_content_oid (cms, 1);
+  printf ("EncapsulatedContentType: %s\n", s?s:"none");
+  printf ("DigestAlgorithms:");
+  for (i=0; (algo = ksba_cms_get_digest_algo_list (cms, i)) >= 0; i++)
+    printf (" %d", algo);
+  putchar('\n');
 
-  dn = ksba_cert_get_issuer (cert);
-  fputs ("issuer: ", stdout);
-  print_dn (dn);
-  ksba_free (dn);
-  putchar ('\n');
+  if (stopreason == KSBA_SR_NEED_HASH)
+    printf("Detached signature\n");
 
-  dn = ksba_cert_get_subject (cert);
-  fputs ("subject: ", stdout);
-  print_dn (dn);
-  ksba_free (dn);
-  putchar ('\n');
+  err = ksba_cms_parse (cms, &stopreason);
+  fail_if_err2 (fname, err);
+  printf ("stop reason: %d\n", stopreason);
 
-  printf ("hash algo: %d\n", ksba_cert_get_digest_algo (cert));
-
-
-  ksba_cert_release (cert);
-  cert = ksba_cert_new ();
-  if (!cert)
-    fail_if_err (KSBA_Out_Of_Core);
-
-  err = ksba_cert_read_der (cert, r);
-  if (err != -1)
+  for (signer=0; signer < 1; signer++)
     {
-      fprintf (stderr, "%s:%d: expected EOF but got: %s\n", 
-               __FILE__, __LINE__, ksba_strerror (err));
-      exit (1);
+      err = ksba_cms_get_issuer_serial (cms, signer, &dn, &p);
+      fail_if_err2 (fname, err);
+      printf ("signer %d - issuer: ", signer);
+      print_dn (dn);
+      ksba_free (dn);
+      putchar ('\n');
+      printf ("signer %d - serial: ", signer);
+      print_integer (p);
+      ksba_free (p);
+      putchar ('\n');
+  
+      err = ksba_cms_get_message_digest (cms, signer, &dn, &n);
+      fail_if_err2 (fname, err);
+      printf ("signer %d - messageDigest: ", signer);
+      print_hex (dn, n);
+      ksba_free (dn);
+      putchar ('\n');
+
+      algo = ksba_cms_get_digest_algo (cms, signer);
+      printf ("signer %d - digest algo: %d\n", signer, algo);
+
+      dn = ksba_cms_get_sig_val (cms, signer);
+      printf ("signer %d - signature: `%s'\n", signer, dn? dn: "[ERROR]");
+      ksba_free (dn);
     }
 
-  ksba_cert_release (cert);
+  ksba_cms_release (cms);
   ksba_reader_release (r);
+  ksba_writer_release (w);
   fclose (fp);
 }
 
@@ -175,15 +188,12 @@ int
 main (int argc, char **argv)
 {
 
-  one_file ("root-cert-1.der"); 
-  one_file ("root-cert-2.der"); 
-  one_file ("pers-cert-1.der");
+  one_file ("../scratch/sample-smime-signed-1.ber");
+  one_file ("pkcs7-1.ber");
+  /*one_file ("root-cert-2.der");  should fail */
 
   return 0;
 }
-
-
-
 
 
 
