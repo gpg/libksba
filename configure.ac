@@ -21,12 +21,12 @@
 
 # Version numbers (Remember to change them just before a release)
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
-# X (Interfaces added:      CURRENT++, AGE++, REVISION=0)
+#   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
-AC_INIT(libksba, 0.2.3-cvs, gpa-dev@gnupg.org)
-LIBKSBA_LT_CURRENT=2
-LIBKSBA_LT_AGE=2
-LIBKSBA_LT_REVISION=1
+AC_INIT(libksba, 0.2.3, gpa-dev@gnupg.org)
+LIBKSBA_LT_CURRENT=3
+LIBKSBA_LT_AGE=3
+LIBKSBA_LT_REVISION=0
 #-------------------
 
 PACKAGE=$PACKAGE_NAME
