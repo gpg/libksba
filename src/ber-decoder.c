@@ -1,5 +1,5 @@
 /* ber-decoder.c - Basic Encoding Rules Decoder
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2004 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -494,7 +494,20 @@ match_der (AsnNode root, const struct tag_info *ti,
       if (node->right)
         node = node->right;
       else if (!node->flags.in_choice)
-        node = NULL;
+        {
+          if (node->flags.is_implicit)
+            {
+              if (debug)
+                puts ("  node was implicit - advancing");
+              while (node->left && node->left->right == node)
+                node = node->left;
+              node = node->left; /* this is the up pointer */
+              if (node)
+                node = node->right;
+            }
+          else
+            node = NULL;
+        }
       else /* in choice */
         {
           if (debug)
@@ -517,7 +530,7 @@ match_der (AsnNode root, const struct tag_info *ti,
           if (ds->cur.node->flags.in_array)
             puts ("  This is in an array!");
           if (ds->cur.went_up)
-            puts ("  And we going up!");
+            puts ("  And we are going up!");
         }
       if ((ds->cur.went_up && !ds->cur.node->flags.in_array) ||
           (ds->idx && ds->cur.nread >= ds->stack[ds->idx-1].length))
@@ -612,11 +625,15 @@ match_der (AsnNode root, const struct tag_info *ti,
 
   if (debug)
     {
-      printf ("  Expect ("); _ksba_asn_node_dump (node, stdout); printf (")\n");
+      printf ("  Expect ("); _ksba_asn_node_dump (node,stdout); printf (")\n");
     }
 
   if (node->flags.skip_this)
-    return 1;
+    {
+      if (debug)
+        printf ("   skipping this\n");
+      return 1;
+    }
 
   if (node->type == TYPE_SIZE)
     {
@@ -804,12 +821,12 @@ decoder_next (BerDecoder d)
                 printf ("  Again\n");
               again = 1;
               break;
-            case 2: /* use default value +  again*/
+            case 2: /* Use default value +  again */
               if (debug)
                 printf ("  Using default\n");
               again = 1;
               break;
-            case 4: /* match of ANY on a constructed type */
+            case 4: /* Match of ANY on a constructed type */
               if (debug)
                   printf ("  ANY");
               ds->cur.in_any = 1;
@@ -818,10 +835,8 @@ decoder_next (BerDecoder d)
               if (debug)
                 {
                   printf ("  Match <"); dump_tlv (&ti, stdout); printf (">\n");
-                  if (ti.tag == TYPE_OCTET_STRING && ti.length == 64)
-                    printf ("  DEBUG POINT\n");
                 }
-              /* increment by the header length */
+              /* Increment by the header length */
               ds->cur.nread += ti.nhdr;
                   
               if (!ti.is_constructed)
@@ -1055,8 +1070,7 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
 
   d->debug = !!getenv("DEBUG_BER_DECODER");
   d->honor_module_end = 1;
-  d->use_image = 1; /* fixme: remove the old cruft as we are only
-                       using the image method. */
+  d->use_image = 1;
   d->image.buf = NULL;
 
   startoff = ksba_reader_tell (d->reader);

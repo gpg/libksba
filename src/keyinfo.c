@@ -62,7 +62,7 @@ static struct algo_table_s pk_algo_table[] = {
   { /* iso.member-body.us.x9-57.x9cm.1 */
     "1.2.840.10040.4.1", /*  dsa */
     "\x2a\x86\x48\xce\x38\x04\x01", 7, 
-    1, "dsa"  "y", "\x02" }, 
+    1, "dsa", "y", "\x02" }, 
   /* FIXME: Need code to extract p,q,g from the parameters */
 
   {NULL}

@@ -1,3 +1,15 @@
+2004-08-17  Werner Koch  <wk@g10code.de>
+
+	* cert.c (ksba_cert_get_image): Replaced assert by proper error
+	message.
+
+	* ber-decoder.c (match_der): Fix for primitive implicit context
+	tags.  Argh, this whole decoder mess needs a full rewrite.
+	
+2004-08-16  Werner Koch  <wk@g10code.de>
+
+	* keyinfo.c: Fixed second DSA entry; a comma was missing.
+
 2004-07-20  Werner Koch  <wk@gnupg.org>
 
 	* cert.c (_ksba_cert_get_issuer_dn_ptr): Renamed to ..

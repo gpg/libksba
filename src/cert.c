@@ -206,7 +206,17 @@ ksba_cert_get_image (ksba_cert_t cert, size_t *r_length )
       return NULL;
     }
 
-  assert (n->nhdr + n->len + n->off <= cert->imagelen);
+  /* Due to minor problems in our parser we might hit the assertion
+     below.  Thus we better return a error, proper. */
+  if ( !(n->nhdr + n->len + n->off <= cert->imagelen) )
+    {
+      fprintf (stderr,"\nOops, ksba_cert_get_image failed: "
+               "imagelen=%d  hdr=%d len=%d off=%d\n",
+               cert->imagelen, n->nhdr, n->len, n->off);
+      return NULL;
+    }
+  /*assert (n->nhdr + n->len + n->off <= cert->imagelen);*/
+
   if (r_length)
     *r_length = n->nhdr + n->len;
   return cert->image + n->off;
@@ -1459,7 +1469,7 @@ parse_distribution_point (const unsigned char *der, size_t derlen,
 
    The caller may pass NULL to any of the pointer arguments if he is
    not interested in this value.  The return values for R_DISTPOINT
-   and R_ISSUER must be released bt the caller using
+   and R_ISSUER must be released by the caller using
    ksba_name_release(). */
 
 gpg_error_t 
