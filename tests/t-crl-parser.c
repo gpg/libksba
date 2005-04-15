@@ -1,5 +1,5 @@
 /* t-crl-parser.c - basic test for the CRl parser.
- *      Copyright (C) 2002, 2004 g10 Code GmbH
+ *      Copyright (C) 2002, 2004, 2005 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -191,22 +191,33 @@ one_file (const char *fname)
   {
     ksba_name_t name1;
     ksba_sexp_t serial;
+    ksba_sexp_t keyid;
 
-    err = ksba_crl_get_auth_key_id (crl, NULL, &name1, &serial);
+    err = ksba_crl_get_auth_key_id (crl, &keyid, &name1, &serial);
     if (!err || gpg_err_code (err) == GPG_ERR_NO_DATA)
       {
         fputs ("AuthorityKeyIdentifier: ", stdout);
         if (gpg_err_code (err) == GPG_ERR_NO_DATA)
-          fputs ("none", stdout);
+          fputs ("none\n", stdout);
         else
           {
-            print_names (24, name1);
-            ksba_name_release (name1);
-            fputs ("                serial: ", stdout);
-            print_sexp (serial);
-            ksba_free (serial);
+            if (name1)
+              {
+                print_names (24, name1);
+                ksba_name_release (name1);
+                fputs ("                serial: ", stdout);
+                print_sexp (serial);
+                ksba_free (serial);
+              }
+            putchar ('\n');
+            if (keyid)
+              {
+                fputs ("         keyIdentifier: ", stdout);
+                print_sexp (keyid);
+                ksba_free (keyid);
+                putchar ('\n');
+              }
           }
-        putchar ('\n');
       }
     else
       fail_if_err (err);

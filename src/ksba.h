@@ -1,5 +1,5 @@
 /* ksba.h - X509 library for the Aegypten project
- *      Copyright (C) 2001, 2002, 2003, 2004 g10 Code GmbH
+ *      Copyright (C) 2001, 2002, 2003, 2004, 2005 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -237,6 +237,9 @@ gpg_error_t ksba_cert_get_auth_key_id (ksba_cert_t cert,
                                        ksba_sexp_t *r_keyid,
                                        ksba_name_t *r_name,
                                        ksba_sexp_t *r_serial);
+gpg_error_t ksba_cert_get_subj_key_id (ksba_cert_t cert,
+                                       int *r_crit,
+                                       ksba_sexp_t *r_keyid);
 gpg_error_t ksba_cert_get_authority_info_access (ksba_cert_t cert, int idx,
                                                  char **r_method,
                                                  ksba_name_t *r_location);

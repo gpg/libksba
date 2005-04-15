@@ -1,5 +1,5 @@
 /* crl.c - CRL parser
- *      Copyright (C) 2002, 2004 g10 Code GmbH
+ *      Copyright (C) 2002, 2004, 2005 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -339,9 +339,9 @@ ksba_crl_get_extension (ksba_crl_t crl, int idx,
 
 
 /* Return the authorityKeyIdentifier in r_name and r_serial or in
-   r_keyID.  Note that r_keyID is not yet supported and must be passed
-   as NULL.  GPG_ERR_NO_DATA is returned if no authorityKeyIdentifier
-   or only one using the keyIdentifier method is available. 
+   r_keyID.  GPG_ERR_NO_DATA is returned if no authorityKeyIdentifier
+   or only one using the keyIdentifier method is available and R_KEYID
+   is NULL.
 
    FIXME: This function shares a lot of code with the one in cert.c 
 */
@@ -354,13 +354,15 @@ ksba_crl_get_auth_key_id (ksba_crl_t crl,
   gpg_error_t err;
   size_t derlen;
   const unsigned char *der;
+  const unsigned char *keyid_der = NULL;
+  size_t keyid_derlen = 0;
   struct tag_info ti;
   char numbuf[30];
   size_t numbuflen;
   crl_extn_t e;
 
   if (r_keyid)
-    return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
+    *r_keyid = NULL;
   if (!crl || !r_name || !r_serial)
     return gpg_error (GPG_ERR_INV_VALUE);
   *r_name = NULL;
@@ -399,17 +401,23 @@ ksba_crl_get_auth_key_id (ksba_crl_t crl,
   if (err)
     return err;
   if (ti.class != CLASS_CONTEXT) 
-    return gpg_error (GPG_ERR_INV_CRL_OBJ); /* we expected a tag */
+    return gpg_error (GPG_ERR_INV_CRL_OBJ); /* We expected a tag. */
   if (ti.ndef)
     return gpg_error (GPG_ERR_NOT_DER_ENCODED);
   if (derlen < ti.length)
     return gpg_error (GPG_ERR_BAD_BER);
 
   if (ti.tag == 0)
-    { /* We do not support the keyIdentifier method yet, but we need
-         to skip it. */
+    { /* keyIdentifier:  Just save it away for later use. */
+      keyid_der = der;
+      keyid_derlen = ti.length;
+
       der += ti.length;
       derlen -= ti.length;
+      /* If the keyid has been requested but no other data follows, we
+         directly jump to the end. */
+      if (r_keyid && !derlen)
+        goto build_keyid;
       if (!derlen)
         return gpg_error (GPG_ERR_NO_DATA); /* not available */
         
@@ -458,6 +466,19 @@ ksba_crl_get_auth_key_id (ksba_crl_t crl,
   (*r_serial)[numbuflen + ti.length] = ')';
   (*r_serial)[numbuflen + ti.length + 1] = 0;
 
+ build_keyid:
+  if (r_keyid && keyid_der && keyid_derlen)
+    {
+      sprintf (numbuf,"(%u:", (unsigned int)keyid_derlen);
+      numbuflen = strlen (numbuf);
+      *r_keyid = xtrymalloc (numbuflen + keyid_derlen + 2);
+      if (!*r_keyid)
+        return gpg_error (GPG_ERR_ENOMEM);
+      strcpy (*r_keyid, numbuf);
+      memcpy (*r_keyid+numbuflen, keyid_der, keyid_derlen);
+      (*r_keyid)[numbuflen + keyid_derlen] = ')';
+      (*r_keyid)[numbuflen + keyid_derlen + 1] = 0;
+    }
   return 0;
 }
 

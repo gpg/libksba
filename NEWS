@@ -1,6 +1,15 @@
 Noteworthy changes in version 0.9.11
 -------------------------------------------------
 
+ * New convenience API function for the subjectKeyIdentifier.
+
+ * Implemented the keyIdentifier part for authorityKeyIdentifier of
+   CRLs and certificates.
+
+ * Interface changes relative to the 0.9.7 release:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ksba_cert_get_subj_key_id            NEW.
+
 
 Noteworthy changes in version 0.9.10 (2004-12-03)
 -------------------------------------------------
@@ -228,7 +237,7 @@ Noteworthy changes in version 0.4.0 (2002-04-15)
  * Nearly all stuff needed for the Aegypten project is now in place.
 
 
- Copyright 2002 g10 Code GmbH
+ Copyright 2002, 2003, 2004, 2005 g10 Code GmbH
 
  This file is free software; as a special exception the author gives
  unlimited permission to copy and/or distribute it, with or without

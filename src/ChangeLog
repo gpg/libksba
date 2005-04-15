@@ -1,3 +1,17 @@
+2005-04-15  Werner Koch  <wk@g10code.com>
+
+	* cert.c (get_info_access): Fixed case of more than one
+	AccessDescription.
+
+	* ksba.h (ksba_cert_get_subj_key_id): New.
+	* cert.c (get_simple_octet_string_ext): New.
+	(ksba_cert_get_subj_key_id): New.
+	* libksba.vers: Added ksba_cert_get_subj_key_id. 
+
+	* cert.c (ksba_cert_get_auth_key_id): Add support for
+	keyIdentifier.
+	* crl.c (ksba_crl_get_auth_key_id): Ditto.
+	
 2005-01-31  Werner Koch  <wk@g10code.com>
 
 	* cms-parser.c (_ksba_cms_parse_signed_data_part_2): Allow NDEF
@@ -636,7 +650,7 @@
 	(ksba_cert_get_subject): Ditto.
 	
 
- Copyright 2001, 2002 g10 Code GmbH
+ Copyright 2001, 2002, 2003, 2004, 2005 g10 Code GmbH
 
  This file is free software; as a special exception the author gives
  unlimited permission to copy and/or distribute it, with or without

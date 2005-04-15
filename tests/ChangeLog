@@ -1,3 +1,9 @@
+2005-04-15  Werner Koch  <wk@g10code.com>
+
+	* cert-basic.c (list_extensions): Print the AKI.keyIdentifier and
+	the subjectKeyIdentifier.
+	* t-crl-parser.c (one_file): Print the AKI.keyIdentifier.
+
 2004-11-28  Werner Koch  <wk@g10code.com>
 
 	* t-cms-parser.c (one_file): Do not use a writer object.
@@ -121,7 +127,7 @@
 	(print_sexp): this and changed all callers.
 	
 
- Copyright 2001, 2002 g10 Code GmbH
+ Copyright 2001, 2002, 2003, 2004, 2005 g10 Code GmbH
 
  This file is free software; as a special exception the author gives
  unlimited permission to copy and/or distribute it, with or without

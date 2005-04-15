@@ -1,3 +1,11 @@
+2005-04-15  Werner Koch  <wk@g10code.com>
+
+	* ksba.texi: Added a new function.  Markup improvements.
+
+2005-02-08  Werner Koch  <wk@g10code.com>
+
+	* ksba.texi: Fixed direntry.
+
 2004-03-23  Werner Koch  <wk@gnupg.org>
 
 	* ksba.texi: Added 2 more functions. Minor other updates.
@@ -28,7 +36,7 @@
 
 	* ksba.texi: Add new functions.
 
- Copyright 2002, 2003 g10 Code GmbH
+ Copyright 2002, 2003, 2004, 2005 g10 Code GmbH
 
  This file is free software; as a special exception the author gives
  unlimited permission to copy and/or distribute it, with or without

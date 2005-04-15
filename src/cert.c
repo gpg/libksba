@@ -1,5 +1,5 @@
 /* cert.c - main function for the certificate handling
- *      Copyright (C) 2001, 2002, 2003, 2004 g10 Code GmbH
+ *      Copyright (C) 2001, 2002, 2003, 2004, 2005 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -32,6 +32,7 @@
 #include "keyinfo.h"
 #include "cert.h"
 
+static const char oidstr_subjectKeyIdentifier[] = "2.5.29.14";
 static const char oidstr_keyUsage[]         = "2.5.29.15";
 static const char oidstr_subjectAltName[]   = "2.5.29.17";
 static const char oidstr_issuerAltName[]    = "2.5.29.18";
@@ -1568,10 +1569,10 @@ ksba_cert_get_crl_dist_point (ksba_cert_t cert, int idx,
 }
 
 
-/* Return the authorityKeyIdentifier in r_name and r_serial or in
-   r_keyID.  Note that r_keyID is not yet supported and must be passed
-   as NULL.  GPG_ERR_NO_DATA is returned if no authorityKeyIdentifier
-   or only one using the keyIdentifier method is available. */
+/* Return the authorityKeyIdentifier in R_NAME and R_SERIAL or/and in
+   R_KEYID.  GPG_ERR_NO_DATA is returned if no authorityKeyIdentifier
+   or only one using the keyIdentifier method is available and R_KEYID
+   is NULL. */
 gpg_error_t 
 ksba_cert_get_auth_key_id (ksba_cert_t cert,
                            ksba_sexp_t *r_keyid,
@@ -1582,13 +1583,15 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
   const char *oid;
   size_t off, derlen;
   const unsigned char *der;
+  const unsigned char *keyid_der = NULL;
+  size_t keyid_derlen = 0;
   int idx, crit;
   struct tag_info ti;
   char numbuf[30];
   size_t numbuflen;
  
   if (r_keyid)
-    return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
+    *r_keyid = NULL;
   if (!r_name || !r_serial)
     return gpg_error (GPG_ERR_INV_VALUE);
   *r_name = NULL;
@@ -1637,13 +1640,18 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
     return gpg_error (GPG_ERR_BAD_BER);
 
   if (ti.tag == 0)
-    { /* We do not support the keyIdentifier method yet, but we need
-         to skip it. */
+    { /* keyIdentifier:  Save it away and skip over it. */
+      keyid_der = der;
+      keyid_derlen = ti.length;
+
       der += ti.length;
       derlen -= ti.length;
+      /* If the keyid has been requested but no other data follows, we
+         directly jump to the end. */
+      if (r_keyid && !derlen)
+        goto build_keyid;
       if (!derlen)
         return gpg_error (GPG_ERR_NO_DATA); /* not available */
-        
       err = _ksba_ber_parse_tl (&der, &derlen, &ti);
       if (err)
         return err;
@@ -1689,18 +1697,117 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
   (*r_serial)[numbuflen + ti.length] = ')';
   (*r_serial)[numbuflen + ti.length + 1] = 0;
 
-
+ build_keyid:
+  if (r_keyid && keyid_der && keyid_derlen)
+    {
+      sprintf (numbuf,"(%u:", (unsigned int)keyid_derlen);
+      numbuflen = strlen (numbuf);
+      *r_keyid = xtrymalloc (numbuflen + keyid_derlen + 2);
+      if (!*r_keyid)
+        return gpg_error (GPG_ERR_ENOMEM);
+      strcpy (*r_keyid, numbuf);
+      memcpy (*r_keyid+numbuflen, keyid_der, keyid_derlen);
+      (*r_keyid)[numbuflen + keyid_derlen] = ')';
+      (*r_keyid)[numbuflen + keyid_derlen + 1] = 0;
+    }
   return 0;
 }
 
 
+/* Return a simple octet string extension at the object identifier OID
+   from certificate CERT.  The data is return as a simple S-expression
+   and stored at R_DATA.  Returns 0 on success or an error code.
+   common error codes are: GPG_ERR_NO_DATA if no such extension is
+   available, GPG_ERR_DUP_VALUE if more than one is available.  If
+   R_CRIT is not NULL, the critical extension flag will be stored at
+   that address. */
+static gpg_error_t 
+get_simple_octet_string_ext (ksba_cert_t cert, const char *oid,
+                             int *r_crit, ksba_sexp_t *r_data)
+{
+  gpg_error_t err;
+  const char *tmpoid;
+  size_t off, derlen;
+  const unsigned char *der;
+  int idx, crit;
+  struct tag_info ti;
+  char numbuf[30];
+  size_t numbuflen;
+ 
+  if (!r_data)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  *r_data = NULL;
+
+  for (idx=0; !(err=ksba_cert_get_extension (cert, idx, &tmpoid, &crit,
+                                             &off, &derlen)); idx++)
+    {
+      if (!strcmp (tmpoid, oid))
+        break;
+    }
+  if (err)
+    {
+      if (gpg_err_code (err) == GPG_ERR_EOF)
+        return gpg_error (GPG_ERR_NO_DATA);
+      return err;
+    }
+    
+  /* Check that there is only one */
+  for (idx++; !(err=ksba_cert_get_extension (cert, idx, &tmpoid, NULL,
+                                             NULL, NULL)); idx++)
+    {
+      if (!strcmp (tmpoid, oid))
+        return gpg_error (GPG_ERR_DUP_VALUE); 
+    }
+  
+  der = cert->image + off;
+
+  err = _ksba_ber_parse_tl (&der, &derlen, &ti);
+  if (err)
+    return err;
+  if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OCTET_STRING
+         && !ti.is_constructed) )
+    return gpg_error (GPG_ERR_INV_CERT_OBJ);
+  if (ti.ndef)
+    return gpg_error (GPG_ERR_NOT_DER_ENCODED);
+  if (ti.length > derlen)
+    return gpg_error (GPG_ERR_BAD_BER);
+  if (ti.length != derlen)
+    return gpg_error (GPG_ERR_INV_CERT_OBJ); /* Garbage follows. */
+
+  sprintf (numbuf,"(%u:", (unsigned int)ti.length);
+  numbuflen = strlen (numbuf);
+  *r_data = xtrymalloc (numbuflen + ti.length + 2);
+  if (!*r_data)
+    return gpg_error (GPG_ERR_ENOMEM);
+  strcpy (*r_data, numbuf);
+  memcpy (*r_data+numbuflen, der, ti.length);
+  (*r_data)[numbuflen + ti.length] = ')';
+  (*r_data)[numbuflen + ti.length + 1] = 0;
+  if (r_crit)
+    *r_crit = crit;
+  return 0;
+}
 
 
+/* Return the subjectKeyIdentifier extension as a simple allocated
+   S-expression at the address of R_KEYID. 0 is returned on success,
+   GPG_ERR_NO_DATA if no such extension is available or any other
+   error code.  If R_CRIT is not passed as NULL, the criticla flag of
+   this is extension is stored there. */
+gpg_error_t 
+ksba_cert_get_subj_key_id (ksba_cert_t cert, int *r_crit, ksba_sexp_t *r_keyid)
+{
+  return get_simple_octet_string_ext (cert, oidstr_subjectKeyIdentifier,
+                                      r_crit, r_keyid);
+}
+
+
+
 /* MODE 0 := authorityInfoAccess
         1 := subjectInfoAccess
 
-   Caller must release METHOD and LOCATIOn if the fucntion retruned
-   with success; on error bot variables will point to NULL.
+   Caller must release METHOD and LOCATION if the function returned
+   with success; on error both variables will point to NULL.
  */   
 static gpg_error_t
 get_info_access (ksba_cert_t cert, int idx, int mode,
@@ -1779,9 +1886,12 @@ get_info_access (ksba_cert_t cert, int idx, int mode,
                   idx--;
                   continue;  
                 }
-              
-              if (!ti.length)
-                return 0;  
+              /* We only need the next object, thus we can (and
+                 actually need to) limit the DERLEN to the length of
+                 the current sequence. */
+              derlen = ti.length;
+              if (!derlen)
+                return gpg_error (GPG_ERR_INV_CERT_OBJ);
 
               err = _ksba_ber_parse_tl (&der, &derlen, &ti);
               if (err)
@@ -1818,13 +1928,13 @@ get_info_access (ksba_cert_t cert, int idx, int mode,
 
 
 /* Return the authorityInfoAccess attributes. IDX should be iterated
-   starting from 0 until the function returns -1.  R_METHOD returns an
-   allocated string with the OID of one item and R_LOCATION return the
-   GeneralName for that OID.  The return values for R_METHOD and
-   R_LOCATION must be released by the caller unless the function
-   returned an error; the function will however make sure that
-   R_METHOD and R_LOCATION will point to NULL if the function retruns
-   an error.  See RFC 2459, section 4.2.2.1 */
+   starting from 0 until the function returns GPG_ERR_EOF.  R_METHOD
+   returns an allocated string with the OID of one item and R_LOCATION
+   return the GeneralName for that OID.  The return values for
+   R_METHOD and R_LOCATION must be released by the caller unless the
+   function returned an error; the function will however make sure
+   that R_METHOD and R_LOCATION will point to NULL if the function
+   returns an error.  See RFC 2459, section 4.2.2.1 */
 gpg_error_t
 ksba_cert_get_authority_info_access (ksba_cert_t cert, int idx,
                                      char **r_method, ksba_name_t *r_location)
@@ -1835,13 +1945,13 @@ ksba_cert_get_authority_info_access (ksba_cert_t cert, int idx,
 }
 
 /* Return the subjectInfoAccess attributes. IDX should be iterated
-   starting from 0 until the function returns -1.  R_METHOD returns an
-   allocated string with the OID of one item and R_LOCATION return the
-   GeneralName for that OID.  The return values for R_METHOD and
-   R_LOCATION must be released by the caller unless the function
-   returned an error; the function will however make sure that
-   R_METHOD and R_LOCATION will point to NULL if the function retruns
-   an error.  See RFC 2459, section 4.2.2.2 */
+   starting from 0 until the function returns GPG_ERR_EOF.  R_METHOD
+   returns an allocated string with the OID of one item and R_LOCATION
+   return the GeneralName for that OID.  The return values for
+   R_METHOD and R_LOCATION must be released by the caller unless the
+   function returned an error; the function will however make sure
+   that R_METHOD and R_LOCATION will point to NULL if the function
+   returns an error.  See RFC 2459, section 4.2.2.2 */
 gpg_error_t
 ksba_cert_get_subject_info_access (ksba_cert_t cert, int idx,
                                    char **r_method, ksba_name_t *r_location)
