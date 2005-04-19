@@ -19,21 +19,23 @@
 
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.57)
-min_automake_version="1.7.6"
+min_automake_version="1.9.3"
 
 # Version number: Remember to change immediately *after* a release.
 #                 Append a "-cvs" for non-released versions.
-AC_INIT(libksba, 0.9.11-cvs, gpa-dev@gnupg.org)
+AC_INIT(libksba, 0.9.11, gpa-dev@gnupg.org)
 # LT Version numbers: Remember to change them just *before* a release.
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
 # Please remember to document interface changes in the NEWS file.
-LIBKSBA_LT_CURRENT=13
-LIBKSBA_LT_AGE=5
-LIBKSBA_LT_REVISION=3
+LIBKSBA_LT_CURRENT=14
+LIBKSBA_LT_AGE=6
+LIBKSBA_LT_REVISION=0
 #-------------------
 
+# fixme: When bouncing this to a newer version, you check whether the
+# declaration tests for some symbols can be removed.
 NEED_GPG_ERROR_VERSION=0.7
 
 
@@ -111,9 +113,13 @@ if test "x$GPG_ERROR_LIBS" = "x"; then
   AC_MSG_ERROR([libgpg-error is needed.
                 See ftp://ftp.gnupg.org/gcrypt/libgpg-error/ .])
 fi
+_tmp_gpg_error_save_cflags="$CFLAGaS"
+CFLAGS="$CFLAGS $GPG_ERROR_CFLAGS"
+AC_CHECK_DECLS(GPG_ERR_UNKNOWN_CRIT_EXTN,,,[#include <gpg-error.h>])
+CFLAGS="${_tmp_gpg_error_save_cflags}"
+
 AC_DEFINE(GPG_ERR_SOURCE_DEFAULT, GPG_ERR_SOURCE_KSBA,
           [The default error source for libksba.])
-
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -121,6 +127,13 @@ AC_CHECK_HEADERS([string.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
+
+AC_C_BIGENDIAN
+
+AC_CHECK_SIZEOF(unsigned int)
+AC_CHECK_SIZEOF(unsigned long)
+GNUPG_CHECK_TYPEDEF(u32, HAVE_U32_TYPEDEF)
+
 
 # Checks for library functions.
 AC_CHECK_FUNCS([memmove strchr strtol strtoul stpcpy gmtime_r])

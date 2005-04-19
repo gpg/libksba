@@ -18,6 +18,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
+/*-- sha1.c --*/
+void sha1_hash_buffer (char *outbuf, const char *buffer, size_t length);
+
+
 
 #define digitp(p)   (*(p) >= '0' && *(p) <= '9')
 

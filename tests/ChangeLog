@@ -1,3 +1,17 @@
+2005-04-19  Werner Koch  <wk@g10code.com>
+
+	* t-ocsp.c (main): Add option --no-nonce.  Ret rid of the
+	libgcrypt requirement.
+	(one_request): Create a nonce.
+	* sha1.c: New.
+
+2005-04-18  Werner Koch  <wk@g10code.com>
+
+	* t-crl-parser.c (one_file): Print extension name if possible.
+
+	* Makefile.am (oidtranstbl.h): Debian install dumpasn1.cfg at
+	/etc/dumpasn1; try this too.
+
 2005-04-15  Werner Koch  <wk@g10code.com>
 
 	* cert-basic.c (list_extensions): Print the AKI.keyIdentifier and

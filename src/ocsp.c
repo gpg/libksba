@@ -1,5 +1,5 @@
 /* ocsp.c - OCSP (rfc2560)
- *      Copyright (C) 2003, 2004 g10 Code GmbH
+ *      Copyright (C) 2003, 2004, 2005 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -318,7 +318,7 @@ ksba_ocsp_add_target (ksba_ocsp_t ocsp,
    the allowed size of the nonce; if the supplied nonce is larger it
    will be truncated and the actual used length of the nonce returned.
    To detect the implementation limit (which should be sonsidred as a
-   good suggestion), the fucntion may be called with NULL for NONCE,
+   good suggestion), the function may be called with NULL for NONCE,
    in which case the maximal usable noncelength is returned. The
    function returns the length of the nonce which will be used. */
 size_t
@@ -330,7 +330,15 @@ ksba_ocsp_set_nonce (ksba_ocsp_t ocsp, unsigned char *nonce, size_t noncelen)
     return sizeof ocsp->nonce;
   if (noncelen > sizeof ocsp->nonce)
     noncelen = sizeof ocsp->nonce;
-  memcpy (ocsp->nonce, nonce, noncelen);
+  if (noncelen)
+    {
+      memcpy (ocsp->nonce, nonce, noncelen);
+      /* Reset the high bit.  We do this to make sure that we have a
+         positive integer and thus we don't need to prepend a leading
+         zero which would be needed then. */
+      ocsp->nonce[0] &= 0x7f;
+    }
+  ocsp->noncelen = noncelen;
   return noncelen;
 }
 
@@ -372,6 +380,98 @@ issuer_key_hash (ksba_cert_t cert, unsigned char *sha1_buffer)
       if (!err && dummy != 20)
         err = gpg_error (GPG_ERR_BUG);
     }
+  return err;
+}
+
+
+/* Write the extensions for a request to WOUT. */
+static gpg_error_t
+write_request_extensions (ksba_ocsp_t ocsp, ksba_writer_t wout)
+{
+  gpg_error_t err;
+  unsigned char *buf;
+  size_t buflen;
+  unsigned char *p;
+  size_t derlen;
+  ksba_writer_t w1 = NULL;
+  ksba_writer_t w2 = NULL;
+
+  if (!ocsp->noncelen)
+    return 0; /* We do only support the nonce extension.  */
+
+  /* Create writer objects for construction of the extension. */
+  err = ksba_writer_new (&w2);
+  if (!err)
+    err = ksba_writer_set_mem (w2, 256);
+  if (!err)
+    err = ksba_writer_new (&w1);
+  if (!err)
+    err = ksba_writer_set_mem (w1, 256);
+  if (err)
+    goto leave;
+
+  /* Write OID and and nonce.  */
+  err = ksba_oid_from_str (oidstr_ocsp_nonce, &buf, &buflen);
+  if (err)
+    goto leave;
+  err = _ksba_ber_write_tl (w1, TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, buflen);
+  if (!err)
+    err = ksba_writer_write (w1, buf, buflen);
+  xfree (buf); buf = NULL;
+  /* We known that the nonce is short enough to put the tag into 2 bytes, thus
+     we write the encasulating octet string directly with a fixed length. */
+  if (!err)
+    err = _ksba_ber_write_tl (w1, TYPE_OCTET_STRING, CLASS_UNIVERSAL, 0,
+                              2+ocsp->noncelen);
+  if (!err)
+    err = _ksba_ber_write_tl (w1, TYPE_INTEGER, CLASS_UNIVERSAL, 0,
+                              ocsp->noncelen);
+  if (!err)
+    err = ksba_writer_write (w1, ocsp->nonce, ocsp->noncelen);
+
+  /* Put a sequence around. */
+  p = ksba_writer_snatch_mem (w1, &derlen);
+  if (!p)
+    {
+      err = ksba_writer_error (w1);
+      goto leave;
+    }
+  err = _ksba_ber_write_tl (w2, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, derlen);
+  if (!err)
+    err = ksba_writer_write (w2, p, derlen);
+  xfree (p); p = NULL;
+
+  /* Put the sequence around all extensions.  */
+  err = ksba_writer_set_mem (w1, 256);
+  if (err)
+    goto leave;
+  p = ksba_writer_snatch_mem (w2, &derlen);
+  if (!p)
+    {
+      err = ksba_writer_error (w2);
+      goto leave;
+    }
+  err = _ksba_ber_write_tl (w1, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, derlen);
+  if (!err)
+    err = ksba_writer_write (w1, p, derlen);
+  xfree (p); p = NULL;
+
+  /* And put a context tag around everything.  */
+  p = ksba_writer_snatch_mem (w1, &derlen);
+  if (!p)
+    {
+      err = ksba_writer_error (w1);
+      goto leave;
+    }
+  err = _ksba_ber_write_tl (wout, 2, CLASS_CONTEXT, 1, derlen);
+  if (!err)
+    err = ksba_writer_write (wout, p, derlen);
+  xfree (p); p = NULL;
+
+
+ leave:
+  ksba_writer_release (w2);
+  ksba_writer_release (w1);
   return err;
 }
 
@@ -547,9 +647,8 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
   if (err)
     goto leave;
 
-  /* The requestExtensions would go here. */
-
-  /* FIXME: Implement the nonce stuff. */
+  /* The requestExtensions go here. */
+  err = write_request_extensions (ocsp, w5);
 
   /* Reuse writers; for clarity, use new names. */ 
   w6 = w3;
@@ -577,7 +676,7 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
 
   /* Write the ocspRequest. */
 
-  /* Note that we do not support the optional Signature, becuase this
+  /* Note that we do not support the optional signature, because this
      saves us one writer object. */
 
   /* Prepend a sequence tag. */
@@ -1301,7 +1400,7 @@ ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
   if (*response_status == KSBA_OCSP_RSPSTATUS_SUCCESS
       && ocsp->noncelen)
     {
-      /* FIXME: Check that there is a received nonce and that it it matches. */
+      /* FIXME: Check that there is a received nonce and that it matches. */
 
     }
 

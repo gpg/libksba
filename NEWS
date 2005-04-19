@@ -1,10 +1,12 @@
-Noteworthy changes in version 0.9.11
+Noteworthy changes in version 0.9.11 (2005-04-19)
 -------------------------------------------------
 
  * New convenience API function for the subjectKeyIdentifier.
 
  * Implemented the keyIdentifier part for authorityKeyIdentifier of
    CRLs and certificates.
+
+ * Reason codes for CRL items are now returned.
 
  * Interface changes relative to the 0.9.7 release:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

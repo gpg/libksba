@@ -33,6 +33,7 @@
 #include "../src/ksba.h"
 
 #include "t-common.h"
+#include "oidtranstbl.h"
 
 static void
 my_hasher (void *arg, const void *buffer, size_t length)
@@ -44,6 +45,21 @@ my_hasher (void *arg, const void *buffer, size_t length)
       if ( fwrite (buffer, length, 1, fp) != 1 )
         fail ("error writing to-be-hashed data");
     }
+}
+
+
+/* Return the description for OID; if no description is available 
+   NULL is returned. */
+static const char *
+get_oid_desc (const char *oid)
+{
+  int i;
+
+  if (oid)
+    for (i=0; oidtranstbl[i].oid; i++)
+      if (!strcmp (oidtranstbl[i].oid, oid))
+        return oidtranstbl[i].desc;
+  return NULL;
 }
 
 
@@ -167,7 +183,7 @@ one_file (const char *fname)
             print_sexp (serial);
             printf (", t=");
             print_time (rdate);
-            printf (", r=%d\n", reason);
+            printf (", r=%x\n", reason);
             xfree (serial);
           }
           break;
@@ -253,8 +269,11 @@ one_file (const char *fname)
                                               &oid, &crit,
                                               NULL, &derlen)); idx++)
       {
-        printf ("%sExtn: %s   (%lu octets)\n",
-                crit? "Crit":"", oid, (unsigned long)derlen);
+        const char *s = get_oid_desc (oid);
+        printf ("%sExtn: %s%s%s%s   (%lu octets)\n",
+                crit? "Crit":"", 
+                s?" (":"", s?s:"", s?")":"",
+                oid, (unsigned long)derlen);
       }
     if (err && gpg_err_code (err) != GPG_ERR_EOF 
         && gpg_err_code (err) != GPG_ERR_NO_DATA )

@@ -34,7 +34,12 @@
 #include "ber-decoder.h"
 #include "crl.h"
 
+#if !HAVE_DECL_GPG_ERR_UNKNOWN_CRIT_EXTN
+#define GPG_ERR_UNKNOWN_CRIT_EXTN  172
+#endif
+
 static const char oidstr_crlNumber[] = "2.5.29.20";
+static const char oidstr_crlReason[] = "2.5.29.21";
 static const char oidstr_authorityKeyIdentifier[] = "2.5.29.35";
 
 /* We better buffer the hashing. */
@@ -1061,6 +1066,78 @@ parse_to_next_update (ksba_crl_t crl)
 }
 
 
+/* Parse an enumerated value.  Note that this code is duplication of
+   the one at ocsp.c.  */
+static gpg_error_t
+parse_enumerated (unsigned char const **buf, size_t *len, struct tag_info *ti,
+                  size_t maxlen)
+{
+  gpg_error_t err;
+
+  err = _ksba_ber_parse_tl (buf, len, ti);
+  if (err)
+     ;
+  else if (!(ti->class == CLASS_UNIVERSAL && ti->tag == TYPE_ENUMERATED
+             && !ti->is_constructed) )
+    err = gpg_error (GPG_ERR_INV_OBJ);
+  else if (!ti->length)
+    err = gpg_error (GPG_ERR_TOO_SHORT);
+  else if (maxlen && ti->length > maxlen)
+    err = gpg_error (GPG_ERR_TOO_LARGE);
+  else if (ti->length > *len)
+    err = gpg_error (GPG_ERR_BAD_BER);
+
+  return err;
+}
+
+
+
+/* Store an entry extension into the current item. */
+static gpg_error_t
+store_one_entry_extension (ksba_crl_t crl,
+                           const unsigned char *der, size_t derlen)
+{
+  gpg_error_t err;
+  char *oid;
+  int critical;
+  size_t off, len;
+
+  err = parse_one_extension (der, derlen, &oid, &critical, &off, &len);
+  if (err)
+    return err;
+  if (!strcmp (oid, oidstr_crlReason))
+    {
+      struct tag_info ti;
+      const unsigned char *buf = der+off;
+      size_t mylen = len;
+
+      err = parse_enumerated (&buf, &mylen, &ti, 1);
+      if (err)
+        return err;
+      /* Note that we OR the values so that in case this extension is
+         repeated we can track all reason codes. */ 
+      switch (*buf)
+        { 
+        case  0: crl->item.reason |= KSBA_CRLREASON_UNSPECIFIED; break;
+        case  1: crl->item.reason |= KSBA_CRLREASON_KEY_COMPROMISE; break;
+        case  2: crl->item.reason |= KSBA_CRLREASON_CA_COMPROMISE; break;
+        case  3: crl->item.reason |= KSBA_CRLREASON_AFFILIATION_CHANGED; break;
+        case  4: crl->item.reason |= KSBA_CRLREASON_SUPERSEDED; break;
+        case  5: crl->item.reason |= KSBA_CRLREASON_CESSATION_OF_OPERATION;
+          break;
+        case  6: crl->item.reason |= KSBA_CRLREASON_CERTIFICATE_HOLD; break;
+        case  8: crl->item.reason |= KSBA_CRLREASON_REMOVE_FROM_CRL; break;
+        case  9: crl->item.reason |= KSBA_CRLREASON_PRIVILEGE_WITHDRAWN; break;
+        case 10: crl->item.reason |= KSBA_CRLREASON_AA_COMPROMISE; break;
+        default: crl->item.reason |= KSBA_CRLREASON_OTHER; break;
+        }
+    }
+  else if (critical)
+    err = gpg_error (GPG_ERR_UNKNOWN_CRIT_EXTN);
+  
+  return err;
+}
+
 /* Parse the revokedCertificates SEQUENCE of SEQUENCE using a custom
    parser for efficiency and return after each entry */
 static gpg_error_t
@@ -1135,6 +1212,7 @@ parse_crl_entry (ksba_crl_t crl, int *got_entry)
   memcpy (crl->item.serial+numbuflen, tmpbuf+ti.nhdr, ti.length);
   crl->item.serial[numbuflen + ti.length] = ')';
   crl->item.serial[numbuflen + ti.length + 1] = 0;
+  crl->item.reason = 0;
 
   /* get the revocation time */
   err = _ksba_ber_read_tl (crl->reader, &ti);
@@ -1209,7 +1287,9 @@ parse_crl_entry (ksba_crl_t crl, int *got_entry)
           if (err)
             return err;
           HASH (tmpbuf, ti.nhdr+ti.length);
-          /* fixme: handle extension */
+          err = store_one_entry_extension (crl, tmpbuf, ti.nhdr+ti.length);
+          if (err)
+            return err;
         }
     }
 

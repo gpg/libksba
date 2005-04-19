@@ -28,28 +28,13 @@
 #include <errno.h>
 
 #include "../src/ksba.h"
-#include "../src/ocsp.h" /* FIXME remove this when ksba.h includes the API. */
-void ksba_set_hash_buffer_function ( gpg_error_t (*fnc)
-                                (void *arg, const char *oid,
-                                 const void *buffer, size_t length,
-                                 size_t resultsize,
-                                 unsigned char *result,
-                                 size_t *resultlen),
-                                     void *fnc_arg); /* FIXME: as above. */
 
-
-
-#if defined(__GNUC__) && defined(__ELF__)
-void gcry_md_hash_buffer (int algo, void *digest,
-			  const void *buffer,
-                          size_t length) __attribute__ ((weak));
-#endif
 
 #include "t-common.h"
 
 int verbose;
 int debug;
-
+int no_nonce;
 
 static unsigned char *
 read_file (const char *fname, size_t *r_length)
@@ -142,6 +127,9 @@ one_request (const char *cert_fname, const char *issuer_cert_fname)
   fail_if_err (err);
   ksba_cert_release (cert);
   ksba_cert_release (issuer_cert);
+
+  if (!no_nonce)
+    ksba_ocsp_set_nonce (ocsp, "ABCDEFGHIJKLMNOP", 16);
 
   err = ksba_ocsp_build_request (ocsp, &request, &requestlen);
   fail_if_err (err);
@@ -269,8 +257,7 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
 }
 
 
-#if defined(__GNUC__) && defined(__ELF__)
-gpg_error_t 
+static gpg_error_t 
 my_hash_buffer (void *arg, const char *oid,
                 const void *buffer, size_t length, size_t resultsize,
                 unsigned char *result, size_t *resultlen)
@@ -279,28 +266,15 @@ my_hash_buffer (void *arg, const char *oid,
     return gpg_error (GPG_ERR_NOT_SUPPORTED); /* We only support SHA-1. */ 
   if (resultsize < 20)
     return gpg_error (GPG_ERR_BUFFER_TOO_SHORT);
-  gcry_md_hash_buffer (2, result, buffer, length); 
+  sha1_hash_buffer (result, buffer, length); 
   *resultlen = 20;
   return 0;
 }
-#endif /* __GNUC__  && __ELF__ */
-
-static void
-setup_libgcrypt (void)
-{
-#if defined(__GNUC__) && defined(__ELF__)
-  if (gcry_md_hash_buffer)
-    {
-      ksba_set_hash_buffer_function (my_hash_buffer, NULL);
-      return;
-    }
-#endif /* __GNUC__  && __ELF__ */
-  fputs ("libgcrypt not available - can't run this test\n", stderr);
-  exit (0);
-}
 
 
-/* ( printf "POST / HTTP/1.0\r\nContent-Type: application/ocsp-request\r\nContent-Length: `wc -c <a.req | tr -d ' '`\r\n\r\n"; cat a.req ) |  nc -v ocsp.openvalidation.org 8088   | sed 1,8d >a.rsp  */
+
+
+/* ( printf "POST / HTTP/1.0\r\nContent-Type: application/ocsp-request\r\nContent-Length: `wc -c <a.req | tr -d ' '`\r\n\r\n"; cat a.req ) |  nc -v ocsp.openvalidation.org 8088   | sed '1,/^\r$/d' >a.rsp  */
 
 
 int 
@@ -313,7 +287,7 @@ main (int argc, char **argv)
   if (!srcdir)
     srcdir = ".";
 
-  setup_libgcrypt ();
+  ksba_set_hash_buffer_function (my_hash_buffer, NULL);
  
   if (argc)
     {
@@ -344,6 +318,11 @@ main (int argc, char **argv)
       else if (!strcmp (*argv, "--response"))
         {
           response_mode = 1;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--no-nonce"))
+        {
+          no_nonce = 1;
           argc--; argv++;
         }
     }          

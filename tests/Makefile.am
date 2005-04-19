@@ -46,6 +46,7 @@ noinst_HEADERS = t-common.h
 noinst_PROGRAMS = $(TESTS) t-cms-parser t-crl-parser t-dnparser t-ocsp
 LDADD = ../src/libksba.la $(GPG_ERROR_LIBS)
 
+t_ocsp_SOURCES = t-ocsp.c sha1.c
 
 # Build the OID table: Note that the binary includes data from an
 # another program and we may not be allowed to distribute this.  This
@@ -53,7 +54,8 @@ LDADD = ../src/libksba.la $(GPG_ERROR_LIBS)
 # installed and thus not distributed.
 oidtranstbl.h: Makefile mkoidtbl.awk 
 	set -e; f="/dev/null"; \
-        for i in /usr/local/bin /usr/local/share /usr/bin /usr/share; do \
+        for i in /usr/local/bin /usr/local/share /usr/bin \
+                 /usr/share /etc/dumpasn1; do \
           if test -f $$i/dumpasn1.cfg; then f=$$i/dumpasn1.cfg; break; fi; \
         done; $(AWK) -f $(srcdir)/mkoidtbl.awk $$f >$@
 

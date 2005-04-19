@@ -1,3 +1,16 @@
+2005-04-19  Werner Koch  <wk@g10code.com>
+
+	Released 0.9.11.
+	
+	* configure.ac: Bumped LT version to C14/A6/R0 due to a new
+	interface.
+
+	* acinclude.m4 (GNUPG_CHECK_TYPEDEF): Added.  Taken from gnupg 1.4
+
+2005-04-18  Werner Koch  <wk@g10code.com>
+
+	* configure.ac: Check for a new gpg-error symbol.
+
 2005-03-16  Werner Koch  <wk@g10code.com>
 
 	* Makefile.am (AUTOMAKE_OPTIONS): Add option to create bzip 2 file

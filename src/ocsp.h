@@ -63,7 +63,10 @@ struct ksba_ocsp_s {
 
   size_t noncelen;          /* 0 if no nonce was sent. */
   unsigned char nonce[16];  /* The random nonce we sent; actual length
-                               is NONCELEN. */
+                               is NONCELEN.  Warning: If its length is
+                               increased, check that the created
+                               request will still be valid as we use a
+                               hacked implementation. */
 
   unsigned char *request_buffer; /* Internal buffer to build the request. */
   size_t request_buflen;
