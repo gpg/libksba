@@ -241,7 +241,7 @@ _ksba_der_store_time (AsnNode node, const ksba_isotime_t atime)
   int need_gen;
   gpg_error_t err;
 
-  /* First check that ATIME is inddeed as formatted as expected. */
+  /* First check that ATIME is indeed as formatted as expected. */
   err = _ksba_assert_time_format (atime);
   if (err)
     return err;

@@ -997,9 +997,10 @@ parse_to_next_update (ksba_crl_t crl)
   if (err)
     return err;
   HASH (tmpbuf, ti.nhdr+ti.length);
-  _ksba_asntime_to_iso (tmpbuf+ti.nhdr, ti.length, crl->this_update);
+  _ksba_asntime_to_iso (tmpbuf+ti.nhdr, ti.length,
+                        ti.tag == TYPE_UTC_TIME, crl->this_update);
 
-  /* read the optional nextUpdate time */
+  /* Read the optional nextUpdate time. */
   err = _ksba_ber_read_tl (crl->reader, &ti);
   if (err)
     return err;
@@ -1023,13 +1024,14 @@ parse_to_next_update (ksba_crl_t crl)
       if (err)
         return err;
       HASH (tmpbuf, ti.nhdr+ti.length);
-      _ksba_asntime_to_iso (tmpbuf+ti.nhdr, ti.length, crl->next_update);
+      _ksba_asntime_to_iso (tmpbuf+ti.nhdr, ti.length,
+                            ti.tag == TYPE_UTC_TIME, crl->next_update);
       err = _ksba_ber_read_tl (crl->reader, &ti);
       if (err)
         return err;
     }
 
-  /* read the first sequence tag of the optional SEQ of SEQ */
+  /* Read the first sequence tag of the optional SEQ of SEQ. */
   if (tbs_ndef || tbs_len)
     {
       if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
@@ -1055,7 +1057,7 @@ parse_to_next_update (ksba_crl_t crl)
         }
     }
 
-  /* we need to save some stuff for the next round */
+  /* We need to save some stuff for the next round. */
   crl->state.ti = ti;
   crl->state.outer_ndef = outer_ndef;
   crl->state.outer_len = outer_len;
@@ -1240,7 +1242,7 @@ parse_crl_entry (ksba_crl_t crl, int *got_entry)
   HASH (tmpbuf, ti.nhdr+ti.length);
   
   _ksba_asntime_to_iso (tmpbuf+ti.nhdr, ti.length,
-                        crl->item.revocation_date);
+                        ti.tag == TYPE_UTC_TIME, crl->item.revocation_date);
 
   /* if there is still space we must parse the optional entryExtensions */
   if (ndef)

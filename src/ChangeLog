@@ -1,4 +1,14 @@
+2005-04-20  Werner Koch  <wk@g10code.com>
+
+	* time.c (_ksba_asntime_to_iso): Add arg IS_UTCTIME to allow for
+	UTCTimes w/o seconds.
+	* ocsp.c (parse_asntime_into_isotime): Set this arg.
+	* crl.c (parse_to_next_update, parse_crl_entry): Ditto.
+	* cert.c (ksba_cert_get_validity): Ditto.
+
 2005-04-19  Werner Koch  <wk@g10code.com>
+
+	* Makefile.am: Don't have asn1-tables depend on built tools.
 
 	* ocsp.c (ksba_ocsp_set_nonce): Set the length of the nonce.
 	(write_request_extensions): New.

@@ -86,7 +86,8 @@ ber_dump_CFLAGS = $(AM_CFLAGS)
 asn1-parse.c : asn1-func.h
 
 if ! CROSS_COMPILING
-asn1-tables.c : asn1-gentables $(asn1_modules)
+asn1-tables.c : $(asn1_modules)
+	$(MAKE) $(AM_MAKEFLAGS) asn1-gentables
 	@set -e; list=""; \
 	  for file in $(asn1_modules); do list="$$list $(srcdir)/$$file";done;\
 	  ./asn1-gentables $$list > asn1-tables.c	

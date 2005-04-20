@@ -1004,7 +1004,7 @@ ksba_cms_get_signing_time (ksba_cms_t cms, int idx, ksba_isotime_t r_sigtime)
     return gpg_error (GPG_ERR_BUG);
 
   return _ksba_asntime_to_iso (si->image + n->off + n->nhdr, n->len,
-                               r_sigtime);
+                               n->type == TYPE_UTC_TIME, r_sigtime);
 }
 
 

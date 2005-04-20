@@ -630,7 +630,7 @@ ksba_cert_get_validity (ksba_cert_t cert, int what, ksba_isotime_t timebuf)
   return_val_if_fail (n->off != -1, gpg_error (GPG_ERR_BUG));
 
   return _ksba_asntime_to_iso (cert->image + n->off + n->nhdr, n->len,
-                               timebuf);
+                               n->type == TYPE_UTC_TIME, timebuf);
 }
 
 

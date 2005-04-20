@@ -1,5 +1,5 @@
 /* time.c - UTCTime and GeneralizedTime helper
- *      Copyright (C) 2001, 2003 g10 Code GmbH
+ *      Copyright (C) 2001, 2003, 2005 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -32,9 +32,14 @@
 /* Converts an UTCTime or GeneralizedTime to ISO format.  Sets the
    returns string to empty on error and returns the error code. The
    function figures automagically the right format.  fixme: Currently
-   we only zupport Zulu time and no timezone */
+   we only zupport Zulu time and no timezone which is sufficient for
+   DER encoding.  It IS_UTCTIME is true, the function assumes that the
+   time is in UTCTime and thus allows to parse UTCTimes without
+   seconds (which is legal ASN.1; however Gutmann claims that the
+   rules changed in 1996 to always require seconds; OTOH, Dubuisson's
+   reference book from 2001 doesn't say so). */
 gpg_error_t
-_ksba_asntime_to_iso (const char *buffer, size_t length,
+_ksba_asntime_to_iso (const char *buffer, size_t length, int is_utctime,
                       ksba_isotime_t timebuf)
 { 
   const char *s;
@@ -44,11 +49,16 @@ _ksba_asntime_to_iso (const char *buffer, size_t length,
   *timebuf = 0;
   for (s=buffer, n=0; n < length && digitp (s); n++, s++)
     ;
-  if ((n != 12 && n != 14) || *s != 'Z')
+  if (is_utctime)
+    {
+      if ((n != 10 && n != 12) || *s != 'Z')
+        return gpg_error (GPG_ERR_INV_TIME);
+    }
+  else if ((n != 12 && n != 14) || *s != 'Z')
     return gpg_error (GPG_ERR_INV_TIME);
   
   s = buffer;
-  if (n==12)
+  if (n==12 || n == 10 ) /* UTCTime with or without seconds. */
     {
       year = atoi_2 (s);
       timebuf[0] = year < 50? '2': '1';
@@ -62,7 +72,15 @@ _ksba_asntime_to_iso (const char *buffer, size_t length,
       s += 8;
     }
   timebuf[8] = 'T';
-  memcpy (timebuf+9, s, 6);
+  if (n == 10) /* UTCTime w/0 seconds. */
+    {
+      memcpy (timebuf+9, s, 4);
+      timebuf[13] = timebuf[14] = '0';
+    }
+  else
+    {
+      memcpy (timebuf+9, s, 6);
+    }
   timebuf[15] = 0;
 
   return 0;
