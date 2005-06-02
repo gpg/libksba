@@ -19,7 +19,7 @@
 
 ## Process this file with automake to produce Makefile.in
 
-ACLOCAL_AMFLAGS = -I m4
+ACLOCAL_AMFLAGS = -I m4 -I gl/m4
 AUTOMAKE_OPTIONS = dist-bzip2
 
 EXTRA_DIST = README-alpha autogen.sh
@@ -32,7 +32,7 @@ tests = tests
 endif
 
 
-SUBDIRS = src ${tests} doc
+SUBDIRS = gl src ${tests} doc
 
 dist-hook:
 	@set -e; echo "$(VERSION)" > $(distdir)/VERSION

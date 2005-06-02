@@ -1,4 +1,13 @@
+2005-06-02  Werner Koch  <wk@g10code.com>
+
+	* gl/, gp/m4/: New.
+	* configure.ac: Add test for gnulib module alloca.
+	* Makefile.am (SUBDIRS): Include gl/
+
 2005-04-20  Werner Koch  <wk@g10code.com>
+
+	* configure.ac: Fixed typo in saving CFLAGS for gpg-error symbol
+	test.
 
 	Released 0.9.11.
 	

@@ -26,6 +26,8 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include <alloca.h>
+
 #include "ksba.h"
 #include "asn1-func.h"
 #include "util.h"

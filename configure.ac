@@ -75,6 +75,7 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
+gl_EARLY
 #AC_ARG_PROGRAM
 AC_PROG_YACC
 AC_C_INLINE
@@ -113,7 +114,7 @@ if test "x$GPG_ERROR_LIBS" = "x"; then
   AC_MSG_ERROR([libgpg-error is needed.
                 See ftp://ftp.gnupg.org/gcrypt/libgpg-error/ .])
 fi
-_tmp_gpg_error_save_cflags="$CFLAGaS"
+_tmp_gpg_error_save_cflags="$CFLAGS"
 CFLAGS="$CFLAGS $GPG_ERROR_CFLAGS"
 AC_CHECK_DECLS(GPG_ERR_UNKNOWN_CRIT_EXTN,,,[#include <gpg-error.h>])
 CFLAGS="${_tmp_gpg_error_save_cflags}"
@@ -139,6 +140,12 @@ GNUPG_CHECK_TYPEDEF(u32, HAVE_U32_TYPEDEF)
 AC_CHECK_FUNCS([memmove strchr strtol strtoul stpcpy gmtime_r])
 
 
+# GNUlib checks
+gl_SOURCE_BASE(gl)
+gl_M4_BASE(gl/m4)
+gl_MODULES(alloca)
+gl_INIT
+
 # To be used in ksba-config
 KSBA_CONFIG_LIBS="-lksba"
 KSBA_CONFIG_CFLAGS=""
@@ -150,6 +157,7 @@ AM_CONDITIONAL(CROSS_COMPILING, test x$cross_compiling = xyes)
 
 AC_CONFIG_FILES([
 Makefile
+gl/Makefile
 src/Makefile
 src/ksba-config
 tests/Makefile

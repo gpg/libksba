@@ -35,7 +35,8 @@ endif
 m4datadir = $(datadir)/aclocal
 m4data_DATA = ksba.m4
 
-AM_CFLAGS = @GPG_ERROR_CFLAGS@
+AM_CCPFLAGS = -I$(top_srcdir)/gl
+AM_CFLAGS = $(GPG_ERROR_CFLAGS)
 
 
 if HAVE_LD_VERSION_SCRIPT
@@ -72,7 +73,7 @@ libksba_la_SOURCES = \
 	asn1-tables.c
 
 asn1_gentables_SOURCES = asn1-gentables.c asn1-parse.c asn1-func.c oid.c util.c
-asn1_gentables_LDADD = @GPG_ERROR_LIBS@
+asn1_gentables_LDADD = $(GPG_ERROR_LIBS) ../gl/libgnu.la
 # Note that we need to use per-target flags to force renaming of the 
 # object files to avoid clashes with libtool.
 asn1_gentables_CFLAGS = $(AM_CFLAGS)
@@ -80,7 +81,7 @@ asn1_gentables_CFLAGS = $(AM_CFLAGS)
 ber_dump_SOURCES = ber-dump.c \
                    ber-decoder.c ber-help.c reader.c writer.c asn1-parse.c \
                    asn1-func.c oid.c util.c
-ber_dump_LDADD = @GPG_ERROR_LIBS@
+ber_dump_LDADD = $(GPG_ERROR_LIBS) ../gl/libgnu.la
 ber_dump_CFLAGS = $(AM_CFLAGS)
 
 asn1-parse.c : asn1-func.h
