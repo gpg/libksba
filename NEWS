@@ -2,6 +2,18 @@ Noteworthy changes in version 0.9.12
 -------------------------------------------------
 
 
+ * Minor changes to some function declarations.  This should not
+   affect any compilation.
+
+ * Interface changes relative to the 0.9.7 release:
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ksba_certreq_add_extension     CHANGED: Argument DER is now a void*.
+ ksba_cms_set_content_enc_algo  CHANGED: Argument IV is now void*.
+ ksba_cms_get_content_enc_iv    CHANGED: Argument IV is now void*.
+ ksba_cms_set_message_digest    CHANGED: Argument DIGEST is now
+                                         unsigned char*.
+
+
 Noteworthy changes in version 0.9.11 (2005-04-20)
 -------------------------------------------------
 

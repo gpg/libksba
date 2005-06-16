@@ -261,7 +261,7 @@ gpg_error_t ksba_cms_build (ksba_cms_t cms, ksba_stop_reason_t *r_stopreason);
 
 ksba_content_type_t ksba_cms_get_content_type (ksba_cms_t cms, int what);
 const char *ksba_cms_get_content_oid (ksba_cms_t cms, int what);
-gpg_error_t ksba_cms_get_content_enc_iv (ksba_cms_t cms, unsigned char *iv,
+gpg_error_t ksba_cms_get_content_enc_iv (ksba_cms_t cms, void *iv,
                                          size_t maxivlen, size_t *ivlen);
 const char *ksba_cms_get_digest_algo_list (ksba_cms_t cms, int idx);
 gpg_error_t ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
@@ -294,7 +294,7 @@ gpg_error_t ksba_cms_add_smime_capability (ksba_cms_t cms, const char *oid,
                                            const unsigned char *der,
                                            size_t derlen);
 gpg_error_t ksba_cms_set_message_digest (ksba_cms_t cms, int idx,
-                                         const char *digest,
+                                         const unsigned char *digest,
                                          size_t digest_len);
 gpg_error_t ksba_cms_set_signing_time (ksba_cms_t cms, int idx,
                                        const ksba_isotime_t sigtime);
@@ -303,7 +303,7 @@ gpg_error_t ksba_cms_set_sig_val (ksba_cms_t cms,
 
 gpg_error_t ksba_cms_set_content_enc_algo (ksba_cms_t cms,
                                            const char *oid,
-                                           const unsigned char *iv,
+                                           const void *iv,
                                            size_t ivlen);
 gpg_error_t ksba_cms_add_recipient (ksba_cms_t cms, ksba_cert_t cert);
 gpg_error_t ksba_cms_set_enc_val (ksba_cms_t cms,
@@ -400,7 +400,7 @@ gpg_error_t ksba_certreq_set_public_key (ksba_certreq_t cr,
                                          ksba_const_sexp_t key);
 gpg_error_t ksba_certreq_add_extension (ksba_certreq_t cr,
                                         const char *oid, int is_crit,
-                                        const unsigned char *der,
+                                        const void *der,
                                         size_t derlen);
 gpg_error_t ksba_certreq_set_sig_val (ksba_certreq_t cr,
                                       ksba_const_sexp_t sigval);

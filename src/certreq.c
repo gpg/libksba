@@ -190,7 +190,7 @@ ksba_certreq_set_public_key (ksba_certreq_t cr, ksba_const_sexp_t key)
 gpg_error_t
 ksba_certreq_add_extension (ksba_certreq_t cr,
                             const char *oid, int is_crit,
-                            const unsigned char *der, size_t derlen)
+                            const void *der, size_t derlen)
 {
   size_t oidlen;
   struct extn_list_s *e;

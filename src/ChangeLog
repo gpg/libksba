@@ -1,3 +1,13 @@
+2005-06-15  Werner Koch  <wk@g10code.com>
+
+	* ksba.h, certreq.c (ksba_certreq_add_extension): Changed arg DER from
+	unsigned char* to void*.
+	* ksba.h, cms.c (ksba_cms_set_content_enc_algo): Changed arg IV
+	from unsigned char* to void*.
+	* ksba.h, cms.c (ksba_cms_get_content_enc_iv): Ditto.
+	* ksba.h, cms.c (ksba_cms_set_message_digest): Changed arg DIGEST
+	from char* to unsigned char*.
+
 2005-06-02  Werner Koch  <wk@g10code.com>
 
 	* Makefile.am: Add flags for gnulib.

@@ -667,10 +667,11 @@ ksba_cms_get_content_oid (ksba_cms_t cms, int what)
   return NULL;
 }
 
-/* copy the initialization vector into iv and its len into ivlen.
+
+/* Copy the initialization vector into iv and its len into ivlen.
    The caller should provide a suitable large buffer */
 gpg_error_t
-ksba_cms_get_content_enc_iv (ksba_cms_t cms, unsigned char *iv,
+ksba_cms_get_content_enc_iv (ksba_cms_t cms, void *iv,
                              size_t maxivlen, size_t *ivlen)
 {
   if (!cms || !iv || !ivlen)
@@ -1498,7 +1499,7 @@ ksba_cms_add_smime_capability (ksba_cms_t cms, const char *oid,
  **/
 gpg_error_t
 ksba_cms_set_message_digest (ksba_cms_t cms, int idx, 
-                             const char *digest, size_t digest_len)
+                             const unsigned char *digest, size_t digest_len)
 { 
   struct certlist_s *cl;
 
@@ -1701,7 +1702,7 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
 gpg_error_t
 ksba_cms_set_content_enc_algo (ksba_cms_t cms,
                                const char *oid,
-                               const unsigned char *iv, size_t ivlen)
+                               const void *iv, size_t ivlen)
 {
   if (!cms || !oid)
     return gpg_error (GPG_ERR_INV_VALUE);
