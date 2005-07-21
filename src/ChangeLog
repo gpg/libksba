@@ -1,3 +1,14 @@
+2005-07-21  Werner Koch  <wk@g10code.com>
+
+	* certreq.h (struct general_names_s): New.
+	(struct ksba_certreq_s): New member SUBJECT_ALT_NAMES.
+	* certreq.c (ksba_certreq_release): Free it.
+	(add_general_names_to_extn): New.
+	(build_cri): And build them here.
+
+	* cert.c (get_name): Support dNSName and uRI.
+	* certreq.c (ksba_certreq_add_subject): Ditto.
+
 2005-06-15  Werner Koch  <wk@g10code.com>
 
 	* ksba.h, certreq.c (ksba_certreq_add_extension): Changed arg DER from

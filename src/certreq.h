@@ -1,5 +1,5 @@
 /* certreq.h - Internal definitions for pkcs-10 objects
- *      Copyright (C) 2002 g10 Code GmbH
+ *      Copyright (C) 2002, 2005 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -28,7 +28,8 @@ typedef struct asn_node_struct *AsnNode;  /* FIXME: should not go here */
 #define HAVE_TYPEDEFD_ASNNODE
 #endif
 
-struct extn_list_s {
+struct extn_list_s 
+{
   struct extn_list_s *next;
   const char *oid;
   int critical;
@@ -37,7 +38,21 @@ struct extn_list_s {
 };
 
 
-struct ksba_certreq_s {
+/* Object to collect information for building a GeneralNames. */
+struct general_names_s 
+{
+  struct general_names_s *next;
+  int tag;   /* The GeneralName CHOICE.  Only certain values are
+                supported. This is not strictly required because DATA
+                below has already been prefixed with the DER encoded
+                tag. */
+  size_t datalen; /* Length of the data. */
+  char data[1];   /* The actual data:  encoded tag, llength and value. */
+};
+
+
+struct ksba_certreq_s 
+{
   gpg_error_t last_error;
 
   ksba_writer_t writer;
@@ -55,6 +70,8 @@ struct ksba_certreq_s {
     unsigned char *der;
     size_t derlen;
   } key;
+
+  struct general_names_s *subject_alt_names;
 
   struct extn_list_s *extn_list;
 

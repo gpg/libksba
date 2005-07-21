@@ -502,7 +502,7 @@ get_name (ksba_cert_t cert, int idx, int use_subject, char **result)
       if (--idx)
         ; /* not yet at the desired index */
       else if (ti.tag == 1)
-        { /* rfc822Name - this is an imlicit IA5_STRING */
+        { /* rfc822Name - this is an implicit IA5_STRING */
           p = xtrymalloc (ti.length+3);
           if (!p)
             return gpg_error (GPG_ERR_ENOMEM);
@@ -513,6 +513,23 @@ get_name (ksba_cert_t cert, int idx, int use_subject, char **result)
           *result = p;
           return 0;
         }
+      else if (ti.tag == 2 || ti.tag == 6)
+        { /* dNSName or URI - this are implicit IA5_STRINGs */
+          char numbuf[30];
+
+          snprintf (numbuf, DIM(numbuf), "%lu:", ti.length);
+          p = xtrymalloc (11 + strlen (numbuf) + ti.length + 3);
+          if (!p)
+            return gpg_error (GPG_ERR_ENOMEM);
+          *result = p;
+          p = stpcpy (p, ti.tag == 2? "(8:dns-name" : "(3:uri");
+          p = stpcpy (p, numbuf);
+          memcpy (p, der, ti.length);
+          p += ti.length;
+          *p++ = ')';
+          *p = 0;
+          return 0;
+        } 
 
       /* advance pointer */
       der += ti.length;

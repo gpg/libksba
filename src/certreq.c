@@ -72,6 +72,12 @@ ksba_certreq_release (ksba_certreq_t cr)
   xfree (cr->cri.der);
   xfree (cr->sig_val.algo);
   xfree (cr->sig_val.value);
+  while (cr->subject_alt_names)
+    {
+      struct general_names_s *tmp = cr->subject_alt_names->next;
+      xfree (cr->subject_alt_names);
+      cr->subject_alt_names = tmp;
+    }
   while (cr->extn_list)
     {
       struct extn_list_s *e = cr->extn_list->next;
@@ -118,9 +124,12 @@ gpg_error_t
 ksba_certreq_add_subject (ksba_certreq_t cr, const char *name)
 {
   unsigned long namelen;
-  size_t n, n1, n2;
-  struct extn_list_s *e;
+  size_t n, n1;
+  struct general_names_s *gn;
   unsigned char *der;
+  int tag;
+  const char *endp;
+
 
   if (!cr || !name)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -128,27 +137,86 @@ ksba_certreq_add_subject (ksba_certreq_t cr, const char *name)
     return _ksba_dn_from_str (name, &cr->subject.der, &cr->subject.derlen);
   /* This is assumed to be an subjectAltName. */
 
-  /* We only support email addresses for now, do some very basic
-     checks.  Note that the way we pass the name should match what
-     ksba_cert_get_subject() returns */
+  /* Note that the way we pass the name should match what
+     ksba_cert_get_subject() returns.  In particular we expect that it
+     is a real string and thus a canonical S-expression is
+     additionally terminated by a 0. */
   namelen = strlen (name);
-  if (*name != '<' || name[namelen-1] != '>'
-      || namelen < 4 || !strchr (name, '@'))
+  if (*name == '<' && name[namelen-1] == '>'
+      && namelen >= 4 && strchr (name, '@'))
+    {
+      name++;
+      namelen -= 2;
+      tag = 1;  /* rfc822Name */
+    }
+  else if (!strncmp (name, "(8:dns-name", 11))
+    {
+      tag = 2; /* dNSName */
+      namelen = strtoul (name+11, (char**)&endp, 10);
+      name = endp;
+      if (!namelen || *name != ':')
+        return gpg_error (GPG_ERR_INV_SEXP); 
+      name++;
+    }
+  else if (!strncmp (name, "(3:uri", 6))
+    {
+      tag = 6; /* uRI */
+      namelen = strtoul (name+6, (char**)&endp, 10);
+      name = endp;
+      if (!namelen || *name != ':')
+        return gpg_error (GPG_ERR_INV_SEXP); 
+      name++;
+    }
+  else
     return gpg_error (GPG_ERR_INV_VALUE);
-  name++;
-  namelen -= 2;
 
-  /* Fixme: it is probably better to put all altNames into one sequence */
-
-  n1  = _ksba_ber_count_tl (1, CLASS_CONTEXT, 0, namelen);
+  n1  = _ksba_ber_count_tl (tag, CLASS_CONTEXT, 0, namelen);
   n1 += namelen;
+  
+  gn = xtrymalloc (sizeof *gn + n1 - 1);
+  if (!gn)
+    return gpg_error_from_errno (errno);
+  gn->tag = tag;
+  gn->datalen = n1;
+  der = (unsigned char *)gn->data;
+  n = _ksba_ber_encode_tl (der, tag, CLASS_CONTEXT, 0, namelen);
+  if (!n)
+    return gpg_error (GPG_ERR_BUG); 
+  der += n;
+  memcpy (der, name, namelen);
+  assert (der + namelen - (unsigned char*)gn->data == n1);
+  
+  gn->next = cr->subject_alt_names;
+  cr->subject_alt_names = gn;
+
+  return 0;
+}
+
+
+/* Add the GeneralNames object GNAMES to the list of extensions in CR.
+   Use OID as object identifier for the extensions. */
+static gpg_error_t
+add_general_names_to_extn (ksba_certreq_t cr, struct general_names_s *gnames,
+                           const char *oid)
+{
+  struct general_names_s *g;
+  size_t n, n1, n2;
+  struct extn_list_s *e;
+  unsigned char *der;
+
+  /* Calculate the required size. */
+  n1 = 0;
+  for (g=gnames; g; g = g->next)
+    n1 += g->datalen;
+
   n2  = _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n1);
   n2 += n1;
-  
+
+  /* Allocate memory and encode all. */
   e = xtrymalloc (sizeof *e + n2 - 1);
   if (!e)
-    return gpg_error (GPG_ERR_ENOMEM);
-  e->oid = oidstr_subjectAltName;
+    return gpg_error_from_errno (errno);
+  e->oid = oid;
   e->critical = 0;
   e->derlen = n2;
   der = e->der;
@@ -156,21 +224,20 @@ ksba_certreq_add_subject (ksba_certreq_t cr, const char *name)
   if (!n)
     return gpg_error (GPG_ERR_BUG); /* (no need to cleanup after a bug) */
   der += n;
-  n = _ksba_ber_encode_tl (der, 1, CLASS_CONTEXT, 0, namelen);
-  if (!n)
-    return gpg_error (GPG_ERR_BUG); 
-  der += n;
-  memcpy (der, name, namelen);
-  assert (der+namelen-e->der == n2);
+
+  for (g=gnames; g; g = g->next)
+    {
+      memcpy (der, g->data, g->datalen);
+      der += g->datalen;
+    }
+  assert (der - e->der == n2);
   
   e->next = cr->extn_list;
   cr->extn_list = e;
-
   return 0;
 }
 
-/* Store the subject's name.  Does perform some syntactic checks on
-   the name */
+/* Store the subject's publickey. */
 gpg_error_t
 ksba_certreq_set_public_key (ksba_certreq_t cr, ksba_const_sexp_t key)
 {
@@ -324,7 +391,7 @@ ksba_certreq_set_sig_val (ksba_certreq_t cr, ksba_const_sexp_t sigval)
 
 
 
-/* build the extension block and return it in R_DER and R_DERLEN */
+/* Build the extension block and return it in R_DER and R_DERLEN */
 static gpg_error_t
 build_extensions (ksba_certreq_t cr, void **r_der, size_t *r_derlen)
 {
@@ -518,7 +585,24 @@ build_cri (ksba_certreq_t cr)
   err = ksba_writer_write (writer, cr->key.der, cr->key.derlen);
   if (err)
     goto leave;
+
+  /* Copy generalNames objects to the extension list. */
+  if (cr->subject_alt_names)
+    {
+      err = add_general_names_to_extn (cr, cr->subject_alt_names, 
+                                       oidstr_subjectAltName);
+      if (err)
+        goto leave;
+      while (cr->subject_alt_names)
+        {
+          struct general_names_s *tmp = cr->subject_alt_names->next;
+          xfree (cr->subject_alt_names);
+          cr->subject_alt_names = tmp;
+        }
+      cr->subject_alt_names = NULL;
+    }
   
+
   /* Write the extensions.  Note that the implicit SET OF is REQUIRED */
   xfree (value); value = NULL;
   valuelen = 0;

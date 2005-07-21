@@ -35,9 +35,6 @@ name part when old style quoting is not used.
 ** Support DSA
 
 
-* src/certreq.c
-** It is probably better to put all altNames into one sequence
-
 * src/keyinfo.c
 ** Extract DSA parameters
 ** Do we need to support BER encoded stuff?

@@ -1,6 +1,7 @@
 Noteworthy changes in version 0.9.12
 -------------------------------------------------
 
+ * GeneralNames types dNSName and Uri are now supported. 
 
  * Minor changes to some function declarations.  This should not
    affect any compilation.
