@@ -1,4 +1,4 @@
-Noteworthy changes in version 0.9.12
+Noteworthy changes in version 0.9.12 (2005-08-01)
 -------------------------------------------------
 
  * GeneralNames types dNSName and Uri are now supported. 
