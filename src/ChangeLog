@@ -1,3 +1,7 @@
+2005-09-28  Marcus Brinkmann  <marcus@g10code.de>
+
+	* Makefile.am (AM_CCPFLAGS): Renamed to AM_CPPFLAGS.
+
 2005-07-21  Werner Koch  <wk@g10code.com>
 
 	* certreq.h (struct general_names_s): New.
