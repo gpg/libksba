@@ -37,6 +37,8 @@ static void *hash_buffer_fnc_arg;
 
 
 
+/* Note, that we expect that the free fucntion does not change
+   ERRNO. */
 void
 ksba_set_malloc_hooks ( void *(*new_alloc_func)(size_t n),
                         void *(*new_realloc_func)(void *p, size_t n),

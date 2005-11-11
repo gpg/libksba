@@ -37,6 +37,7 @@ KSBA_0.9 {
     ksba_cert_read_der; ksba_cert_ref; ksba_cert_release;
     ksba_cert_get_authority_info_access; ksba_cert_get_subject_info_access;
     ksba_cert_get_subj_key_id;
+    ksba_cert_set_user_data; ksba_cert_get_user_data;
 
     ksba_certreq_add_subject; ksba_certreq_build; ksba_certreq_new;
     ksba_certreq_release; ksba_certreq_set_hash_function; 

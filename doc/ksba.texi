@@ -119,6 +119,7 @@ Certificate Handling
 * Creating certificates::       How to create a certificate object.
 * Retrieving attributes::       How to get the attributes of a certificate.
 * Setting attributes::          How to set certicates attributes.
+* User data::                   How to associate other data with a certificate.
 
 Mastering the Cryptographic Message Syntax
 
@@ -170,7 +171,7 @@ Anybody can use, modify, and redistribute it under the terms of the GNU
 General Public License (@pxref{Copying}).
 
 @item It hides the low level stuff
-`KSBA' a higlevel interface to the implemented protocols and presents
+`KSBA' a highlevel interface to the implemented protocols and presents
 the data in a consistent way.  There is no more need to worry about all
 the nasty details of the protocols.  The API gives the C programmer a
 more usual way of interacting with the data.
@@ -316,6 +317,7 @@ an S-expression is intrinsic available.
 * Creating certificates::       How to create a certificate object.
 * Retrieving attributes::       How to get the attributes of a certificate.
 * Setting attributes::          How to set certicates attributes.
+* User data::                   How to associate other data with a certificate.
 @end menu
 
 
@@ -656,6 +658,49 @@ See RFC-2459, section 4.2.2.2 for the defintion of this attribute.
 @section How to set certificate attributes
 
 [This needs to be written.  For example code see newpg/sm/sign.c]
+
+@node User data
+@section How to associate other data with a certificate.
+
+Certificate objects play a central role in many applications and often
+it is desirable to associate other data with the certificate to avoid
+wrapping the certificate object into an own object.  `KSBA' provides a
+mechanism for this by means of two functions:
+
+@deftypefun gpg_error_t ksba_cert_set_user_data (@w{ksba_cert_t @var{cert}, const char *@var{key}, const void *@var{data}, size_t @var{datalen}})
+
+
+Stores arbitrary data along with a certificate.  The data is expected in
+the buffer @var{data} of length @var{datalen}. It will be stored under
+the string @var{key}.  If data is already stored under this key it will
+be replaced by the new data. Using @code{NULL} for @var{data} will
+effectivly delete the data.
+
+On error (i.e. out of memory) an already existing data object
+stored under @var{key} may get deleted.
+
+@strong{Caution:} This function is definitely not thread safe because we
+don't employ any locking mechanisms.
+@end deftypefun
+
+
+@deftypefun gpg_error_t ksba_cert_get_user_data (@w{ksba_cert_t @var{cert},} @w{const char *@var{key},} @w{void *@var{buffer},} @w{size_t @var{bufferlen},} @w{size_t *@var{datalen}})
+
+Return user data for certificate @var{cert} stored under the string
+@var{key}. The caller needs to provide a suitable large @var{buffer} and
+the usable length of this buffer in @var{bufferlen}.  If @var{datalen}
+is not @code{NULL}, the length of the data stored in @var{buffer} will
+be stored there.
+
+If @var{buffer} is given as @code{NULL}, @var{bufferlen} will be ignored
+and the required length of the buffer will be returned at @var{datalen}.
+
+On success 0 is returned.  If no data is stored under thengiven key,
+@code{GPG_ERR_NOT_FOUND} is returned.  If the provided buffer is too
+short and @var{buffer} is not @code{NULL},
+@code{GPG_ERR_BUFFER_TOO_SHORT} will be returned.
+@end deftypefun
+
 
 
 @node CMS

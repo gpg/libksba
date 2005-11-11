@@ -1,3 +1,14 @@
+Noteworthy changes in version 0.9.13
+-------------------------------------------------
+
+ * New functions to associate user data with a certificate object.
+
+ * Interface changes relative to the 0.9.12 release:
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ksba_cert_set_user_data        NEW
+ ksba_cert_get_user_data        NEW
+
+
 Noteworthy changes in version 0.9.12 (2005-08-01)
 -------------------------------------------------
 

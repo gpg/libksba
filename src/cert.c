@@ -1,4 +1,4 @@
-/* cert.c - main function for the certificate handling
+g/* cert.c - main function for the certificate handling
  *      Copyright (C) 2001, 2002, 2003, 2004, 2005 g10 Code GmbH
  *
  * This file is part of KSBA.
@@ -95,6 +95,21 @@ ksba_cert_release (ksba_cert_t cert)
   if (--cert->ref_count)
     return;
 
+  if (cert->udata)
+    {
+      struct cert_user_data *ud = cert->udata;
+      cert->udata = NULL;  
+      do
+        {
+          struct cert_user_data *ud2 = ud->next;
+          if (ud->data && ud->data != ud->databuf)
+            xfree (ud->data);
+          xfree (ud);
+          ud = ud2;
+        }
+      while (ud);
+    }
+  
   xfree (cert->cache.digest_algo);
   if (cert->cache.extns_valid)
     {
@@ -103,8 +118,120 @@ ksba_cert_release (ksba_cert_t cert)
       xfree (cert->cache.extns);
     }
 
+
   /* FIXME: release cert->root, ->asn_tree */
   xfree (cert);
+}
+
+
+/* Store arbitrary data along with a certificate.  The DATA of length
+   DATALEN will be stored under the string KEY.  If some data is
+   already stored under this key it will be replaced by the new data.
+   Using NULL for DATA will effectivly delete the data.
+
+   On error (i.e. out or memory) an already existing data object
+   stored under KEY may get deleted.
+
+   This function is not thread safe because we don't have employ any
+   locking. */
+gpg_error_t
+ksba_cert_set_user_data (ksba_cert_t cert,
+                         const char *key, const void *data, size_t datalen)
+{
+  struct cert_user_data *ud;
+
+  if (!cert || !key || !*key)
+    return gpg_error (GPG_ERR_INV_VALUE);
+
+  for (ud=cert->udata; ud; ud = ud->next)
+    if (!strcmp (ud->key, key))
+      break;
+  if (ud)  /* Update the data stored under this key or reuse this item. */
+    {
+      if (ud->data && ud->data != ud->databuf)
+        xfree (ud->data);
+      ud->data = NULL;
+      if (data && datalen <= sizeof ud->databuf)
+        {
+          memcpy (ud->databuf, data, datalen);
+          ud->data = ud->databuf;
+          ud->datalen = datalen;
+        }
+      else if (data)
+        {
+          ud->data = xtrymalloc (datalen);
+          if (!ud->data)
+            return gpg_error_from_errno (errno);
+          memcpy (ud->data, data, datalen);
+          ud->datalen = datalen;
+        }
+    }
+  else if (data) /* Insert as a new item. */
+    {
+      ud = xtrycalloc (1, sizeof *ud + strlen (key));
+      if (!ud->data)
+        return gpg_error_from_errno (errno);
+      strcpy (ud->key, key);
+      if (datalen <= sizeof ud->databuf)
+        {
+          memcpy (ud->databuf, data, datalen);
+          ud->data = ud->databuf;
+          ud->datalen = datalen;
+        }
+      else
+        {
+          ud->data = xtrymalloc (datalen);
+          if (!ud->data)
+            {
+              xfree (ud);
+              return gpg_error_from_errno (errno);
+            }
+          memcpy (ud->data, data, datalen);
+          ud->datalen = datalen;
+        }
+    }
+
+  return 0;
+}
+
+
+
+/* Return user data for certificate CERT stored under the string
+   KEY. The caller needs to provide a suitable large BUFFER and pass
+   the usable length of the buffer in BUFFERLEN.  If DATALEN is not
+   NULL, the length of the data stored at BUFFER will be stored there.
+
+   If BUFFER is NULL, BUFFERLEN will be ignored and the required
+   length of the buffer will be returned at DATALEN.
+
+   On success 0 is returned.  If no data is stored under KEY
+   GPG_ERR_NOT_FOUND is returned.  If the provided buffer is too
+   short, GPG_ERR_BUFFER_TOO_SHORT will be returned (note, that this
+   is not the case if BUFFER is NULL).
+*/
+gpg_error_t
+ksba_cert_get_user_data (ksba_cert_t cert, const char *key,
+                         void *buffer, size_t bufferlen, size_t *datalen)
+{
+  struct cert_user_data *ud;
+
+  if (!cert || !key || !*key)
+    return gpg_error (GPG_ERR_INV_VALUE);
+
+  for (ud=cert->udata; ud; ud = ud->next)
+    if (!strcmp (ud->key, key))
+      break;
+  if (!ud || !ud->data)
+    return gpg_error (GPG_ERR_NOT_FOUND);
+  if (datalen)
+    *datalen = ud->datalen;
+  if (buffer)
+    {
+      if (ud->datalen > bufferlen)
+        return gpg_error (GPG_ERR_BUFFER_TOO_SHORT);
+      memcpy (buffer, ud->data, ud->datalen);
+    }
+  return 0;
 }
 
 
