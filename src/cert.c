@@ -1,4 +1,4 @@
-g/* cert.c - main function for the certificate handling
+/* cert.c - main function for the certificate handling
  *      Copyright (C) 2001, 2002, 2003, 2004, 2005 g10 Code GmbH
  *
  * This file is part of KSBA.
@@ -169,7 +169,7 @@ ksba_cert_set_user_data (ksba_cert_t cert,
   else if (data) /* Insert as a new item. */
     {
       ud = xtrycalloc (1, sizeof *ud + strlen (key));
-      if (!ud->data)
+      if (!ud)
         return gpg_error_from_errno (errno);
       strcpy (ud->key, key);
       if (datalen <= sizeof ud->databuf)
@@ -189,6 +189,8 @@ ksba_cert_set_user_data (ksba_cert_t cert,
           memcpy (ud->data, data, datalen);
           ud->datalen = datalen;
         }
+      ud->next = cert->udata;
+      cert->udata = ud;
     }
 
   return 0;

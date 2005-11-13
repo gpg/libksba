@@ -1,3 +1,9 @@
+2005-11-13  Werner Koch  <wk@g10code.com>
+
+	* cert.c (ksba_cert_set_user_data): Fixed.
+	* ksba.h (ksba_cert_set_user_data, ksba_cert_get_user_data): Add
+	prototypes.
+
 2005-11-11  Werner Koch  <wk@g10code.com>
 
 	* cert.h (struct cert_user_data): New.

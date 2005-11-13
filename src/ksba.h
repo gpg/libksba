@@ -48,49 +48,55 @@ extern "C" {
 
 typedef gpg_error_t KsbaError _KSBA_DEPRECATED;
 
-typedef enum {
-  KSBA_CT_NONE = 0,
-  KSBA_CT_DATA = 1,
-  KSBA_CT_SIGNED_DATA = 2,
-  KSBA_CT_ENVELOPED_DATA = 3,
-  KSBA_CT_DIGESTED_DATA = 4,
-  KSBA_CT_ENCRYPTED_DATA = 5,
-  KSBA_CT_AUTH_DATA = 6,
-  KSBA_CT_PKCS12 = 7   
-} ksba_content_type_t;
+typedef enum 
+  {
+    KSBA_CT_NONE = 0,
+    KSBA_CT_DATA = 1,
+    KSBA_CT_SIGNED_DATA = 2,
+    KSBA_CT_ENVELOPED_DATA = 3,
+    KSBA_CT_DIGESTED_DATA = 4,
+    KSBA_CT_ENCRYPTED_DATA = 5,
+    KSBA_CT_AUTH_DATA = 6,
+    KSBA_CT_PKCS12 = 7   
+  } 
+ksba_content_type_t;
 typedef ksba_content_type_t KsbaContentType _KSBA_DEPRECATED;
 
 
 
-typedef enum {
-  KSBA_SR_NONE = 0,     /* Never seen by libksba user. */
-  KSBA_SR_RUNNING = 1,  /* Never seen by libksba user. */
-  KSBA_SR_GOT_CONTENT = 2,
-  KSBA_SR_NEED_HASH = 3,
-  KSBA_SR_BEGIN_DATA = 4,
-  KSBA_SR_END_DATA = 5,
-  KSBA_SR_READY = 6,
-  KSBA_SR_NEED_SIG = 7,
-  KSBA_SR_DETACHED_DATA = 8,
-  KSBA_SR_BEGIN_ITEMS = 9,
-  KSBA_SR_GOT_ITEM = 10,
-  KSBA_SR_END_ITEMS = 11,
-} ksba_stop_reason_t;
+typedef enum
+  {
+    KSBA_SR_NONE = 0,     /* Never seen by libksba user. */
+    KSBA_SR_RUNNING = 1,  /* Never seen by libksba user. */
+    KSBA_SR_GOT_CONTENT = 2,
+    KSBA_SR_NEED_HASH = 3,
+    KSBA_SR_BEGIN_DATA = 4,
+    KSBA_SR_END_DATA = 5,
+    KSBA_SR_READY = 6,
+    KSBA_SR_NEED_SIG = 7,
+    KSBA_SR_DETACHED_DATA = 8,
+    KSBA_SR_BEGIN_ITEMS = 9,
+    KSBA_SR_GOT_ITEM = 10,
+    KSBA_SR_END_ITEMS = 11,
+  } 
+ksba_stop_reason_t;
 typedef ksba_stop_reason_t KsbaStopReason _KSBA_DEPRECATED;
 
-typedef enum {
-  KSBA_CRLREASON_UNSPECIFIED = 1,
-  KSBA_CRLREASON_KEY_COMPROMISE = 2,
-  KSBA_CRLREASON_CA_COMPROMISE = 4,
-  KSBA_CRLREASON_AFFILIATION_CHANGED = 8,
-  KSBA_CRLREASON_SUPERSEDED = 16,
-  KSBA_CRLREASON_CESSATION_OF_OPERATION = 32,
-  KSBA_CRLREASON_CERTIFICATE_HOLD = 64,
-  KSBA_CRLREASON_REMOVE_FROM_CRL = 256,
-  KSBA_CRLREASON_PRIVILEGE_WITHDRAWN = 512,
-  KSBA_CRLREASON_AA_COMPROMISE = 1024,
-  KSBA_CRLREASON_OTHER = 32768
-} ksba_crl_reason_t;
+typedef enum
+  {
+    KSBA_CRLREASON_UNSPECIFIED = 1,
+    KSBA_CRLREASON_KEY_COMPROMISE = 2,
+    KSBA_CRLREASON_CA_COMPROMISE = 4,
+    KSBA_CRLREASON_AFFILIATION_CHANGED = 8,
+    KSBA_CRLREASON_SUPERSEDED = 16,
+    KSBA_CRLREASON_CESSATION_OF_OPERATION = 32,
+    KSBA_CRLREASON_CERTIFICATE_HOLD = 64,
+    KSBA_CRLREASON_REMOVE_FROM_CRL = 256,
+    KSBA_CRLREASON_PRIVILEGE_WITHDRAWN = 512,
+    KSBA_CRLREASON_AA_COMPROMISE = 1024,
+    KSBA_CRLREASON_OTHER = 32768
+  } 
+ksba_crl_reason_t;
 typedef ksba_crl_reason_t KsbaCRLReason _KSBA_DEPRECATED;
 
 typedef enum
@@ -117,17 +123,19 @@ typedef enum
 ksba_status_t;
 
 
-typedef enum {
-  KSBA_KEYUSAGE_DIGITAL_SIGNATURE =  1,
-  KSBA_KEYUSAGE_NON_REPUDIATION   =  2,
-  KSBA_KEYUSAGE_KEY_ENCIPHERMENT  =  4,
-  KSBA_KEYUSAGE_DATA_ENCIPHERMENT =  8,
-  KSBA_KEYUSAGE_KEY_AGREEMENT     = 16,
-  KSBA_KEYUSAGE_KEY_CERT_SIGN     = 32,     
-  KSBA_KEYUSAGE_CRL_SIGN          = 64,
-  KSBA_KEYUSAGE_ENCIPHER_ONLY    = 128,
-  KSBA_KEYUSAGE_DECIPHER_ONLY    = 256
-} ksba_key_usage_t;
+typedef enum
+  {
+    KSBA_KEYUSAGE_DIGITAL_SIGNATURE =  1,
+    KSBA_KEYUSAGE_NON_REPUDIATION   =  2,
+    KSBA_KEYUSAGE_KEY_ENCIPHERMENT  =  4,
+    KSBA_KEYUSAGE_DATA_ENCIPHERMENT =  8,
+    KSBA_KEYUSAGE_KEY_AGREEMENT     = 16,
+    KSBA_KEYUSAGE_KEY_CERT_SIGN     = 32,     
+    KSBA_KEYUSAGE_CRL_SIGN          = 64,
+    KSBA_KEYUSAGE_ENCIPHER_ONLY    = 128,
+    KSBA_KEYUSAGE_DECIPHER_ONLY    = 256
+  } 
+ksba_key_usage_t;
 typedef ksba_key_usage_t KsbaKeyUsage _KSBA_DEPRECATED;
 
 /* ISO format, e.g. "19610711T172059", assumed to be UTC. */
@@ -200,8 +208,14 @@ typedef const unsigned char *KsbaConstSexp _KSBA_DEPRECATED;
 
 /*-- cert.c --*/
 gpg_error_t ksba_cert_new (ksba_cert_t *acert);
-void         ksba_cert_ref (ksba_cert_t cert);
+void        ksba_cert_ref (ksba_cert_t cert);
 void        ksba_cert_release (ksba_cert_t cert);
+gpg_error_t ksba_cert_set_user_data (ksba_cert_t cert, const char *key,
+                                     const void *data, size_t datalen);
+gpg_error_t ksba_cert_get_user_data (ksba_cert_t cert, const char *key,
+                                     void *buffer, size_t bufferlen,
+                                     size_t *datalen);
+
 gpg_error_t ksba_cert_read_der (ksba_cert_t cert, ksba_reader_t reader);
 gpg_error_t ksba_cert_init_from_mem (ksba_cert_t cert,
                                      const void *buffer, size_t length);
