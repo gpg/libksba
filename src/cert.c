@@ -132,7 +132,7 @@ ksba_cert_release (ksba_cert_t cert)
    On error (i.e. out or memory) an already existing data object
    stored under KEY may get deleted.
 
-   This function is not thread safe because we don't have employ any
+   This function is not thread safe because we don't employ any
    locking. */
 gpg_error_t
 ksba_cert_set_user_data (ksba_cert_t cert,

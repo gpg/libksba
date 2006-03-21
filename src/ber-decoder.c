@@ -115,12 +115,12 @@ dump_decoder_state (DECODER_STATE ds)
 
   for (i=0; i < ds->idx; i++)
     {
-      fprintf (stdout,"  ds stack[%d] (", i);
+      fprintf (stderr,"  ds stack[%d] (", i);
       if (ds->stack[i].node)
-        _ksba_asn_node_dump (ds->stack[i].node, stdout);
+        _ksba_asn_node_dump (ds->stack[i].node, stderr);
       else
-        printf ("Null");
-      fprintf (stdout,") %s%d (%d)%s\n",
+        fprintf (stderr, "Null");
+      fprintf (stderr,") %s%d (%d)%s\n",
                ds->stack[i].ndef_length? "ndef ":"",
                ds->stack[i].length,
                ds->stack[i].nread,
@@ -475,22 +475,22 @@ match_der (AsnNode root, const struct tag_info *ti,
   if (!node)
     {
       if (debug)
-        puts ("  looking for anchor");
+        fputs ("  looking for anchor\n", stderr);
       node = find_anchor_node (root,  ti);
       if (!node)
-        fputs (" anchor node not found\n", stdout);
+        fputs (" anchor node not found\n", stderr);
     }
   else if (ds->cur.again)
     {
       if (debug)
-        puts ("  doing last again");
+        fputs ("  doing last again\n", stderr);
       ds->cur.again = 0;
     }
   else if (_ksba_asn_is_primitive (node->type) || node->type == TYPE_ANY
            || node->type == TYPE_SIZE || node->type == TYPE_DEFAULT )
     {
       if (debug)
-        puts ("  primitive type - get next");
+        fputs ("  primitive type - get next\n", stderr);
       if (node->right)
         node = node->right;
       else if (!node->flags.in_choice)
@@ -498,7 +498,7 @@ match_der (AsnNode root, const struct tag_info *ti,
           if (node->flags.is_implicit)
             {
               if (debug)
-                puts ("  node was implicit - advancing");
+                fputs ("  node was implicit - advancing\n", stderr);
               while (node->left && node->left->right == node)
                 node = node->left;
               node = node->left; /* this is the up pointer */
@@ -511,7 +511,7 @@ match_der (AsnNode root, const struct tag_info *ti,
       else /* in choice */
         {
           if (debug)
-            puts ("  going up after choice - get next");
+            fputs ("  going up after choice - get next\n", stderr);
           while (node->left && node->left->right == node)
             node = node->left;
           node = node->left; /* this is the up pointer */
@@ -523,20 +523,20 @@ match_der (AsnNode root, const struct tag_info *ti,
     {
       if (debug)
         {
-          printf ("  prepare for seq/set_of (%d %d)  ",
+          fprintf (stderr, "  prepare for seq/set_of (%d %d)  ",
                   ds->cur.length, ds->cur.nread);
-          printf ("  cur: ("); _ksba_asn_node_dump (node, stdout);
-          printf (")\n");
+          fprintf (stderr, "  cur: ("); _ksba_asn_node_dump (node, stderr);
+          fprintf (stderr, ")\n");
           if (ds->cur.node->flags.in_array)
-            puts ("  This is in an array!");
+            fputs ("  This is in an array!\n", stderr);
           if (ds->cur.went_up)
-            puts ("  And we are going up!");
+            fputs ("  And we are going up!\n", stderr);
         }
       if ((ds->cur.went_up && !ds->cur.node->flags.in_array) ||
           (ds->idx && ds->cur.nread >= ds->stack[ds->idx-1].length))
         {
           if (debug)
-            printf ("  advancing\n");
+            fprintf (stderr, "  advancing\n");
           if (node->right)
             node = node->right;
           else
@@ -560,7 +560,7 @@ match_der (AsnNode root, const struct tag_info *ti,
                && ds->cur.went_up)
         {
           if (debug)
-            puts ("  Reiterating");
+            fputs ("  Reiterating\n", stderr);
           node = _ksba_asn_insert_copy (node);
           if (node)
             prepare_copied_tree (node);
@@ -572,14 +572,14 @@ match_der (AsnNode root, const struct tag_info *ti,
     {
       if (debug)
         {
-          printf ("  prepare for constructed (%d %d) ",
+          fprintf (stderr, "  prepare for constructed (%d %d) ",
                   ds->cur.length, ds->cur.nread);
-          printf ("  cur: ("); _ksba_asn_node_dump (node, stdout);
-          printf (")\n");
+          fprintf (stderr, "  cur: ("); _ksba_asn_node_dump (node, stderr);
+          fprintf (stderr, ")\n");
           if (ds->cur.node->flags.in_array)
-            puts ("  This is in an array!");
+            fputs ("  This is in an array!\n", stderr);
           if (ds->cur.went_up)
-            puts ("  And we going up!");
+            fputs ("  And we going up!\n", stderr);
         }
       ds->cur.in_seq_of = 0;
 
@@ -587,7 +587,7 @@ match_der (AsnNode root, const struct tag_info *ti,
           && ds->cur.went_up)
         {
           if (debug)
-            puts ("  Reiterating this");
+            fputs ("  Reiterating this\n", stderr);
           node = _ksba_asn_insert_copy (node);
           if (node)
             prepare_copied_tree (node);
@@ -625,33 +625,33 @@ match_der (AsnNode root, const struct tag_info *ti,
 
   if (debug)
     {
-      printf ("  Expect ("); _ksba_asn_node_dump (node,stdout); printf (")\n");
+      fprintf (stderr, "  Expect ("); _ksba_asn_node_dump (node,stderr); fprintf (stderr, ")\n");
     }
 
   if (node->flags.skip_this)
     {
       if (debug)
-        printf ("   skipping this\n");
+        fprintf (stderr, "   skipping this\n");
       return 1;
     }
 
   if (node->type == TYPE_SIZE)
     {
       if (debug)
-        printf ("   skipping size tag\n");
+        fprintf (stderr, "   skipping size tag\n");
       return 1;
     }
   if (node->type == TYPE_DEFAULT)
     {
       if (debug)
-        printf ("   skipping default tag\n");
+        fprintf (stderr, "   skipping default tag\n");
       return 1;
     }
 
   if (node->flags.is_implicit)
     {
       if (debug)
-        printf ("   dummy accept for implicit tag\n");
+        fprintf (stderr, "   dummy accept for implicit tag\n");
       return 1; /* again */
     }
 
@@ -664,22 +664,22 @@ match_der (AsnNode root, const struct tag_info *ti,
   if (node->type == TYPE_CHOICE)
     {
       if (debug)
-        printf ("   testing choice...\n");
+        fprintf (stderr, "   testing choice...\n");
       for (node = node->down; node; node = node->right)
         {
           if (debug)
             {
-              printf ("       %s (", node->flags.skip_this? "skip":" cmp");
-              _ksba_asn_node_dump (node, stdout);
-              printf (")\n");
+              fprintf (stderr, "       %s (", node->flags.skip_this? "skip":" cmp");
+              _ksba_asn_node_dump (node, stderr);
+              fprintf (stderr, ")\n");
             }
 
           if (!node->flags.skip_this && cmp_tag (node, ti) == 1)
             {
               if (debug)
                 {
-                  printf ("  choice match <"); dump_tlv (ti, stdout);
-                  printf (">\n");
+                  fprintf (stderr, "  choice match <"); dump_tlv (ti, stderr);
+                  fprintf (stderr, ">\n");
                 }
               /* mark the remaining as done */
               for (node=node->right; node; node = node->right)
@@ -695,14 +695,14 @@ match_der (AsnNode root, const struct tag_info *ti,
   if (node->flags.in_choice)
     {
       if (debug)
-        printf ("   skipping non matching choice\n");
+        fprintf (stderr, "   skipping non matching choice\n");
       return 1;
     }
   
   if (node->flags.is_optional)
     {
       if (debug)
-        printf ("   skipping optional element\n");
+        fprintf (stderr, "   skipping optional element\n");
       if (node->type == TYPE_TAG)
         ds->cur.next_tag = 1;
       return 1;
@@ -711,7 +711,7 @@ match_der (AsnNode root, const struct tag_info *ti,
   if (node->flags.has_default)
     {
       if (debug)
-        printf ("   use default value\n");
+        fprintf (stderr, "   use default value\n");
       if (node->type == TYPE_TAG)
         ds->cur.next_tag = 1;
       *retnode = node;
@@ -731,7 +731,7 @@ decoder_init (BerDecoder d, const char *start_name)
   clear_help_flags (d->root);
   d->bypass = 0;
   if (d->debug)
-    printf ("DECODER_INIT for `%s'\n", start_name? start_name: "[root]");
+    fprintf (stderr, "DECODER_INIT for `%s'\n", start_name? start_name: "[root]");
   return 0;
 }
 
@@ -742,7 +742,7 @@ decoder_deinit (BerDecoder d)
   d->ds = NULL;
   d->val.node = NULL;
   if (d->debug)
-    printf ("DECODER_DEINIT\n");
+    fprintf (stderr, "DECODER_DEINIT\n");
 }
 
 
@@ -763,7 +763,9 @@ decoder_next (BerDecoder d)
 
   if (debug)
     {
-      printf ("ReadTLV <"); dump_tlv (&ti, stdout); printf (">\n");
+      fprintf (stderr, "ReadTLV <");
+      dump_tlv (&ti, stderr);
+      fprintf (stderr, ">\n");
     }
 
   if (d->use_image)
@@ -800,7 +802,9 @@ decoder_next (BerDecoder d)
             case -1:
               if (debug)
                 {
-                  printf ("   FAIL <"); dump_tlv (&ti, stdout); printf (">\n");
+                  fprintf (stderr, "   FAIL <");
+                  dump_tlv (&ti, stderr); 
+                  fprintf (stderr, ">\n");
                 }
               if (d->honor_module_end)
                 {
@@ -813,28 +817,30 @@ decoder_next (BerDecoder d)
               break;
             case 0:
               if (debug)
-                puts ("  End of description");
+                fputs ("  End of description\n", stderr);
               d->bypass = 1;
               break;
             case 1: /* again */
               if (debug)
-                printf ("  Again\n");
+                fprintf (stderr, "  Again\n");
               again = 1;
               break;
             case 2: /* Use default value +  again */
               if (debug)
-                printf ("  Using default\n");
+                fprintf (stderr, "  Using default\n");
               again = 1;
               break;
             case 4: /* Match of ANY on a constructed type */
               if (debug)
-                  printf ("  ANY");
+                  fprintf (stderr, "  ANY");
               ds->cur.in_any = 1;
             case 3: /* match */ 
             case 5: /* end tag */
               if (debug)
                 {
-                  printf ("  Match <"); dump_tlv (&ti, stdout); printf (">\n");
+                  fprintf (stderr, "  Match <");
+                  dump_tlv (&ti, stderr);
+                  fprintf (stderr, ">\n");
                 }
               /* Increment by the header length */
               ds->cur.nread += ti.nhdr;
@@ -846,7 +852,7 @@ decoder_next (BerDecoder d)
               do
                 {
                   if (debug)
-                    printf ("  (length %d nread %d) %s\n",
+                    fprintf (stderr, "  (length %d nread %d) %s\n",
                             ds->idx? ds->stack[ds->idx-1].length:-1,
                             ds->cur.nread,
                             ti.is_constructed? "con":"pri");
@@ -856,8 +862,8 @@ decoder_next (BerDecoder d)
                        && (ds->cur.nread
                            > ds->stack[ds->idx-1].length)) 
                     {
-                      fprintf (stderr, "  ERROR: object length field %d octects"
-                               " too large\n",   
+                      fprintf (stderr, "  ERROR: object length field "
+                               "%d octects too large\n",   
                               ds->cur.nread > ds->cur.length);
                       ds->cur.nread = ds->cur.length;
                     }
@@ -879,7 +885,7 @@ decoder_next (BerDecoder d)
                       && (ds->cur.nread
                           >= ds->stack[ds->idx-1].length));
                   
-              if (ti.is_constructed)
+              if (ti.is_constructed && (ti.length || ti.ndef))
                 {
                   /* prepare for the next level */
                   ds->cur.length = ti.length;
@@ -890,7 +896,7 @@ decoder_next (BerDecoder d)
                   ds->cur.nread = 0;
                 }
               if (debug)
-                printf ("  (length %d nread %d) end\n",
+                fprintf (stderr, "  (length %d nread %d) end\n",
                         ds->idx? ds->stack[ds->idx-1].length:-1,
                         ds->cur.nread);
               break;
@@ -1160,8 +1166,8 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
       *r_imagelen = d->image.used;
       if (d->debug)
         {
-          fputs ("Value Tree:\n", stdout); 
-          _ksba_asn_node_dump_all (*r_root, stdout); 
+          fputs ("Value Tree:\n", stderr); 
+          _ksba_asn_node_dump_all (*r_root, stderr); 
         }
     }
 

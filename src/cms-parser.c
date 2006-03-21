@@ -735,6 +735,7 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
     return gpg_error (GPG_ERR_INV_CMS_OBJ); 
 
   si_tail = &cms->signer_info;
+
   while (ti.length)
     {
       size_t off1, off2;
