@@ -84,7 +84,7 @@ This is edition @value{EDITION}, last updated @value{UPDATED}, of
 * Preparation::                 What you should do before using the library.
 * Certificate Handling::        How to work with X.509 certificates.
 * CMS::                         How to work with CMS (PKCS#7) messages.
-* CRLs::                        How to wor with Certificate Revocation Lists.
+* CRLs::                        How to work with Certificate Revocation Lists.
 * PKCS10::                      How to request certificates.
 * Utilities::                   Various utility functions.
 * Error Handling::              Error numbers and their meanings.
@@ -93,7 +93,7 @@ Appendices
 
 * Component Labels::            Labels used in string representations.
 * Copying::                     The GNU General Public License says how you
-                                can copy and share `GnuPG Made Easy'.
+                                can copy and share this manual.
 
 Indices
 
@@ -118,7 +118,7 @@ Certificate Handling
 
 * Creating certificates::       How to create a certificate object.
 * Retrieving attributes::       How to get the attributes of a certificate.
-* Setting attributes::          How to set certicates attributes.
+* Setting attributes::          How to set certificates attributes.
 * User data::                   How to associate other data with a certificate.
 
 Mastering the Cryptographic Message Syntax
@@ -131,8 +131,8 @@ Mastering the Cryptographic Message Syntax
 
 @node Introduction
 @chapter Introduction
-@acronym{KSBA} is a library to make the taks of working with X.509
-certifictes, CMS data and related data more easy.
+@acronym{KSBA} is a library to make the task of working with X.509
+certificates, CMS data and related data more easy.
 
 @menu
 * Getting Started::             
@@ -171,7 +171,7 @@ Anybody can use, modify, and redistribute it under the terms of the GNU
 General Public License (@pxref{Copying}).
 
 @item It hides the low level stuff
-`KSBA' a highlevel interface to the implemented protocols and presents
+`KSBA' a high level interface to the implemented protocols and presents
 the data in a consistent way.  There is no more need to worry about all
 the nasty details of the protocols.  The API gives the C programmer a
 more usual way of interacting with the data.
@@ -234,7 +234,7 @@ reserved for internal use and should never be used by an application.
 It is often desirable to check that the version of `KSBA' used is indeed
 one which fits all requirements.  Even with binary compatibility, new
 features may have been introduced but through peculiarities of the
-runtime linker an old version gets actually used.  So you bettero check
+runtime linker an old version gets actually used.  So you better check
 that the version is as expected right after program startup.
 
 @deftypefun {const char *} ksba_check_version (@w{const char *@var{req_version}})
@@ -244,7 +244,7 @@ a string in @var{req_version} and return the actual version string of
 the library; return @code{NULL} if the condition is not met.  If
 @code{NULL} is passed to this function, no check is done and only the
 version string is returned.  It is a pretty good idea to run this
-function as soon as possible, because it may also intializes some
+function as soon as possible, because it may also initializes some
 subsystems.  In a multi-threaded environment if should be called before
 any more threads are created.
 @end deftypefun
@@ -280,7 +280,7 @@ the path to the library files has to be added to the library search path
 (via the @option{-L} option).  For this, the option @option{--libs} of
 @command{ksba-config} can be used.  For convenience, this option also
 outputs all other options that are required to link the program with the
-`KSBA' libararies (in particular, the @samp{-lksba} option).  The
+`KSBA' libraries (in particular, the @samp{-lksba} option).  The
 example shows how to link @file{foo.o} with the `KSBA' libraries to a
 program @command{foo}.
 
@@ -307,16 +307,16 @@ The @code{ksba_cert_t} type is a handle for an X.509 certificate.
 @end deftp
 
 @deftp {Data type} ksba_sexp_t
-The @code{ksba_sexp_t} type descripes a canonical encodes S-expression
-stored in a memory buffer.  It is alias for @code{unisgned char *}.
+The @code{ksba_sexp_t} type describes a canonically encoded S-expression
+stored in a memory buffer.  It is alias for @code{unsigned char *}.
 Note that a length argument is not required because the length of such
-an S-expression is intrinsic available. 
+an S-expression is intrinsically available. 
 @end deftp
 
 @menu
 * Creating certificates::       How to create a certificate object.
 * Retrieving attributes::       How to get the attributes of a certificate.
-* Setting attributes::          How to set certicates attributes.
+* Setting attributes::          How to set certificates attributes.
 * User data::                   How to associate other data with a certificate.
 @end menu
 
@@ -346,7 +346,7 @@ required to actually release the memory used for the object.
 The function @code{ksba_cert_release} destroys the certificate object
 with the handle @var{cert} and releases all associated resources.  Due
 to the use of reference counting no actual memory may be released if
-another refrence still exists.  It is okay to pass @code{NULL} to the
+another reference still exists.  It is okay to pass @code{NULL} to the
 function in which case nothing happens.
 @end deftypefun
 
@@ -365,8 +365,8 @@ performed.  An error code is returned on failure.
 
 Parse the @var{buffer} which should contain a @acronym{DER} encoded
 certificate of @var{length} and initialize the certificate object
-@var{cert} with it.  This function is intended as a conveninence
-function to be used when a certifciate is already available in a
+@var{cert} with it.  This function is intended as a convenience
+function to be used when a certificate is already available in a
 internal memory buffer.  This avoids the extra code needed to setup the
 reader object.  Note that @var{cert} must be a valid certificate object.
 
@@ -379,7 +379,7 @@ An error code is returned on failure.
 
 The functions in this section allow accessing the attributes of a
 certificate in a well defined manner.  An error will be returned if the
-certificate object has not yet been initialzied by means of
+certificate object has not yet been initialized by means of
 @code{ksba_cert_read_der} or @code{ksba_cert_init_from_mem}.
 
 @deftypefun {const unsigned char *} ksba_cert_get_image (@w{ksba_cert_t @var{cert}}, @w{size_t *@var{r_length}}) 
@@ -391,7 +391,7 @@ certificate.
 
 The function returns @code{NULL} on error or a pointer to a buffer with
 the raw certificate data.  That pointer is only valid as long as the
-certificat object @var{cert} is valid and has not been reinitialized.
+certificate object @var{cert} is valid and has not been reinitialized.
 @end deftypefun
 
 @deftypefun gpg_error_t ksba_cert_hash (@w{ksba_cert_t @var{cert}}, @w{int @var{what}}, @w{void (*@var{hasher})(void *, const void *, size_t length)}, @w{void *@var{hasher_arg}})
@@ -436,7 +436,7 @@ Distinguished Name (@acronym{DN}) of the certificate issuer; this
 usually is the name of a certification authority (@acronym{CA}).  The
 format of the returned string is in accordance with RFC-2253.
 @code{NULL} is returned if the @acronym{DN} is not available; This is a
-severe error and actually should have been catched by the certificate
+severe error and actually should have been caught by the certificate
 reading function.
  
 With @var{idx} greater than zero, the function may be used to enumerate
@@ -445,12 +445,12 @@ no more alternate names. Only alternate names recognized by
 @code{libksba} are returned, others are simply skipped.  The format of
 the returned name is either a RFC-2253 formated string which can be
 detected by checking whether the first character is a letter or digit.
-RFC-822 conform email addresses are returned enclosed in angle
+RFC-822 conformant email addresses are returned enclosed in angle
 brackets; the opening angle bracket should be used to detect this.
 Other formats are returned as an S-Expression in canonical format, so a
-opening parenthesis should be used to detect this encoding, the name may
+opening parenthesis should be used to detect this encoding. The name may
 include binary null characters, thus strlen may return a length shorter
-than actually used.  The real length is implictly given by the structure
+than actually used.  The real length is implicitly given by the structure
 of the S-expression, an extra null is appended for safety reasons.
  
 The caller must free the returned string using @code{ksba_free} or
@@ -475,7 +475,7 @@ brackets; the opening angle bracket should be used to detect this.
 Other formats are returned as an S-Expression in canonical format, so a
 opening parenthesis should be used to detect this encoding, the name may
 include binary null characters, thus strlen may return a length shorter
-than actually used.  The real length is implictly given by the structure
+than actually used.  The real length is implicitly given by the structure
 of the S-expression, an extra null is appended for safety reasons.
  
 The caller must free the returned string using @code{ksba_free} or
@@ -486,20 +486,20 @@ whatever function has been registered as a replacement.
 @deftp {Data type} ksba_isotime_t
 Due to problems with the C data type @code{time_t}, which will overflow
 on most 32 bit machines in the year 2038, it was not advisable to use
-this type for referencing times stored in certificates.  Thus this type
-has been defined.  It is also useful to represent any time since the
-year 0.
+this type for referencing times stored in certificates.  Instead, you
+should use the @code{ksba_isotime_t} type, which can represent any time
+since the year 0.
 
 It is implemented as a buffer of 16 bytes and may be handled like a
-standard string.  It should be initialized to zero (i.e. the first byte
-needs to be 0x00) if it does not hold a valid date.  Date values
-themselfs are stored in ISO format and assumed to mean UTC.  The string
-with the date value is always guaranteed to be of length 15 and having a
-format like: @samp{"19610711T172059"}.  Note that the `T' is required by
-ISO rules.
+standard string.  It should be initialized to zero (i.e. the first
+byte needs to be 0x00) if it does not hold a valid date.  Date values
+themselves are stored in ISO format and assumed to be referenced from
+UTC.  The string with the date value is always guaranteed to be of
+length 15 and having a format like: @samp{"19610711T172059"}.  Note
+that the `T' is required by ISO rules.
 
-A simple assignment of these data types is no good idea.  You may use
-@code{strcpy} or better a specialized function like:
+A simple assignment of these data types is not a good idea.  You may
+use @code{strcpy} or better a specialized function like:
 
 @example
 void
@@ -528,8 +528,8 @@ cmp_time (const ksba_isotime_t a, const ksba_isotime_t b)
 
 Return the validity dates from the certificate.  If no value is
 available an empty date object (i.e. a @code{strlen} will be
-stored at @var{timebuf}, otherwiese it will receive the date. On failure
-an error ode is returned.
+stored at @var{timebuf}, otherwise it will receive the date. On failure
+an error code is returned.
 
 To return the `notBefore' date, the value @code{0} must be supplied for
 @var{what}; @code{1} yields the `notAfter' value.
@@ -560,7 +560,7 @@ To return the `notBefore' date, the value @code{0} must be supplied for
 
 Return information on the basicConstraint (2.5.19.19) of CERT.  R_CA
 receives true if this is a CA and only in that case R_PATHLEN is set to
-the maximim certification path length or -1 if there is no such
+the maximum certification path length or -1 if there is no such
 limitation
 
 @end deftypefun
@@ -575,7 +575,7 @@ key usage is specified.
 @deftypefun gpg_error_t ksba_cert_get_cert_policies (@w{ksba_cert_t @var{cert}, char **@var{r_policies}})
 
 Return a string with the certificatePolicies delimited by linefeeds.
-The return values may be extended to carry more information er line, so
+The return values may be extended to carry more information per line, so
 the caller should only use the first white-space delimited token per
 line.  The function returns @code{GPG_ERR_NO_DATA} when this extension
 is not used.  Caller must free the returned value.
@@ -596,7 +596,7 @@ the certificate issuer.  @var{r_reason} returns the reason for the CRL.
 This is a bit encoded value with no bit set if no reason has been
 specified in the certificate.
 
-The caller may pass @code{NULL} to any of the pointer argumenst if he is
+The caller may pass @code{NULL} to any of the pointer arguments if he is
 not interested in this value.  The return values for @var{r_distpoint}
 and @var{r_issuer} must be released by the caller using
 @code{ksba_name_release}.
@@ -632,10 +632,10 @@ the OID of one item and @var{r_location} returns the GeneralName for
 that OID.  The returned values for @var{r_method} and @var{r_location}
 must be released by the caller unless the function returned an error;
 the function will however make sure that @var{r_method} and
-@var{r_location} will point to @code{NULL} if the function retruns an
+@var{r_location} will point to @code{NULL} if the function returns an
 error. 
 
-See RFC-2459, section 4.2.2.1 for the defintion of this attribute.
+See RFC-2459, section 4.2.2.1 for the definition of this attribute.
 @end deftypefun
 
 @deftypefun gpg_error_t ksba_cert_get_subject_info_access (@w{ksba_cert_t @var{cert}, int @var{idx}, char **@var{r_method}, ksba_name_t *@var{r_location}})
@@ -647,10 +647,10 @@ the OID of one item and @var{r_location} returns the GeneralName for
 that OID.  The returned values for @var{r_method} and @var{r_location}
 must be released by the caller unless the function returned an error;
 the function will however make sure that @var{r_method} and
-@var{r_location} will point to @code{NULL} if the function retruns an
+@var{r_location} will point to @code{NULL} if the function returns an
 error. 
 
-See RFC-2459, section 4.2.2.2 for the defintion of this attribute.
+See RFC-2459, section 4.2.2.2 for the definition of this attribute.
 @end deftypefun
 
 
@@ -674,7 +674,7 @@ Stores arbitrary data along with a certificate.  The data is expected in
 the buffer @var{data} of length @var{datalen}. It will be stored under
 the string @var{key}.  If data is already stored under this key it will
 be replaced by the new data. Using @code{NULL} for @var{data} will
-effectivly delete the data.
+effectively delete the data.
 
 On error (i.e. out of memory) an already existing data object
 stored under @var{key} may get deleted.
@@ -695,7 +695,7 @@ be stored there.
 If @var{buffer} is given as @code{NULL}, @var{bufferlen} will be ignored
 and the required length of the buffer will be returned at @var{datalen}.
 
-On success 0 is returned.  If no data is stored under thengiven key,
+On success 0 is returned.  If no data is stored under the given key,
 @code{GPG_ERR_NOT_FOUND} is returned.  If the provided buffer is too
 short and @var{buffer} is not @code{NULL},
 @code{GPG_ERR_BUFFER_TOO_SHORT} will be returned.
@@ -718,7 +718,7 @@ used with the email encryption protocol S/MIME.
 @node CMS Basics
 @section CMS Basics
 All operations with the CMS framework require the use of a so called CMS
-object which is internally used to keeptrack of the current state and to
+object which is internally used to keep track of the current state and to
 store some meta information.
 
 @deftp {Data type} ksba_cms_t
@@ -742,7 +742,7 @@ with this function should be released after use by using
 
 @deftypefun void ksba_cms_release (@w{ksba_cms_t @var{cms}})
 
-Release allresources associated with the @var{CMS} object.  It is
+Release all resources associated with the @var{CMS} object.  It is
 perfectly okay to pass @code{NULL} to this function in which case
 nothing happens.
 @end deftypefun
@@ -750,16 +750,16 @@ nothing happens.
 @deftypefun gpg_error_t ksba_cms_set_reader_writer (@w{ksba_cms_t @var{cms}, ksba_reader_t @var{r}, ksba_writer_t @var{w}})
 
 About all usages of the CMS framework require some input and output data
-(great surprise!).  Do accomplish this in the most abstract way, no
+(great surprise!).  To accomplish this in the most abstract way, no
 direct output functions are used - instead special reader and writer
-objects are to be used.  Depending on the desired operations either a
+objects are used instead.  Depending on the desired operations either a
 reader, a writer or both must be given.  Associate a reader object with
-@var{cms} by passing it as @var{r} and a wrter object by passing it as
+@var{cms} by passing it as @var{r} and a writer object by passing it as
 @var{w}.  Note that no reference counting is done,so make sure that
 those objects have a lifetime at least as long as @var{CMS}.
 
 If you forget to set these objects, you will get an appropriate error
-later when data is actually to be read or written.  The fnction returns
+later when data is actually to be read or written.  The function returns
 zero on success or an error code when invalid objects are passed.
 @end deftypefun
 
@@ -777,18 +777,18 @@ limited in size; e.g. it does not make sense to use a video clip as the
 @deftypefun gpg_error_t ksba_cms_parse (@w{ksba_cms_t @var{cms}, ksba_stop_reason_t *@var{r_stopreason}})
 
 This is the core function of the parser and commonly used in a loop.
-The parsing process is divided into serveral phases to allow the user to
-get information at the right timeand prepare for further processing.
-The caller has to act on certain stop reasons which are returned by
-@var{r_stopreason} adn set up things accordingly; @acronym{KSBA} may
-introduce new stop reasons to let the caller know other details; there
-is no need for the caller to act on every stop reason; he should oly do
-so for reasons he knows and which are mandatory.  The function does
-return with an error if the caller did not setup things correctly for
-certain stop reasons.
+The parsing process is divided into several phases to allow the user
+to get information at the right time and prepare for further
+processing.  The caller has to act on certain stop reasons which are
+returned by @var{r_stopreason} and set up things accordingly;
+@acronym{KSBA} may introduce new stop reasons to let the caller know
+other details; there is no need for the caller to act on every stop
+reason; it should only do so for reasons that the caller understands
+and which are mandatory.  The function will return with an error if
+the caller did not setup things correctly for certain stop reasons.
 @end deftypefun
 
-The use of the function is best explained by an example, leaving out all
+The use of this function is best explained by an example, leaving out all
 error checking.
 @example
   do 
@@ -807,14 +807,15 @@ error checking.
     @}
   while (stopreason != KSBA_SR_READY);   
 @end example
-This function assumes that the parsed data issocalld `enveloped data'.
+This function assumes that the parsed data is so called `enveloped data'.
  
 @c FIXME: Reference to a list of stop reasons used here.
 
 As @acronym{CMS} provides a common framework for a variety of data
-formats, it is probably very useful tocheck the type of that data very
+formats, it is probably very useful to check the type of that data very
 early.  This can be accomplished by hooking into the stop reason
-@code{KSBA_SR_GOT_CONTENT} and retrieving the content using
+@code{KSBA_SR_GOT_CONTENT} and retrieving the content using the following 
+function.
 
 
 @deftypefun ksba_content_t ksba_cms_get_content_type (@w{ksba_cms_t @var{cms}, int @var{what}})
@@ -829,14 +830,14 @@ content of a CMS message.  Here is a list of possible values:
 
 @table @code
 @item KSBA_CT_NONE 
-No content type know, this one has the value @code{0}
+No content type known (value @code{0})
 
 @item KSBA_CT_DATA
 The content is plain data, not further interpreted.
 
 @item KSBA_CT_SIGNED_DATA
-The content is an signed CMS object.  This alosincludes the case of a
-detachedsignature where no actual data is included in the message.
+The content is an signed CMS object.  This also includes the case of a
+detached signature where no actual data is included in the message.
 
 @item  KSBA_CT_ENVELOPED_DATA
 The content is encrypted using a session key.
@@ -859,8 +860,8 @@ Not yet supported
 Return the object ID of @var{cms}.  This is a constant string valid as
 long as the context is valid and no new parse is started.  This function
 is similar to @code{ksba_cms_get_content_type} but returns the
-@acronym{OID} actually used in the data.  Debinding on the value of
-@var{what} different values are returned: USing a value of @code{0}
+@acronym{OID} actually used in the data.  Depending on the value of
+@var{what} different values are returned: Using a value of @code{0}
 yields the OID of the outer container, a value of @code{1} yields the
 OID of the inner container if available and the value @code{2} returns
 the OID of the algorithm used to encrypt the inner container.
@@ -869,8 +870,8 @@ the OID of the algorithm used to encrypt the inner container.
 @node CRLs
 @chapter Certification Revocation Lists
 KSBA also comes with an API to process certification revocation lists.
-The API is similar to the @acronym{CMS} one but does return entry by
-entry.
+The API is similar to the @acronym{CMS} one but returns the contents
+entry by entry.
 
 
 @node PKCS10
@@ -915,15 +916,15 @@ allowed.
 By iterating @var{idx} up starting with 0, this function returns all
 General Names stored in @var{name}.  The format of the returned name is either
 a RFC-2253 formated one which can be detected by checking whether the
-first character is letter or a digit.  RFC 2822 conform email addresses
+first character is letter or a digit.  RFC 2822 conformant email addresses
 are returned enclosed in angle brackets, the opening angle bracket
 should be used to detect this.  Other formats are returned as an
-S-Expression in canonical format, so a opening parenthesis may be used
+S-Expression in canonical format, so an opening parenthesis may be used
 to detect this encoding, in this case the name may include binary null
 characters, so strlen might return a length shorter than actually used,
-the real length is implictly given by the structure of the S-Exp, an
+the real length is implicitly given by the structure of the S-Exp, an
 extra null is appended for safety reasons.  One common format return is
-probably an Universal Resource Identifier which has the S-expression:
+a Universal Resource Identifier which has the S-expression:
 @samp{(uri <urivalue>)}.
 
 The returned string has the same lifetime as @var{name}. 
@@ -970,17 +971,18 @@ print_names (ksba_name_t name)
 @node Error Handling
 @chapter Error Handling
 
-Most functions in `KSBA' are returning an error if they fail.
+Most functions in `KSBA' will return an error if they fail.
 For this reason, the application should always catch the error
 condition and take appropriate measures, for example by releasing the
 resources and passing the error up to the caller, or by displaying a
-descriptive message to the user and cancelling the operation.
+descriptive message to the user and canceling the operation.
 
-Some error values do not indicate a system error or an error in the operation,
-but the result of an operation that failed properly.  For example, if you try
-to access optional attributes of a certificate you get an appropriate error
-message.  Some error values have specific meanings if returned by a specific
-function.  Such cases are described in the documentation of those functions.
+Some error values do not indicate a system error or an error in the
+operation, but the reasonable result of an operation.  For example, if
+you try to access optional attributes of a certificate that are not
+present, you get an appropriate error message.  Some error values have
+specific meanings if returned by a specific function.  Such cases are
+described in the documentation of those functions.
 
 All error codes are defined by the library @code{libgpg-error}.  See
 there for ways to check the error values and print descriptive
@@ -1012,7 +1014,7 @@ The only exception is that success (i.e. no error) is defined to be
 @node Component Labels
 @appendix Component Labels
 
-RFC-2253 defines the following table with string representions of name
+RFC-2253 defines the following table with string representations of name
 components:
 
 @multitable {SERIALNUMBER} {organizationalUnit}  {xxx}
@@ -1035,7 +1037,7 @@ representation; components not listed in this table will be
 represented by their OID.
 
 For the other direction, i.e. creating a DN from the string
-representation, Libksba recognizes the follwing extra labels:
+representation, KSBA recognizes the following extra labels:
 
 @multitable {SERIALNUMBER} {organizationalUnit}  {xxx}
 @item Label        @tab  Component        @tab OID
