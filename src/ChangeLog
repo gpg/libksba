@@ -1,5 +1,8 @@
 2006-04-23  Brad Hards <bradh@frogmouth.net>  (mb)
 
+	* ksba.h (ksba_crl_get_update_times): Rename parameter to avoid
+	collision with C++ keywords.
+
 	* ksba.h: Fix typos.
 
 2006-03-20  Werner Koch  <wk@g10code.com>

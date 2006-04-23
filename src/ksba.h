@@ -343,8 +343,8 @@ gpg_error_t ksba_crl_get_auth_key_id (ksba_crl_t crl,
                                       ksba_sexp_t *r_serial);
 gpg_error_t ksba_crl_get_crl_number (ksba_crl_t crl, ksba_sexp_t *number);
 gpg_error_t ksba_crl_get_update_times (ksba_crl_t crl,
-                                       ksba_isotime_t this,
-                                       ksba_isotime_t next);
+                                       ksba_isotime_t this_update,
+                                       ksba_isotime_t next_update);
 gpg_error_t ksba_crl_get_item (ksba_crl_t crl,
                                ksba_sexp_t *r_serial,
                                ksba_isotime_t r_revocation_date,
