@@ -171,13 +171,13 @@ struct ksba_certreq_s;
 typedef struct ksba_certreq_s *ksba_certreq_t;
 typedef struct ksba_certreq_s *KsbaCertreq _KSBA_DEPRECATED;
 
-/* This is a reader object vor various purposes
+/* This is a reader object for various purposes
    see ksba_reader_new et al. */
 struct ksba_reader_s;
 typedef struct ksba_reader_s *ksba_reader_t;
 typedef struct ksba_reader_s *KsbaReader _KSBA_DEPRECATED;
 
-/* This is a writer object vor various purposes
+/* This is a writer object for various purposes
    see ksba_writer_new et al. */
 struct ksba_writer_s;
 typedef struct ksba_writer_s *ksba_writer_t;
@@ -189,7 +189,7 @@ struct ksba_asn_tree_s;
 typedef struct ksba_asn_tree_s *ksba_asn_tree_t;
 typedef struct ksba_asn_tree_s *KsbaAsnTree _KSBA_DEPRECATED;
 
-/* This is an object to reference an General Name.  Such an object is
+/* This is an object to reference a General Name.  Such an object is
    returned by several functions. */
 struct ksba_name_s;
 typedef struct ksba_name_s *ksba_name_t;
