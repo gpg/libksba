@@ -626,7 +626,9 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
   if (err)
     goto leave;
 
-  
+  /* The requestExtensions go here. */
+  err = write_request_extensions (ocsp, w4);
+
   /* Write the tbsRequest. */
 
   /* The version is default, thus we don't write it. */
@@ -647,9 +649,6 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
   xfree (p); p = NULL;
   if (err)
     goto leave;
-
-  /* The requestExtensions go here. */
-  err = write_request_extensions (ocsp, w5);
 
   /* Reuse writers; for clarity, use new names. */ 
   w6 = w3;

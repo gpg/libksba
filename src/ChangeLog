@@ -1,3 +1,10 @@
+2006-05-03  Werner Koch  <wk@g10code.com>
+
+	* ber-decoder.c (decoder_next): Zero out NODE.
+
+	* ocsp.c (ksba_ocsp_prepare_request): Move requestExtensions into
+	the TBSRequest.  Reported by Daiko Ueno.
+
 2006-04-23  Brad Hards <bradh@frogmouth.net>  (mb)
 
 	* ksba.h (ksba_crl_get_update_times): Rename parameter to avoid

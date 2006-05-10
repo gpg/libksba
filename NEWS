@@ -1,6 +1,8 @@
 Noteworthy changes in version 0.9.14
 -------------------------------------------------
 
+ * Fixed broken OCSP requests.
+
 
 Noteworthy changes in version 0.9.13 (2005-11-24)
 -------------------------------------------------
