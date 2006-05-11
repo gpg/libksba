@@ -53,7 +53,9 @@ struct decoder_state_s {
 typedef struct decoder_state_s *DECODER_STATE;
 
 
-struct ber_decoder_s {
+/* Context for a decoder. */
+struct ber_decoder_s 
+{
   AsnNode module;    /* the ASN.1 structure */
   ksba_reader_t reader;
   const char *last_errdesc; /* string with the error description */
@@ -61,15 +63,30 @@ struct ber_decoder_s {
   AsnNode root;   /* of the expanded parse tree */
   DECODER_STATE ds;
   int bypass;
+
+  /* Because some certificates actually come with trailing garbage, we
+     use a hack to ignore this garbage.  This hack is enabled for data
+     starting with a fixed length sequence and this variable takes the
+     length of this sequence.  If it is 0, the hack is not
+     acticated. */
+  unsigned long outer_sequence_length;
+  int ignore_garbage;  /* Set to indicate that garpage should be
+                          ignored. */
+
+  int first_tag_seen;  /* Indicates whether the first tag of a decoder
+                          run has been read. */
+
   int honor_module_end; 
   int debug;
   int use_image;
-  struct {
+  struct 
+  {
     unsigned char *buf;
     size_t used;
     size_t length;
   } image;
-  struct {
+  struct
+  {
     int primitive;  /* current value is a primitive one */
     int length;     /* length of the primitive one */
     int nhdr;       /* length of the header */
@@ -758,6 +775,20 @@ decoder_next (BerDecoder d)
   err = _ksba_ber_read_tl (d->reader, &ti);
   if (err)
     {
+      if (debug)
+        fprintf (stderr, "ber_read_tl error: %s (%s)\n",
+                 gpg_strerror (err), ti.err_string? ti.err_string:"");
+      /* This is our actual hack to cope with some trailing garbage:
+         Only if we get an premature EOF and we know that we have read
+         the complete certificate we change the error to EOF.  This
+         won't help with all kinds of garbage but it fixes the case
+         where just one byte is appended.  This is for example the
+         case with current Siemens certificates.  This approach seems
+         to be the least intrusive one. */
+      if (gpg_err_code (err) == GPG_ERR_BAD_BER
+          && d->ignore_garbage
+          && ti.err_string && !strcmp (ti.err_string, "premature EOF"))
+        err = gpg_error (GPG_ERR_EOF);
       return err;
     }
 
@@ -768,6 +799,15 @@ decoder_next (BerDecoder d)
       fprintf (stderr, ">\n");
     }
 
+  /* Check whether the trailing garbage hack is required. */
+  if (!d->first_tag_seen)
+    {
+      d->first_tag_seen = 1;
+      if (ti.tag == TYPE_SEQUENCE && ti.length && !ti.ndef)
+        d->outer_sequence_length = ti.length;
+    }
+
+  /* Store stuff in the image buffer. */
   if (d->use_image)
     {
       if (!d->image.buf)
@@ -856,6 +896,14 @@ decoder_next (BerDecoder d)
                             ds->idx? ds->stack[ds->idx-1].length:-1,
                             ds->cur.nread,
                             ti.is_constructed? "con":"pri");
+                  if (d->outer_sequence_length
+                      && ds->idx == 1
+                      && ds->cur.nread == d->outer_sequence_length)
+                    {
+                      if (debug)
+                        fprintf (stderr, "  Need to stop now\n");
+                      d->ignore_garbage = 1;
+                    }
 
                   if ( ds->idx
                        && !ds->stack[ds->idx-1].ndef_length

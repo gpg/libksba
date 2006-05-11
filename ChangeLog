@@ -1,3 +1,7 @@
+2006-05-11  Werner Koch  <wk@g10code.com>
+
+	* configure.ac: Use -Wno-pointer-sign
+
 2005-11-24  Werner Koch  <wk@g10code.com>
 
 	Released 0.9.13.

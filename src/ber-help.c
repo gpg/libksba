@@ -49,6 +49,7 @@ read_byte (ksba_reader_t reader)
 static int
 premature_eof (struct tag_info *ti)
 {
+  /* Note: We do an strcmp on this string at othyer places. */
   ti->err_string = "premature EOF";
   return gpg_error (GPG_ERR_BAD_BER);
 }
