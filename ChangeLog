@@ -1,6 +1,15 @@
+2006-05-16  Werner Koch  <wk@g10code.com>
+
+	Released 0.9.14.
+	
+	* configure.ac: Bumped LT version to C15/A7/R1.
+
+	* config.guess, config.sub: Updated.
+	* ltmain.sh: Updated.
+
 2006-05-11  Werner Koch  <wk@g10code.com>
 
-	* configure.ac: Use -Wno-pointer-sign
+	* configure.ac: Use -Wno-pointer-sign.
 
 2005-11-24  Werner Koch  <wk@g10code.com>
 

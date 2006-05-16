@@ -56,4 +56,4 @@ name part when old style quoting is not used.
   I have not yet found a server accepting and returning a nonce
   created by libksba.  Any hints are welcome; openvalidation.org does
   not work, ocsp.d-trust.net does not accept requests with
-  nonces. europki returns only a general plain text HTML message. */
+  nonces. europki returns only a general plain text HTML message.
