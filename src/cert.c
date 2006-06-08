@@ -1464,7 +1464,7 @@ ksba_cert_get_ext_key_usages (ksba_cert_t cert, char **result)
 static gpg_error_t
 parse_distribution_point (const unsigned char *der, size_t derlen, 
                           ksba_name_t *distpoint, ksba_name_t *issuer,
-                          unsigned int *reason)
+                          ksba_crl_reason_t *reason)
 {
   gpg_error_t err;
   struct tag_info ti;
@@ -1623,7 +1623,7 @@ gpg_error_t
 ksba_cert_get_crl_dist_point (ksba_cert_t cert, int idx,
                               ksba_name_t *r_distpoint,
                               ksba_name_t *r_issuer,
-                              unsigned int *r_reason)
+                              ksba_crl_reason_t *r_reason)
 {
   gpg_error_t err;
   const char *oid;
