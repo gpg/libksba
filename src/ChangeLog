@@ -1,3 +1,10 @@
+2006-06-19  Werner Koch  <wk@g10code.com>
+
+	* ber-decoder.c (_ksba_ber_decoder_decode): always store value
+	even if NODE is NULL.  It used to work only because NODE used to
+	be unitialized and thus most of the time yielded true.  The
+	2006-05-03 fix unveiled the actual problem.
+
 2006-06-08  Marcus Brinkmann  <marcus@g10code.de>
 
 	* cert.c (ksba_cert_get_crl_dist_point): Fix type of R_REASON.

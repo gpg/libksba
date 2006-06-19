@@ -1,5 +1,5 @@
 /* ber-decoder.c - Basic Encoding Rules Decoder
- *      Copyright (C) 2001, 2004 g10 Code GmbH
+ *      Copyright (C) 2001, 2004, 2006 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -812,8 +812,8 @@ decoder_next (BerDecoder d)
     {
       if (!d->image.buf)
         {
-          /* we need some extra bytes to store the stuff we read ahead
-             at the end of the module which is later pushed back */
+          /* We need some extra bytes to store the stuff we read ahead
+             at the end of the module which is later pushed back. */
           d->image.length = ti.length + 100;
           d->image.used = 0;
           d->image.buf = xtrymalloc (d->image.length);
@@ -823,6 +823,7 @@ decoder_next (BerDecoder d)
 
       if (ti.nhdr + d->image.used >= d->image.length)
         return set_error (d, NULL, "image buffer too short to store the tag");
+
       memcpy (d->image.buf + d->image.used, ti.buf, ti.nhdr);
       d->image.used += ti.nhdr;
     }
@@ -1138,9 +1139,12 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
       int n, c;
 
       node = d->val.node;
-      if (node && d->use_image)
+      /* Fixme: USE_IMAGE is only not used with the ber-dump utility
+         and thus of no big use.  We should remove the other code
+         paths and dump ber-dump.c. */
+      if (d->use_image)
         {
-          if (!d->val.is_endtag)
+          if (node && !d->val.is_endtag)
             { /* We don't have nodes for the end tag - so don't store it */
               node->off = (ksba_reader_tell (d->reader)
                            - d->val.nhdr - startoff);

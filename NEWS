@@ -1,6 +1,8 @@
 Noteworthy changes in version 0.9.15
 -------------------------------------------------
 
+ * Fixed BER parser which was broken in the last release.
+
 
 Noteworthy changes in version 0.9.14 (2006-05-16)
 -------------------------------------------------
