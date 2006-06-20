@@ -1,3 +1,9 @@
+2006-06-20  Werner Koch  <wk@g10code.com>
+
+	Released 0.9.15.
+	
+	* configure.ac: Bumbed LT version to C15/A7/R2.
+
 2006-05-16  Werner Koch  <wk@g10code.com>
 
 	Released 0.9.14.

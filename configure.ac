@@ -1,5 +1,5 @@
 # configure.ac - for libksba
-#       Copyright (C) 2001, 2002, 2003, 2004, 2005 g10 Code GmbH
+# Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006 g10 Code GmbH
 # 
 # This file is part of KSBA
 # 
@@ -24,7 +24,7 @@ min_automake_version="1.9.3"
 
 # Version number: Remember to change immediately *after* a release.
 #                 Append a "-cvs" for non-released versions.
-AC_INIT(libksba, 0.9.15-cvs, gpa-dev@gnupg.org)
+AC_INIT(libksba, 0.9.15, gpa-dev@gnupg.org)
 # LT Version numbers: Remember to change them just *before* a release.
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
@@ -32,7 +32,7 @@ AC_INIT(libksba, 0.9.15-cvs, gpa-dev@gnupg.org)
 # Please remember to document interface changes in the NEWS file.
 LIBKSBA_LT_CURRENT=15
 LIBKSBA_LT_AGE=7
-LIBKSBA_LT_REVISION=1
+LIBKSBA_LT_REVISION=2
 #-------------------
 
 # fixme: When bouncing this to a newer version, you check whether the
