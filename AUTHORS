@@ -1,3 +1,8 @@
+Program: Libksba
+Maintainer: Werner Koch <wk@gnupg.org>
+Bug reports: <bug-gnupg@gnu.org>
+Security related bug reports: <security@gnupg.org>
+
 
 g10 Code GmbH
 Design and most stuff.
