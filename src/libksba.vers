@@ -81,6 +81,8 @@ KSBA_0.9 {
 
     ksba_oid_from_str; ksba_oid_to_str;
 
+    ksba_dn_der2str; ksba_dn_str2der; ksba_dn_teststr;
+
     ksba_reader_clear; ksba_reader_error; ksba_reader_new;
     ksba_reader_read; ksba_reader_release; ksba_reader_set_cb;
     ksba_reader_set_fd; ksba_reader_set_file; ksba_reader_set_mem;
@@ -101,6 +103,5 @@ KSBA_0.9 {
 KSBA_PRIVATE_TESTS {
    global:
      _ksba_keyinfo_from_sexp;  _ksba_keyinfo_to_sexp;
-     _ksba_dn_from_str;
 
 } KSBA_0.9;

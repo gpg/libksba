@@ -1,5 +1,5 @@
 /* t-dnparser.c - basic test for the DN parser
- *      Copyright (C) 2002 g10 Code GmbH
+ *      Copyright (C) 2002, 2006 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -27,7 +27,6 @@
 #include <errno.h>
 
 #include "../src/ksba.h"
-#include "../src/convert.h"
 #include "t-common.h"
 
 
@@ -48,17 +47,50 @@ test_1 (void)
   };
   gpg_error_t err;
   int i;
-  char *buf;
-  size_t len;
+  unsigned char *buf;
+  size_t off, len;
 
   for (i=0; empty_elements[i]; i++)
     {
-      err = _ksba_dn_from_str (empty_elements[i], &buf, &len);
+      err = ksba_dn_str2der (empty_elements[i], &buf, &len);
       if (gpg_err_code (err) != GPG_ERR_SYNTAX)
         fail ("empty element not detected");
+      err = ksba_dn_teststr (empty_elements[i], 0, &off, &len);
+      if (!err)
+        fail ("ksba_dn_teststr returned no error");
+      printf ("string ->%s<-  error at %lu.%lu (%.*s)\n",
+              empty_elements[i], (unsigned long)off, (unsigned long)len,
+              (int)len, empty_elements[i]+off);
       xfree (buf);
     }
+}
 
+static void
+test_2 (void)
+{
+  static char *invalid_labels[] = {
+    "C=de,FOO=something,O=bar",
+    "Y=foo, C=baz",
+    NULL
+  };
+  gpg_error_t err;
+  int i;
+  unsigned char *buf;
+  size_t off, len;
+
+  for (i=0; invalid_labels[i]; i++)
+    {
+      err = ksba_dn_str2der (invalid_labels[i], &buf, &len);
+      if (gpg_err_code (err) != GPG_ERR_UNKNOWN_NAME)
+        fail ("invalid label not detected");
+      err = ksba_dn_teststr (invalid_labels[i], 0, &off, &len);
+      if (!err)
+        fail ("ksba_dn_test_str returned no error");
+      printf ("string ->%s<-  error at %lu.%lu (%.*s)\n",
+              invalid_labels[i], (unsigned long)off, (unsigned long)len,
+              (int)len, invalid_labels[i]+off);
+      xfree (buf);
+    }
 }
 
 
@@ -68,12 +100,12 @@ main (int argc, char **argv)
 {
   char inputbuf[4096];
   int inputlen;
-  char *buf;
+  unsigned char *buf;
   size_t len;
   gpg_error_t err;
   
   if (argc == 2 && !strcmp (argv[1], "--to-str") )
-    { /* Read the DER encoed DN from stdin write the string to stdout */
+    { /* Read the DER encoded DN from stdin write the string to stdout */
       inputlen = fread (inputbuf, 1, sizeof inputbuf, stdin);
       if (!feof (stdin))
         fail ("read error or input too large");
@@ -87,13 +119,14 @@ main (int argc, char **argv)
       if (!feof (stdin))
         fail ("read error or input too large");
       
-      err = _ksba_dn_from_str (inputbuf, &buf, &len);
+      err = ksba_dn_str2der (inputbuf, &buf, &len);
       fail_if_err (err);
       fwrite (buf, len, 1, stdout);
     }
   else if (argc == 1)
     {
       test_1 ();
+      test_2 ();
     }
   else
     {

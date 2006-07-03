@@ -1,3 +1,9 @@
+2006-07-03  Werner Koch  <wk@g10code.com>
+
+	* t-dnparser.c: Use ksba_dn_str2der isntead of internal functions.
+	(test_1): Also test ksba_dn_test_str.
+	(test_2): New.
+
 2005-04-19  Werner Koch  <wk@g10code.com>
 
 	* t-ocsp.c (main): Add option --no-nonce.  Ret rid of the

@@ -1,3 +1,15 @@
+Noteworthy changes in version 0.9.16
+-------------------------------------------------
+
+
+
+ * Interface changes relative to the 0.9.13 release:
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ksba_dn_teststr                NEW
+ ksba_dn_str2der                NEW
+ ksba_dn_der2str                NEW
+
+
 Noteworthy changes in version 0.9.15 (2006-06-20)
 -------------------------------------------------
 

@@ -891,6 +891,7 @@ to support some of the main functions.
 @menu
 * Names::                      General Names object
 * OIDs::                       Object Identifier helpers
+* DNs::                        Distinguished Name helpers
 @end menu
 
 @node Names
@@ -965,6 +966,37 @@ print_names (ksba_name_t name)
 
 @c !FIXME!
 [This needs to get written - for now please see libksba/src/oids.c]
+
+
+@node DNs
+@section Distinguished Name helpers
+
+These are helper functions for the so called distinguished names.  They
+are used for example as the issuer and subject name.
+
+@deftypefun gpg_error_t ksba_dn_teststr (@w{const char *@var{string}}, @w{int @var{seq}}, @w{size_t *@var{rerroff}}, @w{size_t *@var{rerrlen}})
+
+Assuming that @var{string} contains an RFC-2253 encoded string, test
+whether this string may be passed as a valid DN to libksba.  On success
+the functions returns @code{0}.  On error the function returns an error
+code and stores the offset of the erroneous part at
+@var{rerroff}. @var{rerrlen} will then receive the length of the
+erroneous part.
+
+This function is mostly useful to test whether a certain component label
+is supported. @var{seq} should be passed as @code{0} for now.  Any of
+@var{rerroff} and @var{rerrlen} may be passed as @var{NULL} if the
+caller is not interested at this value.
+
+@end deftypefun
+
+
+gpg_error_t
+ksba_dn_str2der (const char *string, void **rder, size_t *rderlen);
+
+gpg_error_t
+ksba_dn_der2str (const void *der, size_t derlen, char **r_string);
+
 
 
 

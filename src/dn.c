@@ -1,5 +1,5 @@
 /* dn.c - Distinguished Name helper functions
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2006 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -843,13 +843,16 @@ write_escaped (ksba_writer_t w, const unsigned char *buffer, size_t nbytes)
 
 
 /* Parse one RDN, and write it to WRITER.  Returns a pointer to the
-   next RDN part where the comma has alrady been skipped or NULL in
-   case of an error.  When NULL is passed as WRITER, the fucntion does
+   next RDN part where the comma has already been skipped or NULL in
+   case of an error.  When NULL is passed as WRITER, the function does
    not allocate any memory but just parses the string and returns the
-   ENDP. */
+   ENDP. If ROFF or RLEN are not NULL, they will receive informaion
+   useful for error reporting. */
 static gpg_error_t
-parse_rdn (const unsigned char *string, const char **endp, ksba_writer_t writer)
+parse_rdn (const unsigned char *string, const char **endp, 
+           ksba_writer_t writer, size_t *roff, size_t *rlen)
 {
+  const unsigned char *orig_string = string;
   const unsigned char *s, *s1;
   size_t n, n1;
   int i;
@@ -863,15 +866,24 @@ parse_rdn (const unsigned char *string, const char **endp, ksba_writer_t writer)
   int valuetype;
   int need_escaping = 0;
   gpg_error_t err = 0;
+  size_t dummy_roff, dummy_rlen;
+
+  if (!roff)
+    roff = &dummy_roff;
+  if (!rlen)
+    rlen = &dummy_rlen;
+
+  *roff = *rlen = 0;
 
   if (!string)
     return gpg_error (GPG_ERR_INV_VALUE);
   while (*string == ' ')
     string++;
+  *roff = string - orig_string;
   if (!*string)
     return gpg_error (GPG_ERR_SYNTAX); /* empty elements are not allowed */
   s = string;
-
+  
   if ( ((*s == 'o' && s[1] == 'i' && s[2] == 'd')
         ||(*s == 'O' && s[1] == 'I' && s[2] == 'D'))
        && s[3] == '.' && digitp (s+4))
@@ -879,6 +891,7 @@ parse_rdn (const unsigned char *string, const char **endp, ksba_writer_t writer)
 
   /* parse attributeType */
   string = s;
+  *roff = string - orig_string;
   if (digitp (s))
     { /* oid */
       for (s++; digitp (s) || (*s == '.' && s[1] != '.'); s++)
@@ -921,7 +934,11 @@ parse_rdn (const unsigned char *string, const char **endp, ksba_writer_t writer)
             break;
         }
       if (!oid_name_tbl[i].name)
-        return gpg_error (GPG_ERR_UNKNOWN_NAME);
+        {
+          *roff = string - orig_string;
+          *rlen = n;
+          return gpg_error (GPG_ERR_UNKNOWN_NAME);
+        }
       oid = oid_name_tbl[i].oid;
       oidlen = oid_name_tbl[i].oidlen;
     }
@@ -929,6 +946,8 @@ parse_rdn (const unsigned char *string, const char **endp, ksba_writer_t writer)
   while (*s == ' ')
     s++;
   string = s;
+
+  *roff = string - orig_string;
 
   /* parse attributeValue */
   if (!*s)
@@ -948,6 +967,7 @@ parse_rdn (const unsigned char *string, const char **endp, ksba_writer_t writer)
       n = s - string;
       if (!n || (n & 1))
         {
+          *rlen = n;
           err = gpg_error (GPG_ERR_SYNTAX); /* no hex digits or odd number */
           goto leave;
         }
@@ -995,6 +1015,7 @@ parse_rdn (const unsigned char *string, const char **endp, ksba_writer_t writer)
       s = count_quoted_string (string, &n, 1, &valuetype);
       if (!s || *s != '\"')
         {
+          *rlen = s - orig_string;
           err = gpg_error (GPG_ERR_SYNTAX); /* error or quote not closed */
           goto leave;
         }
@@ -1027,11 +1048,14 @@ parse_rdn (const unsigned char *string, const char **endp, ksba_writer_t writer)
     }
   if ( *s && *s != ',' && *s != ';' && *s != '+')
     {
+      *roff = s - orig_string;
       err = gpg_error (GPG_ERR_SYNTAX); /* invalid delimiter */
       goto leave;
     }
   if (*s == '+') /* fixme: implement this */
     {
+      *roff = s - orig_string;
+      *rlen = 1;
       err = gpg_error (GPG_ERR_NOT_IMPLEMENTED); 
       goto leave;
     }
@@ -1094,18 +1118,18 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
   int part_array_size, nparts;
 
   *rbuf = NULL; *rlength = 0;
-  /* We are going to build the object using a writer object */
+  /* We are going to build the object using a writer object.  */
   err = ksba_writer_new (&writer);
   if (!err)
     err = ksba_writer_set_mem (writer, 1024);
   if (err)
     return err;
 
-  /* We must assign it in reverese order so we do it in 2 passes */
+  /* We must assign it in reverse order so we do it in 2 passes. */
   part_array_size = 0;
   for (nparts=0, s=string; s && *s;)
     {
-      err = parse_rdn (s, &endp, NULL);
+      err = parse_rdn (s, &endp, NULL, NULL, NULL);
       if (err)
         goto leave;
       if (nparts >= part_array_size)
@@ -1134,19 +1158,19 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
 
   while (--nparts >= 0)
     {
-      err = parse_rdn (part_array[nparts], &endp, writer);
+      err = parse_rdn (part_array[nparts], &endp, writer, NULL, NULL);
       if (err)
         goto leave;
     }
 
-  /* Now get the memory */
+  /* Now get the memory.  */
   buf = ksba_writer_snatch_mem (writer, &buflen);
   if (!buf)
     {
       err = gpg_error (GPG_ERR_ENOMEM);
       goto leave;
     }
-  /* reinitialize the buffer to create the outer sequence*/
+  /* Reinitialize the buffer to create the outer sequence.  */
   err = ksba_writer_set_mem (writer, buflen + 10);
   if (err)
     goto leave;
@@ -1177,3 +1201,60 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
 }
 
 
+
+gpg_error_t
+ksba_dn_der2str (const void *der, size_t derlen, char **rstring)
+{
+  return _ksba_derdn_to_str (der, derlen, rstring);
+}
+
+
+gpg_error_t
+ksba_dn_str2der (const char *string, unsigned char **rder, size_t *rderlen)
+{
+  return _ksba_dn_from_str (string, (char**)rder, rderlen);
+}
+
+
+
+/* Assuming that STRING contains an rfc2253 encoded string, test
+   whther this string may be passed as a valid DN to libksba.  On
+   success the functions returns 0.  On error the function returns an
+   error code and stores the offset within STRING of the erroneous
+   part at RERROFF. RERRLEN will then receive the length of the
+   erroneous part.  This function is most useful to test whether a
+   symbolic name (like SN) is supported. SEQ should be passed as 0 for
+   now.  RERROFF and RERRLEN may be passed as NULL if the caller is
+   not interested at this value. */
+gpg_error_t 
+ksba_dn_teststr (const char *string, int seq, 
+                 size_t *rerroff, size_t *rerrlen)
+{
+  size_t dummy_erroff, dummy_errlen;
+  gpg_error_t err;
+  int nparts;
+  const char *s, *endp;
+  size_t off, len;
+
+  if (!rerroff)
+    rerroff = &dummy_erroff;
+  if (!rerrlen)
+    rerrlen = &dummy_errlen;
+
+  *rerrlen = *rerroff = 0;
+
+  for (nparts=0, s=string; s && *s;)
+    {
+      err = parse_rdn (s, &endp, NULL, &off, &len);
+      if (err && !seq--)
+        {
+          *rerroff = s - string + off;
+          *rerrlen = len? len : strlen (s);
+          return err;
+        }
+      s = endp;
+    }
+  if (!nparts)
+    return gpg_error (GPG_ERR_SYNTAX);
+  return 0;
+}

@@ -481,6 +481,13 @@ char *ksba_oid_to_str (const char *buffer, size_t length);
 gpg_error_t ksba_oid_from_str (const char *string,
                                unsigned char **rbuf, size_t *rlength);
 
+/*-- dn.c --*/
+gpg_error_t ksba_dn_der2str (const void *der, size_t derlen, char **r_string);
+gpg_error_t ksba_dn_str2der (const char *string,
+                             unsigned char **rder, size_t *rderlen);
+gpg_error_t ksba_dn_teststr (const char *string, int seq, 
+                             size_t *rerroff, size_t *rerrlen);
+
 
 /*-- name.c --*/
 gpg_error_t ksba_name_new (ksba_name_t *r_name);
