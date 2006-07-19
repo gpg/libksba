@@ -1,3 +1,14 @@
+2006-07-19  Werner Koch  <wk@g10code.com>
+
+	* dn.c (put_stringbuf_mem_skip): New.
+	(append_quoted): New arg SKIP.  Changed all callers.
+	(append_ucs4_value, append_ucs2_value): Tell append_quoted to skip
+	the zero bytes we detected.
+
+2006-07-18  Werner Koch  <wk@g10code.com>
+
+	* dn.c (append_ucs2_value): Fixed second blank detection case.
+
 2006-07-03  Werner Koch  <wk@g10code.com>
 
 	* ksba.h, ksba.c (ksba_dn_teststr): New.

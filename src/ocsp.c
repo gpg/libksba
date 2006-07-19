@@ -319,7 +319,7 @@ ksba_ocsp_add_target (ksba_ocsp_t ocsp,
    buffer NONCE of size NONCELEN.  Libksba may have an upper limit of
    the allowed size of the nonce; if the supplied nonce is larger it
    will be truncated and the actual used length of the nonce returned.
-   To detect the implementation limit (which should be sonsidred as a
+   To detect the implementation limit (which should be considered as a
    good suggestion), the function may be called with NULL for NONCE,
    in which case the maximal usable noncelength is returned. The
    function returns the length of the nonce which will be used. */
@@ -1358,7 +1358,7 @@ parse_response (ksba_ocsp_t ocsp, const unsigned char *msg, size_t msglen)
 
 /* Given the OCSP context and a binary reponse message of MSGLEN bytes
    in MSG, this fucntion parses the response and prepares it for
-   signature verification.  The status from the server is retruned in
+   signature verification.  The status from the server is returned in
    RESPONSE_STATUS and must be checked even if the fucntion returns
    without an error. */
 gpg_error_t
@@ -1380,7 +1380,7 @@ ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
   ocsp->received_certs = NULL;
   ocsp->hash_length = 0;
 
-  /* Reset the fields used to track the reponse.  This is so that we
+  /* Reset the fields used to track the response.  This is so that we
      can use the parse function a second time for the same
      request. This is useful in case of a TryLater response status. */
   for (ri=ocsp->requestlist; ri; ri = ri->next)
@@ -1402,7 +1402,7 @@ ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
       && ocsp->noncelen)
     {
       /* FIXME: Check that there is a received nonce and that it matches. */
-
+      /* If not status to KSBA_OCSP_RSPSTATUS_REPLAYED */
     }
 
 

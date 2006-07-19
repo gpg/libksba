@@ -170,6 +170,43 @@ put_stringbuf_mem (struct stringbuf *sb, const char *text, size_t n)
   sb->len += n;
 }
 
+static void
+put_stringbuf_mem_skip (struct stringbuf *sb, const char *text, size_t n,
+                        int skip)
+{
+  char *p;
+      
+  if (!skip)
+    {
+      put_stringbuf_mem (sb, text, n);
+      return;
+    }
+  if (sb->out_of_core)
+    return;
+
+  if (sb->len + n >= sb->size)
+    {
+      /* Note: we allocate too much here, but we don't care. */
+      sb->size += n + 100;
+      p = xtryrealloc (sb->buf, sb->size);
+      if ( !p)
+        {
+          sb->out_of_core = 1;
+          return;
+        }
+      sb->buf = p;
+    }
+  p = sb->buf+sb->len;
+  while (n > skip)
+    {
+      text += skip;
+      n -= skip;
+      *p++ = *text++;
+      n--;
+      sb->len++;
+    }
+}
+
 static char *
 get_stringbuf (struct stringbuf *sb)
 {
@@ -192,9 +229,11 @@ get_stringbuf (struct stringbuf *sb)
 /* This function is used for 1 byte encodings to insert any required
    quoting.  It does not do the quoting for a space or hash mark at
    the beginning of a string or a space as the last character of a
-   string */
+   string.  It will do steps of SKIP+1 characters, assuming that these
+   SKIP characters are null octets. */
 static void
-append_quoted (struct stringbuf *sb, const unsigned char *value, size_t length)
+append_quoted (struct stringbuf *sb, const unsigned char *value, size_t length,
+               int skip)
 {
   unsigned char tmp[4];
   const unsigned char *s = value;
@@ -202,16 +241,20 @@ append_quoted (struct stringbuf *sb, const unsigned char *value, size_t length)
 
   for (;;)
     {
-      for (value = s; n < length; n++, s++)
+      for (value = s; n+skip < length; n++, s++)
         {
+          s += skip;
+          n += skip;
           if (*s < ' ' || *s > 126 || strchr (",+\"\\<>;", *s) )
             break;
         }
 
       if (s != value)
-        put_stringbuf_mem (sb, value, s-value);
-      if (n==length)
+        put_stringbuf_mem_skip (sb, value, s-value, skip);
+      if (n+skip >= length)
         return; /* ready */
+      s += skip;
+      n += skip;
       if ( *s < ' ' || *s > 126 )
         {
           sprintf (tmp, "\\%02X", *s);
@@ -260,7 +303,7 @@ append_utf8_value (const unsigned char *value, size_t length,
       for (value = s; n < length && !(*s & 0x80); n++, s++)
         ;
       if (s != value)
-        append_quoted (sb, value, s-value);
+        append_quoted (sb, value, s-value, 0);
       if (n==length)
         return; /* ready */
       assert ((*s & 0x80));
@@ -323,7 +366,7 @@ append_latin1_value (const unsigned char *value, size_t length,
       for (value = s; n < length && !(*s & 0x80); n++, s++)
         ;
       if (s != value)
-        append_quoted (sb, value, s-value);
+        append_quoted (sb, value, s-value, 0);
       if (n==length)
         return; /* ready */
       assert ((*s & 0x80));
@@ -369,7 +412,7 @@ append_ucs4_value (const unsigned char *value, size_t length,
              && !s[0] && !s[1] && !s[2] && !(s[3] & 0x80); n += 4, s += 4)
         ;
       if (s != value)
-        append_quoted (sb, value, s-value);
+        append_quoted (sb, value, s-value, 3);
       if (n>=length)
         return; /* ready */
       if (n < 4)
@@ -443,7 +486,7 @@ append_ucs2_value (const unsigned char *value, size_t length,
       value += 2;
       length -= 2;
     }
-  if (length>3 && !value[0] && value[1] == ' ')
+  if (length>1 && !value[0] && value[1] == ' ')
     {
       tmp[0] = '\\';
       tmp[1] = ' ';
@@ -456,7 +499,7 @@ append_ucs2_value (const unsigned char *value, size_t length,
       for (value = s; n+1 < length && !s[0] && !(s[1] & 0x80); n += 2, s += 2)
         ;
       if (s != value)
-        append_quoted (sb, value, s-value);
+        append_quoted (sb, value, s-value, 1);
       if (n>=length)
         return; /* ready */
       if (n < 2)
