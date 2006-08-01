@@ -22,17 +22,26 @@
 AC_PREREQ(2.57)
 min_automake_version="1.9.3"
 
-# Version number: Remember to change immediately *after* a release.
-#                 Append a "-cvs" for non-released versions.
-AC_INIT(libksba, 0.9.16-cvs, gpa-dev@gnupg.org)
+
+# Remember to change the version number immediately *after* a release.
+# Set my_issvn to "yes" for non-released code.  Remember to run an
+# "svn up" and "autogen.sh" right before creating a distribution.
+m4_define([my_version], [0.9.16])
+m4_define([my_issvn], [no])
+
+m4_define([svn_revision], m4_esyscmd([echo -n $((svn info 2>/dev/null \
+          || echo 'Revision: 0')|sed -n '/^Revision:/ s/[^0-9]//gp'|head -1)]))
+AC_INIT([libksba], my_version[]m4_if(my_issvn,[yes],[-svn[]svn_revision]),
+        [gpa-dev@gnupg.org])
+
 # LT Version numbers: Remember to change them just *before* a release.
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
 # Please remember to document interface changes in the NEWS file.
-LIBKSBA_LT_CURRENT=15
-LIBKSBA_LT_AGE=7
-LIBKSBA_LT_REVISION=2
+LIBKSBA_LT_CURRENT=16
+LIBKSBA_LT_AGE=8
+LIBKSBA_LT_REVISION=0
 #-------------------
 
 # fixme: When bouncing this to a newer version, you check whether the

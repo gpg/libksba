@@ -1,3 +1,9 @@
+2006-08-01  Werner Koch  <wk@g10code.com>
+
+	* Makefile.am (TESTS): Add t-dnparser.
+
+	* t-dnparser.c (test_0): New.  We need this good case test.
+
 2006-07-03  Werner Koch  <wk@g10code.com>
 
 	* t-dnparser.c: Use ksba_dn_str2der isntead of internal functions.

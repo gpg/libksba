@@ -1,7 +1,9 @@
-Noteworthy changes in version 0.9.16
+Noteworthy changes in version 0.9.16 (2006-08-01)
 -------------------------------------------------
 
  * Fixed a character set conversion bug in BMPStrings.
+
+ * New function for better error reporting of DNs.
 
  * Interface changes relative to the 0.9.13 release:
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

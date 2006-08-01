@@ -1286,7 +1286,7 @@ ksba_dn_teststr (const char *string, int seq,
 
   *rerrlen = *rerroff = 0;
 
-  for (nparts=0, s=string; s && *s;)
+  for (nparts=0, s=string; s && *s; nparts++)
     {
       err = parse_rdn (s, &endp, NULL, &off, &len);
       if (err && !seq--)
