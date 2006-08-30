@@ -77,7 +77,7 @@ KSBA_0.9 {
     ksba_ocsp_get_status; ksba_ocsp_hash_request; ksba_ocsp_hash_response;
     ksba_ocsp_new; ksba_ocsp_parse_response; ksba_ocsp_prepare_request;
     ksba_ocsp_release; ksba_ocsp_set_digest_algo; ksba_ocsp_set_nonce;
-    ksba_ocsp_set_requestor; ksba_ocsp_set_sig_val;
+    ksba_ocsp_set_requestor; ksba_ocsp_set_sig_val; ksba_ocsp_get_extension;
 
     ksba_oid_from_str; ksba_oid_to_str;
 

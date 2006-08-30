@@ -1,7 +1,13 @@
 Noteworthy changes in version 0.9.17
 -------------------------------------------------
 
- * OCSP nonces are now checked to detact replay attacks.
+ * OCSP nonces are now checked to detect replay attacks.
+
+ * OCSP extensions may no be retrieved.
+
+ * Interface changes relative to the 0.9.16 release:
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ksba_ocsp_get_extension        NEW
 
 
 Noteworthy changes in version 0.9.16 (2006-08-01)

@@ -1412,7 +1412,7 @@ parse_response (ksba_ocsp_t ocsp, const unsigned char *msg, size_t msglen)
         cl->cert = cert;
 
         *cl_tail = cl;
-        cl_tail = &ocsp->received_certs;
+        cl_tail = &cl->next;
       }
   }
 
@@ -1607,7 +1607,7 @@ ksba_ocsp_get_status (ksba_ocsp_t ocsp, ksba_cert_t cert,
   /* Find the certificate.  We don't care about the issuer certificate
      and stop at the first match.  The implementation may be optimized
      by keeping track of the last certificate found to start with the
-     next one the.  Given that a usual request consiost only of a few
+     next one then.  Given that a usual request consists only of a few
      certificates, this does not make much sense in reality. */
   for (ri=ocsp->requestlist; ri; ri = ri->next)
     if (ri->cert == cert)
@@ -1626,3 +1626,42 @@ ksba_ocsp_get_status (ksba_ocsp_t ocsp, ksba_cert_t cert,
     *r_reason = ri->revocation_reason;
   return 0;
 }
+
+
+gpg_error_t
+ksba_ocsp_get_extension (ksba_ocsp_t ocsp, ksba_cert_t cert, int idx,
+                         char const **r_oid, int *r_crit,
+                         size_t *r_deroff, size_t *r_derlen)
+{
+  gpg_error_t err;
+
+  if (!ocsp)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  if (!ocsp->requestlist)
+    return gpg_error (GPG_ERR_MISSING_ACTION);
+
+  if (cert)
+    {
+      /* Return extensions for the certificate (singleExtensions).  */
+/*       for (ri=ocsp->requestlist; ri; ri = ri->next) */
+/*         if (ri->cert == cert) */
+/*           break; */
+/*       if (!ri) */
+/*         return gpg_error (GPG_ERR_NOT_FOUND); */
+
+
+    }
+  else
+    {
+      /* Return extensions for the response (responseExtensions).  */
+
+
+
+    }
+
+  return gpg_error (GPG_ERR_EOF); 
+
+/*   if (idx < 0 || idx >= cert->cache.n_extns) */
+/*     return gpg_error (GPG_ERR_INV_INDEX); */
+}
+

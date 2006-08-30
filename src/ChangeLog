@@ -2,6 +2,8 @@
 
 	* ocsp.c (extract_nonce): New.
 	(ksba_ocsp_parse_response): Set status to replay on bad nonce.
+	(ksba_ocsp_get_extension): New.
+	(parse_response): Fixed storing of received_certs.
 
 	* util.c (ksba_calloc): Protect against integer overflow.
 

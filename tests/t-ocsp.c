@@ -203,7 +203,8 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
     }
   printf ("response status ..: %s\n", t);
 
-  if (response_status == KSBA_OCSP_RSPSTATUS_SUCCESS)
+  if (response_status == KSBA_OCSP_RSPSTATUS_SUCCESS
+      || response_status == KSBA_OCSP_RSPSTATUS_REPLAYED)
     {
       ksba_status_t status;
       ksba_crl_reason_t reason;
@@ -216,6 +217,8 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
       printf ("\nproduced at ......: ");
       print_time (produced_at);
       putchar ('\n');
+      
+
 
       err = ksba_ocsp_get_status (ocsp, cert,
                                   &status, this_update, next_update,
@@ -252,6 +255,15 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
       printf ("\nnext update ......: ");
       print_time (next_update);
       putchar ('\n');
+      {
+        int cert_idx;
+        ksba_cert_t acert;
+
+        for (cert_idx=0; (acert = ksba_ocsp_get_cert (ocsp, cert_idx));
+             cert_idx++)
+          ksba_cert_release (acert);
+        printf ("extra certificates: %d\n", cert_idx );
+      }
     }
   
 

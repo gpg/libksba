@@ -51,3 +51,4 @@ name part when old style quoting is not used.
 ** The ASN.1 parse tree is not released in all places
 ** Some memory is not released in case of errors.
 
+* Implement ksba_ocsp_get_extension!!!!

@@ -399,7 +399,10 @@ gpg_error_t ksba_ocsp_get_status (ksba_ocsp_t ocsp, ksba_cert_t cert,
                                   ksba_isotime_t r_next_update,
                                   ksba_isotime_t r_revocation_time,
                                   ksba_crl_reason_t *r_reason);
-
+gpg_error_t ksba_ocsp_get_extension (ksba_ocsp_t ocsp, ksba_cert_t cert,
+                                     int idx,
+                                     char const **r_oid, int *r_crit,
+                                     size_t *r_deroff, size_t *r_derlen);
 
 
 /*-- certreq.c --*/
