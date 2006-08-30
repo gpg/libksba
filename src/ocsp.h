@@ -68,6 +68,8 @@ struct ksba_ocsp_s {
                                increased, check that the created
                                request will still be valid as we use a
                                hacked implementation. */
+  int bad_nonce;            /* The nonce does not match the request. */
+  int good_nonce;           /* The nonce does match the request. */
 
   unsigned char *request_buffer; /* Internal buffer to build the request. */
   size_t request_buflen;

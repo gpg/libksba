@@ -30,4 +30,13 @@ on 2003-11-20 and prefixed with "ov-":
 
    The responder adress is http://ocsp.openvalidation.org
 
+Certificates downloaded from  http://www.openvalidation.org/en/test/ca2.html
+on 2006-08-30 and prefixed with "ov2-":
+
+ ov2-root-ca-cert.crt   Root certificate
+ ov2-ocsp-server.crt    The certificate of the OCSP responder
+ ov2-user.crt           User certificate
+ ov2-userrev.crt        A user certificate revoked by OCSP
+
+
 

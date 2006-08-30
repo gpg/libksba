@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 
 #include "util.h"
 
@@ -123,9 +124,19 @@ ksba_malloc (size_t n )
 void *
 ksba_calloc (size_t n, size_t m )
 {
-  void *p = ksba_malloc (n*m);
+  size_t nbytes;
+  void *p;
+
+  nbytes = n * m;
+  if ( m && nbytes / m != n)
+    {
+      errno = ENOMEM;
+      p = NULL;
+    }
+  else
+    p = ksba_malloc (nbytes);
   if (p)
-    memset (p, 0, n*m);
+    memset (p, 0, nbytes);
   return p;
 }
 

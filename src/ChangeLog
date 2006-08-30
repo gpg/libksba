@@ -1,3 +1,10 @@
+2006-08-30  Werner Koch  <wk@g10code.com>
+
+	* ocsp.c (extract_nonce): New.
+	(ksba_ocsp_parse_response): Set status to replay on bad nonce.
+
+	* util.c (ksba_calloc): Protect against integer overflow.
+
 2006-08-01  Werner Koch  <wk@g10code.com>
 
 	* dn.c (ksba_dn_teststr): Bump nparts to actually allow returning

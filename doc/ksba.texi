@@ -1097,3 +1097,53 @@ representation, KSBA recognizes the following extra labels:
 @unnumbered Function and Data Index
 @printindex fn
 @bye
+
+
+
+         Old Information which might not be correct anymore:
+         ---------------------------------------------------
+
+KSBA  provides these subsystems:
+
+
+* ASN.1 Parser  (ksba_asn_*)
+
+  KSBA provides a simple ASN.1 parser which can be used to read
+  definitions directly from an ASN.1 module without the need of
+  generating extra tables.  For ease of maintenance it also comes with
+  a tool to create static data structures to avoid that overhead and
+  the need to include ASN.1 modules.
+
+  The primary goal of this parser is to provide the ASN.1 syntax tree
+  to be used by other library modules.
+
+* BER Decoder (ksba_ber_decoder_*)
+
+  This is a decoder for the ASN.1 Basic Encoding Rules with a facility
+  to detect valid DER encoding (DER is a subset of BER).  By using
+  thresholds and pre-registered callout function it is possible to
+  work on indefinite length data stream and limiting the memory usage
+  to a fixed upper bound.
+
+* BER Encoder (ksba_ber_encoder_*)
+
+  This is the counterpart to the DER Decoder with the ability to
+  restrict the encoding to DER.
+
+* Certificate Handling (ksba_cert_*)
+
+  The main bulk of the provided functions are used to give a clean
+  interface to X.509 certificates by translating X.509 data types to
+  more standard data types.
+
+* CMS Handling (ksba_cms_*)
+
+  The Cryptographic Message Syntax is the core data type for S/MIME
+  and therefore KSBA provides an interface to parse and create these
+  objects without the need to cope with ASN.1.
+
+* Reader and Writer (ksba_reader_*, ksba_writer_*)
+
+  Abstraction objects to access memory areas, files or file
+  descriptor.
+

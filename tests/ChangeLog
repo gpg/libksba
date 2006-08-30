@@ -1,3 +1,7 @@
+2006-08-30  Werner Koch  <wk@g10code.com>
+
+	* t-ocsp.c (one_response): Build the test request with the same nonce.
+
 2006-08-01  Werner Koch  <wk@g10code.com>
 
 	* Makefile.am (TESTS): Add t-dnparser.

@@ -27,7 +27,9 @@ test_certs = cert_dfn_pca01.der cert_dfn_pca15.der \
 	     samples/authority.crt samples/betsy.crt samples/bull.crt \
              samples/ov-ocsp-server.crt samples/ov-userrev.crt \
              samples/ov-root-ca-cert.crt samples/ov-serverrev.crt \
-	     samples/ov-user.crt samples/ov-server.crt 
+	     samples/ov-user.crt samples/ov-server.crt  \
+             samples/ov2-root-ca-cert.crt samples/ov2-ocsp-server.crt \
+             samples/ov2-user.crt samples/ov2-userrev.crt 
 
 test_crls = samples/ov-test-crl.crl 
 

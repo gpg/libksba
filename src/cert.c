@@ -456,7 +456,7 @@ ksba_cert_get_digest_algo (ksba_cert_t cert)
  * @cert: certificate object 
  * 
  * This function returnes the serial number of the certificate.  The
- * serial number is an integer returned as an cancnical encoded
+ * serial number is an integer returned as an canonical encoded
  * S-expression with just one element.
  * 
  * Return value: An allocated S-Exp or NULL for no value.

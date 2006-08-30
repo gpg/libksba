@@ -173,6 +173,9 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
   fail_if_err (err);
   ksba_cert_release (issuer_cert);
 
+  if (!no_nonce)
+    ksba_ocsp_set_nonce (ocsp, "ABCDEFGHIJKLMNOP", 16);
+
   err = ksba_ocsp_build_request (ocsp, &request, &requestlen);
   fail_if_err (err);
   xfree (request);
@@ -192,7 +195,7 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
     case KSBA_OCSP_RSPSTATUS_INTERNAL:     t = "internal error"; break;  
     case KSBA_OCSP_RSPSTATUS_TRYLATER:     t = "try later"; break;      
     case KSBA_OCSP_RSPSTATUS_SIGREQUIRED:  t = "must sign request"; break;  
-    case KSBA_OCSP_RSPSTATUS_UNAUTHORIZED: t = "unautorized"; break;  
+    case KSBA_OCSP_RSPSTATUS_UNAUTHORIZED: t = "unauthorized"; break;  
     case KSBA_OCSP_RSPSTATUS_REPLAYED:     t = "replay detected"; break;  
     case KSBA_OCSP_RSPSTATUS_OTHER:        t = "other (unknown)"; break;  
     case KSBA_OCSP_RSPSTATUS_NONE:         t = "no status"; break;
@@ -275,8 +278,29 @@ my_hash_buffer (void *arg, const char *oid,
 
 
 
-/* ( printf "POST / HTTP/1.0\r\nContent-Type: application/ocsp-request\r\nContent-Length: `wc -c <a.req | tr -d ' '`\r\n\r\n"; cat a.req ) |  nc -v ocsp.openvalidation.org 8088   | sed '1,/^\r$/d' >a.rsp  */
+/* ( printf "POST / HTTP/1.0\r\nContent-Type: application/ocsp-request\r\nContent-Length: `wc -c <a.req | tr -d ' '`\r\n\r\n"; cat a.req ) |  nc -v ocsp.openvalidation.org 8088   | sed '1,/^\r$/d' >a.rsp 
 
+    Openvalidation test reponders:
+
+    Port: 80  	Standard  configuration. OCSP Responder will accept
+                all proper requests and send a signed response.
+    Port: 8080 	Response does not contain any attached certificates.
+                Client must accept this response
+    Port: 8081 	Never replies nonce. Insecure but standard conform mode.
+                Client application should warn in case of replay-attacks.
+    Port: 8082 	The OCSP Responder will sign the response with randomized
+                bytecode. Client should NOT accept this response.
+    Port: 8083 	OCSP response will always be revoked.
+    Port: 8084 	OCSP response will always be unknown.
+    Port: 8085 	OCSP response will always be malformed.
+    Port: 8086 	OCSP response will always be internal error.
+    Port: 8087 	OCSP response will always be try later.
+    Port: 8088 	OCSP response will always be signature required.
+    Port: 8089 	OCSP response will always be unauth.
+    Port: 8090 	Standard configuration with full Debuglogs. Access the
+                logs at http://www.openvalidation.org/en/test/logs.html
+
+*/
 
 int 
 main (int argc, char **argv)

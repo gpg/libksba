@@ -1,5 +1,7 @@
-Noteworthy changes in version 0.9.16
+Noteworthy changes in version 0.9.17
 -------------------------------------------------
+
+ * OCSP nonces are now checked to detact replay attacks.
 
 
 Noteworthy changes in version 0.9.16 (2006-08-01)
@@ -299,7 +301,7 @@ Noteworthy changes in version 0.4.0 (2002-04-15)
  * Nearly all stuff needed for the Aegypten project is now in place.
 
 
- Copyright 2002, 2003, 2004, 2005 g10 Code GmbH
+ Copyright 2002, 2003, 2004, 2005, 2006 g10 Code GmbH
 
  This file is free software; as a special exception the author gives
  unlimited permission to copy and/or distribute it, with or without

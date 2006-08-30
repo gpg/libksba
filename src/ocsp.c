@@ -1,5 +1,5 @@
 /* ocsp.c - OCSP (rfc2560)
- *      Copyright (C) 2003, 2004, 2005 g10 Code GmbH
+ *      Copyright (C) 2003, 2004, 2005, 2006 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -50,7 +50,7 @@ dump_hex (const unsigned char *p, size_t n)
   else
     {
       for (; n; n--, p++)
-        fprintf (stderr, "%02X", *p);
+        fprintf (stderr, " %02X", *p);
     }
 }
 #endif
@@ -421,7 +421,7 @@ write_request_extensions (ksba_ocsp_t ocsp, ksba_writer_t wout)
     err = ksba_writer_write (w1, buf, buflen);
   xfree (buf); buf = NULL;
   /* We known that the nonce is short enough to put the tag into 2 bytes, thus
-     we write the encasulating octet string directly with a fixed length. */
+     we write the encapsulating octet string directly with a fixed length. */
   if (!err)
     err = _ksba_ber_write_tl (w1, TYPE_OCTET_STRING, CLASS_UNIVERSAL, 0,
                               2+ocsp->noncelen);
@@ -775,6 +775,71 @@ ksba_ocsp_build_request (ksba_ocsp_t ocsp,
 
 
 
+/* Extract the nonce from the extension sequence.  A typical data
+   ASN.1 blob passed to this function is:
+
+    SEQUENCE {
+      SEQUENCE {
+        OBJECT IDENTIFIER ocspNonce (1 3 6 1 5 5 7 48 1 2)
+        OCTET STRING, encapsulates {
+            INTEGER
+              41 42 43 44 45 46 47 48 49 4A 4B 4C 4D 4E 4F 50
+            }
+        }
+      }
+*/
+
+static int
+extract_nonce (ksba_ocsp_t ocsp, const unsigned char *data, size_t datalen)
+{
+  gpg_error_t err;
+  struct tag_info ti;
+  size_t length;
+  char *oid = NULL;
+
+  err = parse_sequence (&data, &datalen, &ti);
+  if (err)
+    goto leave;
+  length = ti.length;
+  while (length)
+    {
+      err = parse_sequence (&data, &datalen, &ti);
+      if (err)
+        goto leave;
+      if (length < ti.nhdr + ti.length)
+        {
+          err = gpg_error (GPG_ERR_BAD_BER);
+          goto leave;
+        }
+      length -= ti.nhdr + ti.length;
+
+      xfree (oid);
+      err = parse_object_id_into_str (&data, &datalen, &oid);
+      if (err)
+        goto leave;
+      err = parse_octet_string (&data, &datalen, &ti);
+      if (err)
+        goto leave;
+      if (!strcmp (oid, oidstr_ocsp_nonce))
+        {
+          err = parse_integer (&data, &datalen, &ti);
+          if (err)
+            goto leave;
+          if (ocsp->noncelen != ti.length
+              || memcmp (ocsp->nonce, data, ti.length))
+            ocsp->bad_nonce = 1;
+          else
+            ocsp->good_nonce = 1;
+        }
+      parse_skip (&data, &datalen, &ti); /* Skip the octet string / integer. */
+    }
+
+ leave:
+  xfree (oid);
+  return err;
+}
+
+
 /* Parse the first part of a response:
 
      OCSPResponse ::= SEQUENCE {
@@ -1209,10 +1274,9 @@ parse_response_data (ksba_ocsp_t ocsp,
   err = parse_context_tag (data, datalen, &ti, 1);
   if (!err)
     {
-      
-
-
-      /* FIXME: parse responseExtensions. */
+      err = extract_nonce (ocsp, *data, ti.length);
+      if (err)
+        return err;
       parse_skip (data, datalen, &ti);
     }
   else if (gpg_err_code (err) == GPG_ERR_INV_OBJ)
@@ -1359,7 +1423,7 @@ parse_response (ksba_ocsp_t ocsp, const unsigned char *msg, size_t msglen)
 /* Given the OCSP context and a binary reponse message of MSGLEN bytes
    in MSG, this fucntion parses the response and prepares it for
    signature verification.  The status from the server is returned in
-   RESPONSE_STATUS and must be checked even if the fucntion returns
+   RESPONSE_STATUS and must be checked even if the function returns
    without an error. */
 gpg_error_t
 ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
@@ -1379,6 +1443,8 @@ ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
   release_ocsp_certlist (ocsp->received_certs);
   ocsp->received_certs = NULL;
   ocsp->hash_length = 0;
+  ocsp->bad_nonce = 0;
+  ocsp->good_nonce = 0;
 
   /* Reset the fields used to track the response.  This is so that we
      can use the parse function a second time for the same
@@ -1398,13 +1464,9 @@ ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
   /* FIXME: find duplicates in the request list and set them to the
      same status. */
 
-  if (*response_status == KSBA_OCSP_RSPSTATUS_SUCCESS
-      && ocsp->noncelen)
-    {
-      /* FIXME: Check that there is a received nonce and that it matches. */
-      /* If not status to KSBA_OCSP_RSPSTATUS_REPLAYED */
-    }
-
+  if (*response_status == KSBA_OCSP_RSPSTATUS_SUCCESS)
+    if (ocsp->bad_nonce || (ocsp->noncelen && !ocsp->good_nonce))
+      *response_status = KSBA_OCSP_RSPSTATUS_REPLAYED;
 
   return err;
 }

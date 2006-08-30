@@ -1170,7 +1170,7 @@ ksba_cms_get_sig_val (ksba_cms_t cms, int idx)
  * @idx: index of recipient info
  * 
  * Return the encrypted value (the session key) of recipient @idx in a
- * format suitable to be used as input to Libgcrypt's verification
+ * format suitable to be used as input to Libgcrypt's decryption
  * function.  The caller must free the returned string.
  * 
  * Return value: NULL or a string with a S-Exp.
