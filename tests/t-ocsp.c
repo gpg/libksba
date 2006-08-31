@@ -32,10 +32,27 @@
 
 
 #include "t-common.h"
+#include "oidtranstbl.h"
+
 
 int verbose;
 int debug;
 int no_nonce;
+
+/* Return the description for OID; if no description is available 
+   NULL is returned. */
+static const char *
+get_oid_desc (const char *oid)
+{
+  int i;
+
+  if (oid)
+    for (i=0; oidtranstbl[i].oid; i++)
+      if (!strcmp (oidtranstbl[i].oid, oid))
+        return oidtranstbl[i].desc;
+  return NULL;
+}
+
 
 static unsigned char *
 read_file (const char *fname, size_t *r_length)
@@ -210,6 +227,19 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
       ksba_crl_reason_t reason;
       ksba_isotime_t this_update, next_update, revocation_time, produced_at;
       ksba_sexp_t sigval;
+      char *name;
+      ksba_sexp_t keyid;
+
+      err = ksba_ocsp_get_responder_id (ocsp, &name, &keyid);
+      fail_if_err (err);
+      printf ("responder id .....: ");
+      if (name)
+        printf ("`%s'", name);
+      else
+        print_sexp (keyid);
+      putchar ('\n');
+      ksba_free (name);
+      ksba_free (keyid);
 
       sigval = ksba_ocsp_get_sig_val (ocsp, produced_at);
       printf ("signature value ..: ");
@@ -217,9 +247,6 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
       printf ("\nproduced at ......: ");
       print_time (produced_at);
       putchar ('\n');
-      
-
-
       err = ksba_ocsp_get_status (ocsp, cert,
                                   &status, this_update, next_update,
                                   revocation_time, &reason);
@@ -263,6 +290,45 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
              cert_idx++)
           ksba_cert_release (acert);
         printf ("extra certificates: %d\n", cert_idx );
+      }
+
+      {
+        int idx, crit;
+        const char *oid;
+        const unsigned char *der;
+        size_t derlen;
+        
+        for (idx=0; !(err=ksba_ocsp_get_extension (ocsp, NULL, idx,
+                                                   &oid, &crit,
+                                                   &der, &derlen)); idx++)
+          {
+            const char *s = get_oid_desc (oid);
+            printf ("%sresp-extn ..%s: %s%s%s%s  (",
+                    crit? "crit. ":"", 
+                    crit?"":"......", 
+                    s?"(":"", s?s:"", s?") ":"", oid);
+            print_hex (der, derlen);
+            putchar (')');
+            putchar ('\n');
+          }
+        if (err && gpg_err_code (err) != GPG_ERR_EOF)
+          fail_if_err (err);
+
+        for (idx=0; !(err=ksba_ocsp_get_extension (ocsp, cert, idx,
+                                                   &oid, &crit,
+                                                   &der, &derlen)); idx++)
+          {
+            const char *s = get_oid_desc (oid);
+            printf ("%ssngl-extn ..%s: %s%s%s%s  (",
+                    crit? "crit. ":"", 
+                    crit?"":"......", 
+                    s?"(":"", s?s:"", s?") ":"", oid);
+            print_hex (der, derlen);
+            putchar (')');
+            putchar ('\n');
+          }
+        if (err && gpg_err_code (err) != GPG_ERR_EOF)
+          fail_if_err (err);
       }
     }
   

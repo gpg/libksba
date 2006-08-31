@@ -143,6 +143,43 @@ parse_octet_string (unsigned char const **buf, size_t *len, struct tag_info *ti)
   return err;
 }
 
+
+/* Note that R_BOOL will only be set if a value has been given. Thus
+   the caller should set it to the default value prior to calling this
+   function.  Obviously no call to parse_skip is required after
+   calling this function. */
+static gpg_error_t
+parse_optional_boolean (unsigned char const **buf, size_t *len, int *r_bool)
+{
+  gpg_error_t err;
+  struct tag_info ti;
+
+  err = _ksba_ber_parse_tl (buf, len, &ti);
+  if (err)
+    ;
+  else if (!ti.length)
+    err = gpg_error (GPG_ERR_TOO_SHORT);
+  else if (ti.length > *len)
+    err = gpg_error (GPG_ERR_BAD_BER);
+  else if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_BOOLEAN
+           && !ti.is_constructed)
+    { 
+      if (ti.length != 1)
+        err = gpg_error (GPG_ERR_BAD_BER);
+      *r_bool = !!**buf;
+      parse_skip (buf, len, &ti);
+    }
+  else
+    { /* Undo the read. */
+      *buf -= ti.nhdr;
+      *len += ti.nhdr;
+    }
+
+  return err;
+}
+
+
+
 static gpg_error_t
 parse_object_id_into_str (unsigned char const **buf, size_t *len, char **oid)
 {
@@ -238,6 +275,18 @@ release_ocsp_certlist (struct ocsp_certlist_s *cl)
 }
 
 
+static void
+release_ocsp_extensions (struct ocsp_extension_s *ex)
+{
+  while (ex)
+    {
+      struct ocsp_extension_s *tmp = ex->next;
+      xfree (ex);
+      ex = tmp;
+    }
+}
+
+
 /* Release the OCSP object and all its resources. Passing NULL for
    OCSP is a valid nop. */
 void
@@ -254,10 +303,14 @@ ksba_ocsp_release (ksba_ocsp_t ocsp)
       ocsp->requestlist = ri->next;
       ksba_cert_release (ri->cert);
       ksba_cert_release (ri->issuer_cert);
+      release_ocsp_extensions (ri->single_extensions);
       xfree (ri->serialno);
     }
   xfree (ocsp->sigval);
+  xfree (ocsp->responder_id.name);
+  xfree (ocsp->responder_id.keyid);
   release_ocsp_certlist (ocsp->received_certs);
+  release_ocsp_extensions (ocsp->response_extensions);
   xfree (ocsp);
 }
 
@@ -775,8 +828,10 @@ ksba_ocsp_build_request (ksba_ocsp_t ocsp,
 
 
 
-/* Extract the nonce from the extension sequence.  A typical data
-   ASN.1 blob passed to this function is:
+/* 
+   Parse the response extensions and store them aways.  While doing
+   this we also check the nonce extension.  A typical data ASN.1 blob
+   with only the nonce extension as passed to this function is:
 
     SEQUENCE {
       SEQUENCE {
@@ -790,19 +845,24 @@ ksba_ocsp_build_request (ksba_ocsp_t ocsp,
 */
 
 static int
-extract_nonce (ksba_ocsp_t ocsp, const unsigned char *data, size_t datalen)
+parse_response_extensions (ksba_ocsp_t ocsp,
+                          const unsigned char *data, size_t datalen)
 {
   gpg_error_t err;
   struct tag_info ti;
   size_t length;
   char *oid = NULL;
 
+  assert (!ocsp->response_extensions);
   err = parse_sequence (&data, &datalen, &ti);
   if (err)
     goto leave;
   length = ti.length;
   while (length)
     {
+      struct ocsp_extension_s *ex;
+      int is_crit;
+
       err = parse_sequence (&data, &datalen, &ti);
       if (err)
         goto leave;
@@ -815,6 +875,10 @@ extract_nonce (ksba_ocsp_t ocsp, const unsigned char *data, size_t datalen)
 
       xfree (oid);
       err = parse_object_id_into_str (&data, &datalen, &oid);
+      if (err)
+        goto leave;
+      is_crit = 0;
+      err = parse_optional_boolean (&data, &datalen, &is_crit);
       if (err)
         goto leave;
       err = parse_octet_string (&data, &datalen, &ti);
@@ -831,6 +895,88 @@ extract_nonce (ksba_ocsp_t ocsp, const unsigned char *data, size_t datalen)
           else
             ocsp->good_nonce = 1;
         }
+      ex = xtrymalloc (sizeof *ex + strlen (oid) + ti.length);
+      if (!ex)
+        {
+          err = gpg_error_from_errno (errno);
+          goto leave;
+        }
+      ex->crit = is_crit;
+      strcpy (ex->data, oid);
+      ex->data[strlen (oid)] = 0;
+      ex->off = strlen (oid) + 1;
+      ex->len = ti.length;
+      memcpy (ex->data + ex->off, data, ti.length);
+      ex->next = ocsp->response_extensions;
+      ocsp->response_extensions = ex;
+
+      parse_skip (&data, &datalen, &ti); /* Skip the octet string / integer. */
+    }
+
+ leave:
+  xfree (oid);
+  return err;
+}
+
+
+/* 
+   Parse single extensions and store them away.
+*/
+static int
+parse_single_extensions (struct ocsp_reqitem_s *ri,
+                         const unsigned char *data, size_t datalen)
+{
+  gpg_error_t err;
+  struct tag_info ti;
+  size_t length;
+  char *oid = NULL;
+
+  assert (ri && !ri->single_extensions);
+  err = parse_sequence (&data, &datalen, &ti);
+  if (err)
+    goto leave;
+  length = ti.length;
+  while (length)
+    {
+      struct ocsp_extension_s *ex;
+      int is_crit;
+
+      err = parse_sequence (&data, &datalen, &ti);
+      if (err)
+        goto leave;
+      if (length < ti.nhdr + ti.length)
+        {
+          err = gpg_error (GPG_ERR_BAD_BER);
+          goto leave;
+        }
+      length -= ti.nhdr + ti.length;
+
+      xfree (oid);
+      err = parse_object_id_into_str (&data, &datalen, &oid);
+      if (err)
+        goto leave;
+      is_crit = 0;
+      err = parse_optional_boolean (&data, &datalen, &is_crit);
+      if (err)
+        goto leave;
+      err = parse_octet_string (&data, &datalen, &ti);
+      if (err)
+        goto leave;
+      ex = xtrymalloc (sizeof *ex + strlen (oid) + ti.length);
+      if (!ex)
+        {
+          err = gpg_error_from_errno (errno);
+          goto leave;
+        }
+      ex->crit = is_crit;
+      strcpy (ex->data, oid);
+      ex->data[strlen (oid)] = 0;
+      ex->off = strlen (oid) + 1;
+      ex->len = ti.length;
+      memcpy (ex->data + ex->off, data, ti.length);
+      ex->next = ri->single_extensions;
+      ri->single_extensions = ex;
+
       parse_skip (&data, &datalen, &ti); /* Skip the octet string / integer. */
     }
 
@@ -1178,7 +1324,13 @@ parse_single_response (ksba_ocsp_t ocsp,
     return gpg_error (GPG_ERR_BAD_BER);
   if (ti.class == CLASS_CONTEXT && ti.tag == 1  && ti.is_constructed)
     {
-      parse_skip (data, datalen, &ti); /* FIXME */
+      if (request_item)
+        {
+          err = parse_single_extensions (request_item, *data, ti.length);
+          if (err)
+            return err;
+        }
+      parse_skip (data, datalen, &ti);
     }
   else
     err = gpg_error (GPG_ERR_INV_OBJ);
@@ -1232,6 +1384,8 @@ parse_response_data (ksba_ocsp_t ocsp,
     }
 
   /* The responderID field. */
+  assert (!ocsp->responder_id.name);
+  assert (!ocsp->responder_id.keyid);
   err = _ksba_ber_parse_tl (data, datalen, &ti);
   if (err)
     return err;
@@ -1239,11 +1393,24 @@ parse_response_data (ksba_ocsp_t ocsp,
     return gpg_error (GPG_ERR_BAD_BER);
   else if (ti.class == CLASS_CONTEXT && ti.tag == 1  && ti.is_constructed)
     { /* byName. */
-      parse_skip (data, datalen, &ti);  /* FIXME */
+      err = _ksba_derdn_to_str (*data, ti.length, &ocsp->responder_id.name);
+      if (err)
+        return err; 
+      parse_skip (data, datalen, &ti);
     }
   else if (ti.class == CLASS_CONTEXT && ti.tag == 2  && ti.is_constructed)
     { /* byKey. */
-      parse_skip (data, datalen, &ti);  /* FIXME */
+      err = parse_octet_string (data, datalen, &ti);
+      if (err)
+        return err;
+      if (!ti.length)
+        return gpg_error (GPG_ERR_INV_OBJ); /* Zero length key id.  */
+      ocsp->responder_id.keyid = xtrymalloc (ti.length);
+      if (!ocsp->responder_id.keyid)
+        return gpg_error_from_errno (errno);
+      memcpy (ocsp->responder_id.keyid, *data, ti.length);
+      ocsp->responder_id.keyidlen = ti.length;
+      parse_skip (data, datalen, &ti); 
     }
   else
     err = gpg_error (GPG_ERR_INV_OBJ);
@@ -1274,7 +1441,7 @@ parse_response_data (ksba_ocsp_t ocsp,
   err = parse_context_tag (data, datalen, &ti, 1);
   if (!err)
     {
-      err = extract_nonce (ocsp, *data, ti.length);
+      err = parse_response_extensions (ocsp, *data, ti.length);
       if (err)
         return err;
       parse_skip (data, datalen, &ti);
@@ -1439,16 +1606,20 @@ ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
   if (!ocsp->requestlist)
     return gpg_error (GPG_ERR_MISSING_ACTION);
 
+  /* Reset the fields used to track the response.  This is so that we
+     can use the parse function a second time for the same
+     request. This is useful in case of a TryLater response status. */
   ocsp->response_status = KSBA_OCSP_RSPSTATUS_NONE;
   release_ocsp_certlist (ocsp->received_certs);
+  release_ocsp_extensions (ocsp->response_extensions);
   ocsp->received_certs = NULL;
   ocsp->hash_length = 0;
   ocsp->bad_nonce = 0;
   ocsp->good_nonce = 0;
-
-  /* Reset the fields used to track the response.  This is so that we
-     can use the parse function a second time for the same
-     request. This is useful in case of a TryLater response status. */
+  xfree (ocsp->responder_id.name);
+  ocsp->responder_id.name = NULL;
+  xfree (ocsp->responder_id.keyid);
+  ocsp->responder_id.keyid = NULL;
   for (ri=ocsp->requestlist; ri; ri = ri->next)
     {
       ri->status = KSBA_STATUS_NONE;
@@ -1456,8 +1627,10 @@ ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
       *ri->next_update = 0;
       *ri->revocation_time = 0;
       ri->revocation_reason = 0;
+      release_ocsp_extensions (ri->single_extensions);
     }
 
+  /* Run the actual parser.  */
   err = parse_response (ocsp, msg, msglen);
   *response_status = ocsp->response_status;
 
@@ -1534,21 +1707,50 @@ ksba_ocsp_get_sig_val (ksba_ocsp_t ocsp, ksba_isotime_t produced_at)
 }
 
 
-/* Return the responder ID for the current response into NAME or into
-   the provided 20 byte buffer SHA1KEYHASH.  On sucess NAME either
-   contains the responder ID as a standard name or if NAME is NULL,
-   SHA1KEYHASH contains the hash of the public key.  SHA1KEYHASH may
-   be given as NULL if support for a KEYHASH is not intended.  Caller
-   must release NAME. */
+/* Return the responder ID for the current response into R_NAME or
+   into R_KEYID.  On sucess either R_NAME or R_KEYID will receive an
+   allocated object.  If R_NAME or R_KEYID has been passed as NULL but
+   a value is available the errorcode GPG_ERR_NO_DATA is returned.
+   Caller must release the values stored at R_NAME or R_KEYID; the
+   function stores NULL tehre in case of an error.  */
 gpg_error_t
 ksba_ocsp_get_responder_id (ksba_ocsp_t ocsp,
-                            ksba_name_t *name, unsigned char *sha1keyhash)
+                            char **r_name, ksba_sexp_t *r_keyid)
 {
+  if (r_name)
+    *r_name = NULL;
+  if (r_keyid)
+    *r_keyid = NULL;
+
   if (!ocsp)
     return gpg_error (GPG_ERR_INV_VALUE);
 
+  if (ocsp->responder_id.name && r_name)
+    {
+      *r_name = xtrystrdup (ocsp->responder_id.name);
+      if (!*r_name)
+        return gpg_error_from_errno (errno);
+    }
+  else if (ocsp->responder_id.keyid && r_keyid)
+    {
+      char numbuf[50];
+      size_t numbuflen;
 
-  return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
+      sprintf (numbuf,"(%lu:", (unsigned long)ocsp->responder_id.keyidlen);
+      numbuflen = strlen (numbuf);
+      *r_keyid = xtrymalloc (numbuflen + ocsp->responder_id.keyidlen + 2);
+      if (!*r_keyid)
+        return gpg_error_from_errno (errno);
+      strcpy (*r_keyid, numbuf);
+      memcpy (*r_keyid+numbuflen,
+              ocsp->responder_id.keyid, ocsp->responder_id.keyidlen);
+      (*r_keyid)[numbuflen + ocsp->responder_id.keyidlen] = ')';
+      (*r_keyid)[numbuflen + ocsp->responder_id.keyidlen + 1] = 0;
+    }
+  else
+    gpg_error (GPG_ERR_NO_DATA);
+  
+  return 0;
 }
 
 
@@ -1628,40 +1830,56 @@ ksba_ocsp_get_status (ksba_ocsp_t ocsp, ksba_cert_t cert,
 }
 
 
+/* WARNING: The returned values ares only valid as long as no other
+   ocsp function is called on the same context.  */
 gpg_error_t
 ksba_ocsp_get_extension (ksba_ocsp_t ocsp, ksba_cert_t cert, int idx,
                          char const **r_oid, int *r_crit,
-                         size_t *r_deroff, size_t *r_derlen)
+                         unsigned char const **r_der, size_t *r_derlen)
 {
-  gpg_error_t err;
+  struct ocsp_extension_s *ex;
 
   if (!ocsp)
     return gpg_error (GPG_ERR_INV_VALUE);
   if (!ocsp->requestlist)
     return gpg_error (GPG_ERR_MISSING_ACTION);
+  if (idx < 0)
+    return gpg_error (GPG_ERR_INV_INDEX);
 
   if (cert)
     {
       /* Return extensions for the certificate (singleExtensions).  */
-/*       for (ri=ocsp->requestlist; ri; ri = ri->next) */
-/*         if (ri->cert == cert) */
-/*           break; */
-/*       if (!ri) */
-/*         return gpg_error (GPG_ERR_NOT_FOUND); */
+      struct ocsp_reqitem_s *ri;
 
-
+      for (ri=ocsp->requestlist; ri; ri = ri->next)
+        if (ri->cert == cert)
+          break;
+      if (!ri)
+        return gpg_error (GPG_ERR_NOT_FOUND);
+      
+      for (ex=ri->single_extensions; ex && idx; ex = ex->next, idx--)
+        ;
+      if (!ex)
+        return gpg_error (GPG_ERR_EOF); /* No more extensions. */
     }
   else
     {
       /* Return extensions for the response (responseExtensions).  */
-
-
-
+      for (ex=ocsp->response_extensions; ex && idx; ex = ex->next, idx--)
+        ;
+      if (!ex)
+        return gpg_error (GPG_ERR_EOF); /* No more extensions. */
     }
 
-  return gpg_error (GPG_ERR_EOF); 
+  if (r_oid)
+    *r_oid = ex->data;
+  if (r_crit)
+    *r_crit = ex->crit;
+  if (r_der)
+    *r_der = ex->data + ex->off;
+  if (r_derlen)
+    *r_derlen = ex->len;
 
-/*   if (idx < 0 || idx >= cert->cache.n_extns) */
-/*     return gpg_error (GPG_ERR_INV_INDEX); */
+  return 0;
 }
 

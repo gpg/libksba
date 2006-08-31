@@ -25,6 +25,25 @@
 #include "ksba.h"
 
 
+
+/* A structure to store certificates read from a response. */
+struct ocsp_certlist_s {
+  struct ocsp_certlist_s *next;
+  ksba_cert_t cert;
+};
+
+/* A structre to save a way extensions. */
+struct ocsp_extension_s 
+{
+  struct ocsp_extension_s *next;
+  size_t off;    /* Offset into DATA to the content of the octet string.  */
+  size_t len;    /* Length of the octet string. */
+  int crit;      /* IsCritical flag. */
+  char data[1];  /* This is made up of the OID string followed by the
+                    actual DER data of the extension. */
+};
+
+
 /* A structure to keep a information about a single status request. */
 struct ocsp_reqitem_s {
   struct ocsp_reqitem_s *next;
@@ -44,16 +63,8 @@ struct ocsp_reqitem_s {
   ksba_status_t  status;               /* Set to the status of the target. */
   ksba_isotime_t revocation_time;      /* The indicated revocation time. */
   ksba_crl_reason_t revocation_reason; /* The reason given for revocation. */
+  struct ocsp_extension_s *single_extensions; /* List of extensions. */
 };
-
-
-/* A structure to store certificates read from a response. */
-struct ocsp_certlist_s {
-  struct ocsp_certlist_s *next;
-  ksba_cert_t cert;
-};
-
-
 
 /* A structure used as context for the ocsp subsystem. */
 struct ksba_ocsp_s {
@@ -68,8 +79,6 @@ struct ksba_ocsp_s {
                                increased, check that the created
                                request will still be valid as we use a
                                hacked implementation. */
-  int bad_nonce;            /* The nonce does not match the request. */
-  int good_nonce;           /* The nonce does match the request. */
 
   unsigned char *request_buffer; /* Internal buffer to build the request. */
   size_t request_buflen;
@@ -82,6 +91,14 @@ struct ksba_ocsp_s {
   ksba_isotime_t produced_at;  /* The time the response was signed. */
   struct ocsp_certlist_s *received_certs; /* Certificates received in
                                              the response. */
+  struct ocsp_extension_s *response_extensions; /* List of extensions. */
+  int bad_nonce;            /* The nonce does not match the request. */
+  int good_nonce;           /* The nonce does match the request. */
+  struct {
+    char *name;             /* Allocated DN. */
+    char *keyid;            /* Allocated key ID. */
+    size_t keyidlen;        /* length of the KeyID. */
+  } responder_id;           /* The reponder ID from the response. */
 };
 
 

@@ -1,3 +1,12 @@
+2006-08-31  Werner Koch  <wk@g10code.com>
+
+	Released 1.0.0.
+	
+	* configure.ac: Bumped LT version to C17/A9/R0.
+	
+	* configure.ac: Require libgpg-error 1.2. Removed test on
+	GPG_ERR_UNKNOWN_CRIT_EXTN.
+
 2006-08-01  Werner Koch  <wk@g10code.com>
 
 	Released 0.9.16.

@@ -1,5 +1,5 @@
 /* ksba.h - X509 library for the Aegypten project
- *      Copyright (C) 2001, 2002, 2003, 2004, 2005 g10 Code GmbH
+ *      Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -390,8 +390,8 @@ gpg_error_t ksba_ocsp_hash_response (ksba_ocsp_t ocsp,
 ksba_sexp_t ksba_ocsp_get_sig_val (ksba_ocsp_t ocsp,
                                    ksba_isotime_t produced_at);
 gpg_error_t ksba_ocsp_get_responder_id (ksba_ocsp_t ocsp,
-                                        ksba_name_t *name,
-                                        unsigned char *sha1keyhash);
+                                        char **r_name,
+                                        ksba_sexp_t *r_keyid);
 ksba_cert_t ksba_ocsp_get_cert (ksba_ocsp_t ocsp, int idx);
 gpg_error_t ksba_ocsp_get_status (ksba_ocsp_t ocsp, ksba_cert_t cert,
                                   ksba_status_t *r_status,
@@ -402,7 +402,8 @@ gpg_error_t ksba_ocsp_get_status (ksba_ocsp_t ocsp, ksba_cert_t cert,
 gpg_error_t ksba_ocsp_get_extension (ksba_ocsp_t ocsp, ksba_cert_t cert,
                                      int idx,
                                      char const **r_oid, int *r_crit,
-                                     size_t *r_deroff, size_t *r_derlen);
+                                     unsigned char const **r_der, 
+                                     size_t *r_derlen);
 
 
 /*-- certreq.c --*/

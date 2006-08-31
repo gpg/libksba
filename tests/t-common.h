@@ -80,7 +80,7 @@ prepend_srcdir (const char *fname)
 
 
 void
-print_hex (unsigned char *p, size_t n)
+print_hex (const unsigned char *p, size_t n)
 {
   if (!p)
     fputs ("none", stdout);

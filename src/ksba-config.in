@@ -14,6 +14,8 @@ libs="@KSBA_CONFIG_LIBS@ @GPG_ERROR_LIBS@"
 cflags="@KSBA_CONFIG_CFLAGS@ @GPG_ERROR_CFLAGS@"
 prefix=@prefix@
 exec_prefix=@exec_prefix@
+api_version="@KSBA_CONFIG_API_VERSION@"
+
 includes=""
 libdirs=""
 exec_prefix_set=no
@@ -21,6 +23,7 @@ echo_libs=no
 echo_cflags=no
 echo_prefix=no
 echo_exec_prefix=no
+echo_api_version=no
 
 
 usage()
@@ -31,6 +34,7 @@ Options:
 	[--prefix[=DIR]]
 	[--exec-prefix[=DIR]]
 	[--version]
+        [--api-version]
 	[--libs]
 	[--cflags]
 EOF
@@ -68,6 +72,9 @@ while test $# -gt 0; do
       echo "@VERSION@"
       exit 0
       ;;
+    --api-version)
+      echo_api_version=yes
+      ;;
     --cflags)
       echo_cflags=yes
       ;;
@@ -87,6 +94,10 @@ fi
 
 if test "$echo_exec_prefix" = "yes"; then
     echo $exec_prefix
+fi
+
+if test "$echo_api_version" = "yes"; then
+    echo "$api_version"
 fi
 
 if test "$echo_cflags" = "yes"; then

@@ -1,3 +1,9 @@
+2006-08-31  Werner Koch  <wk@g10code.com>
+
+	* t-ocsp.c (one_response): Print the responder id.
+	(one_response): Print extension info.
+	(get_oid_desc): New.
+
 2006-08-30  Werner Koch  <wk@g10code.com>
 
 	* t-ocsp.c (one_response): Build the test request with the same nonce.

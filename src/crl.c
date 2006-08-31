@@ -35,9 +35,6 @@
 #include "ber-decoder.h"
 #include "crl.h"
 
-#if !HAVE_DECL_GPG_ERR_UNKNOWN_CRIT_EXTN
-#define GPG_ERR_UNKNOWN_CRIT_EXTN  172
-#endif
 
 static const char oidstr_crlNumber[] = "2.5.29.20";
 static const char oidstr_crlReason[] = "2.5.29.21";

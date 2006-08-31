@@ -1,13 +1,19 @@
-Noteworthy changes in version 0.9.17
+Noteworthy changes in version 1.0.0 (2006-08-31)
 -------------------------------------------------
 
  * OCSP nonces are now checked to detect replay attacks.
 
  * OCSP extensions may no be retrieved.
 
+ * Implemented ksba_ocsp_get_responder_id which used to always return
+   an error code not_implemented.  Thus we can assume that the
+   function has never been used and we don't need to see this as an
+   API break.
+
  * Interface changes relative to the 0.9.16 release:
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  ksba_ocsp_get_extension        NEW
+ ksba_ocsp_get_responder_id     CHANGED: No ABI break.
 
 
 Noteworthy changes in version 0.9.16 (2006-08-01)

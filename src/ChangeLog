@@ -1,3 +1,28 @@
+2006-08-31  Werner Koch  <wk@g10code.com>
+
+	* ocsp.h (struct ocsp_extension_s): New.
+	* ocsp.c (extract_nonce): Renamed to ..
+	(parse_response_extensions): .. this. Extended to save all
+	extensions.
+	(release_ocsp_extensions): New.
+	(ksba_ocsp_release): Release new extension data.
+	(ksba_ocsp_parse_response): Reset extesnion data.
+	(parse_optional_boolean): New.
+	(parse_single_extensions): New.
+
+	* ksba.m4: Implement --api-version check.
+	* ksba-config.in (echo_api_version): New option --api-version.
+
+	* crl.c (GPG_ERR_UNKNOWN_CRIT_EXTN): Removed definition as we now
+	require a decent libgpg-error.
+
+	* ocsp.c (ksba_ocsp_get_responder_id): Implemented.  Changed NAME
+	from ksba_name_t* to char** and SHA1KEYHASH from unsigned char* to
+	ksba_sexp_t*.  Given that the function has always returned an
+	not_implemented error code and thus was not useful at all, we
+	don't consider this as an ABI change (still pointers) and the API
+	change is not real as this function was never useful.
+
 2006-08-30  Werner Koch  <wk@g10code.com>
 
 	* ocsp.c (extract_nonce): New.

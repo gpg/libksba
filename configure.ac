@@ -26,8 +26,8 @@ min_automake_version="1.9.3"
 # Remember to change the version number immediately *after* a release.
 # Set my_issvn to "yes" for non-released code.  Remember to run an
 # "svn up" and "autogen.sh" right before creating a distribution.
-m4_define([my_version], [0.9.17])
-m4_define([my_issvn], [yes])
+m4_define([my_version], [1.0.0])
+m4_define([my_issvn], [no])
 
 m4_define([svn_revision], m4_esyscmd([echo -n $((svn info 2>/dev/null \
           || echo 'Revision: 0')|sed -n '/^Revision:/ s/[^0-9]//gp'|head -1)]))
@@ -39,14 +39,15 @@ AC_INIT([libksba], my_version[]m4_if(my_issvn,[yes],[-svn[]svn_revision]),
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
 # Please remember to document interface changes in the NEWS file.
-LIBKSBA_LT_CURRENT=16
-LIBKSBA_LT_AGE=8
+LIBKSBA_LT_CURRENT=17
+LIBKSBA_LT_AGE=9
 LIBKSBA_LT_REVISION=0
 #-------------------
+# If the API is changed in an incompatible way: increment the next counter.
+KSBA_CONFIG_API_VERSION=1
 
-# fixme: When bouncing this to a newer version, you check whether the
-# declaration tests for some symbols can be removed.
-NEED_GPG_ERROR_VERSION=0.7
+
+NEED_GPG_ERROR_VERSION=1.2
 
 
 PACKAGE=$PACKAGE_NAME
@@ -136,10 +137,6 @@ if test "x$GPG_ERROR_LIBS" = "x"; then
   AC_MSG_ERROR([libgpg-error is needed.
                 See ftp://ftp.gnupg.org/gcrypt/libgpg-error/ .])
 fi
-_tmp_gpg_error_save_cflags="$CFLAGS"
-CFLAGS="$CFLAGS $GPG_ERROR_CFLAGS"
-AC_CHECK_DECLS(GPG_ERR_UNKNOWN_CRIT_EXTN,,,[#include <gpg-error.h>])
-CFLAGS="${_tmp_gpg_error_save_cflags}"
 
 AC_DEFINE(GPG_ERR_SOURCE_DEFAULT, GPG_ERR_SOURCE_KSBA,
           [The default error source for libksba.])
@@ -173,6 +170,7 @@ KSBA_CONFIG_LIBS="-lksba"
 KSBA_CONFIG_CFLAGS=""
 AC_SUBST(KSBA_CONFIG_LIBS)
 AC_SUBST(KSBA_CONFIG_CFLAGS)
+AC_SUBST(KSBA_CONFIG_API_VERSION)
 
 # The Makefiles need to know about cross compiling
 AM_CONDITIONAL(CROSS_COMPILING, test x$cross_compiling = xyes)
