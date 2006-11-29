@@ -1127,7 +1127,8 @@ ksba_cert_get_key_usage (ksba_cert_t cert, unsigned int *r_flags)
       if (!strcmp (oid, oidstr_keyUsage))
         break;
     }
-  if (gpg_err_code (err) == GPG_ERR_EOF)
+  if (gpg_err_code (err) == GPG_ERR_EOF
+      || gpg_err_code (err) == GPG_ERR_NO_VALUE)
       return gpg_error (GPG_ERR_NO_DATA); /* no key usage */
   if (err)
     return err;
@@ -1355,7 +1356,7 @@ ksba_cert_get_cert_policies (ksba_cert_t cert, char **r_policies)
 
   if (gpg_err_code (err) == GPG_ERR_EOF)
     err = 0;
-  if (!*r_policies)
+  if (!*r_policies || gpg_err_code (err) == GPG_ERR_NO_VALUE)
     err = gpg_error (GPG_ERR_NO_DATA);
 
  leave:
@@ -1446,7 +1447,7 @@ ksba_cert_get_ext_key_usages (ksba_cert_t cert, char **result)
 
   if (gpg_err_code (err) == GPG_ERR_EOF)
     err = 0;
-  if (!*result)
+  if (!*result || gpg_err_code (err) == GPG_ERR_NO_VALUE)
     err = gpg_error (GPG_ERR_NO_DATA);
 
  leave:
@@ -1750,7 +1751,8 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
       if (!strcmp (oid, oidstr_authorityKeyIdentifier))
         break;
     }
-  if (gpg_err_code (err) == GPG_ERR_EOF)
+  if (gpg_err_code (err) == GPG_ERR_EOF
+      || gpg_err_code (err) == GPG_ERR_NO_VALUE)
     return gpg_error (GPG_ERR_NO_DATA); /* not available */
   if (err)
     return err;
@@ -1893,7 +1895,8 @@ get_simple_octet_string_ext (ksba_cert_t cert, const char *oid,
     }
   if (err)
     {
-      if (gpg_err_code (err) == GPG_ERR_EOF)
+      if (gpg_err_code (err) == GPG_ERR_EOF
+          || gpg_err_code (err) == GPG_ERR_NO_VALUE)
         return gpg_error (GPG_ERR_NO_DATA);
       return err;
     }

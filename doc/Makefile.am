@@ -25,3 +25,12 @@ DISTCLEANFILES = ksba.cps
 info_TEXINFOS = ksba.texi
 ksba_TEXINFOS = gpl.texi 
 
+online: ksba.html ksba.pdf
+	set -e; \
+	echo "Uploading current manuals to www.gnupg.org ..."; \
+        user=werner ; \
+	(cd ksba.html && rsync -vr --exclude='.svn' .  \
+	  $${user}@cvs.gnupg.org:webspace/manuals/ksba/ ); \
+        rsync -v ksba.pdf $${user}@cvs.gnupg.org:webspace/manuals/
+
+

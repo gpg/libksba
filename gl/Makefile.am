@@ -15,8 +15,8 @@ AUTOMAKE_OPTIONS = 1.5 gnits no-dependencies
 
 noinst_LTLIBRARIES = libgnu.la
 
-libgnu_la_SOURCES =
-libgnu_la_LIBADD = @LTLIBOBJS@
+libgnu_la_SOURCES = dummyobj.c 
+libgnu_la_LIBADD = @LTLIBOBJS@ 
 EXTRA_DIST =
 BUILT_SOURCES =
 SUFFIXES =

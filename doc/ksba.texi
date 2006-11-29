@@ -568,7 +568,40 @@ limitation
 @deftypefun gpg_error_t ksba_cert_get_key_usage (@w{ksba_cert_t @var{cert}, unsigned int *@var{r_flags}})
 
 Get the key usage flags. The function returns @code{GPG_ERR_NO_DATA} if no
-key usage is specified. 
+key usage is specified. The usage flags are as shown in RFC3280, section
+4.2.1.3. The key usage flags are represented by a bitmask, and you can
+test each bit using symbolic constants, which tells you if that usage
+is set on the certificate. The constants are
+
+@table @code
+@item KSBA_KEYUSAGE_DIGITAL_SIGNATURE 
+Usable for digitalSignature.
+@item KSBA_KEYUSAGE_NON_REPUDIATION
+Usable for nonRepudiation.
+@item KSBA_KEYUSAGE_KEY_ENCIPHERMENT
+Usable for keyEncipherment.
+@item KSBA_KEYUSAGE_DATA_ENCIPHERMENT
+Usable for dataEncipherment.
+@item KSBA_KEYUSAGE_KEY_AGREEMENT
+Usable for for keyAgreement.
+@item KSBA_KEYUSAGE_KEY_CERT_SIGN
+Usable for keyCertSign.
+@item KSBA_KEYUSAGE_CRL_SIGN
+Usable for cRLSign.
+@item KSBA_KEYUSAGE_ENCIPHER_ONLY
+Usable for encipherOnly.
+@item KSBA_KEYUSAGE_DECIPHER_ONLY
+Usable for decipherOnly.
+@end table
+
+These are the basic constraints on usage of a certificate. If you need
+to get additional constraints, see @code{ksba_cert_get_ext_key_usages}.
+@end deftypefun
+ 
+@deftypefun gpg_error_t ksba_cert_get_ext_key_usages (@w{ksba_cert_t @var{cert}, char **@var{result}})
+ 
+Return a string containing the extended usages for the certificate,
+delimited by linefeeds.
 @end deftypefun
 
 

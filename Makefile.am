@@ -38,5 +38,7 @@ SUBDIRS = gl src ${tests} doc
 dist-hook:
 	@set -e; echo "$(VERSION)" > $(distdir)/VERSION
 
+stowinstall: 
+	$(MAKE) $(AM_MAKEFLAGS) install prefix=/usr/local/stow/libksba
 
 

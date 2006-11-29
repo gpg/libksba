@@ -1,3 +1,17 @@
+2006-11-29  Werner Koch  <wk@g10code.com>
+
+	* ocsp.c (parse_single_response): Fixed skipping of the NULL.
+
+	* cert.c (ksba_cert_get_image): Cast an arg for printf.
+
+2006-10-18  Werner Koch  <wk@g10code.com>
+
+	* cert.c (ksba_cert_get_key_usage): Map GPG_ERR_NO_VALUE to
+	GPG_ERR_NO_DATA.  This is required in case no extensions at all
+	are available.
+	(ksba_cert_get_cert_policies, ksba_cert_get_ext_key_usages) 
+	(ksba_cert_get_auth_key_id, get_simple_octet_string_ext): Ditto.
+
 2006-08-31  Werner Koch  <wk@g10code.com>
 
 	* ocsp.h (struct ocsp_extension_s): New.
