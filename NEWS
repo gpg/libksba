@@ -1,9 +1,13 @@
-Noteworthy changes in version 1.0.1
--------------------------------------------------
+Noteworthy changes in version 1.0.1 (2006-11-29)
+------------------------------------------------
+
+ * Fixes for certificates lacking certain objects.
+
+ * Fixes to allow building on systems with a broken ar.
 
 
 Noteworthy changes in version 1.0.0 (2006-08-31)
--------------------------------------------------
+------------------------------------------------
 
  * OCSP nonces are now checked to detect replay attacks.
 

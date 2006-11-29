@@ -1,5 +1,9 @@
 2006-11-29  Werner Koch  <wk@g10code.com>
 
+	Released 1.0.1.
+	
+	* configure.ac: Bumped LT version to C17/A9/R1.
+
 	* gl/dummyobj.c: New.
 
 2006-11-15  Werner Koch  <wk@g10code.com>
