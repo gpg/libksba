@@ -634,7 +634,8 @@ ksba_asn_tree_dump (ksba_asn_tree_t tree, const char *name, FILE *fp)
 	}
     }
 
-  /* FIXME: release the tree if expanded */
+  if (expand)
+    _ksba_asn_release_nodes (root);
 }
 
 int
@@ -997,12 +998,16 @@ static AsnNode
 copy_tree (AsnNode src_root, AsnNode s)
 {
   AsnNode first=NULL, dprev=NULL, d, down, tmp;
+  AsnNode *link_nextp = NULL;
 
   for (; s; s=s->right )
     {
       down = s->down;
       d = copy_node (s);
-
+      if (link_nextp)
+	*link_nextp = d;
+      link_nextp = &d->link_next;
+      
       if (!first)
         first = d;
       else
@@ -1014,6 +1019,15 @@ copy_tree (AsnNode src_root, AsnNode s)
       if (down)
         {
           tmp = copy_tree (src_root, down);
+	  if (tmp)
+	    {
+	      if (link_nextp)
+		*link_nextp = tmp;
+	      link_nextp = &tmp->link_next;
+	      while (*link_nextp)
+		link_nextp = &(*link_nextp)->link_next;
+	    }
+	      
           if (d->down && tmp)
             { /* Need to merge it with the existing down */
               AsnNode x;
@@ -1063,6 +1077,7 @@ static AsnNode
 do_expand_tree (AsnNode src_root, AsnNode s, int depth)
 {
   AsnNode first=NULL, dprev=NULL, d, down, tmp;
+  AsnNode *link_nextp = NULL;
 
   /* On the very first level we do not follow the right pointer so that
      we can break out a valid subtree. */
@@ -1085,6 +1100,9 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
             }
           down = d->down;
           d = copy_node (d);
+	  if (link_nextp)
+	    *link_nextp = d;
+	  link_nextp = &d->link_next;
           if (s->flags.is_optional)
             d->flags.is_optional = 1;
           if (s->flags.in_choice)
@@ -1105,6 +1123,9 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
               AsnNode x;
 
               x = copy_node (s2);
+	      if (link_nextp)
+		*link_nextp = x;
+	      link_nextp = &x->link_next;
               x->left = *dp? *dp : d;
               *dp = x;
               dp = &(*dp)->right;
@@ -1117,7 +1138,12 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
           d->down = tmp;
         }
       else
-        d = copy_node (s);
+        {
+	  d = copy_node (s);
+	  if (link_nextp)
+	    *link_nextp = d;
+	  link_nextp = &d->link_next;
+	}
 
       if (!first)
         first = d;
@@ -1135,7 +1161,17 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
               tmp = NULL;
             }
           else
-            tmp = do_expand_tree (src_root, down, depth+1);
+            {
+	      tmp = do_expand_tree (src_root, down, depth+1);
+	      if (tmp)
+		{
+		  if (link_nextp)
+		    *link_nextp = tmp;
+		  link_nextp = &tmp->link_next;
+		  while (*link_nextp)
+		    link_nextp = &(*link_nextp)->link_next;
+		}
+	    }
           if (d->down && tmp)
             { /* Need to merge it with the existing down */
               AsnNode x;
@@ -1153,6 +1189,7 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
             }
         }
     }
+
   return first;
 }
 
@@ -1179,6 +1216,7 @@ AsnNode
 _ksba_asn_insert_copy (AsnNode node)
 {
   AsnNode n;
+  AsnNode *link_nextp;
 
   n = copy_tree (node, node);
   if (!n)
@@ -1186,7 +1224,13 @@ _ksba_asn_insert_copy (AsnNode node)
   return_null_if_fail (n->right == node->right);
   node->right = n;
   n->left = node;
-  
+
+  /* FIXME: Consider tail pointer for faster insertion.  */
+  link_nextp = &node->link_next;
+  while (*link_nextp)
+    link_nextp = &(*link_nextp)->link_next;
+  *link_nextp = n;
+
   return n;
 }
 

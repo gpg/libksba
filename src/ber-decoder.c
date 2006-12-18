@@ -768,7 +768,7 @@ static gpg_error_t
 decoder_next (BerDecoder d)
 {
   struct tag_info ti;
-  AsnNode node = NULL;
+  AsnNode node;
   gpg_error_t err;
   DECODER_STATE ds = d->ds;
   int debug = d->debug;
@@ -1206,7 +1206,7 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
     {
       if (!d->image.buf)
         { /* Not even the first node available - return eof */
-          /* Fixme: release d->root */
+	  _ksba_asn_release_nodes (d->root);
           d->root = NULL;
           err = gpg_error (GPG_ERR_EOF);
         }

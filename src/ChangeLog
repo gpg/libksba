@@ -1,3 +1,17 @@
+2006-12-18  Marcus Brinkmann  <marcus@g10code.de>
+
+	* cert.c (ksba_cert_release): Release cert->root and
+	cert->asn_tree.
+	(ksba_cert_read_der): Release cert->root and cert->asn_tree.
+	* ber-decoder.c (_ksba_ber_decoder_decode): Release d->root.
+	* asn1-func.c (do_expand_tree): Keep track of created nodes.
+	(copy_tree): Likewise.
+	(_ksba_asn_insert_copy): Likewise.
+	(ksba_asn_tree_dump): Release tree if expanded.
+	* asn1-func2.c (ksba_asn_create_tree): Keep track of created
+	nodes.
+	* asn1-parse.y (new_node): Fix assignment.
+
 2006-11-29  Werner Koch  <wk@g10code.com>
 
 	* ocsp.c (parse_single_response): Fixed skipping of the NULL.

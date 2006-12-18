@@ -119,8 +119,9 @@ ksba_cert_release (ksba_cert_t cert)
       xfree (cert->cache.extns);
     }
 
-
-  /* FIXME: release cert->root, ->asn_tree */
+  _ksba_asn_release_nodes (cert->root);
+  ksba_asn_tree_release (cert->asn_tree);
+  
   xfree (cert);
 }
 
@@ -261,7 +262,10 @@ ksba_cert_read_der (ksba_cert_t cert, ksba_reader_t reader)
   if (cert->initialized)
     return gpg_error (GPG_ERR_CONFLICT); /* Fixme: should remove the old one */
 
-  /* fixme: clear old cert->root */
+  _ksba_asn_release_nodes (cert->root);
+  ksba_asn_tree_release (cert->asn_tree);
+  cert->root = NULL;
+  cert->asn_tree = NULL;
 
   err = ksba_asn_create_tree ("tmttv2", &cert->asn_tree);
   if (err)

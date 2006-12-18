@@ -105,9 +105,12 @@ ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result)
 {
   enum { DOWN, UP, RIGHT } move;
   const static_asn *root;
-  AsnNode pointer, p, p_last = NULL;
+  AsnNode pointer;
+  AsnNode p = NULL;
+  AsnNode p_last = NULL;
   unsigned long k;
   int rc;
+  AsnNode link_next = NULL;
 
   if (!result)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -128,6 +131,9 @@ ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result)
       p = _ksba_asn_new_node (root[k].type);
       p->flags = root[k].flags;
       p->flags.help_down = 0;
+      p->link_next = link_next;
+      link_next = p;
+
       if (root[k].name)
 	_ksba_asn_set_name (p, root[k].name);
       if (root[k].stringvalue)
@@ -191,7 +197,7 @@ ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result)
       else
         {
           tree->parse_tree = pointer;
-          tree->node_list = NULL; /* fixme: should release the memory */
+          tree->node_list = p;
           strcpy (tree->filename, mod_name);
           *result = tree;
           rc = 0;

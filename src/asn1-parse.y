@@ -889,7 +889,7 @@ new_node (struct parser_control_s *parsectl, node_type_t type)
   node->type = type;
   node->off = -1;
   node->link_next = parsectl->all_nodes;
-  parsectl->all_nodes = node->link_next;
+  parsectl->all_nodes = node;
 
   return node;
 }
