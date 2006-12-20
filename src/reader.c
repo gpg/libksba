@@ -59,6 +59,8 @@ ksba_reader_release (ksba_reader_t r)
 {
   if (!r)
     return;
+  if (r->type == READER_TYPE_MEM)
+    xfree (r->u.mem.buffer);
   xfree (r->unread.buf);
   xfree (r);
 }
