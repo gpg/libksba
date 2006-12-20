@@ -753,11 +753,15 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
          signature.  Thus we have to allow for EOF here */
       if (gpg_err_code (err) == GPG_ERR_EOF)
         {
+	  xfree (si);
           err = 0;
           break;
         }
       if (err)
-        return err;
+	{
+	  xfree (si);
+	  return err;
+	}
 
       *si_tail = si;
       si_tail = &si->next;

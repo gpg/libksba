@@ -1,3 +1,9 @@
+2006-12-20  Marcus Brinkmann  <marcus@g10code.de>
+
+	* cms.c (ksba_cms_release): Release CMS->signer_info.
+	* cms-parser.c (_ksba_cms_parse_signed_data_part_2): On failure,
+	release SI.
+
 2006-12-18  Marcus Brinkmann  <marcus@g10code.de>
 
 	* cert.c (ksba_cert_release): Release cert->root and

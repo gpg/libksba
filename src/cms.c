@@ -511,9 +511,10 @@ ksba_cms_release (ksba_cms_t cms)
     {
       struct signer_info_s *tmp = cms->signer_info->next;
       _ksba_asn_release_nodes (cms->signer_info->root);
-       xfree (cms->signer_info->image);
-       xfree (cms->signer_info->cache.digest_algo);
-       cms->signer_info = tmp;
+      xfree (cms->signer_info->image);
+      xfree (cms->signer_info->cache.digest_algo);
+      xfree (cms->signer_info);
+      cms->signer_info = tmp;
     }
   release_value_tree (cms->recp_info);
   while (cms->sig_val)
