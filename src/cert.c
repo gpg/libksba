@@ -121,7 +121,9 @@ ksba_cert_release (ksba_cert_t cert)
 
   _ksba_asn_release_nodes (cert->root);
   ksba_asn_tree_release (cert->asn_tree);
-  
+
+  xfree (cert->image);
+
   xfree (cert);
 }
 

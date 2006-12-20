@@ -1202,6 +1202,9 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
   if (gpg_err_code (err) == GPG_ERR_EOF)
     err = 0;
 
+  if (err)
+    xfree (d->image.buf);
+
   if (r_root && !err)
     {
       if (!d->image.buf)
