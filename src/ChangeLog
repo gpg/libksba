@@ -2,6 +2,11 @@
 
 	* cms.c (build_enveloped_data_header): Initialize CMS_TREE.
 	Release CMS_TREE, and also TMPWRT always, just as IMAGE and ROOT.
+	(build_signed_data_attributes): Release all this stuff that's not
+	released.
+	(build_signed_data_rest): Likewise.
+	(ksba_cms_set_sig_val): Release SV and SV->algo on error.
+	(ksba_cms_release): Free CMS->sig_val.
 
 	* cert.c (ksba_cert_release): Release CERT->image.
 	* ber-decoder.c (release_decoder_state): Release D->image.buf on

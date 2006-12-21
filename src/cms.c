@@ -522,6 +522,7 @@ ksba_cms_release (ksba_cms_t cms)
       struct sig_val_s *tmp = cms->sig_val->next;
       xfree (cms->sig_val->algo);
       xfree (cms->sig_val->value);
+      xfree (cms->sig_val);
       cms->sig_val = tmp;
     }
   while (cms->capability_list)
@@ -1634,7 +1635,11 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
   /* And now the values - FIXME: For now we only support one */
   /* fixme: start loop */
   if (*s != '(')
-    return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
+    {
+      xfree (sv->algo);
+      xfree (sv);
+      return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
+    }
   s++;
 
   if (!(n = snext (&s)))
@@ -1649,7 +1654,8 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
     {
       xfree (sv->algo);
       xfree (sv);
-      return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
+      /* May also be an invalid S-EXP.  */
+      return gpg_error (GPG_ERR_UNKNOWN_SEXP);
     }
 
   if (!(n = snext (&s)))
@@ -2314,10 +2320,16 @@ build_signed_data_attributes (ksba_cms_t cms)
 {
   gpg_error_t err;
   int signer;
-  ksba_asn_tree_t cms_tree;
+  ksba_asn_tree_t cms_tree = NULL;
   struct certlist_s *certlist;
   struct oidlist_s *digestlist;
   struct signer_info_s *si, **si_tail;
+  AsnNode root = NULL;
+  struct attrarray_s attrarray[4]; 
+  int attridx = 0;
+  int i;
+
+  memset (attrarray, 0, sizeof (attrarray));
 
   /* Write the End tag */
   err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
@@ -2365,44 +2377,58 @@ build_signed_data_attributes (ksba_cms_t cms)
   err = ksba_asn_create_tree ("cms", &cms_tree);
   if (err)
     return err;
-  /* fixme: we must release root and cms_tree on error */
 
   certlist = cms->cert_list;
   if (!certlist)
-    return gpg_error (GPG_ERR_MISSING_VALUE); /* oops */
+    {
+      err = gpg_error (GPG_ERR_MISSING_VALUE); /* oops */
+      goto leave;
+    }
   digestlist = cms->digest_algos;
   if (!digestlist)
-    return gpg_error (GPG_ERR_MISSING_VALUE); /* oops */
+    {
+      err = gpg_error (GPG_ERR_MISSING_VALUE); /* oops */
+      goto leave;
+    }
 
   si_tail = &cms->signer_info;
   for (signer=0; certlist;
        signer++, certlist = certlist->next, digestlist = digestlist->next)
     {
-      AsnNode attr, root;
+      AsnNode attr;
       AsnNode n;
       unsigned char *image;
       size_t imagelen;
-      int i;
-      struct attrarray_s attrarray[4]; 
-      int attridx = 0;
 
       if (!digestlist)
-        return gpg_error (GPG_ERR_MISSING_VALUE); /* oops */
+        {
+	  err = gpg_error (GPG_ERR_MISSING_VALUE); /* oops */
+	  goto leave;
+	}
 
       if (!certlist->cert || !digestlist->oid)
-        return gpg_error (GPG_ERR_BUG);
+	{
+	  err = gpg_error (GPG_ERR_BUG);
+	  goto leave;
+	}
 
       /* Include the pretty important message digest. */
       attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
                                     "CryptographicMessageSyntax.Attribute");
       if (!attr)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+        {
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	  goto leave;
+	}
       n = _ksba_asn_find_node (attr, "Attribute.attrType");
       if (!n)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+        {
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	  goto leave;
+	}
       err = _ksba_der_store_oid (n, oidstr_messageDigest);
       if (err)
-        return err;
+        goto leave;
       n = _ksba_asn_find_node (attr, "Attribute.attrValues");
       if (!n || !n->down)
         return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
@@ -2411,10 +2437,10 @@ build_signed_data_attributes (ksba_cms_t cms)
       err = _ksba_der_store_octet_string (n, certlist->msg_digest,
                                           certlist->msg_digest_len);
       if (err)
-        return err;
+        goto leave;
       err = _ksba_der_encode_tree (attr, &image, &imagelen);
       if (err)
-        return err;
+        goto leave;
       attrarray[attridx].root = attr;
       attrarray[attridx].image = image;
       attrarray[attridx].imagelen = imagelen;
@@ -2424,23 +2450,32 @@ build_signed_data_attributes (ksba_cms_t cms)
       attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
                                     "CryptographicMessageSyntax.Attribute");
       if (!attr)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+        {
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	  goto leave;
+	}
       n = _ksba_asn_find_node (attr, "Attribute.attrType");
       if (!n)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+        {
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	  goto leave;
+	}
       err = _ksba_der_store_oid (n, oidstr_contentType);
       if (err)
-        return err;
+	goto leave;
       n = _ksba_asn_find_node (attr, "Attribute.attrValues");
       if (!n || !n->down)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+        {
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	  goto leave;
+	}
       n = n->down; /* fixme: ugly hack */
       err = _ksba_der_store_oid (n, cms->inner_cont_oid);
       if (err)
-        return err;
+        goto leave;
       err = _ksba_der_encode_tree (attr, &image, &imagelen);
       if (err)
-        return err;
+        goto leave;
       attrarray[attridx].root = attr;
       attrarray[attridx].image = image;
       attrarray[attridx].imagelen = imagelen;
@@ -2452,23 +2487,32 @@ build_signed_data_attributes (ksba_cms_t cms)
           attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
                                      "CryptographicMessageSyntax.Attribute");
           if (!attr)
-            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+            {
+	      err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	      goto leave;
+	    }
           n = _ksba_asn_find_node (attr, "Attribute.attrType");
           if (!n)
-            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+            {
+	      err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	      goto leave;
+	    }
           err = _ksba_der_store_oid (n, oidstr_signingTime);
           if (err)
-            return err;
+            goto leave;
           n = _ksba_asn_find_node (attr, "Attribute.attrValues");
           if (!n || !n->down)
-            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+            {
+	      err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	      goto leave;
+	    }
           n = n->down; /* fixme: ugly hack */
           err = _ksba_der_store_time (n, certlist->signing_time);
           if (err)
-            return err;
+            goto leave;
           err = _ksba_der_encode_tree (attr, &image, &imagelen);
           if (err)
-            return err;
+            goto leave;
           /* We will use the attributes again - so save them */
           attrarray[attridx].root = attr;
           attrarray[attridx].image = image;
@@ -2482,29 +2526,37 @@ build_signed_data_attributes (ksba_cms_t cms)
           attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
                                     "CryptographicMessageSyntax.Attribute");
           if (!attr)
-            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+            {
+	      err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	      goto leave;
+	    }
           n = _ksba_asn_find_node (attr, "Attribute.attrType");
           if (!n)
-            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+            {
+	      err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	      goto leave;
+	    }
           err = _ksba_der_store_oid (n, oidstr_smimeCapabilities);
           if (err)
-            return err;
+            goto leave;
           n = _ksba_asn_find_node (attr, "Attribute.attrValues");
           if (!n || !n->down)
-            return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+            {
+	      err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	      goto leave;
+	    }
           n = n->down; /* fixme: ugly hack */
           err = store_smime_capability_sequence (n, cms->capability_list);
           if (err)
-            return err;
+            goto leave;
           err = _ksba_der_encode_tree (attr, &image, &imagelen);
           if (err)
-            return err;
+            goto leave;
           attrarray[attridx].root = attr;
           attrarray[attridx].image = image;
           attrarray[attridx].imagelen = imagelen;
           attridx++;
         }
-
 
       /* Arggh.  That silly ASN.1 DER encoding rules: We need to sort
          the SET values. */
@@ -2517,41 +2569,63 @@ build_signed_data_attributes (ksba_cms_t cms)
                                     "CryptographicMessageSyntax.SignerInfo"); 
       n = _ksba_asn_find_node (root, "SignerInfo.signedAttrs");
       if (!n || !n->down) 
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND); 
+        {
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND); 
+	  goto leave;
+	}
       /* This is another ugly hack to move to the element we want */
       for (n = n->down->down; n && n->type != TYPE_SEQUENCE; n = n->right)
         ;
       if (!n) 
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND); 
+        {
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND); 
+	  goto leave;
+	}
 
       for (i=0; i < attridx; i++)
         {
           if (i)
             {
               if ( !(n=_ksba_asn_insert_copy (n)))
-                return gpg_error (GPG_ERR_ENOMEM);
+                {
+		  err = gpg_error (GPG_ERR_ENOMEM);
+		  goto leave;
+		}
             }
           err = _ksba_der_copy_tree (n, attrarray[i].root, attrarray[i].image);
           if (err)
-            return err;
-          /* fixme: release this array slot */
+            goto leave;
+	  _ksba_asn_release_nodes (attrarray[i].root);
+	  free (attrarray[i].image);
+	  attrarray[i].root = NULL;
+	  attrarray[i].image = NULL;
         }
 
       err = _ksba_der_encode_tree (root, &image, NULL);
       if (err)
-        return err;
+        goto leave;
       
       si = xtrycalloc (1, sizeof *si);
       if (!si)
         return gpg_error (GPG_ERR_ENOMEM);
       si->root = root;
+      root = NULL;
       si->image = image;
       /* Hmmm, we don't set the length of the image. */
       *si_tail = si;
       si_tail = &si->next;
     }
 
-  return 0;
+ leave:
+  _ksba_asn_release_nodes (root);
+  ksba_asn_tree_release (cms_tree);
+  for (i = 0; i < attridx; i++)
+    {
+      _ksba_asn_release_nodes (attrarray[i].root);
+      free (attrarray[i].image);
+    }
+
+  return err;
 }
 
 
@@ -2564,30 +2638,33 @@ build_signed_data_rest (ksba_cms_t cms)
 {
   gpg_error_t err;
   int signer;
-  ksba_asn_tree_t cms_tree;
+  ksba_asn_tree_t cms_tree = NULL;
   struct certlist_s *certlist;
   struct oidlist_s *digestlist;
   struct signer_info_s *si;
   struct sig_val_s *sv;
   ksba_writer_t tmpwrt = NULL;
+  AsnNode root = NULL;
 
   /* Now we can really write the signer info */
   err = ksba_asn_create_tree ("cms", &cms_tree);
   if (err)
     return err;
-  /* fixme: we must release root and cms_tree on error */
 
   certlist = cms->cert_list;
   if (!certlist)
-    return gpg_error (GPG_ERR_MISSING_VALUE); /* oops */
+    {
+      err = gpg_error (GPG_ERR_MISSING_VALUE); /* oops */
+      return err;
+    }
 
   /* To construct the set we use a temporary writer object. */
   err = ksba_writer_new (&tmpwrt);
   if (err)
-    return err;
+    goto leave;
   err = ksba_writer_set_mem (tmpwrt, 2048);
   if (err)
-    return err;
+    goto leave;
 
   digestlist = cms->digest_algos;
   si = cms->signer_info;
@@ -2600,14 +2677,20 @@ build_signed_data_rest (ksba_cms_t cms)
          si = si->next,
          sv = sv->next)
     {
-      AsnNode root, n, n2;
+      AsnNode n, n2;
       unsigned char *image;
       size_t imagelen;
 
       if (!digestlist || !si || !sv)
-        return gpg_error (GPG_ERR_MISSING_VALUE); /* oops */
+        {
+	  err = gpg_error (GPG_ERR_MISSING_VALUE); /* oops */
+	  goto leave;
+	}
       if (!certlist->cert || !digestlist->oid)
-        return gpg_error (GPG_ERR_BUG);
+        {
+	  err = gpg_error (GPG_ERR_BUG);
+	  goto leave;
+	}
 
       root = _ksba_asn_expand_tree (cms_tree->parse_tree, 
                                     "CryptographicMessageSyntax.SignerInfo");
@@ -2615,83 +2698,118 @@ build_signed_data_rest (ksba_cms_t cms)
       /* We store a version of 1 because we use the issuerAndSerialNumber */
       n = _ksba_asn_find_node (root, "SignerInfo.version");
       if (!n)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	{
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	  goto leave;
+	}
       err = _ksba_der_store_integer (n, "\x00\x00\x00\x01\x01");
       if (err)
-        return err;
+        goto leave;
 
       /* Store the sid */
       n = _ksba_asn_find_node (root, "SignerInfo.sid");
       if (!n)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+        {
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	  goto leave;
+	}
 
       err = set_issuer_serial (n, certlist->cert, 0);
       if (err)
-        return err;
+        goto leave;
 
       /* store the digestAlgorithm */
       n = _ksba_asn_find_node (root, "SignerInfo.digestAlgorithm.algorithm");
       if (!n)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	{
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	  goto leave;
+	}
       err = _ksba_der_store_oid (n, digestlist->oid);
       if (err)
-        return err;
+        goto leave;
       n = _ksba_asn_find_node (root, "SignerInfo.digestAlgorithm.parameters");
       if (!n)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+        {
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	  goto leave;
+	}
       err = _ksba_der_store_null (n);
       if (err)
-        return err;
+        goto leave;
 
       /* and the signed attributes */
       n = _ksba_asn_find_node (root, "SignerInfo.signedAttrs");
       if (!n || !n->down) 
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND); 
+        {
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND); 
+	  goto leave;
+	}
       assert (si->root);
       assert (si->image);
       n2 = _ksba_asn_find_node (si->root, "SignerInfo.signedAttrs");
       if (!n2 || !n->down) 
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND); 
+        {
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	  goto leave;
+	}
       err = _ksba_der_copy_tree (n, n2, si->image);
       if (err)
-        return err;
+        goto leave;
       image = NULL;
 
       /* store the signatureAlgorithm */
-      n = _ksba_asn_find_node (root, "SignerInfo.signatureAlgorithm.algorithm");
+      n = _ksba_asn_find_node (root,
+			       "SignerInfo.signatureAlgorithm.algorithm");
       if (!n)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+        {
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	  goto leave;
+	}
       if (!sv->algo)
-        return gpg_error (GPG_ERR_MISSING_VALUE);
+        {
+	  err = gpg_error (GPG_ERR_MISSING_VALUE);
+	  goto leave;
+	}
       err = _ksba_der_store_oid (n, sv->algo);
       if (err)
-        return err;
-      n = _ksba_asn_find_node (root, "SignerInfo.signatureAlgorithm.parameters");
+	goto leave;
+      n = _ksba_asn_find_node (root,
+			       "SignerInfo.signatureAlgorithm.parameters");
       if (!n)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+        {
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	  goto leave;
+	}
       err = _ksba_der_store_null (n);
       if (err)
-        return err;
+	goto leave;
 
       /* store the signature  */
       if (!sv->value)
-        return gpg_error (GPG_ERR_MISSING_VALUE);
+        {
+	  err = gpg_error (GPG_ERR_MISSING_VALUE);
+	  goto leave;
+	}
       n = _ksba_asn_find_node (root, "SignerInfo.signature");
       if (!n)
-        return gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	{
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+	  goto leave;
+	}
       err = _ksba_der_store_octet_string (n, sv->value, sv->valuelen);
       if (err)
-        return err;
+	goto leave;
 
       /* Make the DER encoding and write it out. */
       err = _ksba_der_encode_tree (root, &image, &imagelen);
       if (err)
-          return err;
+	goto leave;
 
       err = ksba_writer_write (tmpwrt, image, imagelen);
-      if (err )
-        return err;
-      /* fixme: release what we don't need */
+      xfree (image);
+      if (err)
+	goto leave;
     }
 
   /* Write out the SET filled with all signer infos */
@@ -2702,7 +2820,8 @@ build_signed_data_rest (ksba_cms_t cms)
     value = ksba_writer_snatch_mem (tmpwrt, &valuelen);
     if (!value)
       {
-        return gpg_error (GPG_ERR_ENOMEM);
+        err = gpg_error (GPG_ERR_ENOMEM);
+	goto leave;
       }
     err = _ksba_ber_write_tl (cms->writer, TYPE_SET, CLASS_UNIVERSAL,
                               1, valuelen);
@@ -2710,11 +2829,8 @@ build_signed_data_rest (ksba_cms_t cms)
       err = ksba_writer_write (cms->writer, value, valuelen);
     xfree (value);
     if (err)
-      return err;
+      goto leave;
   }
-
-  /* FIXME: release tmpwrt on error */
-  ksba_writer_release (tmpwrt);
 
   /* Write 3 end tags */
   err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
@@ -2722,6 +2838,11 @@ build_signed_data_rest (ksba_cms_t cms)
     err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
   if (!err)
     err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
+
+ leave:
+  ksba_asn_tree_release (cms_tree);
+  _ksba_asn_release_nodes (root);
+  ksba_writer_release (tmpwrt);
 
   return err;
 }
