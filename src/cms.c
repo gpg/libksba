@@ -2820,7 +2820,7 @@ build_enveloped_data_header (ksba_cms_t cms)
 {
   gpg_error_t err;
   int recpno;
-  ksba_asn_tree_t cms_tree;
+  ksba_asn_tree_t cms_tree = NULL;
   struct certlist_s *certlist;
   unsigned char *buf;
   const char *s;
@@ -2878,17 +2878,18 @@ build_enveloped_data_header (ksba_cms_t cms)
   err = ksba_asn_create_tree ("cms", &cms_tree);
   if (err)
     return err;
-  /* fixme: we must cms_tree on error */
 
   certlist = cms->cert_list;
   if (!certlist)
-    return gpg_error (GPG_ERR_MISSING_VALUE); /* oops */
-
+    {
+      err = gpg_error (GPG_ERR_MISSING_VALUE); /* oops */
+      goto leave;
+    }
 
   /* To construct the set we use a temporary writer object */
   err = ksba_writer_new (&tmpwrt);
   if (err)
-    return err;
+    goto leave;
   err = ksba_writer_set_mem (tmpwrt, 2048);
   if (err)
     goto leave;
@@ -2981,10 +2982,15 @@ build_enveloped_data_header (ksba_cms_t cms)
           goto leave;
 
       err = ksba_writer_write (tmpwrt, image, imagelen);
-      if (err )
+      if (err)
         goto leave;
-      /* fixme: release what we don't need */
+
+      xfree (image);
+      _ksba_asn_release_nodes (root);
     }
+
+  ksba_asn_tree_release (cms_tree);
+  cms_tree = NULL;
 
   /* Write out the SET filled with all recipient infos */
   {
@@ -2997,6 +3003,8 @@ build_enveloped_data_header (ksba_cms_t cms)
         err = gpg_error (GPG_ERR_ENOMEM);
         goto leave;
       }
+    ksba_writer_release (tmpwrt);
+    tmpwrt = NULL;
     err = _ksba_ber_write_tl (cms->writer, TYPE_SET, CLASS_UNIVERSAL,
                               1, valuelen);
     if (!err)
@@ -3040,6 +3048,7 @@ build_enveloped_data_header (ksba_cms_t cms)
 
  leave:
   ksba_writer_release (tmpwrt);
+  ksba_asn_tree_release (cms_tree);
   return err;
 }
 
