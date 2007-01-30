@@ -1200,8 +1200,8 @@ parse_single_response (ksba_ocsp_t ocsp,
         ; /* Cope with zero length objects. */
       else if (*datalen && !**data)
         { /* Skip the NULL. */
-          *datalen--;
-          *data++;
+          (*datalen)--;
+          (*data)++;
         }
       else
         return gpg_error (GPG_ERR_INV_OBJ);
@@ -1261,8 +1261,8 @@ parse_single_response (ksba_ocsp_t ocsp,
         ; /* Cope with zero length objects. */
       else if (!**data)
         { /* Skip the NULL. */
-          *datalen--;
-          *data++;
+          (*datalen)--;
+          (*data)++;
         }
       else /* The comment indicates that an enumeration may come here. */ 
         {

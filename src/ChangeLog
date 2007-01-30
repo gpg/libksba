@@ -1,3 +1,9 @@
+2007-01-30  Werner Koch  <wk@g10code.com>
+
+	* shared.h: Add constants for SHA-2.
+	* keyinfo.c (sig_algo_table): Add SHA-256, SHA384 and SHA-512 from
+	pkcs#1.
+
 2006-12-21  Marcus Brinkmann  <marcus@g10code.de>
 
 	* cms.c (build_enveloped_data_header): Initialize CMS_TREE.

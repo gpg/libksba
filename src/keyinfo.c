@@ -106,6 +106,21 @@ static struct algo_table_s sig_algo_table[] = {
     "\x2B\x0E\x03\x02\x1D", 5,
     1, "rsa", "s", "\x82", GCRY_MD_SHA1 },
 
+  { /* from PKCS#1  */
+    "1.2.840.113549.1.1.11", /* sha256WithRSAEncryption */
+    "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0b", 9,
+    1, "rsa", "s", "\x82", GCRY_MD_SHA256 },
+
+  { /* from PKCS#1  */
+    "1.2.840.113549.1.1.12", /* sha384WithRSAEncryption */
+    "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0c", 9,
+    1, "rsa", "s", "\x82", GCRY_MD_SHA384 },
+
+  { /* from PKCS#1  */
+    "1.2.840.113549.1.1.13", /* sha512WithRSAEncryption */
+    "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0d", 9,
+    1, "rsa", "s", "\x82", GCRY_MD_SHA512 },
+
   {NULL}
 };
 
