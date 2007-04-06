@@ -1,3 +1,7 @@
+2007-04-06  Werner Koch  <wk@g10code.com>
+
+	* configure.ac: Require libgpg-error 1.4.
+
 2006-11-29  Werner Koch  <wk@g10code.com>
 
 	Released 1.0.1.

@@ -1,3 +1,13 @@
+2007-04-06  Werner Koch  <wk@g10code.com>
+
+	* keyinfo.c (curve_names): New.
+	(get_ecc_curve_oid): New.
+	(_ksba_keyinfo_from_sexp): Support ECC.
+	(oid_from_buffer): Ditto.
+	(_ksba_keyinfo_to_sexp): Ditto.
+
+	* oid.c (_ksba_oid_from_buf): New.
+
 2007-01-30  Werner Koch  <wk@g10code.com>
 
 	* shared.h: Add constants for SHA-2.

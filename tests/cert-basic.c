@@ -97,6 +97,7 @@ print_sexp (ksba_const_sexp_t p)
           else if (*p == ')')
             {
               putchar (*p);
+              p++;
               if (--level <= 0 )
                 return;
             }
@@ -108,7 +109,8 @@ print_sexp (ksba_const_sexp_t p)
           else
             {
               char *endp;
-              unsigned long n;
+              unsigned long n, i;
+              int need_hex;
 
               n = strtoul (p, &endp, 10);
               p = endp;
@@ -117,10 +119,33 @@ print_sexp (ksba_const_sexp_t p)
                   fputs ("[invalid s-exp]", stdout);
                   return;
                 }
-              putchar('#');
-              for (p++; n; n--, p++)
-                printf ("%02X", *p);
-              putchar('#');
+              p++;
+              for (i=0; i < n; i++)
+                if ( !((p[i] >='A' && p[i] <= 'Z')
+                       || (p[i] >='a' && p[i] <='z')
+                       || (p[i] >='0' && p[i] <='9')
+                       || p[i] == '-'
+                       || p[i] == '.'))
+                  break;
+              need_hex = (i<n);
+              if (!n /* n==0 is not allowed, but anyway.  */
+                  || (!need_hex 
+                      && !((*p >='A' && *p <= 'Z') || (*p >='a' && *p <='z'))))
+                printf ("%lu:", n);
+
+              if (need_hex)
+                {
+                  putchar('#');
+                  for (; n; n--, p++)
+                    printf ("%02X", *p);
+                  putchar('#');
+                }
+              else
+                {
+                  for (; n; n--, p++)
+                    putchar (*p);
+                }
+              putchar(' ');
             }
         }
     }

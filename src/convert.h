@@ -42,6 +42,8 @@ gpg_error_t _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
 
 /*-- oid.c --*/
 char *_ksba_oid_node_to_str (const unsigned char *image, AsnNode node);
+gpg_error_t _ksba_oid_from_buf (const void *buffer, size_t buflen,
+                                unsigned char **rbuf, size_t *rlength);
 
 
 /*-- name.c --*/

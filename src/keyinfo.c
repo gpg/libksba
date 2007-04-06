@@ -34,6 +34,7 @@
 #include "asn1-func.h"
 #include "keyinfo.h"
 #include "shared.h"
+#include "convert.h"
 #include "ber-help.h"
 
 struct algo_table_s {
@@ -41,6 +42,7 @@ struct algo_table_s {
   const unsigned char *oid;  /* NULL indicattes end of table */
   int                  oidlen;
   int supported;
+  int is_ecc;
   const char *algo_string;
   const char *elem_string; /* parameter name or '-' */
   const char *ctrl_string; /* expected tag values (value > 127 are raw data)*/
@@ -51,20 +53,30 @@ static struct algo_table_s pk_algo_table[] = {
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
     "1.2.840.113549.1.1.1", /* rsaEncryption (RSAES-PKCA1-v1.5) */ 
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01", 9, 
-    1, "rsa", "-ne", "\x30\x02\x02" },
+    1, 0, "rsa", "-ne", "\x30\x02\x02" },
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.7 */
     "1.2.840.113549.1.1.7", /* RSAES-OAEP */ 
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x07", 9, 
-    0, "rsa", "-ne", "\x30\x02\x02"}, /* (patent problems) */
+    0, 0, "rsa", "-ne", "\x30\x02\x02"}, /* (patent problems) */
   { /* */
     "2.5.8.1.1", /* rsa (ambiguous due to missing padding rules)*/
     "\x55\x08\x01\x01", 4, 
-    1, "ambiguous-rsa", "-ne", "\x30\x02\x02" },
+    1, 0, "ambiguous-rsa", "-ne", "\x30\x02\x02" },
   { /* iso.member-body.us.x9-57.x9cm.1 */
     "1.2.840.10040.4.1", /*  dsa */
     "\x2a\x86\x48\xce\x38\x04\x01", 7, 
-    1, "dsa", "y", "\x02" }, 
+    1, 0, "dsa", "y", "\x02" }, 
   /* FIXME: Need code to extract p,q,g from the parameters */
+ 
+  { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha1 */
+    "1.2.840.10045.4.1", /*  ecdsa */
+    "\x2a\x86\x48\xce\x3d\x04\x01", 7, 
+    1, 1, "ecdsa", "q", "\x80" }, 
+
+  { /* iso.member-body.us.ansi-x9-62.2.1 */
+    "1.2.840.10045.2.1", /*  ecdsa or ecdh */
+    "\x2a\x86\x48\xce\x3d\x02\x01", 7, 
+    1, 1,"ecc", "q", "\x80" }, 
 
   {NULL}
 };
@@ -74,52 +86,52 @@ static struct algo_table_s sig_algo_table[] = {
   {  /* iso.member-body.us.rsadsi.pkcs.pkcs-1.5 */
     "1.2.840.113549.1.1.5", /* sha1WithRSAEncryption */ 
     "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x05", 9, 
-    1, "rsa", "s", "\x82", GCRY_MD_SHA1 },
+    1, 0, "rsa", "s", "\x82", GCRY_MD_SHA1 },
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.4 */
     "1.2.840.113549.1.1.4", /* md5WithRSAEncryption */ 
     "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x04", 9, 
-    1, "rsa", "s", "\x82", GCRY_MD_MD5 },
+    1, 0, "rsa", "s", "\x82", GCRY_MD_MD5 },
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.2 */
     "1.2.840.113549.1.1.2", /* md2WithRSAEncryption */ 
     "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x02", 9, 
-    0, "rsa", "s", "\x82", 0 },
+    0, 0, "rsa", "s", "\x82", 0 },
   { /* iso.member-body.us.x9-57.x9cm.3 */
     "1.2.840.10040.4.3", /*  dsaWithSha1 */
     "\x2a\x86\x48\xce\x38\x04\x03", 7, 
-    1, "dsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA1 }, 
+    1, 0, "dsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA1 }, 
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
     "1.2.840.113549.1.1.1", /* rsaEncryption used without hash algo*/ 
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01", 9, 
-    1, "rsa", "s", "\x82" },
+    1, 0, "rsa", "s", "\x82" },
   { /* from NIST's OIW - actually belongs in a pure hash table */
     "1.3.14.3.2.26",  /* sha1 */
     "\x2B\x0E\x03\x02\x1A", 5,
-    0, "sha-1", "", "", GCRY_MD_SHA1 },
+    0, 0, "sha-1", "", "", GCRY_MD_SHA1 },
 
   { /* As used by telesec cards */
     "1.3.36.3.3.1.2",  /* rsaSignatureWithripemd160 */
     "\x2b\x24\x03\x03\x01\x02", 6,
-    1, "rsa", "s", "\x82", GCRY_MD_RMD160 },
+    1, 0, "rsa", "s", "\x82", GCRY_MD_RMD160 },
 
   { /* from NIST's OIW - used by TU Darmstadt */
     "1.3.14.3.2.29",  /* sha-1WithRSAEncryption */
     "\x2B\x0E\x03\x02\x1D", 5,
-    1, "rsa", "s", "\x82", GCRY_MD_SHA1 },
+    1, 0, "rsa", "s", "\x82", GCRY_MD_SHA1 },
 
   { /* from PKCS#1  */
     "1.2.840.113549.1.1.11", /* sha256WithRSAEncryption */
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0b", 9,
-    1, "rsa", "s", "\x82", GCRY_MD_SHA256 },
+    1, 0, "rsa", "s", "\x82", GCRY_MD_SHA256 },
 
   { /* from PKCS#1  */
     "1.2.840.113549.1.1.12", /* sha384WithRSAEncryption */
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0c", 9,
-    1, "rsa", "s", "\x82", GCRY_MD_SHA384 },
+    1, 0, "rsa", "s", "\x82", GCRY_MD_SHA384 },
 
   { /* from PKCS#1  */
     "1.2.840.113549.1.1.13", /* sha512WithRSAEncryption */
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0d", 9,
-    1, "rsa", "s", "\x82", GCRY_MD_SHA512 },
+    1, 0, "rsa", "s", "\x82", GCRY_MD_SHA512 },
 
   {NULL}
 };
@@ -128,9 +140,32 @@ static struct algo_table_s enc_algo_table[] = {
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
     "1.2.840.113549.1.1.1", /* rsaEncryption (RSAES-PKCA1-v1.5) */ 
     "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01", 9, 
-    1, "rsa", "a", "\x82" },
+    1, 0, "rsa", "a", "\x82" },
   {NULL}
 };
+
+
+/* This tables maps names of ECC curves names to OIDs.  A similar
+   table is used by lib gcrypt.  */
+static const struct
+{
+  const char *oid; 
+  const char *name; 
+} curve_names[] = 
+  {
+    { "1.2.840.10045.3.1.1", "NIST P-192" },
+    { "1.2.840.10045.3.1.1", "prime192v1" }, 
+    { "1.2.840.10045.3.1.1", "secp192r1"  },
+
+    { "1.2.840.10045.3.1.7", "NIST P-256", }, 
+    { "1.2.840.10045.3.1.7", "prime256v1" },          
+    { "1.2.840.10045.3.1.7", "secp256r1"  },          
+
+    { NULL, NULL}
+  };
+
+
+
 
 
 struct stringbuf {
@@ -170,6 +205,60 @@ struct stringbuf {
 } while (0)
 
 
+#if 0
+static void
+dump_hex (const unsigned char *p, size_t n)
+{
+  if (!p)
+    fputs (" none", stderr);
+  else
+    {
+      for (; n; n--, p++)
+        fprintf (stderr, " %02X", *p);
+    }
+}
+#endif
+
+
+/* Given a string BUF of length BUFLEN with either the name of an ECC
+   curve or its OID in dotted form return the DER encoding of the OID.
+   The caller must free the result.  On error NULL is returned.  */
+static unsigned char *
+get_ecc_curve_oid (const unsigned char *buf, size_t buflen, size_t *r_oidlen)
+{
+  unsigned char *der_oid;
+
+  /* Skip an optional "oid." prefix. */
+  if (buflen > 4 && buf[3] == '.' && digitp (buf+4)
+      && ((buf[0] == 'o' && buf[1] == 'i' && buf[2] == 'd')
+          ||(buf[0] == 'O' && buf[1] == 'I' && buf[2] == 'D')))
+    {
+      buf += 4;
+      buflen -= 4;
+    }
+
+  /* If it does not look like an OID - map it through the table.  */
+  if (buflen && !digitp (buf))
+    {
+      int i;
+
+      for (i=0; curve_names[i].oid; i++)
+        if (buflen == strlen (curve_names[i].name)
+            && !memcmp (buf, curve_names[i].name, buflen))
+          break;
+      if (curve_names[i].oid)
+        return NULL; /* Not found.  */
+      buf = curve_names[i].name;
+      buflen = strlen (curve_names[i].name);
+    }
+
+  if (_ksba_oid_from_buf (buf, buflen, &der_oid, r_oidlen))
+    return NULL;
+  return der_oid;
+}
+
+
+
 /* Return the OFF and the LEN of algorithm within DER.  Do some checks
    and return the number of bytes read in r_nread, adding this to der
    does point into the BIT STRING.
@@ -181,7 +270,7 @@ struct stringbuf {
 static gpg_error_t
 get_algorithm (int mode, const unsigned char *der, size_t derlen,
                size_t *r_nread, size_t *r_pos, size_t *r_len, int *r_bitstr,
-               size_t *r_parm_pos, size_t *r_parm_len)
+               size_t *r_parm_pos, size_t *r_parm_len, int *r_parm_type)
 {
   int c;
   const unsigned char *start = der;
@@ -219,7 +308,7 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
   derlen -= len;
   seqlen -= der - startseq;;
 
-  /* check that the parameter is NULL or not there */
+  /* Parse the parameter.  */
   if (seqlen)
     {
       const unsigned char *startparm = der;
@@ -229,16 +318,33 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
       c = *der++; derlen--;
       if ( c == 0x05 ) 
         {
-          /*printf ("parameter: NULL \n"); the only correct thing */
+          /*printf ("parameter: NULL \n"); the usual case */
           if (!derlen)
             return gpg_error (GPG_ERR_INV_KEYINFO);
           c = *der++; derlen--;
           if (c) 
-            return gpg_error (GPG_ERR_BAD_BER);  /* NULL must have a length of 0 */
+            return gpg_error (GPG_ERR_BAD_BER);  /* NULL must have a
+                                                    length of 0 */
           seqlen -= 2;
         }
       else if (r_parm_pos && r_parm_len && c == 0x04)
-        { /* this is an octet string parameter and we need it */
+        { 
+          /*  This is an octet string parameter and we need it.  */
+          if (r_parm_type)
+            *r_parm_type = TYPE_OCTET_STRING;
+          TLV_LENGTH();
+          *r_parm_pos = der - start;
+          *r_parm_len = len;
+          seqlen -= der - startparm;
+          der += len;
+          derlen -= len;
+          seqlen -= len;
+        }
+      else if (r_parm_pos && r_parm_len && c == 0x06)
+        { 
+          /*  This is an object identifier.  */
+          if (r_parm_type)
+            *r_parm_type = TYPE_OBJECT_ID;
           TLV_LENGTH();
           *r_parm_pos = der - start;
           *r_parm_len = len;
@@ -296,7 +402,7 @@ _ksba_parse_algorithm_identifier (const unsigned char *der, size_t derlen,
   *r_oid = NULL;
   *r_nread = 0;
   err = get_algorithm (0, der, derlen, &nread, &off, &len, &is_bitstr,
-                       NULL, NULL);
+                       NULL, NULL, NULL);
   if (err)
     return err;
   *r_nread = nread;
@@ -319,7 +425,7 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
   *r_nread = 0;
   off2 = len2 = 0;
   err = get_algorithm (0, der, derlen, &nread, &off, &len, &is_bitstr,
-                       &off2, &len2);
+                       &off2, &len2, NULL);
   if (err)
     return err;
   *r_nread = nread;
@@ -450,7 +556,9 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
 {
   gpg_error_t err;
   int c;
-  size_t nread, off, len;
+  size_t nread, off, len, parm_off, parm_len;
+  int parm_type;
+  char *parm_oid = NULL;
   int algoidx;
   int is_bitstr;
   const unsigned char *ctrl;
@@ -468,7 +576,7 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
   TLV_LENGTH();
   /* and now the inner part */
   err = get_algorithm (1, der, derlen, &nread, &off, &len, &is_bitstr,
-                       NULL, NULL);
+                       &parm_off, &parm_len, &parm_type);
   if (err)
     return err;
   
@@ -484,6 +592,10 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
   if (!pk_algo_table[algoidx].supported)
     return gpg_error (GPG_ERR_UNSUPPORTED_ALGORITHM);
 
+
+  if (parm_off && parm_len && parm_type == TYPE_OBJECT_ID)
+    parm_oid = ksba_oid_to_str (der+parm_off, parm_len);
+
   der += nread;
   derlen -= nread;
 
@@ -492,7 +604,10 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
          CMS as an octet string - for ease of implementation we always
          allow both */
       if (!derlen)
-        return gpg_error (GPG_ERR_INV_KEYINFO);
+        {
+          xfree (parm_oid);
+          return gpg_error (GPG_ERR_INV_KEYINFO);
+        }
       c = *der++; derlen--;
       if (c) 
         fprintf (stderr, "warning: number of unused bits is not zero\n");
@@ -508,6 +623,15 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
      whatever library is used */
   put_stringbuf_sexp (&sb, pk_algo_table[algoidx].algo_string);
 
+  /* Insert the curve name for ECC. */
+  if (pk_algo_table[algoidx].is_ecc && parm_oid)
+    {
+      put_stringbuf (&sb, "(");
+      put_stringbuf_sexp (&sb, "curve");
+      put_stringbuf_sexp (&sb, parm_oid);
+      put_stringbuf (&sb, ")");
+    }
+
   /* FIXME: We don't release the stringbuf in case of error
      better let the macro jump to a label */
   elem = pk_algo_table[algoidx].elem_string; 
@@ -516,15 +640,30 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
     {
       int is_int;
 
-      if (!derlen)
-        return gpg_error (GPG_ERR_INV_KEYINFO);
-      c = *der++; derlen--;
-      if ( c != *ctrl )
-        return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not the required tag */
-      is_int = c == 0x02;
-      TLV_LENGTH ();
-      if (is_int && *elem != '-')
-        { /* take this integer */
+      if ( (*ctrl & 0x80) && !elem[1] )
+        {
+          /* Hack to allow reading a raw value.  */
+          is_int = 1;
+          len = derlen;
+        }
+      else
+        {
+          if (!derlen)
+            {
+              xfree (parm_oid);
+              return gpg_error (GPG_ERR_INV_KEYINFO);
+            }
+          c = *der++; derlen--;
+          if ( c != *ctrl )
+            {
+              xfree (parm_oid);
+              return gpg_error (GPG_ERR_UNEXPECTED_TAG);
+            }
+          is_int = c == 0x02;
+          TLV_LENGTH ();
+        }
+      if (is_int && *elem != '-')  /* Take this integer.  */
+        { 
           char tmp[2];
 
           put_stringbuf (&sb, "(");
@@ -537,7 +676,8 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
         }
     }
   put_stringbuf (&sb, "))");
-  
+  xfree (parm_oid);
+
   *r_string = get_stringbuf (&sb);
   if (!*r_string)
     return gpg_error (GPG_ERR_ENOMEM);
@@ -546,14 +686,16 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
 }
 
 
-/* match the algorithm string given in BUF which is of length BUFLEN
+/* Match the algorithm string given in BUF which is of length BUFLEN
    with the known algorithms from our table and returns the table
    entries for the DER encoded OID.
 
-   FIXME: We restrict this for now to RSA because the code using this
-   function is not yet prepared to handle other algorithms */
+   FIXME: We restrict this for now to RSA and ECC because the code
+   using this function is not yet prepared to handle other
+   algorithms.  */
 static const unsigned char *
-oid_from_buffer (const unsigned char *buf, int buflen, int *oidlen)
+oid_from_buffer (const unsigned char *buf, int buflen, int *oidlen,
+                 int *r_is_ecc)
 {
   int i;
 
@@ -581,8 +723,11 @@ oid_from_buffer (const unsigned char *buf, int buflen, int *oidlen)
   if (!pk_algo_table[i].oid)
     return NULL;
   
-  if (strcmp (pk_algo_table[i].elem_string, "-ne"))
-    return NULL; /* that is not RSA - we can't handle it yet */
+  if (!pk_algo_table[i].is_ecc
+      && strcmp (pk_algo_table[i].elem_string, "-ne"))
+    return NULL; /* Not ECC or RSA - we can't handle it yet.  */
+
+  *r_is_ecc = pk_algo_table[i].is_ecc;
   *oidlen = pk_algo_table[i].oidlen;
   return pk_algo_table[i].oid;
 }
@@ -600,6 +745,9 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
   unsigned long n, n1;
   const unsigned char *oid;
   int oidlen;
+  unsigned char *curve_oid = NULL;
+  size_t curve_oidlen;
+  int is_ecc;
   int i;
   struct {
     const char *name;
@@ -611,7 +759,7 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
   ksba_writer_t writer = NULL;
   void *bitstr_value = NULL;
   size_t bitstr_len;
-    
+  int ecc_curve_idx, ecc_q_idx;  
 
   if (!sexp)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -633,13 +781,13 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
     return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
   s++;
 
-  /* break out the algorithm ID */
+  /* Break out the algorithm ID */
   n = strtoul (s, &endp, 10);
   s = endp;
   if (!n || *s != ':')
     return gpg_error (GPG_ERR_INV_SEXP); /* we don't allow empty lengths */
   s++;
-  oid = oid_from_buffer (s, n, &oidlen);
+  oid = oid_from_buffer (s, n, &oidlen, &is_ecc);
   if (!oid)
     return gpg_error (GPG_ERR_UNSUPPORTED_ALGORITHM);
   s += n;
@@ -661,7 +809,7 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
       parm[parmidx].namelen = n;
       s += n; 
       if (!digitp(s))
-        return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
+        return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* ... or invalid S-Exp. */
 
       n = strtoul (s, &endp, 10);
       s = endp;
@@ -672,127 +820,195 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
       parm[parmidx].valuelen = n;
       s += n;
       if ( *s != ')')
-        return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
+        return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* ... or invalid S-Exp. */
       s++;
     }
   s++;
-  /* we need another closing parenthesis */
+  /* We need another closing parenthesis. */
   if ( *s != ')' )
     return gpg_error (GPG_ERR_INV_SEXP); 
 
-  /* check that the names match the requirements for RSA */
-  s = "ne"; 
-  if (parmidx != strlen (s))
-    return gpg_error (GPG_ERR_UNKNOWN_SEXP);
-  for (i=0; i < parmidx; i++)
+  ecc_q_idx = ecc_curve_idx = -1;
+  if (is_ecc)
     {
-      if (parm[i].namelen != 1 || parm[i].name[0] != s[i])
+      for (i=0; i < parmidx; i++)
+        {
+          if (ecc_curve_idx == -1 
+              && parm[i].namelen == 5 && !memcmp (parm[i].name, "curve", 5))
+            ecc_curve_idx = i;
+          else if (ecc_q_idx == -1 
+              && parm[i].namelen == 1 && parm[i].name[0] == 'q')
+            ecc_q_idx = i;
+        }
+      if (ecc_curve_idx == -1 || ecc_q_idx == -1)
+        return gpg_error (GPG_ERR_UNKNOWN_SEXP);
+
+      curve_oid = get_ecc_curve_oid (parm[ecc_curve_idx].value,
+                                     parm[ecc_curve_idx].valuelen,
+                                     &curve_oidlen);
+      if (!curve_oid)
         return gpg_error (GPG_ERR_UNKNOWN_SEXP);
     }
-
-  
-  /* Create write object.  We create the keyinfo in 2 steps: 1. we
-     build the inner one and encapsulate it in bit string. 2. we
-     create the outer sequence include the algorithm identifier and
-     the bit string from step 1 */
+  else /* This is RSA.  */
+    {
+      /* Check that the names match the requirements for RSA */
+      s = "ne"; 
+      if (parmidx != strlen (s))
+        return gpg_error (GPG_ERR_UNKNOWN_SEXP);
+      for (i=0; i < parmidx; i++)
+        {
+          if (parm[i].namelen != 1 || parm[i].name[0] != s[i])
+            return gpg_error (GPG_ERR_UNKNOWN_SEXP);
+        }
+    }      
+      
+  /* Create write object. */
   err = ksba_writer_new (&writer);
   if (err)
     goto leave;
   err = ksba_writer_set_mem (writer, 1024);
   if (err)
     goto leave;
-
-  /* calculate the size of the sequence value and the size of the
-     bit string value */
-  for (n=0, i=0; i < parmidx; i++ )
-    {
-      n += _ksba_ber_count_tl (TYPE_INTEGER, CLASS_UNIVERSAL, 0,
-                                parm[i].valuelen);
-      n += parm[i].valuelen;
-    }
   
-  n1 = 1; /* # of unused bits */
-  n1 += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
-  n1 += n;
-
-  /* write the bit string header and the number of unused bits */
-  err = _ksba_ber_write_tl (writer, TYPE_BIT_STRING, CLASS_UNIVERSAL, 0, n1);
-  if (!err)
-    err = ksba_writer_write (writer, "", 1);
-  if (err)
-    goto leave;
-  
-  /* write the sequence tag and the integers */
-  err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
-  if (err)
-    goto leave;
-  for (i=0; i < parmidx; i++)
+  if (is_ecc)
     {
-      /* fixme: we should make sure that the integer conforms to the
-         ASN.1 encoding rules. */
-      err  = _ksba_ber_write_tl (writer, TYPE_INTEGER, CLASS_UNIVERSAL, 0, 
-                                 parm[i].valuelen);
+      /* Write the bit string header and the number of unused bits. */
+      err = _ksba_ber_write_tl (writer, TYPE_BIT_STRING, CLASS_UNIVERSAL, 
+                                0, parm[ecc_q_idx].valuelen + 1);
       if (!err)
-        err = ksba_writer_write (writer, parm[i].value, parm[i].valuelen);
+        err = ksba_writer_write (writer, "", 1);
+      /* And the actual raw value.  */
+      if (!err)
+        err = ksba_writer_write (writer, parm[ecc_q_idx].value,
+                                 parm[ecc_q_idx].valuelen);
       if (err)
         goto leave;
+
+    }
+  else /* RSA */
+    {
+      /* For RSA we create the keyinfo in 2 steps:
+
+        1. We build the inner one and encapsulate it in bit string.
+        
+        2. We create the outer sequence include the algorithm identifier
+           and the bit string from step 1.  
+      */
+
+      /* Calculate the size of the sequence value and the size of the bit
+         string value */
+      for (n=0, i=0; i < parmidx; i++ )
+        {
+          n += _ksba_ber_count_tl (TYPE_INTEGER, CLASS_UNIVERSAL, 0,
+                                   parm[i].valuelen);
+          n += parm[i].valuelen;
+        }
+  
+      n1 = 1; /* # of unused bits.  */
+      n1 += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
+      n1 += n;
+  
+      /* Write the bit string header and the number of unused bits. */
+      err = _ksba_ber_write_tl (writer, TYPE_BIT_STRING, CLASS_UNIVERSAL, 
+                                0, n1);
+      if (!err)
+        err = ksba_writer_write (writer, "", 1);
+      if (err)
+        goto leave;
+      
+      /* Write the sequence tag and the integers. */
+      err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
+      if (err)
+        goto leave;
+      for (i=0; i < parmidx; i++)
+        {
+          /* fixme: we should make sure that the integer conforms to the
+             ASN.1 encoding rules. */
+          err  = _ksba_ber_write_tl (writer, TYPE_INTEGER, CLASS_UNIVERSAL, 0, 
+                                     parm[i].valuelen);
+          if (!err)
+            err = ksba_writer_write (writer, parm[i].value, parm[i].valuelen);
+          if (err)
+            goto leave;
+        }
     }
 
-  /* get the encoded bit string */
+  /* Get the encoded bit string. */
   bitstr_value = ksba_writer_snatch_mem (writer, &bitstr_len);
   if (!bitstr_value)
     {
       err = gpg_error (GPG_ERR_ENOMEM);
       goto leave;
     }
-  /* reinitialize the buffer to create the outer sequence */
+  /* Reinitialize the buffer to create the outer sequence. */
   err = ksba_writer_set_mem (writer, 1024);
   if (err)
     goto leave;
 
-  /* calulate lengths */
+  /* Calulate lengths. */
   n  = _ksba_ber_count_tl (TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, oidlen);
   n += oidlen;
-  n += _ksba_ber_count_tl (TYPE_NULL, CLASS_UNIVERSAL, 0, 0);
-  
+  if (is_ecc)
+    {
+      n += _ksba_ber_count_tl (TYPE_OBJECT_ID, CLASS_UNIVERSAL,
+                               0, curve_oidlen);
+      n += curve_oidlen;
+    }
+  else
+    {
+      n += _ksba_ber_count_tl (TYPE_NULL, CLASS_UNIVERSAL, 0, 0);
+    }
+
   n1 = n;
   n1 += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
   n1 += bitstr_len;
 
-  /* the outer sequence */
+  /* The outer sequence.  */
   err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n1);
   if (err)
     goto leave;
 
-  /* the sequence */
+  /* The sequence.  */
   err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
   if (err)
     goto leave;
 
-  /* the object id */
+  /* The object id.  */
   err = _ksba_ber_write_tl (writer, TYPE_OBJECT_ID,CLASS_UNIVERSAL, 0, oidlen);
   if (!err)
     err = ksba_writer_write (writer, oid, oidlen);
   if (err)
     goto leave;
-  /* the parameter */
-  err = _ksba_ber_write_tl (writer, TYPE_NULL, CLASS_UNIVERSAL, 0, 0);
+
+  /* The parameter. */
+  if (is_ecc)
+    {
+      err = _ksba_ber_write_tl (writer, TYPE_OBJECT_ID, CLASS_UNIVERSAL,
+                                0, curve_oidlen);
+      if (!err)
+        err = ksba_writer_write (writer, curve_oid, curve_oidlen);
+    }
+  else /* RSA */
+    {
+      err = _ksba_ber_write_tl (writer, TYPE_NULL, CLASS_UNIVERSAL, 0, 0);
+    }
   if (err)
     goto leave;
 
-  /* append the pre-constructed bit string */
+  /* Append the pre-constructed bit string.  */
   err = ksba_writer_write (writer, bitstr_value, bitstr_len);
   if (err)
     goto leave;
   
-  /* and get the result */
+  /* Get the result. */
   *r_der = ksba_writer_snatch_mem (writer, r_derlen);
   if (!*r_der)
-      err = gpg_error (GPG_ERR_ENOMEM);
+    err = gpg_error (GPG_ERR_ENOMEM);
 
  leave:
   ksba_writer_release (writer);
   xfree (bitstr_value);
+  xfree (curve_oid);
   return err;
 }
 
@@ -824,7 +1040,7 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
   
 
   err = get_algorithm (1, der, derlen, &nread, &off, &len, &is_bitstr,
-                       NULL, NULL);
+                       NULL, NULL, NULL);
   if (err)
     return err;
   

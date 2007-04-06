@@ -1,7 +1,7 @@
 Noteworthy changes in version 1.0.2
 ------------------------------------------------
  
- * Support for SHA-1.
+ * Support for SHA-2.
 
  * Fixed a couple of memory leaks.
 
