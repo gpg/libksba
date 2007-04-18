@@ -99,6 +99,12 @@ static struct algo_table_s sig_algo_table[] = {
     "1.2.840.10040.4.3", /*  dsaWithSha1 */
     "\x2a\x86\x48\xce\x38\x04\x03", 7, 
     1, 0, "dsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA1 }, 
+
+  { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha1 */
+    "1.2.840.10045.4.1", /*  ecdsa */
+    "\x2a\x86\x48\xce\x3d\x04\x01", 7, 
+    1, 1, "ecdsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA1 }, 
+
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
     "1.2.840.113549.1.1.1", /* rsaEncryption used without hash algo*/ 
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01", 9, 
