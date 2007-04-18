@@ -5,6 +5,8 @@ Noteworthy changes in version 1.0.2
 
  * Fixed a couple of memory leaks.
 
+ * Experimental support for ECDSA.
+
 
 Noteworthy changes in version 1.0.1 (2006-11-29)
 ------------------------------------------------
