@@ -47,6 +47,7 @@
 
 #define xfree(a)  ksba_free (a)
 
+static int verbose;
 static int errorcount = 0;
 
 
@@ -582,6 +583,13 @@ one_file (const char *fname)
         unsigned char *der;
         size_t derlen;
 
+        if (verbose)
+          {
+            fputs ("  pubkey....: ", stdout);
+            print_sexp (public);
+            putchar ('\n');
+          }
+
         err = _ksba_keyinfo_from_sexp (public, &der, &derlen);
         if (err)
           {
@@ -629,15 +637,16 @@ one_file (const char *fname)
       }
   }
 
-  list_extensions (cert);
+  if (verbose)
+    {
+      sexp = ksba_cert_get_sig_val (cert);
+      fputs ("  sigval....: ", stdout);
+      print_sexp (sexp);
+      ksba_free (sexp);
+      putchar ('\n');
+    }
 
-#if 0
-  sexp = ksba_cert_get_sig_val (cert);
-  fputs ("  sigval....: ", stdout);
-  print_sexp (sexp);
-  ksba_free (sexp);
-  putchar ('\n');
-#endif
+  list_extensions (cert);
 
   ksba_cert_release (cert);
   err = ksba_cert_new (&cert);
@@ -669,9 +678,21 @@ main (int argc, char **argv)
   if (!srcdir)
     srcdir = ".";
 
-  if (argc > 1)
+  if (argc)
     {
-      for (argc--, argv++; argc; argc--, argv++)
+      argc--; argv++;
+    }
+
+  if (argc && !strcmp (*argv, "--verbose"))
+    {
+      verbose = 1;
+      argc--; argv++;
+    }
+
+
+  if (argc)
+    {
+      for (; argc; argc--, argv++)
         one_file (*argv);
     }
   else

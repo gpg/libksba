@@ -1,3 +1,18 @@
+2007-04-20  Werner Koch  <wk@g10code.com>
+
+	* keyinfo.c: Add OIDs for brainpool curves.
+
+2007-04-19  Werner Koch  <wk@g10code.com>
+
+	* keyinfo.c (pk_algo_table): Removed the ecdsa entry.
+	(sig_algo_table): Add X9.62 ecc signature algorithm entries.
+	(_ksba_parse_algorithm_identifier): Replace by a call to
+	_ksba_parse_algorithm_identifier2.
+	(_ksba_parse_algorithm_identifier2): Add hack to cope with
+	ecdsaWithSpecified.
+	* cert.c (ksba_cert_get_digest_algo): Use of
+	_ksba_parse_algorithm_identifier to parse the OID.
+
 2007-04-06  Werner Koch  <wk@g10code.com>
 
 	* keyinfo.c (curve_names): New.

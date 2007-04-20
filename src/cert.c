@@ -426,8 +426,10 @@ ksba_cert_hash (ksba_cert_t cert, int what,
 const char *
 ksba_cert_get_digest_algo (ksba_cert_t cert)
 {
+  gpg_error_t err;
   AsnNode n;
   char *algo;
+  size_t nread;
 
   if (!cert)
     {
@@ -443,11 +445,22 @@ ksba_cert_get_digest_algo (ksba_cert_t cert)
   if (cert->cache.digest_algo)
     return cert->cache.digest_algo;
   
-  n = _ksba_asn_find_node (cert->root,
-                           "Certificate.signatureAlgorithm.algorithm");
-  algo = _ksba_oid_node_to_str (cert->image, n);
-  if (!algo)
-    cert->last_error = gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
+/*   n = _ksba_asn_find_node (cert->root, */
+/*                            "Certificate.signatureAlgorithm.algorithm"); */
+/*   algo = _ksba_oid_node_to_str (cert->image, n); */
+/*   if (!algo) */
+/*     cert->last_error = gpg_error (GPG_ERR_UNKNOWN_ALGORITHM); */
+/*   else  */
+/*     cert->cache.digest_algo = algo; */
+
+  n = _ksba_asn_find_node (cert->root, "Certificate.signatureAlgorithm");
+  if (!n || n->off == -1)
+    err = gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
+  else
+    err = _ksba_parse_algorithm_identifier (cert->image + n->off,
+                                            n->nhdr + n->len, &nread, &algo);
+  if (err)
+    cert->last_error = err;
   else 
     cert->cache.digest_algo = algo;
 

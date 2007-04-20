@@ -57,8 +57,8 @@ t_ocsp_SOURCES = t-ocsp.c sha1.c
 # installed and thus not distributed.
 oidtranstbl.h: Makefile mkoidtbl.awk 
 	set -e; f="/dev/null"; \
-        for i in /usr/local/bin /usr/local/share /usr/bin \
-                 /usr/share /etc/dumpasn1; do \
+        for i in /etc/dumpasn1 /usr/local/bin /usr/local/share /usr/bin \
+                 /usr/share ; do \
           if test -f $$i/dumpasn1.cfg; then f=$$i/dumpasn1.cfg; break; fi; \
         done; $(AWK) -f $(srcdir)/mkoidtbl.awk $$f >$@
 

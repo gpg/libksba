@@ -50,31 +50,30 @@ struct algo_table_s {
 };
 
 static struct algo_table_s pk_algo_table[] = {
+
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
     "1.2.840.113549.1.1.1", /* rsaEncryption (RSAES-PKCA1-v1.5) */ 
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01", 9, 
     1, 0, "rsa", "-ne", "\x30\x02\x02" },
+
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.7 */
     "1.2.840.113549.1.1.7", /* RSAES-OAEP */ 
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x07", 9, 
     0, 0, "rsa", "-ne", "\x30\x02\x02"}, /* (patent problems) */
+
   { /* */
     "2.5.8.1.1", /* rsa (ambiguous due to missing padding rules)*/
     "\x55\x08\x01\x01", 4, 
     1, 0, "ambiguous-rsa", "-ne", "\x30\x02\x02" },
+
   { /* iso.member-body.us.x9-57.x9cm.1 */
     "1.2.840.10040.4.1", /*  dsa */
     "\x2a\x86\x48\xce\x38\x04\x01", 7, 
     1, 0, "dsa", "y", "\x02" }, 
   /* FIXME: Need code to extract p,q,g from the parameters */
  
-  { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha1 */
-    "1.2.840.10045.4.1", /*  ecdsa */
-    "\x2a\x86\x48\xce\x3d\x04\x01", 7, 
-    1, 1, "ecdsa", "q", "\x80" }, 
-
   { /* iso.member-body.us.ansi-x9-62.2.1 */
-    "1.2.840.10045.2.1", /*  ecdsa or ecdh */
+    "1.2.840.10045.2.1", /*  ecPublicKey */
     "\x2a\x86\x48\xce\x3d\x02\x01", 7, 
     1, 1,"ecc", "q", "\x80" }, 
 
@@ -104,6 +103,33 @@ static struct algo_table_s sig_algo_table[] = {
     "1.2.840.10045.4.1", /*  ecdsa */
     "\x2a\x86\x48\xce\x3d\x04\x01", 7, 
     1, 1, "ecdsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA1 }, 
+
+  { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-specified */
+    "1.2.840.10045.4.3", 
+    "\x2a\x86\x48\xce\x3d\x04\x03", 7, 
+    1, 1, "ecdsa", "-rs", "\x30\x02\x02", 0 }, 
+  /* The digest algorithm is given by the parameter.  */ 
+
+
+  { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha224 */
+    "1.2.840.10045.4.3.1", 
+    "\x2a\x86\x48\xce\x3d\x04\x03\x01", 8, 
+    1, 1, "ecdsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA224 }, 
+
+  { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha256 */
+    "1.2.840.10045.4.3.2", 
+    "\x2a\x86\x48\xce\x3d\x04\x03\x02", 8, 
+    1, 1, "ecdsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA256 }, 
+
+  { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha384 */
+    "1.2.840.10045.4.3.3", 
+    "\x2a\x86\x48\xce\x3d\x04\x03\x03", 8, 
+    1, 1, "ecdsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA384 }, 
+
+  { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha512 */
+    "1.2.840.10045.4.3.4", 
+    "\x2a\x86\x48\xce\x3d\x04\x03\x04", 8, 
+    1, 1, "ecdsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA512 }, 
 
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
     "1.2.840.113549.1.1.1", /* rsaEncryption used without hash algo*/ 
@@ -163,9 +189,23 @@ static const struct
     { "1.2.840.10045.3.1.1", "prime192v1" }, 
     { "1.2.840.10045.3.1.1", "secp192r1"  },
 
+    { "1.3.132.0.33",        "secp224r1" },
+
     { "1.2.840.10045.3.1.7", "NIST P-256", }, 
     { "1.2.840.10045.3.1.7", "prime256v1" },          
     { "1.2.840.10045.3.1.7", "secp256r1"  },          
+
+    { "1.3.132.0.34",        "secp384r1" },
+
+    { "1.3.132.0.35",        "secp521r1" },
+
+    { "1.3.36.3.3.2.8.1.1.1" , "brainpoolP160r1" },
+    { "1.3.36.3.3.2.8.1.1.3" , "brainpoolP192r1" },
+    { "1.3.36.3.3.2.8.1.1.5" , "brainpoolP224r1" },
+    { "1.3.36.3.3.2.8.1.1.7" , "brainpoolP256r1" },
+    { "1.3.36.3.3.2.8.1.1.9" , "brainpoolP320r1" },
+    { "1.3.36.3.3.2.8.1.1.11", "brainpoolP384r1" },
+    { "1.3.36.3.3.2.8.1.1.13", "brainpoolP512r1" },
 
     { NULL, NULL}
   };
@@ -359,6 +399,19 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
           derlen -= len;
           seqlen -= len;
         }
+      else if (r_parm_pos && r_parm_len && c == 0x30)
+        { 
+          /*  This is a sequence. */
+          if (r_parm_type)
+            *r_parm_type = TYPE_SEQUENCE;
+          TLV_LENGTH();
+          *r_parm_pos = startparm - start;
+          *r_parm_len = len + (der - startparm);
+          seqlen -= der - startparm;
+          der += len;
+          derlen -= len;
+          seqlen -= len;
+        }
       else
         {
 /*            printf ("parameter: with tag %02x - ignored\n", c); */
@@ -399,21 +452,8 @@ gpg_error_t
 _ksba_parse_algorithm_identifier (const unsigned char *der, size_t derlen,
                                   size_t *r_nread, char **r_oid)
 {
-  gpg_error_t err;
-  int is_bitstr;
-  size_t nread, off, len;
-
-  /* fixme: get_algorithm might return the error invalid keyinfo -
-     this should be invalid algorithm identifier */
-  *r_oid = NULL;
-  *r_nread = 0;
-  err = get_algorithm (0, der, derlen, &nread, &off, &len, &is_bitstr,
-                       NULL, NULL, NULL);
-  if (err)
-    return err;
-  *r_nread = nread;
-  *r_oid = ksba_oid_to_str (der+off, len);
-  return *r_oid? 0 : gpg_error (GPG_ERR_ENOMEM);
+  return _ksba_parse_algorithm_identifier2 (der, derlen,
+                                            r_nread, r_oid, NULL, NULL);
 }
 
 gpg_error_t
@@ -424,6 +464,7 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
   gpg_error_t err;
   int is_bitstr;
   size_t nread, off, len, off2, len2;
+  int parm_type;
 
   /* fixme: get_algorithm might return the error invalid keyinfo -
      this should be invalid algorithm identifier */
@@ -431,13 +472,38 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
   *r_nread = 0;
   off2 = len2 = 0;
   err = get_algorithm (0, der, derlen, &nread, &off, &len, &is_bitstr,
-                       &off2, &len2, NULL);
+                       &off2, &len2, &parm_type);
   if (err)
     return err;
   *r_nread = nread;
   *r_oid = ksba_oid_to_str (der+off, len);
   if (!*r_oid)
     return gpg_error (GPG_ERR_ENOMEM);
+  
+  /* Special hack for ecdsaWithSpecified.  We replace the returned OID
+     by the one in the parameter. */
+  if (off2 && len2 && parm_type == TYPE_SEQUENCE
+      && !strcmp (*r_oid, "1.2.840.10045.4.3"))
+    {
+      xfree (*r_oid);
+      *r_oid = NULL;
+      err = get_algorithm (0, der+off2, len2, &nread, &off, &len, &is_bitstr,
+                           NULL, NULL, NULL);
+      if (err)
+        {
+          *r_nread = 0;
+          return err;
+        }
+      *r_oid = ksba_oid_to_str (der+off2+off, len);
+      if (!*r_oid)
+        {
+          *r_nread = 0;
+          return gpg_error (GPG_ERR_ENOMEM);
+        }
+
+      off2 = len2 = 0; /* So that R_PARM is set to NULL.  */
+    }
+
   if (r_parm && r_parmlen)
     {
       if (off2 && len2)
