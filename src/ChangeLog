@@ -1,3 +1,10 @@
+2007-05-01  Werner Koch  <wk@g10code.com>
+
+	* crl.c (do_hash): Cast BUFFER to char* for arithmetics.
+	* ksba.h (ksba_stop_reason_t): Remove trailing comma.
+	* asn1-parse.y (CONST_IMPLICIT): Ditto.  Reported by Peter
+	O'Gorman.
+
 2007-04-20  Werner Koch  <wk@g10code.com>
 
 	* keyinfo.c: Add OIDs for brainpool curves.

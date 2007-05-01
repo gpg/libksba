@@ -54,7 +54,7 @@
 /* constants used in the grammar */
 enum {
   CONST_EXPLICIT = 1,
-  CONST_IMPLICIT,
+  CONST_IMPLICIT
 };
 
 struct parser_control_s {

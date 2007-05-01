@@ -78,7 +78,7 @@ typedef enum
     KSBA_SR_DETACHED_DATA = 8,
     KSBA_SR_BEGIN_ITEMS = 9,
     KSBA_SR_GOT_ITEM = 10,
-    KSBA_SR_END_ITEMS = 11,
+    KSBA_SR_END_ITEMS = 11
   } 
 ksba_stop_reason_t;
 typedef ksba_stop_reason_t KsbaStopReason _KSBA_DEPRECATED;
