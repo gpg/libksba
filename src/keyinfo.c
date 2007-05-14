@@ -20,8 +20,8 @@
  */
 
 /* Instead of using the ASN parser - which is easily possible - we use
-   a simple handcoded one to speed the oepration up and make it more
-   robust. */
+   a simple handcoded one to speed up the operation and to make it
+   more robust. */
 
 #include <config.h>
 #include <stdio.h>

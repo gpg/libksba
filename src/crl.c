@@ -59,7 +59,7 @@ do_hash (ksba_crl_t crl, const void *buffer, size_t length)
                            crl->hashbuf.buffer, crl->hashbuf.used);
           crl->hashbuf.used = 0;
         }
-      buffer += n;
+      buffer = (const char *)buffer + n;
       length -= n;
     }
 }

@@ -50,10 +50,11 @@ char *_ksba_xstrdup (const char *p);
 #define DIM(v) (sizeof(v)/sizeof((v)[0]))
 #define DIMof(type,member)   DIM(((type *)0)->member)
 #ifndef STR
-  #define STR(v) #v
+# define STR(v) #v
 #endif
-#define STR2(v) STR(v)
-
+#ifndef STR2
+# define STR2(v) STR(v)
+#endif
 
 #define return_if_fail(expr) do {                        \
     if (!(expr)) {                                       \
@@ -99,10 +100,4 @@ char *_ksba_stpcpy (char *a, const char *b);
 #define xtoi_2(p)   ((xtoi_1(p) * 16) + xtoi_1((p)+1))
 
 #endif /* UTIL_H */
-
-
-
-
-
-
 

@@ -14,8 +14,8 @@ name part when old style quoting is not used.
 
 ** should work on a stripped down parse tree
 
-** Allow to specify the desired top element.  Or a list so that it
-    can detect the needed tree itself
+** Allow to specify the desired top element.
+   Or a list so that it can detect the needed tree itself
 
 * src/der-encoder.c
 ** Setting default values is missing
@@ -64,3 +64,8 @@ name part when old style quoting is not used.
 
 ** Allow fetching of all entry extensions.
 
+
+
+
+
+ 

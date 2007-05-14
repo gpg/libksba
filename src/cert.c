@@ -31,7 +31,9 @@
 #include "ber-help.h"
 #include "convert.h"
 #include "keyinfo.h"
+#include "sexp-parse.h"
 #include "cert.h"
+
 
 static const char oidstr_subjectKeyIdentifier[] = "2.5.29.14";
 static const char oidstr_keyUsage[]         = "2.5.29.15";
@@ -664,15 +666,16 @@ get_name (ksba_cert_t cert, int idx, int use_subject, char **result)
         }
       else if (ti.tag == 2 || ti.tag == 6)
         { /* dNSName or URI - this are implicit IA5_STRINGs */
-          char numbuf[30];
+          char numbuf[20], *numbufp;
+          size_t numbuflen;
 
-          snprintf (numbuf, DIM(numbuf), "%lu:", ti.length);
-          p = xtrymalloc (11 + strlen (numbuf) + ti.length + 3);
+          numbufp = smklen (numbuf, DIM(numbuf), ti.length, &numbuflen);
+          p = xtrymalloc (11 + numbuflen + ti.length + 3);
           if (!p)
             return gpg_error (GPG_ERR_ENOMEM);
           *result = p;
           p = stpcpy (p, ti.tag == 2? "(8:dns-name" : "(3:uri");
-          p = stpcpy (p, numbuf);
+          p = stpcpy (p, numbufp);
           memcpy (p, der, ti.length);
           p += ti.length;
           *p++ = ')';
