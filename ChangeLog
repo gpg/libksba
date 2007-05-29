@@ -1,3 +1,17 @@
+2007-05-29  Werner Koch  <wk@g10code.com>
+
+	* configure.ac (AC_LIBTOOL_WIN32_DLL): New.
+	(HAVE_W32_SYSTEM): New.
+	(BUILD_REVISION, BUILD_TIMESTAMP, BUILD_FILEVERSION): New.
+	(AC_CANONICAL_TARGET): New.
+
+	* autogen.sh: Add Option --force.  Modernized cross compiler
+	selection for --build-w32.
+
+2007-05-24  Werner Koch  <wk@g10code.com>
+
+	* configure.ac: Use -Wpointer-arith if possible.
+
 2007-04-06  Werner Koch  <wk@g10code.com>
 
 	* configure.ac: Require libgpg-error 1.4.

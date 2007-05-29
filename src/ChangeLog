@@ -1,3 +1,10 @@
+2007-05-29  Werner Koch  <wk@g10code.com>
+
+	* versioninfo.rc.in: New.
+	* libksba.def: New.
+	* Makefile.am: Add code to build a W32 DLL.
+	(install-data-local, uninstall-local): New.
+
 2007-05-14  Werner Koch  <wk@g10code.com>
 
 	* sexp-parse.h (smklen): New.

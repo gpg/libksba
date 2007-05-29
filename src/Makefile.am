@@ -1,5 +1,5 @@
 # Makefile.am - for the KSBA ASN.1 and X.509 library
-#       Copyright (C) 2001, 2002, 2004, 2005 g10 Code GmbH
+#       Copyright (C) 2001, 2002, 2004, 2005, 2007 g10 Code GmbH
 # 	
 # This file is part of KSBA.
 # 
@@ -22,7 +22,7 @@
 
 asn1_modules = tmttv2.asn cms.asn
 
-EXTRA_DIST = ksba-config.in $(asn1_modules) ksba.m4 libksba.vers \
+EXTRA_DIST = ksba-config.in $(asn1_modules) ksba.m4 libksba.vers libksba.def \
 	     asn1-parse.c asn1-tables.c
 BUILT_SOURCES = asn1-parse.c asn1-tables.c
 bin_SCRIPTS = ksba-config
@@ -47,11 +47,44 @@ else
 endif
 
 
+if HAVE_W32_SYSTEM
+LTRCCOMPILE = $(LIBTOOL) --mode=compile $(RC) \
+     `echo $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) | \
+     sed -e 's/-I/--include-dir /g;s/-D/--define /g'`
 
-libksba_la_LDFLAGS = $(libksba_version_script_cmd) -version-info \
+.rc.lo:
+	$(LTRCCOMPILE) -i $< -o $@
+
+ksba_res = versioninfo.lo
+ksba_res_ldflag = -Wl,.libs/versioninfo.o
+no_undefined = -no-undefined
+export_symbols = -export-symbols $(srcdir)/libksba.def
+ksba_deps = $(ksba_res) libksba.def
+
+install-def-file:
+	$(INSTALL) $(srcdir)/libksba.def $(DESTDIR)$(libdir)/libksba.def
+
+uninstall-def-file:
+	-rm $(DESTDIR)$(libdir)/libksba.def
+
+else !HAVE_W32_SYSTEM
+ksba_res =
+ksba_ldflag =
+no_undefined =
+export_symbols =
+ksba_deps =
+install-def-file:
+uninstall-def-file:
+endif !HAVE_W32_SYSTEM
+
+
+libksba_la_LDFLAGS = $(gcrypt_res_ldflag) $(no_undefined) $(export_symbols) \
+      $(libksba_version_script_cmd) -version-info \
       @LIBKSBA_LT_CURRENT@:@LIBKSBA_LT_REVISION@:@LIBKSBA_LT_AGE@
 libksba_la_INCLUDES = -I$(top_srcdir)/lib 
-libksba_la_DEPENDENCIES = $(srcdir)/libksba.vers
+libksba_la_DEPENDENCIES = $(srcdir)/libksba.vers $(ksba_deps)
+libksba_la_LIBADD = @LTLIBOBJS@ @GPG_ERROR_LIBS@
+
 
 libksba_la_SOURCES = \
 	ksba.h \
@@ -94,5 +127,10 @@ asn1-tables.c : $(asn1_modules)
 	  for file in $(asn1_modules); do list="$$list $(srcdir)/$$file";done;\
 	  ./asn1-gentables $$list > asn1-tables.c	
 endif
+
+
+install-data-local: install-def-file
+
+uninstall-local: uninstall-def-file
 
 
