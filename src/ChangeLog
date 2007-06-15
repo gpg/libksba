@@ -1,3 +1,8 @@
+2007-06-15  Werner Koch  <wk@g10code.com>
+
+	* Makefile.am (AM_CPPFLAGS): Add top_builddir/gl as gnulib may
+	create a header.
+
 2007-05-29  Werner Koch  <wk@g10code.com>
 
 	* versioninfo.rc.in: New.

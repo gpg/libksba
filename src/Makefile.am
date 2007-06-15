@@ -36,7 +36,7 @@ endif
 m4datadir = $(datadir)/aclocal
 m4data_DATA = ksba.m4
 
-AM_CPPFLAGS = -I$(top_srcdir)/gl
+AM_CPPFLAGS =  -I$(top_builddir)/gl -I$(top_srcdir)/gl
 AM_CFLAGS = $(GPG_ERROR_CFLAGS)
 
 
