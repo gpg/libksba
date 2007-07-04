@@ -1,7 +1,7 @@
                                LIBKSBA
                               ---------
 
-                  Copyright 2001, 2006 g10 Code GmbH
+               Copyright 2001, 2006, 2007 g10 Code GmbH
 
 This file is free software; as a special exception the author gives
 unlimited permission to copy and/or distribute it, with or without
@@ -13,8 +13,8 @@ implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 PURPOSE.
 
 
-Libksba itself is distributed under the trms of the GNU General Public
-License, see the file COPYING for details.
+Libksba itself is distributed under the terms of the GNU General
+Public License, see the file COPYING for details.
 
 
                             KSBA Overview
@@ -43,7 +43,3 @@ A standard info format reference manual is included.  However the OCSP
 feature has not yet been documented.  See the comments in src/ocsp.c
 and the example tests/t-ocsp.c.  The package dirmngr make extensive
 use of the ocsp feature and may be used as another example.
-
-
-
-

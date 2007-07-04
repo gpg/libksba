@@ -1,3 +1,10 @@
+2007-07-04  Werner Koch  <wk@g10code.com>
+
+	Changed license to GPLv3.
+
+	* asn1-func.c, asn1-parse.y, CertificateExample.c: Also
+	changed to GPLv3 as they used to be GPLv2+.
+
 2007-06-15  Werner Koch  <wk@g10code.com>
 
 	* Makefile.am (AM_CPPFLAGS): Add top_builddir/gl as gnulib may

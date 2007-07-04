@@ -5,7 +5,7 @@
 # 
 # KSBA is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
+# the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
 # 
 # KSBA is distributed in the hope that it will be useful,
@@ -14,9 +14,7 @@
 # GNU General Public License for more details.
 # 
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,
-# USA.
+# along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.61)
@@ -27,7 +25,7 @@ min_automake_version="1.10"
 # Set my_issvn to "yes" for non-released code.  Remember to run an
 # "svn up" and "autogen.sh" right before creating a distribution.
 m4_define([my_version], [1.0.2])
-m4_define([my_issvn], [yes])
+m4_define([my_issvn], [no])
 
 m4_define([svn_revision], m4_esyscmd([echo -n $( (svn info 2>/dev/null \
           || echo 'Revision: 0')|sed -n '/^Revision:/ s/[^0-9]//gp'|head -1)]))
@@ -41,7 +39,7 @@ AC_INIT([libksba], my_version[]m4_if(my_issvn,[yes],[-svn[]svn_revision]),
 # Please remember to document interface changes in the NEWS file.
 LIBKSBA_LT_CURRENT=17
 LIBKSBA_LT_AGE=9
-LIBKSBA_LT_REVISION=1
+LIBKSBA_LT_REVISION=2
 #-------------------
 # If the API is changed in an incompatible way: increment the next counter.
 KSBA_CONFIG_API_VERSION=1
@@ -225,6 +223,7 @@ AC_DEFINE_UNQUOTED(BUILD_REVISION, "$BUILD_REVISION",
 
 AC_CONFIG_FILES([
 Makefile
+m4/Makefile
 gl/Makefile
 src/Makefile
 src/ksba-config

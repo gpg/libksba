@@ -1,4 +1,4 @@
-Noteworthy changes in version 1.0.2
+Noteworthy changes in version 1.0.2 (2007-07-04)
 ------------------------------------------------
  
  * Support for SHA-2.
@@ -8,6 +8,8 @@ Noteworthy changes in version 1.0.2
  * Experimental support for ECDSA.
 
  * Minor portability fixes.
+
+ * Switched to GPLv3.
 
 
 Noteworthy changes in version 1.0.1 (2006-11-29)

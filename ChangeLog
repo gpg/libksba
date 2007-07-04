@@ -1,3 +1,25 @@
+2007-07-04  Werner Koch  <wk@g10code.com>
+
+	Released 1.0.2.
+	
+	* configure.ac: Bumped LT version to C17/A9/R2.
+
+	Changed license to GPLv3.
+
+	* COPYING: Updated to GPLv3.
+
+	* config.guess, config.sub: Updated from Savannah CVS and switched
+	license to GPLv3+ and the old exception.
+
+	* acinclude.m4: Remove.
+	* Makefile.am (SUBDIRS): Include m4.
+	* m4/gnupg-typedef.m4: New.
+	* m4/Makefile.am: New.
+
+2007-06-15  Werner Koch  <wk@g10code.com>
+
+	* autogen.sh: Use = and not == in test to be POSIXly correct.
+
 2007-05-29  Werner Koch  <wk@g10code.com>
 
 	* configure.ac (AC_LIBTOOL_WIN32_DLL): New.

@@ -5,7 +5,7 @@
  *
  * KSBA is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
+ * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
  *
  * KSBA is distributed in the hope that it will be useful,
@@ -14,9 +14,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,
- * USA.
+ * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 /* Reference is RFC-2253 */
@@ -1261,7 +1259,7 @@ ksba_dn_str2der (const char *string, unsigned char **rder, size_t *rderlen)
 
 
 /* Assuming that STRING contains an rfc2253 encoded string, test
-   whther this string may be passed as a valid DN to libksba.  On
+   whether this string may be passed as a valid DN to libksba.  On
    success the functions returns 0.  On error the function returns an
    error code and stores the offset within STRING of the erroneous
    part at RERROFF. RERRLEN will then receive the length of the
