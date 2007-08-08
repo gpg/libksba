@@ -24,8 +24,8 @@ min_automake_version="1.10"
 # Remember to change the version number immediately *after* a release.
 # Set my_issvn to "yes" for non-released code.  Remember to run an
 # "svn up" and "autogen.sh" right before creating a distribution.
-m4_define([my_version], [1.0.2])
-m4_define([my_issvn], [no])
+m4_define([my_version], [1.0.3])
+m4_define([my_issvn], [yes])
 
 m4_define([svn_revision], m4_esyscmd([echo -n $( (svn info 2>/dev/null \
           || echo 'Revision: 0')|sed -n '/^Revision:/ s/[^0-9]//gp'|head -1)]))
@@ -52,9 +52,9 @@ PACKAGE=$PACKAGE_NAME
 VERSION=$PACKAGE_VERSION
 
 AC_CONFIG_SRCDIR([src/ksba.h])
-AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
 AM_CONFIG_HEADER(config.h)
+AC_CANONICAL_HOST
 AB_INIT
 
 AC_GNU_SOURCE
@@ -124,9 +124,9 @@ if test "$GCC" = yes; then
 
 fi
 
-# Setup some stuff depending on host/target.
+# Setup some stuff depending on host.
 have_w32_system=no
-case "${target}" in
+case "${host}" in
     *-*-mingw32*)
       have_w32_system=yes
       ;;
