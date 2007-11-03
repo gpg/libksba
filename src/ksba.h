@@ -21,6 +21,7 @@
 #define KSBA_H 1
 
 #include <gpg-error.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" { 
