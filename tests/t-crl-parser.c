@@ -179,7 +179,7 @@ one_file (const char *fname)
             err = ksba_crl_get_item (crl, &serial, rdate, &reason);
             fail_if_err2 (fname, err);
             printf ("CRL entry %d: s=", ++count);
-            print_sexp (serial);
+            print_sexp_hex (serial);
             printf (", t=");
             print_time (rdate);
             printf (", r=%x\n", reason);
@@ -221,7 +221,7 @@ one_file (const char *fname)
                 print_names (24, name1);
                 ksba_name_release (name1);
                 fputs ("                serial: ", stdout);
-                print_sexp (serial);
+                print_sexp_hex (serial);
                 ksba_free (serial);
               }
             putchar ('\n');

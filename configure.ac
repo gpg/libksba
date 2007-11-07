@@ -99,6 +99,15 @@ AC_LIBTOOL_WIN32_DLL
 AC_LIBTOOL_RC
 AM_PROG_LIBTOOL
 
+# This is handy for debugging so the compiler doesn't rearrange
+# things and eliminate variables.
+AC_ARG_ENABLE(optimization,
+       AC_HELP_STRING([--disable-optimization],
+		      [disable compiler optimization]),
+                      [if test $enableval = no ; then
+                         CFLAGS=`echo $CFLAGS | sed 's/-O[[0-9]]//'`
+                       fi])
+
 if test "$GCC" = yes; then
     CFLAGS="$CFLAGS -Wall -Wcast-align -Wshadow -Wstrict-prototypes"
 

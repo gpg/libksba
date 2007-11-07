@@ -1,3 +1,7 @@
+2007-11-07  Werner Koch  <wk@g10code.com>
+
+	* configure.ac: Add option --disable-optimization.
+
 2007-08-08  Werner Koch  <wk@g10code.com>
 
 	* configure.ac: Use $host and not $target.  Reported by Peter

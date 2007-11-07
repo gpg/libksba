@@ -2398,6 +2398,14 @@ build_signed_data_attributes (ksba_cms_t cms)
       unsigned char *image;
       size_t imagelen;
 
+      for (i = 0; i < attridx; i++)
+        {
+          _ksba_asn_release_nodes (attrarray[i].root);
+          xfree (attrarray[i].image);
+        }
+      attridx = 0;
+      memset (attrarray, 0, sizeof (attrarray));
+
       if (!digestlist)
         {
 	  err = gpg_error (GPG_ERR_MISSING_VALUE); /* oops */
@@ -2580,6 +2588,7 @@ build_signed_data_attributes (ksba_cms_t cms)
 	  goto leave;
 	}
 
+      assert (attridx <= DIM (attrarray));
       for (i=0; i < attridx; i++)
         {
           if (i)
@@ -2620,7 +2629,7 @@ build_signed_data_attributes (ksba_cms_t cms)
   for (i = 0; i < attridx; i++)
     {
       _ksba_asn_release_nodes (attrarray[i].root);
-      free (attrarray[i].image);
+      xfree (attrarray[i].image);
     }
 
   return err;

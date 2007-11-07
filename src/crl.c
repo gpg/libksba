@@ -36,6 +36,8 @@
 
 static const char oidstr_crlNumber[] = "2.5.29.20";
 static const char oidstr_crlReason[] = "2.5.29.21";
+static const char oidstr_issuingDistributionPoint[] = "2.5.29.28";
+static const char oidstr_certificateIssuer[] = "2.5.29.29";
 static const char oidstr_authorityKeyIdentifier[] = "2.5.29.35";
 
 /* We better buffer the hashing. */
@@ -560,7 +562,7 @@ ksba_crl_get_update_times (ksba_crl_t crl,
     *next = 0;
   if (!crl)
     return gpg_error (GPG_ERR_INV_VALUE);
-  if (!*crl->this_update || !*crl->next_update)
+  if (!*crl->this_update)
     return gpg_error (GPG_ERR_INV_TIME);
   if (this)
     _ksba_copy_time (this, crl->this_update);
@@ -1129,6 +1131,10 @@ store_one_entry_extension (ksba_crl_t crl,
         case 10: crl->item.reason |= KSBA_CRLREASON_AA_COMPROMISE; break;
         default: crl->item.reason |= KSBA_CRLREASON_OTHER; break;
         }
+    }
+  if (!strcmp (oid, oidstr_certificateIssuer))
+    {
+      /* FIXME: We need to implement this. */
     }
   else if (critical)
     err = gpg_error (GPG_ERR_UNKNOWN_CRIT_EXTN);

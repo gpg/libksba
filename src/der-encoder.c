@@ -523,10 +523,10 @@ sum_up_lengths (AsnNode root)
 }
 
 /* Create a DER encoding from the value tree ROOT and return an
-   allocated image of appropriate length in r_imae and r_imagelen.
+   allocated image of appropriate length in r_image and r_imagelen.
    The value tree is modified so that it can be used the same way as a
    parsed one, i.e the elements off, and len are set to point into
-   image. */
+   image.  */
 gpg_error_t
 _ksba_der_encode_tree (AsnNode root,
                        unsigned char **r_image, size_t *r_imagelen)

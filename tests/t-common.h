@@ -155,6 +155,57 @@ print_sexp (ksba_const_sexp_t p)
     }
 }
 
+/* Variant of print_sexp which force printing the values in hex.  */
+void
+print_sexp_hex (ksba_const_sexp_t p)
+{
+  int level = 0;
+
+  if (!p)
+    fputs ("[none]", stdout);
+  else
+    {
+      for (;;)
+        {
+          if (*p == '(')
+            {
+              putchar (*p);
+              p++;
+              level++;
+            }
+          else if (*p == ')')
+            {
+              putchar (*p);
+              if (--level <= 0 )
+                return;
+            }
+          else if (!digitp (p))
+            {
+              fputs ("[invalid s-exp]", stdout);
+              return;
+            }
+          else
+            {
+              char *endp;
+              unsigned long len, n;
+
+              len = strtoul (p, &endp, 10);
+              p = endp;
+              if (*p != ':')
+                {
+                  fputs ("[invalid s-exp]", stdout);
+                  return;
+                }
+              p++;
+              putchar('#');
+              for (n=0; n < len; n++, p++)
+                printf ("%02X", *p);
+              putchar('#');
+            }
+        }
+    }
+}
+
 
 void
 print_dn (char *p)
