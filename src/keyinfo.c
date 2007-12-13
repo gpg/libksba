@@ -1,5 +1,5 @@
 /* keyinfo.c - Parse and build a keyInfo structure
- *      Copyright (C) 2001, 2002 g10 Code GmbH
+ *      Copyright (C) 2001, 2002, 2007 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -44,7 +44,7 @@ struct algo_table_s {
   const char *algo_string;
   const char *elem_string; /* parameter name or '-' */
   const char *ctrl_string; /* expected tag values (value > 127 are raw data)*/
-  int digest_algo;
+  const char *digest_string; /* The digest algo if included in the OID. */
 };
 
 static struct algo_table_s pk_algo_table[] = {
@@ -83,51 +83,51 @@ static struct algo_table_s sig_algo_table[] = {
   {  /* iso.member-body.us.rsadsi.pkcs.pkcs-1.5 */
     "1.2.840.113549.1.1.5", /* sha1WithRSAEncryption */ 
     "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x05", 9, 
-    1, 0, "rsa", "s", "\x82", GCRY_MD_SHA1 },
+    1, 0, "rsa", "s", "\x82", "sha1" },
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.4 */
     "1.2.840.113549.1.1.4", /* md5WithRSAEncryption */ 
     "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x04", 9, 
-    1, 0, "rsa", "s", "\x82", GCRY_MD_MD5 },
+    1, 0, "rsa", "s", "\x82", "md5" },
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.2 */
     "1.2.840.113549.1.1.2", /* md2WithRSAEncryption */ 
     "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x02", 9, 
-    0, 0, "rsa", "s", "\x82", 0 },
+    0, 0, "rsa", "s", "\x82", "md2" },
   { /* iso.member-body.us.x9-57.x9cm.3 */
     "1.2.840.10040.4.3", /*  dsaWithSha1 */
     "\x2a\x86\x48\xce\x38\x04\x03", 7, 
-    1, 0, "dsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA1 }, 
+    1, 0, "dsa", "-rs", "\x30\x02\x02", "sha1" }, 
 
   { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha1 */
     "1.2.840.10045.4.1", /*  ecdsa */
     "\x2a\x86\x48\xce\x3d\x04\x01", 7, 
-    1, 1, "ecdsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA1 }, 
+    1, 1, "ecdsa", "-rs", "\x30\x02\x02", "sha1" }, 
 
   { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-specified */
     "1.2.840.10045.4.3", 
     "\x2a\x86\x48\xce\x3d\x04\x03", 7, 
-    1, 1, "ecdsa", "-rs", "\x30\x02\x02", 0 }, 
+    1, 1, "ecdsa", "-rs", "\x30\x02\x02", NULL }, 
   /* The digest algorithm is given by the parameter.  */ 
 
 
   { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha224 */
     "1.2.840.10045.4.3.1", 
     "\x2a\x86\x48\xce\x3d\x04\x03\x01", 8, 
-    1, 1, "ecdsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA224 }, 
+    1, 1, "ecdsa", "-rs", "\x30\x02\x02", "sha224" }, 
 
   { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha256 */
     "1.2.840.10045.4.3.2", 
     "\x2a\x86\x48\xce\x3d\x04\x03\x02", 8, 
-    1, 1, "ecdsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA256 }, 
+    1, 1, "ecdsa", "-rs", "\x30\x02\x02", "sha256" }, 
 
   { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha384 */
     "1.2.840.10045.4.3.3", 
     "\x2a\x86\x48\xce\x3d\x04\x03\x03", 8, 
-    1, 1, "ecdsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA384 }, 
+    1, 1, "ecdsa", "-rs", "\x30\x02\x02", "sha384" }, 
 
   { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha512 */
     "1.2.840.10045.4.3.4", 
     "\x2a\x86\x48\xce\x3d\x04\x03\x04", 8, 
-    1, 1, "ecdsa", "-rs", "\x30\x02\x02", GCRY_MD_SHA512 }, 
+    1, 1, "ecdsa", "-rs", "\x30\x02\x02", "sha512" }, 
 
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
     "1.2.840.113549.1.1.1", /* rsaEncryption used without hash algo*/ 
@@ -136,32 +136,32 @@ static struct algo_table_s sig_algo_table[] = {
   { /* from NIST's OIW - actually belongs in a pure hash table */
     "1.3.14.3.2.26",  /* sha1 */
     "\x2B\x0E\x03\x02\x1A", 5,
-    0, 0, "sha-1", "", "", GCRY_MD_SHA1 },
+    0, 0, "sha-1", "", "", "sha1" },
 
   { /* As used by telesec cards */
     "1.3.36.3.3.1.2",  /* rsaSignatureWithripemd160 */
     "\x2b\x24\x03\x03\x01\x02", 6,
-    1, 0, "rsa", "s", "\x82", GCRY_MD_RMD160 },
+    1, 0, "rsa", "s", "\x82", "rmd160" },
 
   { /* from NIST's OIW - used by TU Darmstadt */
     "1.3.14.3.2.29",  /* sha-1WithRSAEncryption */
     "\x2B\x0E\x03\x02\x1D", 5,
-    1, 0, "rsa", "s", "\x82", GCRY_MD_SHA1 },
+    1, 0, "rsa", "s", "\x82", "sha1" },
 
   { /* from PKCS#1  */
     "1.2.840.113549.1.1.11", /* sha256WithRSAEncryption */
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0b", 9,
-    1, 0, "rsa", "s", "\x82", GCRY_MD_SHA256 },
+    1, 0, "rsa", "s", "\x82", "sha256" },
 
   { /* from PKCS#1  */
     "1.2.840.113549.1.1.12", /* sha384WithRSAEncryption */
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0c", 9,
-    1, 0, "rsa", "s", "\x82", GCRY_MD_SHA384 },
+    1, 0, "rsa", "s", "\x82", "sha384" },
 
   { /* from PKCS#1  */
     "1.2.840.113549.1.1.13", /* sha512WithRSAEncryption */
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0d", 9,
-    1, 0, "rsa", "s", "\x82", GCRY_MD_SHA512 },
+    1, 0, "rsa", "s", "\x82", "sha512" },
 
   {NULL}
 };
@@ -1165,7 +1165,7 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
             return gpg_error (GPG_ERR_INV_KEYINFO);
           c = *der++; derlen--;
           if ( c != *ctrl )
-            return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not the required tag */
+            return gpg_error (GPG_ERR_UNEXPECTED_TAG);
           is_int = c == 0x02;
           TLV_LENGTH ();
         }
@@ -1182,7 +1182,15 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
           put_stringbuf (&sb, ")");
         }
     }
-  put_stringbuf (&sb, "))");
+  put_stringbuf (&sb, ")");
+  if (!mode && algo_table[algoidx].digest_string)
+    {
+      /* Insert the hash algorithm if included in the OID.  */
+      put_stringbuf (&sb, "(4:hash");
+      put_stringbuf_sexp (&sb, algo_table[algoidx].digest_string);
+      put_stringbuf (&sb, ")");
+    }
+  put_stringbuf (&sb, ")");
   
   *r_string = get_stringbuf (&sb);
   if (!*r_string)
@@ -1208,8 +1216,8 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
     (<algo>
       (<param_name1> <mpi>)
       ...
-      (<param_namen> <mpi>)
-    ))
+      (<param_namen> <mpi>))
+    (hash algo))
 
  The S-Exp will be returned in a string which the caller must free.
  We don't pass an ASN.1 node here but a plain memory block.  */

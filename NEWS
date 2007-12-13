@@ -1,6 +1,10 @@
 Noteworthy changes in version 1.0.3
 ------------------------------------------------
 
+ * Minor bug fixes
+
+ * Include the used hash algorithm in sig-val structures.
+
  
 Noteworthy changes in version 1.0.2 (2007-07-04)
 ------------------------------------------------

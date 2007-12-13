@@ -1,3 +1,7 @@
+2007-12-13  Werner Koch  <wk@g10code.com>
+
+	* t-cms-parser.c (one_file): Print the value of the signature.
+
 2007-08-08  Werner Koch  <wk@g10code.com>
 
 	* t-common.h (print_sexp_hex): New.

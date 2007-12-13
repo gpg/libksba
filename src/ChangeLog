@@ -1,3 +1,15 @@
+2007-12-13  Werner Koch  <wk@g10code.com>
+
+	* keyinfo.c (algo_table_s): Replace the unused DIGEST_ALGO int by
+	a string and changed all tables to use a string representation of
+	the digest algo.
+	(cryptval_to_sexp): Insert the hash algo element into the result. 
+
+2007-11-14  Werner Koch  <wk@g10code.com>
+
+	* ber-decoder.c (_ksba_ber_decoder_dump) 
+	(_ksba_ber_decoder_decode): Change envvar to KSBA_DEBUG_BER_DECODER.
+
 2007-11-07  Werner Koch  <wk@g10code.com>
 
 	* cms.c (build_signed_data_attribute): Reset ATTRIDX for new

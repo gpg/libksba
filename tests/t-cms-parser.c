@@ -186,7 +186,14 @@ one_file (const char *fname)
           printf ("signer %d - digest algo: %s\n", idx, algoid?algoid:"?");
 
           dn = ksba_cms_get_sig_val (cms, idx);
-          printf ("signer %d - signature %s\n", idx, dn? "found": "missing");
+          if (dn)
+            {
+              printf ("signer %d - signature: ", idx);
+              print_sexp (dn);
+              putchar ('\n');
+            }
+          else
+            printf ("signer %d - signature not found\n", idx);
           ksba_free (dn);
         }
     }
