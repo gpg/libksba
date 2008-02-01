@@ -648,7 +648,9 @@ get_name (ksba_cert_t cert, int idx, int use_subject, char **result)
       seqlen -= ti.length;
       if (derlen < ti.length)
         return gpg_error (GPG_ERR_BAD_BER);
-      if (--idx)
+      if (!(ti.tag == 1 || ti.tag == 2 || ti.tag == 6))
+        ; /* Not a supported tag: Do not change IDX. */
+      else if (--idx)
         ; /* not yet at the desired index */
       else if (ti.tag == 1)
         { /* rfc822Name - this is an implicit IA5_STRING */

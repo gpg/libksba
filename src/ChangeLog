@@ -1,3 +1,11 @@
+2008-02-01  Werner Koch  <wk@g10code.com>
+
+	* cert.c (get_name): Fix for unknown tags.
+
+2008-01-11  Werner Koch  <wk@g10code.com>
+
+	* ber-decoder.c (decoder_next): Initialize NODE.
+
 2007-12-13  Werner Koch  <wk@g10code.com>
 
 	* keyinfo.c (algo_table_s): Replace the unused DIGEST_ALGO int by

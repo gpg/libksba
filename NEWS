@@ -1,11 +1,13 @@
 Noteworthy changes in version 1.0.3
 ------------------------------------------------
 
- * Minor bug fixes
+ * Minor bug fixes.
 
  * Include the used hash algorithm in sig-val structures.
 
- 
+ * Fix for unknown tags in issuerAltName and subjectAltName.
+
+
 Noteworthy changes in version 1.0.2 (2007-07-04)
 ------------------------------------------------
  

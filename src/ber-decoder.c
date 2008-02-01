@@ -766,7 +766,7 @@ static gpg_error_t
 decoder_next (BerDecoder d)
 {
   struct tag_info ti;
-  AsnNode node;
+  AsnNode node = NULL;
   gpg_error_t err;
   DECODER_STATE ds = d->ds;
   int debug = d->debug;
