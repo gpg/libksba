@@ -1,3 +1,11 @@
+2008-02-12  Werner Koch  <wk@g10code.com>
+
+	Released 1.0.2.
+	
+	* configure.ac: Bump LT version to C17/A9/R3.
+
+	* config.guess, config.sub: Update to version 2007-11-19.
+
 2007-11-07  Werner Koch  <wk@g10code.com>
 
 	* configure.ac: Add option --disable-optimization.

@@ -1,7 +1,7 @@
                                LIBKSBA
                               ---------
 
-               Copyright 2001, 2006, 2007 g10 Code GmbH
+               Copyright 2001, 2006, 2007, 2008 g10 Code GmbH
 
 This file is free software; as a special exception the author gives
 unlimited permission to copy and/or distribute it, with or without
@@ -11,7 +11,6 @@ This file is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
 implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
 PURPOSE.
-
 
 Libksba itself is distributed under the terms of the GNU General
 Public License, see the file COPYING for details.

@@ -4,7 +4,7 @@
 
 2008-01-11  Werner Koch  <wk@g10code.com>
 
-	* ber-decoder.c (decoder_next): Initialize NODE.
+	* ber-decoder.c (decoder_next): Initialize NODE.  Fixes bug#582.
 
 2007-12-13  Werner Koch  <wk@g10code.com>
 
