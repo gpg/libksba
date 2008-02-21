@@ -1,3 +1,9 @@
+2008-02-21  Werner Koch  <wk@g10code.com>
+
+	* der-encoder.c (_ksba_der_write_algorithm_identifier): Add hack
+	to allow not writing the parameter.
+	* cms.c (store_smime_capability_sequence): Use this hack.
+
 2008-02-01  Werner Koch  <wk@g10code.com>
 
 	* cert.c (get_name): Fix for unknown tags.

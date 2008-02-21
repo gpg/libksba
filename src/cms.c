@@ -1,5 +1,5 @@
 /* cms.c - cryptographic message syntax main functions
- *      Copyright (C) 2001, 2003, 2004 g10 Code GmbH
+ *      Copyright (C) 2001, 2003, 2004, 2008 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -2258,8 +2258,13 @@ store_smime_capability_sequence (AsnNode node,
         }
       if (cap2 == cap)
         {
+          /* RFC3851 requires that a missing parameter must not be
+             encoded as NULL.  This is in contrast to all other usages
+             of the algorithm identifier where ist is allowed and in
+             some profiles (e.g. tmttv2) even explicitly suggested to
+             use NULL.  */
           err = _ksba_der_write_algorithm_identifier
-                 (tmpwrt, cap->oid, cap->parmlen?cap->parm:NULL, cap->parmlen);
+                 (tmpwrt, cap->oid, cap->parmlen?cap->parm:"", cap->parmlen);
           if (err)
             {
               ksba_writer_release (tmpwrt);

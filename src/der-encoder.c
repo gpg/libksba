@@ -1,5 +1,5 @@
 /* der-decoder.c - Distinguished Encoding Rules Encoder
- *      Copyright (C) 2001, 2004 g10 Code GmbH
+ *      Copyright (C) 2001, 2004, 2008 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -126,7 +126,8 @@ _ksba_der_encoder_set_writer (DerEncoder d, ksba_writer_t w)
   }
 
   where parameters will be set to NULL if parm is NULL or to an octet
-  string conating the given parm */
+  string with the given parm.  As a special hack parameter will not be
+  written if PARM is given but parmlen is 0.  */
 gpg_error_t
 _ksba_der_write_algorithm_identifier (ksba_writer_t w, const char *oid,
                                       const void *parm, size_t parmlen)
@@ -134,6 +135,7 @@ _ksba_der_write_algorithm_identifier (ksba_writer_t w, const char *oid,
   gpg_error_t err;
   unsigned char *buf;
   size_t len;
+  int no_null = (parm && !parmlen);
 
   err = ksba_oid_from_str (oid, &buf, &len);
   if (err)
@@ -142,9 +144,9 @@ _ksba_der_write_algorithm_identifier (ksba_writer_t w, const char *oid,
   /* write the sequence */
   /* fixme: the the length to encode the TLV values are actually not
      just 2 byte each but depend on the length of the values - for
-     our purposes the static values do work */
+     our purposes the static values do work.  */
   err = _ksba_ber_write_tl (w, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1,
-                            4 + len + (parm? parmlen:0));
+                            (no_null? 2:4) + len + (parm? parmlen:0));
   if (err)
     goto leave;
 
@@ -156,7 +158,9 @@ _ksba_der_write_algorithm_identifier (ksba_writer_t w, const char *oid,
     goto leave;
 
   /* Write the parameter */
-  if (parm)
+  if (no_null)
+    ;
+  else if (parm)
     {
       err = _ksba_ber_write_tl (w, TYPE_OCTET_STRING, CLASS_UNIVERSAL,
                                 0, parmlen);
