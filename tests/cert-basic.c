@@ -599,6 +599,12 @@ one_file (const char *fname)
           {
             ksba_sexp_t tmp;
 
+            if (verbose)
+              {
+                fputs ("  pubkey-DER: ", stdout);
+                print_hex (der, derlen);
+                putchar ('\n');
+              }
             err = _ksba_keyinfo_to_sexp (der, derlen, &tmp);
             if (err)
               {

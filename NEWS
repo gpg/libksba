@@ -3,6 +3,8 @@ Noteworthy changes in version 1.0.4
 
  * Write smimeCapabilities according to RFC3851 to help Mozilla.
 
+ * Support DSA.
+
 
 Noteworthy changes in version 1.0.3 (2008-02-12)
 ------------------------------------------------

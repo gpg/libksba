@@ -32,11 +32,9 @@ name part when old style quoting is not used.
    retrieved by online means.
 ** cant't handle unprotected attributes
    e.g. for counter signatures.  Not needed in Aegypten.
-** Support DSA
 
 
 * src/keyinfo.c
-** Extract DSA parameters
 ** Do we need to support BER encoded stuff?
 
 * src/time.c

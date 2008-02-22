@@ -1,3 +1,16 @@
+2008-02-22  Werner Koch  <wk@g10code.com>
+
+	* keyinfo.c (pkalgo_t): New.
+	(algo_table_s): Add fields PARMELEM_STRING and
+	PARMCTRL_STRING. repalce IS-ECC by PKALGO. Adjust all tables and
+	users of IS_ECC.  Add DSA parameter description.
+	(TLV_LENGTH): Add PREFIX arg and change all callers.
+	(_ksba_keyinfo_to_sexp): Parse parameters.
+	(oid_from_buffer): Replace R_IS_ECC by R_PKALGO and allow for DSA.
+	(_ksba_keyinfo_from_sexp): Revamp to support DSA.
+	(sig_algo_table): Add dsaWithRIPEMD160, dsaWithSha224 and
+	dsaWithSha256.
+
 2008-02-21  Werner Koch  <wk@g10code.com>
 
 	* der-encoder.c (_ksba_der_write_algorithm_identifier): Add hack
@@ -972,7 +985,7 @@
 	(ksba_cert_get_subject): Ditto.
 	
 
- Copyright 2001, 2002, 2003, 2004, 2005 g10 Code GmbH
+ Copyright 2001, 2002, 2003, 2004, 2005, 2008 g10 Code GmbH
 
  This file is free software; as a special exception the author gives
  unlimited permission to copy and/or distribute it, with or without
