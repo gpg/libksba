@@ -1,3 +1,16 @@
+2008-02-25  Werner Koch  <wk@g10code.com>
+
+	* keyinfo.c (pk_algo_table, sig_algo_table, enc_algo_table): Make
+	const.
+	(cryptval_to_sexp): Adjust for it.
+	* dn.c (oid_name_tbl): Make const and static.
+	* cms.c: Make oidstr_ const.
+
+	* asn1-gentables.c (create_static_structure): Revamp to use a
+	string table to reduce the relocation table.
+	* asn1-func.h: Replace char* by offsets.
+	* asn1-func2.c (ksba_asn_create_tree): Adjust for that change.
+
 2008-02-22  Werner Koch  <wk@g10code.com>
 
 	* keyinfo.c (pkalgo_t): New.

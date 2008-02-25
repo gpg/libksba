@@ -30,7 +30,7 @@
 #include "ber-help.h"
 #include "ber-decoder.h"
 
-struct {
+static const struct {
   const char *name;
   int source; /* 0 = unknown
                  1 = rfc2253

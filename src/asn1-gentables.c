@@ -1,5 +1,5 @@
 /* asn1-gentables.c - Tool to create required ASN tables
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2008 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -50,6 +50,8 @@ struct name_list_s {
   char name[1];
 };
 
+static struct name_list_s *string_table, **string_table_tail;
+static size_t string_table_offset;
 
 static void print_error (const char *fmt, ... )  ATTR_PRINTF(1,2);
 
@@ -67,12 +69,111 @@ print_error (const char *fmt, ... )
   
 }
 
+static size_t
+insert_string (const char *name)
+{
+  struct name_list_s *item;
+  size_t off, n;
+
+  if (!string_table_tail)
+    {
+      string_table_tail = &string_table;
+      insert_string ("");
+    }
+  
+  if (string_table_offset && !*name)
+    return 0;
+
+  for (item = string_table,off = 0; item; item = item->next)
+    {
+      for (n=0; item->name[n]; n++)
+        if (!strcmp (item->name+n, name))
+          return off + n;
+      off += strlen (item->name) + 1;
+    }
+  
+  item = xmalloc ( sizeof *item + strlen (name));
+  strcpy (item->name, name);
+  item->next = NULL;
+  *string_table_tail = item;
+  string_table_tail = &item->next;
+  off = string_table_offset;
+  string_table_offset += strlen (name) + 1;
+  return off;
+}
+
+static int
+cmp_string (const void *aptr, const void *bptr)
+{
+  const struct name_list_s **a = (const struct name_list_s **)aptr;
+  const struct name_list_s **b = (const struct name_list_s **)bptr;
+
+  return strlen ((*a)->name) < strlen ((*b)->name);
+}
+
+static void
+sort_string_table (void)
+{
+  struct name_list_s *item;
+  struct name_list_s **array;
+  size_t i, arraylen;
+  
+  if (!string_table || !string_table->next)
+    return; /* Nothing to sort.  */
+
+  for (item = string_table,arraylen = 0; item; item = item->next)
+    arraylen++;
+  array = xcalloc (arraylen, sizeof *array);
+  for (item = string_table,arraylen = 0; item; item = item->next)
+    array[arraylen++] = item;
+  qsort (array, arraylen, sizeof *array, cmp_string);
+  /* Replace table by sorted one.  */
+  string_table_tail = NULL;
+  string_table = NULL;
+  string_table_offset = 0;
+  for (i=0; i < arraylen; i++)
+    insert_string (array[i]->name);
+  xfree (array);
+  for (item = string_table,arraylen = 0; item; item = item->next)
+    fprintf (stderr, "  `%s'\n", item->name);
+}
+
+
+static void
+write_string_table (FILE *fp)
+{
+  struct name_list_s *item;
+  const char *s;
+  int count = 0;
+  int pos;
+
+  if (!string_table)
+    insert_string ("");
+
+  fputs ("static const char string_table[] = {\n  ", fp);
+  for (item = string_table; item; item = item->next)
+    {
+      for (s=item->name, pos=0; *s; s++)
+        {
+          if (!(pos++ % 16)) 
+            fprintf (fp, "%s  ", pos>1? "\n":"");
+          fprintf (fp, "'%c',", *s);
+        }
+      fputs ("'\\0',\n", fp);
+      count++;
+    }
+  /* (we use an extra \0 to get rid of the last comma) */
+  fprintf (fp, "  '\\0' };\n/* (%d strings) */\n", count);
+}
+
+
 static struct name_list_s *
-create_static_structure (AsnNode pointer, const char *file_name)
+create_static_structure (AsnNode pointer, const char *file_name, FILE *fp)
 {
   AsnNode p;
   struct name_list_s *structure_name;
   const char *char_p, *slash_p, *dot_p;
+  char numbuf[50];
 
   char_p = file_name;
   slash_p = file_name;
@@ -96,8 +197,8 @@ create_static_structure (AsnNode pointer, const char *file_name)
   memcpy (structure_name->name, slash_p, dot_p - slash_p);
   structure_name->name[dot_p - slash_p] = 0;
 
-  printf ("static const static_asn %s_asn1_tab[] = {\n",
-          structure_name->name);
+  fprintf (fp, "static const static_asn %s_asn1_tab[] = {\n",
+           structure_name->name);
 
   for (p = pointer; p; p = _ksba_asn_walk_tree (pointer, p))
     {
@@ -106,56 +207,63 @@ create_static_structure (AsnNode pointer, const char *file_name)
       p->flags.help_right = !!p->right;
 
       /* write a structure line */
-      fputs ("  {", stdout);
+      fputs ("  {", fp);
       if (p->name)
-	fprintf (stdout, "\"%s\"", p->name);
+	fprintf (fp, "%u", (unsigned int)insert_string (p->name));
       else
-	fprintf (stdout, "NULL");
-      fprintf (stdout, ",%u", p->type);
+	fprintf (fp, "0");
+      fprintf (fp, ",%u", p->type);
 
-      fputs (", {", stdout);
-      fprintf (stdout, "%u", p->flags.class);
-      fputs (p->flags.explicit       ? ",1":",0", stdout);
-      fputs (p->flags.implicit       ? ",1":",0", stdout);
-      fputs (p->flags.has_imports    ? ",1":",0", stdout);
-      fputs (p->flags.assignment     ? ",1":",0", stdout);
-      fputs (p->flags.one_param      ? ",1":",0", stdout);
-      fputs (p->flags.has_tag        ? ",1":",0", stdout);
-      fputs (p->flags.has_size       ? ",1":",0", stdout);
-      fputs (p->flags.has_list       ? ",1":",0", stdout);
-      fputs (p->flags.has_min_max    ? ",1":",0", stdout);
-      fputs (p->flags.has_defined_by ? ",1":",0", stdout);
-      fputs (p->flags.is_false       ? ",1":",0", stdout);
-      fputs (p->flags.is_true        ? ",1":",0", stdout);
-      fputs (p->flags.has_default     ? ",1":",0", stdout);
-      fputs (p->flags.is_optional    ? ",1":",0", stdout);
-      fputs (p->flags.is_implicit    ? ",1":",0", stdout);
-      fputs (p->flags.in_set         ? ",1":",0", stdout);
-      fputs (p->flags.in_choice      ? ",1":",0", stdout);
-      fputs (p->flags.in_array       ? ",1":",0", stdout);
-      fputs (p->flags.is_any         ? ",1":",0", stdout);
-      fputs (p->flags.not_used       ? ",1":",0", stdout);
-      fputs (p->flags.help_down      ? ",1":",0", stdout);
-      fputs (p->flags.help_right     ? ",1":",0", stdout);
-      fputs ("}", stdout);
+      fputs (", {", fp);
+      fprintf (fp, "%u", p->flags.class);
+      fputs (p->flags.explicit       ? ",1":",0", fp);
+      fputs (p->flags.implicit       ? ",1":",0", fp);
+      fputs (p->flags.has_imports    ? ",1":",0", fp);
+      fputs (p->flags.assignment     ? ",1":",0", fp);
+      fputs (p->flags.one_param      ? ",1":",0", fp);
+      fputs (p->flags.has_tag        ? ",1":",0", fp);
+      fputs (p->flags.has_size       ? ",1":",0", fp);
+      fputs (p->flags.has_list       ? ",1":",0", fp);
+      fputs (p->flags.has_min_max    ? ",1":",0", fp);
+      fputs (p->flags.has_defined_by ? ",1":",0", fp);
+      fputs (p->flags.is_false       ? ",1":",0", fp);
+      fputs (p->flags.is_true        ? ",1":",0", fp);
+      fputs (p->flags.has_default     ? ",1":",0", fp);
+      fputs (p->flags.is_optional    ? ",1":",0", fp);
+      fputs (p->flags.is_implicit    ? ",1":",0", fp);
+      fputs (p->flags.in_set         ? ",1":",0", fp);
+      fputs (p->flags.in_choice      ? ",1":",0", fp);
+      fputs (p->flags.in_array       ? ",1":",0", fp);
+      fputs (p->flags.is_any         ? ",1":",0", fp);
+      fputs (p->flags.not_used       ? ",1":",0", fp);
+      fputs (p->flags.help_down      ? ",1":",0", fp);
+      fputs (p->flags.help_right     ? ",1":",0", fp);
+      fputs ("}", fp);
 
       if (p->valuetype == VALTYPE_CSTR)
-	fprintf (stdout, ",\"%s\"", p->value.v_cstr);
+	fprintf (fp, ",%u", 
+                 (unsigned int)insert_string (p->value.v_cstr));
       else if (p->valuetype == VALTYPE_LONG
                && p->type == TYPE_INTEGER && p->flags.assignment)
-        fprintf (stdout, ",\"%ld\"", p->value.v_long);
+        {
+          snprintf (numbuf, sizeof numbuf, "%ld", p->value.v_long);
+          fprintf (fp, ",%u", (unsigned int)insert_string (numbuf));
+        }
       else if (p->valuetype == VALTYPE_ULONG)
-        fprintf (stdout, ",\"%lu\"", p->value.v_ulong);
+        {
+          snprintf (numbuf, sizeof numbuf, "%lu", p->value.v_ulong);
+          fprintf (fp, ",%u", (unsigned int)insert_string (numbuf));
+        }
       else
         {
           if (p->valuetype)
             print_error ("can't store a value of type %d\n", p->valuetype);
-          fprintf (stdout, ",0");
+          fprintf (fp, ",0");
         }
-      fputs ("},\n", stdout);
+      fputs ("},\n", fp);
     }
 
-  fprintf (stdout, "  {0,0}\n};\n");
+  fprintf (fp, "  {0,0}\n};\n");
 
   return structure_name;
 }
@@ -163,30 +271,30 @@ create_static_structure (AsnNode pointer, const char *file_name)
 
 
 static struct name_list_s *
-one_file (FILE *fp, const char *fname, int *count)
+one_file (const char *fname, int *count, FILE *fp)
 {
   ksba_asn_tree_t tree;
   int rc;
     
   rc = ksba_asn_parse_file (fname, &tree, check_only);
   if (rc)
-      print_error ("error parsing `%s': %s\n", fname, gpg_strerror (rc) );
+    print_error ("error parsing `%s': %s\n", fname, gpg_strerror (rc) );
   else if (!check_only)
     {
       if (dump_only)
-        ksba_asn_tree_dump (tree, dump_only==2? "<":NULL, stdout);
+        ksba_asn_tree_dump (tree, dump_only==2? "<":NULL, fp);
       else
         {
           if (!*count)
-            printf ("\n"
-                    "#include <config.h>\n"
-                    "#include <stdio.h>\n"
-                    "#include <string.h>\n"
-                    "#include \"ksba.h\"\n"
-                    "#include \"asn1-func.h\"\n"
-                    "\n");
+            fprintf (fp,"\n"
+                     "#include <config.h>\n"
+                     "#include <stdio.h>\n"
+                     "#include <string.h>\n"
+                     "#include \"ksba.h\"\n"
+                     "#include \"asn1-func.h\"\n"
+                     "\n");
           ++*count;
-          return create_static_structure (tree->parse_tree, fname);
+          return create_static_structure (tree->parse_tree, fname, fp);
         }
     }
   return 0;
@@ -198,6 +306,7 @@ main (int argc, char **argv)
 {
   int count = 0;
   struct name_list_s *all_names = NULL, *nl;
+  int i;
 
   if (!argc || (argc > 1 &&
                 (!strcmp (argv[1],"--help") || !strcmp (argv[1],"-h"))) )
@@ -226,34 +335,48 @@ main (int argc, char **argv)
 
 
   if (!argc)
-    all_names = one_file (stdin, "-", &count);
+    all_names = one_file ("-", &count, stdout);
   else
     {
+      FILE *nullfp;
+
+      /* We first parse it to /dev/null to build up the string table.  */
+      nullfp = fopen ("/dev/null", "w");
+      if (!nullfp)
+        {
+          print_error ("can't open `/dev/null': %s\n", strerror (errno));
+          exit (2);
+        }
+      for (i=0; i < argc; i++) 
+        one_file (argv[i], &count, nullfp);
+      fclose (nullfp);
+
+      sort_string_table ();
+
+      count = 0;
       for (; argc; argc--, argv++) 
         {
-          FILE *fp;
-          
-          fp = fopen (*argv, "r");
-          if (!fp)
-              print_error ("can't open `%s': %s\n", *argv, strerror (errno));
-          else
+          nl = one_file (*argv, &count, stdout);
+          if (nl)
             {
-              nl = one_file (fp, *argv, &count);
-              fclose (fp);
-              if (nl)
-                {
-                  nl->next = all_names;
-                  all_names = nl;
-                }
+              nl->next = all_names;
+              all_names = nl;
             }
         }
     }
 
   if (all_names && !error_counter)
-    { /* Write the lookup function */
+    { 
+      /* Write the string table. */
+      putchar ('\n');
+      write_string_table (stdout);
+      /* Write the lookup function */
       printf ("\n\nconst static_asn *\n"
-              "_ksba_asn_lookup_table (const char *name)\n"
-              "{\n");
+              "_ksba_asn_lookup_table (const char *name,"
+              " const char **stringtbl)\n"
+              "{\n"
+              "  *stringtbl = string_table;\n"
+              );
       for (nl=all_names; nl; nl = nl->next)
         printf ("  if (!strcmp (name, \"%s\"))\n"
                 "    return %s_asn1_tab;\n", nl->name, nl->name);

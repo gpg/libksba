@@ -160,10 +160,10 @@ struct ksba_asn_tree_s {
 
 
 typedef struct static_struct_asn {
-  char *name;                    /* Node name */
+  unsigned int name_off;        /* Node name */
   node_type_t type;             /* Node type */
   struct node_flag_s flags;
-  char *stringvalue;      
+  unsigned int stringvalue_off;
 } static_asn;
 
 
@@ -212,7 +212,8 @@ int ksba_asn_write_value(AsnNode root,char *name,unsigned char *value,int len);
 
 
 /*-- asn1-tables.c (generated) --*/
-const static_asn *_ksba_asn_lookup_table (const char *name);
+const static_asn *_ksba_asn_lookup_table (const char *name,
+                                          const char **stringtbl);
 
 
 

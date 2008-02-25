@@ -62,7 +62,7 @@ struct algo_table_s {
 
 
 
-static struct algo_table_s pk_algo_table[] = {
+static const struct algo_table_s pk_algo_table[] = {
 
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
     "1.2.840.113549.1.1.1", /* rsaEncryption (RSAES-PKCA1-v1.5) */ 
@@ -93,7 +93,7 @@ static struct algo_table_s pk_algo_table[] = {
 };
 
 
-static struct algo_table_s sig_algo_table[] = {
+static const struct algo_table_s sig_algo_table[] = {
   {  /* iso.member-body.us.rsadsi.pkcs.pkcs-1.5 */
     "1.2.840.113549.1.1.5", /* sha1WithRSAEncryption */ 
     "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x05", 9, 
@@ -196,7 +196,7 @@ static struct algo_table_s sig_algo_table[] = {
   {NULL}
 };
 
-static struct algo_table_s enc_algo_table[] = {
+static const struct algo_table_s enc_algo_table[] = {
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
     "1.2.840.113549.1.1.1", /* rsaEncryption (RSAES-PKCA1-v1.5) */ 
     "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01", 9, 
@@ -1244,7 +1244,7 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
                   ksba_sexp_t *r_string)
 {
   gpg_error_t err;
-  struct algo_table_s *algo_table;
+  const struct algo_table_s *algo_table;
   int c;
   size_t nread, off, len;
   int algoidx;

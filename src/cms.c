@@ -65,16 +65,16 @@ static struct {
   { NULL }
 };
 
-static char oidstr_contentType[] = "1.2.840.113549.1.9.3";
+static const char oidstr_contentType[] = "1.2.840.113549.1.9.3";
 /*static char oid_contentType[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x03";*/
 
-static char oidstr_messageDigest[] = "1.2.840.113549.1.9.4";
-static char oid_messageDigest[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x04";
+static const char oidstr_messageDigest[] = "1.2.840.113549.1.9.4";
+static const char oid_messageDigest[9] ="\x2A\x86\x48\x86\xF7\x0D\x01\x09\x04";
 
-static char oidstr_signingTime[] = "1.2.840.113549.1.9.5";
-static char oid_signingTime[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x05";
+static const char oidstr_signingTime[] = "1.2.840.113549.1.9.5";
+static const char oid_signingTime[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x05";
 
-static char oidstr_smimeCapabilities[] = "1.2.840.113549.1.9.15";
+static const char oidstr_smimeCapabilities[] = "1.2.840.113549.1.9.15";
 
 
 
@@ -2264,7 +2264,8 @@ store_smime_capability_sequence (AsnNode node,
              some profiles (e.g. tmttv2) even explicitly suggested to
              use NULL.  */
           err = _ksba_der_write_algorithm_identifier
-                 (tmpwrt, cap->oid, cap->parmlen?cap->parm:"", cap->parmlen);
+                 (tmpwrt, cap->oid, 
+                  cap->parmlen?cap->parm:(const void*)"", cap->parmlen);
           if (err)
             {
               ksba_writer_release (tmpwrt);

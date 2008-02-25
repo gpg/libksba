@@ -198,7 +198,7 @@ eof_or_error (BerDecoder d, int premature)
 static const char *
 universal_tag_name (unsigned long no)
 {
-  static const char *names[31] = {
+  static const char * const names[31] = {
     "[End Tag]",
     "BOOLEAN",
     "INTEGER",

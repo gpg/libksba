@@ -1,6 +1,6 @@
 /* asn1-func2.c - More ASN.1 definitions
  *      Copyright (C) 2000, 2001 Fabio Fiorina
- *      Copyright (C) 2001 Free Software Foundation, Inc.
+ *      Copyright (C) 2001, 2008 Free Software Foundation, Inc.
  *
  * This file is part of GNUTLS.
  *
@@ -103,6 +103,7 @@ ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result)
 {
   enum { DOWN, UP, RIGHT } move;
   const static_asn *root;
+  const char *strgtbl;
   AsnNode pointer;
   AsnNode p = NULL;
   AsnNode p_last = NULL;
@@ -116,7 +117,7 @@ ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result)
 
   if (!mod_name)
     return gpg_error (GPG_ERR_INV_VALUE);
-  root = _ksba_asn_lookup_table (mod_name);
+  root = _ksba_asn_lookup_table (mod_name, &strgtbl);
   if (!root)
     return gpg_error (GPG_ERR_MODULE_NOT_FOUND);
 
@@ -124,7 +125,7 @@ ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result)
   move = UP;
 
   k = 0;
-  while (root[k].stringvalue || root[k].type || root[k].name)
+  while (root[k].stringvalue_off || root[k].type || root[k].name_off)
     {
       p = _ksba_asn_new_node (root[k].type);
       p->flags = root[k].flags;
@@ -132,18 +133,19 @@ ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result)
       p->link_next = link_next;
       link_next = p;
 
-      if (root[k].name)
-	_ksba_asn_set_name (p, root[k].name);
-      if (root[k].stringvalue)
+      if (root[k].name_off)
+	_ksba_asn_set_name (p, strgtbl + root[k].name_off);
+      if (root[k].stringvalue_off)
         {
           if (root[k].type == TYPE_TAG)
             {
               unsigned long val;
-              val = strtoul (root[k].stringvalue, NULL, 10);
+              val = strtoul (strgtbl+root[k].stringvalue_off, NULL, 10);
               _ksba_asn_set_value (p, VALTYPE_ULONG, &val, sizeof(val));
             }
           else
-            _ksba_asn_set_value (p, VALTYPE_CSTR, root[k].stringvalue, 0);
+            _ksba_asn_set_value (p, VALTYPE_CSTR, 
+                                 strgtbl+root[k].stringvalue_off, 0);
         }
 
       if (!pointer)
