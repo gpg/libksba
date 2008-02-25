@@ -86,6 +86,7 @@ libksba_la_LIBADD = @LTLIBOBJS@ @GPG_ERROR_LIBS@
 
 libksba_la_SOURCES = \
 	ksba.h \
+        visibility.c visibility.h \
 	reader.c reader.h \
 	writer.c writer.h \
 	asn1-parse.y asn1-parse.h \

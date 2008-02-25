@@ -168,8 +168,93 @@ AC_ARG_ENABLE([ld-version-script],
 AM_CONDITIONAL(HAVE_LD_VERSION_SCRIPT, test "$have_ld_version_script" = "yes")
 
 
-# Checks for libraries.
+#            
+# Check for ELF visibility support.
+#
+AC_CACHE_CHECK(whether the visibility attribute is supported,
+       ksba_cv_visibility_attribute,
+       [ksba_cv_visibility_attribute=no
+        AC_LANG_CONFTEST([AC_LANG_SOURCE(
+          [[int foo __attribute__ ((visibility ("hidden"))) = 1;
+            int bar __attribute__ ((visibility ("protected"))) = 1;
+          ]])])
+        
+        if ${CC-cc} -Werror -S conftest.c -o conftest.s \
+                  1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD ; then
+            if grep '\.hidden.*foo' conftest.s >/dev/null 2>&1 ; then
+                if grep '\.protected.*bar' conftest.s >/dev/null 2>&1; then
+                    ksba_cv_visibility_attribute=yes
+                fi
+            fi  
+        fi  
+       ])
+if test "$ksba_cv_visibility_attribute" = "yes"; then
+    AC_CACHE_CHECK(for broken visibility attribute,
+       ksba_cv_broken_visibility_attribute,
+       [ksba_cv_broken_visibility_attribute=yes
+        AC_LANG_CONFTEST([AC_LANG_SOURCE(
+          [[int foo (int x);
+            int bar (int x) __asm__ ("foo")
+                            __attribute__ ((visibility ("hidden")));
+            int bar (int x) { return x; }
+          ]])])
+                  
+        if ${CC-cc} -Werror -S conftest.c -o conftest.s \
+                  1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD ; then
+           if grep '\.hidden@<:@ 	_@:>@foo' conftest.s >/dev/null 2>&1;
+            then
+               ksba_cv_broken_visibility_attribute=no
+           fi
+        fi
+       ])
+fi
+if test "$ksba_cv_visibility_attribute" = "yes"; then
+    AC_CACHE_CHECK(for broken alias attribute,
+       ksba_cv_broken_alias_attribute,
+       [ksba_cv_broken_alias_attribute=yes
+        AC_LANG_CONFTEST([AC_LANG_SOURCE(
+          [[extern int foo (int x) __asm ("xyzzy");
+            int bar (int x) { return x; }
+            extern __typeof (bar) foo __attribute ((weak, alias ("bar")));
+            extern int dfoo;
+            extern __typeof (dfoo) dfoo __asm ("abccb");
+            int dfoo = 1;
+          ]])])
 
+        if ${CC-cc} -Werror -S conftest.c -o conftest.s \
+                  1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD ; then
+           if grep 'xyzzy' conftest.s >/dev/null 2>&1 && \
+              grep 'abccb' conftest.s >/dev/null 2>&1; then
+              ksba_cv_broken_alias_attribute=no
+           fi
+        fi
+        ])
+fi
+if test "$ksba_cv_visibility_attribute" = "yes"; then
+    AC_CACHE_CHECK(if gcc supports -fvisibility=hidden,
+       ksba_cv_gcc_has_f_visibility,
+       [ksba_cv_gcc_has_f_visibility=no
+        _gcc_cflags_save=$CFLAGS
+        CFLAGS="-fvisibility=hidden"
+        AC_COMPILE_IFELSE(AC_LANG_PROGRAM([]),
+                          ksba_cv_gcc_has_f_visibility=yes)
+        CFLAGS=$_gcc_cflags_save;
+       ])
+fi
+if test "$ksba_cv_visibility_attribute" = "yes" \
+   && test "$ksba_cv_broken_visibility_attribute" != "yes" \
+   && test "$ksba_cv_broken_alias_attribute" != "yes" \
+   && test "$ksba_cv_gcc_has_f_visibility" = "yes"  
+ then
+   AC_DEFINE(KSBA_USE_VISIBILITY, 1,
+               [Define to use the GNU C visibility attribute.])
+   CFLAGS="$CFLAGS -fvisibility=hidden"
+fi
+
+
+#
+# Checks for libraries.
+#
 AM_PATH_GPG_ERROR("$NEED_GPG_ERROR_VERSION")
 if test "x$GPG_ERROR_LIBS" = "x"; then
   AC_MSG_ERROR([libgpg-error is needed.

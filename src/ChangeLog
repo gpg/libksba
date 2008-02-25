@@ -1,5 +1,8 @@
 2008-02-25  Werner Koch  <wk@g10code.com>
 
+	* visibility.h, visibility.c: New.
+	* util.h: Include visibility.h.
+
 	* keyinfo.c (pk_algo_table, sig_algo_table, enc_algo_table): Make
 	const.
 	(cryptval_to_sexp): Adjust for it.

@@ -20,7 +20,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include "ksba.h"  /* ksba_malloc() etc. */
+#include "visibility.h"
+
 
 gpg_error_t _ksba_hash_buffer (const char *oid,
                                const void *buffer, size_t length,

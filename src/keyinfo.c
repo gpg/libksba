@@ -27,7 +27,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include "ksba.h"
 #include "util.h"
 #include "asn1-func.h"
 #include "keyinfo.h"

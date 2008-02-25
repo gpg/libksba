@@ -1,6 +1,7 @@
 /* asn1-func2.c - More ASN.1 definitions
  *      Copyright (C) 2000, 2001 Fabio Fiorina
- *      Copyright (C) 2001, 2008 Free Software Foundation, Inc.
+ *      Copyright (C) 2001 Free Software Foundation, Inc.
+ *      Copyright (C) 2008 g10 Code GmbH
  *
  * This file is part of GNUTLS.
  *
@@ -31,9 +32,9 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include "util.h"
 #include "ksba.h"
 #include "asn1-func.h"
-#include "util.h"
 
 
 static AsnNode 

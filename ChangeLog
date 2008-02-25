@@ -1,3 +1,8 @@
+2008-02-25  Werner Koch  <wk@g10code.com>
+
+	* configure.ac (KSBA_USE_VISIBILITY): Define if system supports
+	the visibility attribute.
+
 2008-02-12  Werner Koch  <wk@g10code.com>
 
 	Released 1.0.3.

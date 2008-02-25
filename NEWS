@@ -5,6 +5,8 @@ Noteworthy changes in version 1.0.4
 
  * Support DSA.
 
+ * The visibility attribute is now used if supported by the toolchain.
+
 
 Noteworthy changes in version 1.0.3 (2008-02-12)
 ------------------------------------------------

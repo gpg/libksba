@@ -24,6 +24,7 @@
 #include <errno.h>
 
 #include "../src/ksba.h"
+#define _KSBA_VISIBILITY_DEFAULT /*  */
 #include "../src/keyinfo.h"
 
 #include "oidtranstbl.h"

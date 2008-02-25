@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <stdarg.h>
 
+#include "visibility.h"
 #include "ksba.h"
 #include "ber-decoder.h"
 

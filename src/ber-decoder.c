@@ -24,6 +24,7 @@
 #include <assert.h>
 #include "util.h"
 
+#include "util.h"
 #include "ksba.h"
 #include "asn1-func.h"
 #include "ber-decoder.h"

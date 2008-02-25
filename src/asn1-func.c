@@ -27,9 +27,9 @@
 
 #include <alloca.h>
 
+#include "util.h"
 #include "ksba.h"
 #include "asn1-func.h"
-#include "util.h"
 
 
 static AsnNode
