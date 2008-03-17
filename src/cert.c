@@ -348,8 +348,8 @@ ksba_cert_get_image (ksba_cert_t cert, size_t *r_length )
   if ( !(n->nhdr + n->len + n->off <= cert->imagelen) )
     {
       fprintf (stderr,"\nOops, ksba_cert_get_image failed: "
-               "imagelen=%d  hdr=%d len=%d off=%d\n",
-               cert->imagelen, n->nhdr, (int)n->len, n->off);
+               "imagelen=%lu  hdr=%d len=%d off=%d\n",
+               (unsigned long)cert->imagelen, n->nhdr, (int)n->len, n->off);
       return NULL;
     }
   /*assert (n->nhdr + n->len + n->off <= cert->imagelen);*/

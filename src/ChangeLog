@@ -1,3 +1,8 @@
+2008-03-17  Werner Koch  <wk@g10code.com>
+
+	* cert.c (ksba_cert_get_image): Fix size_t/int format mismatch.
+	Reported by Stéphane Corthésy.
+
 2008-02-25  Werner Koch  <wk@g10code.com>
 
 	* visibility.h, visibility.c: New.
