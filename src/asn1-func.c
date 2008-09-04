@@ -637,7 +637,7 @@ ksba_asn_tree_dump (ksba_asn_tree_t tree, const char *name, FILE *fp)
 }
 
 int
-ksba_asn_delete_structure (AsnNode root)
+_ksba_asn_delete_structure (AsnNode root)
 {
   AsnNode p, p2, p3;
 

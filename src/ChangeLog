@@ -1,3 +1,14 @@
+2008-09-04  Werner Koch  <wk@g10code.com>
+
+	* asn1-func.h (ksba_asn_create_structure): Remove unused prototype
+	(ksba_asn1_create_tree): Ditto.
+	(ksba_asn_read_value, ksba_asn_write_value): Ditto.
+
+	* asn1-func.c (ksba_asn_delete_structure): Prefix name with underscore.
+	* visibility.h (ksba_asn_delete_structure): Remove macros.
+	(MARK_VISIBLEX): New.
+	(ksba_asn_delete_structure): New.
+
 2008-03-17  Werner Koch  <wk@g10code.com>
 
 	* cert.c (ksba_cert_get_image): Fix size_t/int format mismatch.
@@ -23,7 +34,7 @@
 
 	* keyinfo.c (pkalgo_t): New.
 	(algo_table_s): Add fields PARMELEM_STRING and
-	PARMCTRL_STRING. repalce IS-ECC by PKALGO. Adjust all tables and
+	PARMCTRL_STRING. Replace IS_ECC by PKALGO. Adjust all tables and
 	users of IS_ECC.  Add DSA parameter description.
 	(TLV_LENGTH): Add PREFIX arg and change all callers.
 	(_ksba_keyinfo_to_sexp): Parse parameters.

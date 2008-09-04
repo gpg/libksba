@@ -30,7 +30,6 @@
 #define ksba_realloc                       _ksba_realloc
 #define ksba_strdup                        _ksba_strdup
 #define ksba_asn_create_tree               _ksba_asn_create_tree
-#define ksba_asn_delete_structure          _ksba_asn_delete_structure
 #define ksba_asn_parse_file                _ksba_asn_parse_file
 #define ksba_asn_tree_dump                 _ksba_asn_tree_dump
 #define ksba_asn_tree_release              _ksba_asn_tree_release
@@ -199,21 +198,16 @@
 # ifdef KSBA_USE_VISIBILITY
 #  define MARK_VISIBLE(name) \
      extern __typeof__ (_##name) name _KSBA_VISIBILITY_DEFAULT;
+#  define MARK_VISIBLEX(name) \
+     extern __typeof__ (name) name _KSBA_VISIBILITY_DEFAULT;
 # else
-#  define MARK_VISIBLE(name) /* */
+#  define MARK_VISIBLE(name)  /* */
+#  define MARK_VISIBLEX(name) /* */
 # endif
 
 
-/* Prototypes of functions though exported not yet officially known or
-   only accidently put into the public interface.  */
-struct asn_node_struct;
-#ifndef HAVE_TYPEDEFD_ASNNODE
-  typedef struct asn_node_struct *AsnNode; 
-  typedef struct asn_node_struct *asn_node_t; 
-# define HAVE_TYPEDEFD_ASNNODE
-#endif
-int ksba_asn_delete_structure (asn_node_t root);
-
+/* Prototype for a dummy function we once exported accidently.  */
+int ksba_asn_delete_structure (void *dummy);
 
 
 /* Undef all redefined symbols so that we set the attribute on the
@@ -227,7 +221,6 @@ int ksba_asn_delete_structure (asn_node_t root);
 #undef ksba_realloc
 #undef ksba_strdup
 #undef ksba_asn_create_tree
-#undef ksba_asn_delete_structure
 #undef ksba_asn_parse_file
 #undef ksba_asn_tree_dump
 #undef ksba_asn_tree_release
@@ -386,10 +379,10 @@ MARK_VISIBLE (ksba_calloc)
 MARK_VISIBLE (ksba_realloc)
 MARK_VISIBLE (ksba_strdup)
 MARK_VISIBLE (ksba_asn_create_tree)
-MARK_VISIBLE (ksba_asn_delete_structure)
 MARK_VISIBLE (ksba_asn_parse_file)
 MARK_VISIBLE (ksba_asn_tree_dump)
 MARK_VISIBLE (ksba_asn_tree_release)
+MARK_VISIBLEX (ksba_asn_delete_structure) /* Dummy for ABI compatibility. */
 
 MARK_VISIBLE (ksba_cert_get_auth_key_id)
 MARK_VISIBLE (ksba_cert_get_cert_policies)

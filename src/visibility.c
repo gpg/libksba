@@ -1096,7 +1096,6 @@ ksba_asn_tree_release (ksba_asn_tree_t tree)
 }
 
 
-
 /*-- asn1-func.c --*/
 void
 ksba_asn_tree_dump (ksba_asn_tree_t tree, const char *name, FILE *fp)
@@ -1109,6 +1108,17 @@ gpg_error_t
 ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result)
 {
   return _ksba_asn_create_tree (mod_name, result);
+}
+
+
+/* This is a dummy function which we only include because it was
+   accidently put into the public interface.  */
+int
+ksba_asn_delete_structure (void *dummy)
+{
+  (void)dummy;
+  fprintf (stderr, "BUG: ksba_asn_delete_structure called\n");
+  return -1;
 }
 
 

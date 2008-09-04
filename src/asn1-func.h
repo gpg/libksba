@@ -201,12 +201,7 @@ AsnNode _ksba_asn_find_type_value (const unsigned char *image,
                                    const void *oidbuf, size_t oidlen);
 
 
-int ksba_asn_create_structure (AsnNode root, char *source_name,
-                               AsnNode*pointer , char *dest_name);
-int ksba_asn_delete_structure (AsnNode root);
-int ksba_asn1_create_tree (const static_asn *root,AsnNode*pointer);
-int ksba_asn_read_value(AsnNode root,const char *name,unsigned char *value,int *len);
-int ksba_asn_write_value(AsnNode root,char *name,unsigned char *value,int len);
+int _ksba_asn_delete_structure (AsnNode root);
 
 /*-- asn2-func.c --*/
 

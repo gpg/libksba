@@ -1329,7 +1329,7 @@ ksba_cms_set_content_type (ksba_cms_t cms, int what, ksba_content_type_t type)
  * Set the algorithm to be used for creating the hash. Note, that we
  * currently can't do a per-signer hash.
  * 
- * Return value: o on success or an error code
+ * Return value: 0 on success or an error code
  **/
 gpg_error_t
 ksba_cms_add_digest_algo (ksba_cms_t cms, const char *oid)

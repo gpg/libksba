@@ -208,7 +208,7 @@ ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result)
       rc = gpg_error (GPG_ERR_GENERAL);
 
   if (rc)
-    ksba_asn_delete_structure (pointer);
+    _ksba_asn_delete_structure (pointer);
 
   return rc;
 }
