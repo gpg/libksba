@@ -1,3 +1,7 @@
+2008-10-30  Marcus Brinkmann  <marcus@g10code.de>
+
+	* ocsp.c (parse_context_tag): Don't trash the error value.
+
 2008-09-04  Werner Koch  <wk@g10code.com>
 
 	* asn1-func.h (ksba_asn_create_structure): Remove unused prototype
