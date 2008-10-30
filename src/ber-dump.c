@@ -76,6 +76,8 @@ one_file (FILE *fp, const char *fname, ksba_asn_tree_t asn_tree)
   ksba_reader_t r;
   BerDecoder d;
 
+  (void)fname;  /* Not yet used in error messages.  */
+
   err = ksba_reader_new (&r);
   if (err)
     fatal ("out of core\n");

@@ -29,8 +29,11 @@
 #include "t-common.h"
 
 void 
-dummy_hash_fnc (void *arg, const void *buffer,size_t length)
+dummy_hash_fnc (void *arg, const void *buffer, size_t length)
 {
+  (void)arg;
+  (void)buffer;
+  (void)length;
 }
 
 

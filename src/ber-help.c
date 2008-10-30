@@ -404,11 +404,11 @@ _ksba_ber_encode_tl (unsigned char *buffer,
 }
 
 
-/* calculate the length of the TL needed to encode a TAG of CLASS.
-   constructed is a flag telling
-   whether the value is a constructed one.  length gives the length of
-   the value, if it is 0 undefinite length is assumed.  length is
-   ignored for the NULL tag. */
+/* Calculate the length of the TL needed to encode a TAG of CLASS.
+   CONSTRUCTED is a flag telling whether the value is a constructed
+   one.  LENGTH gives the length of the value; if it is 0 an
+   indefinite length is assumed.  LENGTH is ignored for the NULL
+   tag. */
 size_t
 _ksba_ber_count_tl (unsigned long tag,
                     enum tag_class class,
@@ -416,6 +416,8 @@ _ksba_ber_count_tl (unsigned long tag,
                     unsigned long length)
 {
   int buflen = 0;
+
+  (void)constructed;  /* Not used, but passed for uniformity of such calls.  */
 
   if (tag < 0x1f)
     {

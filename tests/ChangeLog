@@ -1,3 +1,8 @@
+2008-10-30  Werner Koch  <wk@g10code.com>
+
+	* t-cms-parser.c (dummy_hash_fnc): Mark unused args.
+	* t-ocsp.c (my_hash_buffer): Ditto.
+
 2007-12-13  Werner Koch  <wk@g10code.com>
 
 	* t-cms-parser.c (one_file): Print the value of the signature.

@@ -342,6 +342,8 @@ my_hash_buffer (void *arg, const char *oid,
                 const void *buffer, size_t length, size_t resultsize,
                 unsigned char *result, size_t *resultlen)
 {
+  (void)arg; /* Not used.  */
+
   if (oid && strcmp (oid, "1.3.14.3.2.26")) 
     return gpg_error (GPG_ERR_NOT_SUPPORTED); /* We only support SHA-1. */ 
   if (resultsize < 20)

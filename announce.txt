@@ -1,6 +1,6 @@
 Hello!
 
-We are pleased to announce version 1.0.3 of Libksba.
+We are pleased to announce version 1.0.4 of Libksba.
 
 Libksba is an X.509 and CMS (PKCS#7) library.  It is for example
 required to build the S/MIME part of GnuPG-2 (gpgsm).  The only build
@@ -10,35 +10,36 @@ by the user.  Libksba is distributed under the GPLv3+.  There are no
 user tools accompanying this software, thus it is mostly relevant to
 developers.
 
-This is a bug fix release.
+This is a maintenance release.
 
 You may download the library and its OpenPGP signature from:
 
-  ftp://ftp.gnupg.org/gcrypt/libksba/libksba-1.0.3.tar.bz2 (513k)
-  ftp://ftp.gnupg.org/gcrypt/libksba/libksba-1.0.3.tar.bz2.sig
+  ftp://ftp.gnupg.org/gcrypt/libksba/libksba-1.0.4.tar.bz2 (553k)
+  ftp://ftp.gnupg.org/gcrypt/libksba/libksba-1.0.4.tar.bz2.sig
 
 As an alternative you may use a patch file to upgrade the previous
 version of the library:
 
-  ftp://ftp.gnupg.org/gcrypt/libksba/libksba-1.0.2-1.0.3.diff.bz2 (13k)
+  ftp://ftp.gnupg.org/gcrypt/libksba/libksba-1.0.3-1.0.4.diff.bz2 (144k)
 
-or from any mirror of that server (http://www.gnupg.org/mirrors.html).
+(the reason for the large patch file is due to newer version of files
+from the build systems) or from any mirror of that server
+(http://www.gnupg.org/mirrors.html).
 
 SHA-1 checksums are:
 
-7a4b3a8340087ed360269b567881ebfb9b67441b  libksba-1.0.3.tar.bz2
-ecbeb0f381db55f387753f5c873e20be59c9b65f  libksba-1.0.2-1.0.3.diff.bz2
+05d0b803bac34b53e07619ca52425452be535792  libksba-1.0.4.tar.bz2
+51249c45ea74c61325c1f2462045ba5a4148bf38  libksba-1.0.3-1.0.4.diff.bz2
 
 
-Noteworthy changes in version 1.0.3 (2008-02-12)
+Noteworthy changes in version 1.0.4 (2008-09-22)
 ------------------------------------------------
 
- * Minor bug fixes.
+ * Write smimeCapabilities according to RFC3851 to help Mozilla.
 
- * Include the used hash algorithm in sig-val structures.
+ * Support DSA.
 
- * Fix for unknown tags in issuerAltName and subjectAltName.
-
+ * The visibility attribute is now used if supported by the toolchain.
 
 
 Commercial support contracts for Libksba are available, and they help
