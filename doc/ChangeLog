@@ -1,3 +1,7 @@
+2008-11-12  Marcus Brinkmann  <marcus@g10code.com>
+
+	* ksba.texi: Clear up wording on reference counting.
+
 2007-07-04  Werner Koch  <wk@g10code.com>
 
 	Changed license to GPLv3.

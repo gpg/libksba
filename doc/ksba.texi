@@ -328,8 +328,9 @@ This section explains how to create a certificate object, initialize it,
 copy it and eventually destroy it. 
 
 @deftypefun ksba_cert_t ksba_cert_new (void)
-The function @code{ksba_cert_new} creates a new certificate
-object and returns a handle for it.
+The function @code{ksba_cert_new} creates a new certificate object and
+returns a handle for it.  The certificate object has initially one
+reference.
 
 The only reason why this function may fail is an out-of-memory condition in
 which case @code{NULL} is returned.  You might then get the actual error
@@ -343,11 +344,11 @@ required to actually release the memory used for the object.
 @end deftypefun
 
 @deftypefun void ksba_cert_release (@w{ksba_cert_t @var{cert}})
-The function @code{ksba_cert_release} destroys the certificate object
-with the handle @var{cert} and releases all associated resources.  Due
-to the use of reference counting no actual memory may be released if
-another reference still exists.  It is okay to pass @code{NULL} to the
-function in which case nothing happens.
+The function @code{ksba_cert_release} reduces the number of references
+to the certificate object with the handle @var{cert}.  If this was the
+last reference, it will also destroy the object and releases all
+associated resources.  It is okay to pass @code{NULL} to the function
+in which case nothing happens.
 @end deftypefun
 
 @deftypefun gpg_error_t ksba_cert_read_der (@w{ksba_cert_t @var{cert}}, @w{ksba_reader_t @var{reader}})
