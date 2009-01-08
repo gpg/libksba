@@ -115,7 +115,7 @@ static const struct algo_table_s sig_algo_table[] = {
     1, PKALGO_DSA, "dsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha1" }, 
   { /* Teletrust signature algorithm.  */
     "1.3.36.8.5.1.2.2", /* dsaWithRIPEMD160 */
-    "\x06\x07\x2B\x24\x08\x05\x01\x02\x02", 9,
+    "\x2b\x24\x08\x05\x01\x02\x02", 7,
     1, PKALGO_DSA, "dsa", "-rs", "\x30\x02\x02", NULL, NULL, "rmd160" }, 
   { /* NIST Algorithm */
     "2.16.840.1.101.3.4.3.1", /* dsaWithSha224 */
@@ -192,6 +192,13 @@ static const struct algo_table_s sig_algo_table[] = {
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0d", 9,
     1, PKALGO_RSA, "rsa", "s", "\x82", NULL, NULL, "sha512" },
 
+  { /* TeleTrust signature scheme with RSA signature and DSI according
+       to ISO/IEC 9796-2 with random number and RIPEMD-160.  I am not
+       sure for what this is good; thus disabled. */
+    "1.3.36.3.4.3.2.2",     /* sigS_ISO9796-2rndWithrsa_ripemd160 */
+    "\x2B\x24\x03\x04\x03\x02\x02", 7,
+    0, PKALGO_RSA, "rsa", "s", "\x82", NULL, NULL, "rmd160" },
+  
   {NULL}
 };
 
@@ -336,6 +343,12 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
   unsigned long seqlen, len;
 
   *r_bitstr = 0;
+  if (r_parm_pos)
+    *r_parm_pos = 0;
+  if (r_parm_len)
+    *r_parm_len = 0;
+  if (r_parm_type)
+    *r_parm_type = 0;
   /* get the inner sequence */
   if (!derlen)
     return gpg_error (GPG_ERR_INV_KEYINFO);
