@@ -1878,6 +1878,7 @@ ksba_cms_add_recipient (ksba_cms_t cms, ksba_cert_t cert)
 static gpg_error_t 
 ct_parse_data (ksba_cms_t cms)
 {
+  (void)cms;
   return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 }
 
@@ -2033,6 +2034,7 @@ ct_parse_enveloped_data (ksba_cms_t cms)
 static gpg_error_t 
 ct_parse_digested_data (ksba_cms_t cms)
 {
+  (void)cms;
   return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 }
 
@@ -2040,6 +2042,7 @@ ct_parse_digested_data (ksba_cms_t cms)
 static gpg_error_t 
 ct_parse_encrypted_data (ksba_cms_t cms)
 {
+  (void)cms;
   return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 }
 
@@ -2052,6 +2055,7 @@ ct_parse_encrypted_data (ksba_cms_t cms)
 static gpg_error_t 
 ct_build_data (ksba_cms_t cms)
 {
+  (void)cms;
   return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 }
 
@@ -3263,6 +3267,7 @@ ct_build_enveloped_data (ksba_cms_t cms)
 static gpg_error_t 
 ct_build_digested_data (ksba_cms_t cms)
 {
+  (void)cms;
   return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 }
 
@@ -3270,6 +3275,7 @@ ct_build_digested_data (ksba_cms_t cms)
 static gpg_error_t 
 ct_build_encrypted_data (ksba_cms_t cms)
 {
+  (void)cms;
   return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 }
 

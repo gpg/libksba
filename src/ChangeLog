@@ -1,3 +1,19 @@
+2009-01-14  Werner Koch  <wk@g10code.com>
+
+	* ocsp.c (ksba_ocsp_set_requestor, ksba_ocsp_hash_request) 
+	(ksba_ocsp_set_sig_val, ksba_ocsp_add_cert): Mark unused args.
+	* cms-parser.c (_ksba_cms_parse_enveloped_data_part_2): Ditto.
+	* cms.c (ct_parse_data, ct_parse_digested_data) 
+	(ct_parse_encrypted_data, ct_build_data, ct_build_digested_data) 
+	(ct_build_encrypted_data): Ditto.
+
+	* visibility.c (ksba_cms_release, ksba_cms_set_hash_function) 
+	(ksba_crl_release, ksba_crl_set_hash_function, ksba_ocsp_release) 
+	(ksba_certreq_release, ksba_certreq_set_hash_function) 
+	(ksba_reader_release, ksba_writer_release, ksba_asn_tree_release) 
+	(ksba_asn_tree_dump, ksba_name_ref, ksba_name_release): No return
+	vor a void fucntion.  Reported by Nelson H. F. Beebe.
+
 2009-01-08  Werner Koch  <wk@g10code.com>
 
 	* keyinfo.c (get_algorithm): Initialize R_PARM_POS, R_PARM_LEN and
@@ -1036,7 +1052,7 @@
 	(ksba_cert_get_subject): Ditto.
 	
 
- Copyright 2001, 2002, 2003, 2004, 2005, 2008 g10 Code GmbH
+ Copyright 2001, 2002, 2003, 2004, 2005, 2008, 2009 g10 Code GmbH
 
  This file is free software; as a special exception the author gives
  unlimited permission to copy and/or distribute it, with or without

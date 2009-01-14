@@ -319,7 +319,7 @@ ksba_cms_new (ksba_cms_t *r_cms)
 void
 ksba_cms_release (ksba_cms_t cms)
 {
-  return _ksba_cms_release (cms);
+  _ksba_cms_release (cms);
 }
 
 
@@ -441,7 +441,7 @@ ksba_cms_set_hash_function (ksba_cms_t cms,
                             void (*hash_fnc)(void *, const void *, size_t),
                             void *hash_fnc_arg)
 {
-  return _ksba_cms_set_hash_function (cms, hash_fnc, hash_fnc_arg);
+  _ksba_cms_set_hash_function (cms, hash_fnc, hash_fnc_arg);
 }
 
 
@@ -555,7 +555,7 @@ ksba_crl_new (ksba_crl_t *r_crl)
 void
 ksba_crl_release (ksba_crl_t crl)
 {
-  return _ksba_crl_release (crl);
+  _ksba_crl_release (crl);
 }
 
 
@@ -572,7 +572,7 @@ ksba_crl_set_hash_function (ksba_crl_t crl,
                                              const void *, size_t),
                             void *hash_fnc_arg)
 {
-  return _ksba_crl_set_hash_function (crl, hash_fnc, hash_fnc_arg);
+  _ksba_crl_set_hash_function (crl, hash_fnc, hash_fnc_arg);
 }
 
 
@@ -662,7 +662,7 @@ ksba_ocsp_new (ksba_ocsp_t *r_oscp)
 void
 ksba_ocsp_release (ksba_ocsp_t ocsp)
 {
-  return _ksba_ocsp_release (ocsp);
+  _ksba_ocsp_release (ocsp);
 }
 
 
@@ -829,7 +829,7 @@ ksba_certreq_new (ksba_certreq_t *r_cr)
 void
 ksba_certreq_release (ksba_certreq_t cr)
 {
-  return _ksba_certreq_release (cr);
+  _ksba_certreq_release (cr);
 }
 
 
@@ -845,7 +845,7 @@ ksba_certreq_set_hash_function (ksba_certreq_t cr,
                                 void (*hash_fnc)(void *, const void *, size_t),
                                 void *hash_fnc_arg)
 {
-  return _ksba_certreq_set_hash_function (cr, hash_fnc, hash_fnc_arg);
+  _ksba_certreq_set_hash_function (cr, hash_fnc, hash_fnc_arg);
 }
 
 
@@ -903,7 +903,7 @@ ksba_reader_new (ksba_reader_t *r_r)
 void
 ksba_reader_release (ksba_reader_t r)
 {
-  return _ksba_reader_release (r);
+  _ksba_reader_release (r);
 }
 
 
@@ -989,7 +989,7 @@ ksba_writer_new (ksba_writer_t *r_w)
 void
 ksba_writer_release (ksba_writer_t w)
 {
-  return _ksba_writer_release (w);
+  _ksba_writer_release (w);
 }
 
 
@@ -1092,7 +1092,7 @@ ksba_asn_parse_file (const char *filename, ksba_asn_tree_t *result,
 void
 ksba_asn_tree_release (ksba_asn_tree_t tree)
 {
-  return _ksba_asn_tree_release (tree);
+  _ksba_asn_tree_release (tree);
 }
 
 
@@ -1100,7 +1100,7 @@ ksba_asn_tree_release (ksba_asn_tree_t tree)
 void
 ksba_asn_tree_dump (ksba_asn_tree_t tree, const char *name, FILE *fp)
 {
-  return _ksba_asn_tree_dump (tree, name, fp);
+  _ksba_asn_tree_dump (tree, name, fp);
 }
 
 
@@ -1176,14 +1176,14 @@ ksba_name_new (ksba_name_t *r_name)
 void
 ksba_name_ref (ksba_name_t name)
 {
-  return _ksba_name_ref (name);
+  _ksba_name_ref (name);
 }
 
 
 void
 ksba_name_release (ksba_name_t name)
 {
-  return _ksba_name_release (name);
+  _ksba_name_release (name);
 }
 
 

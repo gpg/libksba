@@ -335,6 +335,8 @@ ksba_ocsp_set_digest_algo (ksba_ocsp_t ocsp, const char *oid)
 gpg_error_t
 ksba_ocsp_set_requestor (ksba_ocsp_t ocsp, ksba_cert_t cert)
 {
+  (void)ocsp;
+  (void)cert;
   return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 }
 
@@ -773,6 +775,9 @@ ksba_ocsp_hash_request (ksba_ocsp_t ocsp,
                                        size_t length), 
                         void *hasher_arg)
 {
+  (void)ocsp;
+  (void)hasher;
+  (void)hasher_arg;
   return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 }
 
@@ -781,6 +786,8 @@ gpg_error_t
 ksba_ocsp_set_sig_val (ksba_ocsp_t ocsp,
                        ksba_const_sexp_t sigval)
 {
+  (void)ocsp;
+  (void)sigval;
   return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 }
 
@@ -788,6 +795,8 @@ ksba_ocsp_set_sig_val (ksba_ocsp_t ocsp,
 gpg_error_t 
 ksba_ocsp_add_cert (ksba_ocsp_t ocsp, ksba_cert_t cert)
 {
+  (void)ocsp;
+  (void)cert;
   return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 }
 

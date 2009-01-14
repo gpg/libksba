@@ -904,6 +904,7 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
 gpg_error_t
 _ksba_cms_parse_enveloped_data_part_2 (ksba_cms_t cms)
 {
+  (void)cms;
   /* FIXME */
   return 0;
 }
