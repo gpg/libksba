@@ -1,3 +1,7 @@
+2009-03-26  Werner Koch  <wk@g10code.com>
+
+	* cms.h (struct certlist_s): Allow for SHA-512.
+
 2009-01-14  Werner Koch  <wk@g10code.com>
 
 	* ocsp.c (ksba_ocsp_set_requestor, ksba_ocsp_hash_request) 

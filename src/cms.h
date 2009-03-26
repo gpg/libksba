@@ -62,7 +62,7 @@ struct certlist_s {
   struct certlist_s *next;
   ksba_cert_t cert;
   int  msg_digest_len;  /* used length of .. */
-  char msg_digest[32];  /* enough space to store a SHA-256 hash */
+  char msg_digest[64];  /* enough space to store a SHA-512 hash */
   ksba_isotime_t signing_time;
   struct {
     AsnNode root;
