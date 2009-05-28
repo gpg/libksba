@@ -382,7 +382,8 @@ _ksba_der_store_null (AsnNode node)
 
   if (node->type == TYPE_NULL)
     {
-      return store_value (node, "", 0);
+      clear_value (node);
+      return 0;
     }
   else
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -508,6 +509,9 @@ sum_up_lengths (AsnNode root)
   AsnNode n;
   unsigned long len = 0;
 
+  if (root->type == TYPE_NULL)
+    return root->nhdr;
+
   if (!(n=root->down) || _ksba_asn_is_primitive (root->type))
     len = root->len;
   else
@@ -555,9 +559,9 @@ _ksba_der_encode_tree (AsnNode root,
   for (n=root; n ; n = _ksba_asn_walk_tree (root, n))
     {
       if (_ksba_asn_is_primitive (n->type)
-          && n->valuetype == VALTYPE_MEM
-          && n->value.v_mem.len 
-          && !n->flags.is_implicit)
+          && !n->flags.is_implicit
+          && ((n->valuetype == VALTYPE_MEM && n->value.v_mem.len)
+              || n->type == TYPE_NULL))
         set_nhdr_and_len (n, n->value.v_mem.len);
     }
 

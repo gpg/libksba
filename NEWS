@@ -3,6 +3,11 @@ Noteworthy changes in version 1.0.6
 
  * Support SHA-{384,512} based signature generation.
 
+ * The RSA algorithmIdentifier ASN.1 sequence is now emitted with an
+   explicit NULL parameter.  Despite all the interop testing we did in
+   the past, some software still requires this and thus we follow the
+   best current practise now.
+
 
 Noteworthy changes in version 1.0.5 (2009-01-09)
 ------------------------------------------------
@@ -367,7 +372,8 @@ Noteworthy changes in version 0.4.0 (2002-04-15)
  * Nearly all stuff needed for the Aegypten project is now in place.
 
 
- Copyright 2002, 2003, 2004, 2005, 2006 g10 Code GmbH
+ Copyright 2002, 2003, 2004, 2005, 2006, 2007, 2008,
+           2009 g10 Code GmbH
 
  This file is free software; as a special exception the author gives
  unlimited permission to copy and/or distribute it, with or without

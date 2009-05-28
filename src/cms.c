@@ -3091,6 +3091,32 @@ build_enveloped_data_header (ksba_cms_t cms)
           err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
           goto leave;
         }
+
+      /* Now store NULL for the optional parameters.  From Peter
+       * Gutmann's X.509 style guide:
+       *
+       *   Another pitfall to be aware of is that algorithms which
+       *   have no parameters have this specified as a NULL value
+       *   rather than omitting the parameters field entirely.  The
+       *   reason for this is that when the 1988 syntax for
+       *   AlgorithmIdentifier was translated into the 1997 syntax,
+       *   the OPTIONAL associated with the AlgorithmIdentifier
+       *   parameters got lost.  Later it was recovered via a defect
+       *   report, but by then everyone thought that algorithm
+       *   parameters were mandatory.  Because of this the algorithm
+       *   parameters should be specified as NULL, regardless of what
+       *   you read elsewhere.
+       *
+       *        The trouble is that things *never* get better, they just
+       *        stay the same, only more so
+       *            -- Terry Pratchett, "Eric"
+       *
+       * Although this is about signing, we always do it.  Versions of
+       * Libksba before 1.0.6 had a bug writing out the NULL tag here,
+       * thus in reality we used to be correct according to the
+       * standards despite we didn't intended so.
+       */
+
       err = _ksba_der_store_null (n); 
       if (err)
         goto leave;
