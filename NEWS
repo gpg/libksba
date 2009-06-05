@@ -1,12 +1,12 @@
-Noteworthy changes in version 1.0.6
+Noteworthy changes in version 1.0.6 (2009-06-05)
 ------------------------------------------------
 
  * Support SHA-{384,512} based signature generation.
 
  * The RSA algorithmIdentifier ASN.1 sequence is now emitted with an
-   explicit NULL parameter.  Despite all the interop testing we did in
-   the past, some software still requires this and thus we follow the
-   best current practise now.
+   explicit NULL parameter.  Despite the interop testing we did in the
+   past, some software still requires this and thus we better follow
+   the best current practise.
 
 
 Noteworthy changes in version 1.0.5 (2009-01-09)
