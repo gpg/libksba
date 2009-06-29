@@ -1,3 +1,13 @@
+2009-06-29  Werner Koch  <wk@g10code.com>
+
+	* oid.c (ksba_oid_to_str): Add an overflow check so that we can
+	detect bogus OIDs.
+
+	* asn1-func.c (copy_value): Fix out-of-bounds assignment of a
+	boolean to HELPBUF.  Due to alignment rules this was not
+	exploitable and we did not even used this code path.  Reported by
+	David Binderman.
+
 2009-05-28  Werner Koch  <wk@g10code.com>
 
 	* der-encoder.c (_ksba_der_store_null, sum_up_lengths): Actually

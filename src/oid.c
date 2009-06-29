@@ -1,5 +1,5 @@
 /* oid.c - Object identifier helper functions
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2009 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -54,7 +54,9 @@ ksba_oid_to_str (const char *buffer, size_t length)
   const unsigned char *buf = buffer;
   char *string, *p;
   int n = 0;
-  unsigned long val;
+  unsigned long val, valmask;
+
+  valmask = (unsigned long)0xfe << (8 * (sizeof (valmask) - 1));
 
   /* To calculate the length of the string we can safely assume an
      upper limit of 3 decimal characters per byte.  Two extra bytes
@@ -68,9 +70,6 @@ ksba_oid_to_str (const char *buffer, size_t length)
       return string;
     }
 
-  /* fixme: open code the sprintf so that we can cope with arbitrary
-     long integers - at least we should check for overflow of ulong */
-
   if (buf[0] < 40)
     p += sprintf (p, "0.%d", buf[n]);
   else if (buf[0] < 80)
@@ -79,6 +78,8 @@ ksba_oid_to_str (const char *buffer, size_t length)
     val = buf[n] & 0x7f;
     while ( (buf[n]&0x80) && ++n < length )
       {
+        if ( (val & valmask) )
+          goto badoid;  /* Overflow.  */
         val <<= 7;
         val |= buf[n] & 0x7f;
       }
@@ -91,6 +92,8 @@ ksba_oid_to_str (const char *buffer, size_t length)
       val = buf[n] & 0x7f;
       while ( (buf[n]&0x80) && ++n < length )
         {
+          if ( (val & valmask) )
+            goto badoid;  /* Overflow.  */
           val <<= 7;
           val |= buf[n] & 0x7f;
         }
@@ -100,6 +103,15 @@ ksba_oid_to_str (const char *buffer, size_t length)
     
   *p = 0;
   return string;
+
+ badoid:
+  /* Return a special OID (gnu.gnupg.badoid) to indicate the error
+     case.  The OID is broken and thus we return one which can't do
+     any harm.  Formally this does not need to be a bad OID but an OID
+     with an arc that can't be represented in a 32 bit word is more
+     than likely corrupt.  */
+  xfree (string);
+  return xtrystrdup ("1.3.6.1.4.1.11591.2.12242973"); 
 }
 
 

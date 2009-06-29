@@ -171,7 +171,7 @@ copy_value (AsnNode d, const AsnNode s)
       break;
     case VALTYPE_BOOL:
       len = 1;
-      helpbuf[1] = s->value.v_bool;
+      helpbuf[0] = s->value.v_bool;
       buf = helpbuf;
       break;
     case VALTYPE_CSTR:
