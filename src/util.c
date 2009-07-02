@@ -1,5 +1,5 @@
 /* util.c
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2009 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -221,4 +221,30 @@ _ksba_stpcpy (char *a,const char *b)
   return a;
 }
 #endif
+
+
+static inline int 
+ascii_toupper (int c)
+{
+  if (c >= 'a' && c <= 'z')
+    c &= ~0x20;
+  return c;
+}
+
+
+int
+_ksba_ascii_memcasecmp (const void *a_arg, const void *b_arg, size_t n)
+{
+  const char *a = a_arg;
+  const char *b = b_arg;
+
+  if (a == b)
+    return 0;
+  for ( ; n; n--, a++, b++ )
+    {
+      if (*a != *b && ascii_toupper (*a) != ascii_toupper (*b))
+        return *a == *b? 0 : (ascii_toupper (*a) - ascii_toupper (*b));
+    }
+  return 0;
+}
 

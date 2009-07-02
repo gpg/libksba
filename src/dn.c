@@ -984,7 +984,7 @@ parse_rdn (const unsigned char *string, const char **endp,
       for (i=0; oid_name_tbl[i].name; i++)
         {
           if ( n == strlen (oid_name_tbl[i].name)
-               && !memcmp (string, oid_name_tbl[i].name, n))
+               && !ascii_memcasecmp (string, oid_name_tbl[i].name, n))
             break;
         }
       if (!oid_name_tbl[i].name)

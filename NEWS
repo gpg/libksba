@@ -4,6 +4,8 @@ Noteworthy changes in version 1.0.7
  * Detect overflow while parsing OIDs.  Map BER encoded OIDs to well
    known names.
 
+ * Allow mixed case names in DNs.
+
 
 Noteworthy changes in version 1.0.6 (2009-06-05)
 ------------------------------------------------

@@ -1,5 +1,5 @@
 /* util.h 
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2009 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -83,6 +83,9 @@ char *_ksba_xstrdup (const char *p);
 char *_ksba_stpcpy (char *a, const char *b);
 #define stpcpy(a,b) _ksba_stpcpy ((a), (b))
 #endif
+
+int _ksba_ascii_memcasecmp (const void *a_arg, const void *b_arg, size_t n);
+#define ascii_memcasecmp(a,b,n) _ksba_ascii_memcasecmp ((a),(b),(n))
 
 /* some macros to replace ctype ones and avoid locale problems */
 #define spacep(p)   (*(p) == ' ' || *(p) == '\t')
