@@ -55,11 +55,15 @@ VERSION=$PACKAGE_VERSION
 AC_CONFIG_SRCDIR([src/ksba.h])
 AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
 AM_CONFIG_HEADER(config.h)
+AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_HOST
 AB_INIT
 
 AC_GNU_SOURCE
 
+LT_PREREQ([2.2.6])
+LT_INIT([win32-dll disable-static])
+LT_LANG([Windows Resource])
 
 AM_MAINTAINER_MODE
 
@@ -96,9 +100,6 @@ gl_EARLY
 AC_PROG_YACC
 AC_C_INLINE
 
-AC_LIBTOOL_WIN32_DLL
-AC_LIBTOOL_RC
-AM_PROG_LIBTOOL
 
 # This is handy for debugging so the compiler doesn't rearrange
 # things and eliminate variables.

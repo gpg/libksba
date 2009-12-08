@@ -46,18 +46,18 @@ endif
 
 
 if HAVE_W32_SYSTEM
-LTRCCOMPILE = $(LIBTOOL) --mode=compile $(RC) \
-     `echo $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) | \
-     sed -e 's/-I/--include-dir /g;s/-D/--define /g'`
+RCCOMPILE = $(RC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	$(libksba_la_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS)
+LTRCCOMPILE = $(LIBTOOL) --mode=compile --tag=RC $(RCCOMPILE)
+
+SUFFIXES = .rc .lo
 
 .rc.lo:
-	$(LTRCCOMPILE) -i $< -o $@
+	$(LTRCCOMPILE) -i "$<" -o "$@"
 
 ksba_res = versioninfo.lo
-ksba_res_ldflag = -Wl,.libs/versioninfo.o
 no_undefined = -no-undefined
 export_symbols = -export-symbols $(srcdir)/libksba.def
-ksba_deps = $(ksba_res) libksba.def
 
 install-def-file:
 	$(INSTALL) $(srcdir)/libksba.def $(DESTDIR)$(libdir)/libksba.def
@@ -65,9 +65,10 @@ install-def-file:
 uninstall-def-file:
 	-rm $(DESTDIR)$(libdir)/libksba.def
 
+ksba_deps = $(ksba_res) libksba.def
+
 else !HAVE_W32_SYSTEM
 ksba_res =
-ksba_ldflag =
 no_undefined =
 export_symbols =
 ksba_deps =
@@ -76,12 +77,12 @@ uninstall-def-file:
 endif !HAVE_W32_SYSTEM
 
 
-libksba_la_LDFLAGS = $(gcrypt_res_ldflag) $(no_undefined) $(export_symbols) \
+libksba_la_LDFLAGS = $(no_undefined) $(export_symbols) \
       $(libksba_version_script_cmd) -version-info \
       @LIBKSBA_LT_CURRENT@:@LIBKSBA_LT_REVISION@:@LIBKSBA_LT_AGE@
 libksba_la_INCLUDES = -I$(top_srcdir)/lib 
 libksba_la_DEPENDENCIES = $(srcdir)/libksba.vers $(ksba_deps)
-libksba_la_LIBADD = @LTLIBOBJS@ @GPG_ERROR_LIBS@
+libksba_la_LIBADD = $(ksba_res) @LTLIBOBJS@ @GPG_ERROR_LIBS@
 
 
 libksba_la_SOURCES = \
