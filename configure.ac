@@ -324,7 +324,7 @@ AC_SUBST(KSBA_CONFIG_CFLAGS)
 AC_SUBST(KSBA_CONFIG_API_VERSION)
 
 # The Makefiles need to know about cross compiling
-AM_CONDITIONAL(CROSS_COMPILING, test x$cross_compiling = xyes)
+AM_CONDITIONAL(CROSS_COMPILING, test x$cross_compiling != xno)
 
 
 # Generate extended version information for W32.
@@ -361,7 +361,7 @@ echo "
         Platform:  $host
 
 "
-if test x$cross_compiling = xyes; then
+if test x$cross_compiling != xno; then
 echo "Hint: If you encounter make problems like
   \"No rule to make target 'asn1-tables.c'\"
 you should first do a native build without installing
