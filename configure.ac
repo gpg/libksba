@@ -46,7 +46,7 @@ LIBKSBA_LT_REVISION=7
 KSBA_CONFIG_API_VERSION=1
 
 
-NEED_GPG_ERROR_VERSION=1.4
+NEED_GPG_ERROR_VERSION=1.8
 
 BUILD_REVISION=svn_revision
 PACKAGE=$PACKAGE_NAME
@@ -163,7 +163,12 @@ fi
 
 # Setup some stuff depending on host.
 have_w32_system=no
+have_w32ce_system=no
 case "${host}" in
+    *-*-mingw32ce*)
+      have_w32_system=yes
+      have_w32ce_system=yes
+      ;;
     *-*-mingw32*)
       have_w32_system=yes
       ;;
@@ -172,8 +177,12 @@ case "${host}" in
 esac
 if test "$have_w32_system" = yes; then
    AC_DEFINE(HAVE_W32_SYSTEM,1, [Defined if we run on a W32 API based system])
+   if test "$have_w32ce_system" = yes; then
+     AC_DEFINE(HAVE_W32CE_SYSTEM,1,[Defined if we run on WindowsCE])
+   fi
 fi
 AM_CONDITIONAL(HAVE_W32_SYSTEM, test "$have_w32_system" = yes)
+AM_CONDITIONAL(HAVE_W32CE_SYSTEM, test "$have_w32ce_system" = yes)
 
 
 # For some systems we know that we have ld_version scripts.  
@@ -308,7 +317,7 @@ GNUPG_CHECK_TYPEDEF(u32, HAVE_U32_TYPEDEF)
 
 
 # Checks for library functions.
-AC_CHECK_FUNCS([memmove strchr strtol strtoul stpcpy gmtime_r])
+AC_CHECK_FUNCS([memmove strchr strtol strtoul stpcpy gmtime_r getenv])
 
 
 # GNUlib checks

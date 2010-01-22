@@ -128,7 +128,7 @@ ksba_calloc (size_t n, size_t m )
   nbytes = n * m;
   if ( m && nbytes / m != n)
     {
-      errno = ENOMEM;
+      gpg_err_set_errno (ENOMEM);
       p = NULL;
     }
   else

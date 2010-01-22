@@ -29,6 +29,10 @@
 
 #include "oidtranstbl.h"
 
+#ifdef __MINGW32CE__
+#define getenv(a) (NULL)
+#endif
+
 #define digitp(p)   (*(p) >= '0' && *(p) <= '9')
 
 #define fail_if_err(a) do { if(a) {                                       \
@@ -508,7 +512,7 @@ one_file (const char *fname)
   ksba_sexp_t sexp;
   const char *oid, *s;
 
-  fp = fopen (fname, "r");
+  fp = fopen (fname, "rb");
   if (!fp)
     {
       fprintf (stderr, "%s:%d: can't open `%s': %s\n", 
@@ -566,6 +570,8 @@ one_file (const char *fname)
   s = get_oid_desc (oid);
   printf ("  hash algo.: %s%s%s%s\n", oid, s?" (":"",s?s:"",s?")":"");
 
+  /* Under Windows the _ksba_keyinfo_from_sexp are not exported.  */
+#ifndef __WIN32
   /* check that the sexp to keyinfo conversion works */
   {
     ksba_sexp_t public;
@@ -641,6 +647,7 @@ one_file (const char *fname)
           }
       }
   }
+#endif
 
   if (verbose)
     {

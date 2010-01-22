@@ -1021,7 +1021,11 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
   if (!d)
     return gpg_error (GPG_ERR_INV_VALUE);
 
+#ifdef HAVE_GETENV
   d->debug = !!getenv("KSBA_DEBUG_BER_DECODER");
+#else
+  d->debug = 0;
+#endif
   d->use_image = 0;
   d->image.buf = NULL;
   err = decoder_init (d, NULL);
@@ -1123,7 +1127,11 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
   if (r_root)
     *r_root = NULL;
 
+#ifdef HAVE_GETENV
   d->debug = !!getenv("KSBA_DEBUG_BER_DECODER");
+#else
+  d->debug = 0;
+#endif
   d->honor_module_end = 1;
   d->use_image = 1;
   d->image.buf = NULL;
