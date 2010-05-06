@@ -3,6 +3,8 @@ Noteworthy changes in version 1.0.8 (unreleased)
 
  * Support for WindowsCE.
 
+ * Builds cleaning from SVN even when cross-compiling.
+
 
 Noteworthy changes in version 1.0.7 (2009-07-03)
 ------------------------------------------------

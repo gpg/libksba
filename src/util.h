@@ -20,6 +20,11 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#ifdef BUILD_GENTOOLS
+#error file may not be be used for build time tools
+#endif
+
+
 #include "visibility.h"
 
 

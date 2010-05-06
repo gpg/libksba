@@ -1,6 +1,6 @@
-/* asn1-func.c - Manage ASN.1 definitions
+/* asn1-func.c - Fucntions for the ASN.1 data structures.
  *      Copyright (C) 2000, 2001 Fabio Fiorina
- *      Copyright (C) 2001 Free Software Foundation, Inc.
+ *      Copyright (C) 2001, 2010 Free Software Foundation, Inc.
  *
  * This file is part of GNUTLS.
  *
@@ -18,22 +18,27 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef BUILD_GENTOOLS
 #include <config.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
 
-#include <alloca.h>
+#ifdef BUILD_GENTOOLS
+# include "gen-help.h"
+#else
+# include "util.h"
+# include "ksba.h"
+#endif
 
-#include "util.h"
-#include "ksba.h"
 #include "asn1-func.h"
 
 
-static AsnNode
-resolve_identifier (AsnNode root, AsnNode node, int nestlevel);
+static AsnNode resolve_identifier (AsnNode root, AsnNode node, int nestlevel);
 
 
 static AsnNode 
@@ -1051,8 +1056,10 @@ copy_tree (AsnNode src_root, AsnNode s)
 static AsnNode
 resolve_identifier (AsnNode root, AsnNode node, int nestlevel)
 {
+  char buf_space[50];
   char *buf;
   AsnNode n;
+  size_t bufsize;
 
   if (nestlevel > 20)
     return NULL;
@@ -1060,13 +1067,24 @@ resolve_identifier (AsnNode root, AsnNode node, int nestlevel)
   return_null_if_fail (root);
   return_null_if_fail (node->valuetype == VALTYPE_CSTR);
 
-  buf = alloca (strlen(root->name)+strlen(node->value.v_cstr)+2);
-  return_null_if_fail (buf);
+  bufsize = strlen (root->name) + strlen (node->value.v_cstr) + 2;
+  if (bufsize <= sizeof buf_space)
+    buf = buf_space;
+  else
+    {
+      buf = xtrymalloc (bufsize);
+      return_null_if_fail (buf);
+    }
   strcpy (stpcpy (stpcpy (buf, root->name), "."), node->value.v_cstr);
   n = _ksba_asn_find_node (root, buf);
-  /* we do just a simple indirection */
+
+  /* We do just a simple indirection. */
   if (n && n->type == TYPE_IDENTIFIER)
     n = resolve_identifier (root, n, nestlevel+1);
+
+  if (buf != buf_space)
+    xfree (buf);
+
   return n;
 }
 
@@ -1270,8 +1288,3 @@ _ksba_asn_find_type_value (const unsigned char *image, AsnNode root, int idx,
     }
   return NULL;
 }
-
-
-
-
-

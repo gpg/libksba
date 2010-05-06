@@ -17,16 +17,13 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <stdarg.h>
 
-#include "util.h"
-
-#include "ksba.h"
+#include "gen-help.h"
 #include "asn1-func.h"
 
 #define PGMNAME "asn1-gentables"
@@ -134,8 +131,8 @@ sort_string_table (void)
   for (i=0; i < arraylen; i++)
     insert_string (array[i]->name);
   xfree (array);
-  for (item = string_table,arraylen = 0; item; item = item->next)
-    fprintf (stderr, "  `%s'\n", item->name);
+  /* for (item = string_table,arraylen = 0; item; item = item->next) */
+  /*   fprintf (stderr, "  `%s'\n", item->name); */
 }
 
 

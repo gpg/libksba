@@ -20,19 +20,20 @@
 
 asn1_modules = tmttv2.asn cms.asn
 
+buildtool_src = asn1-gentables.c gen-help.c gen-help.h
 EXTRA_DIST = ksba-config.in $(asn1_modules) ksba.m4 libksba.vers libksba.def \
-	     asn1-parse.c asn1-tables.c
+	     asn1-parse.c asn1-tables.c $(buildtool_src)
 BUILT_SOURCES = asn1-parse.c asn1-tables.c
 bin_SCRIPTS = ksba-config
 include_HEADERS = ksba.h
 lib_LTLIBRARIES = libksba.la
-
-if ! CROSS_COMPILING
-noinst_PROGRAMS = asn1-gentables ber-dump
-endif
+noinst_PROGRAMS = ber-dump
 
 m4datadir = $(datadir)/aclocal
 m4data_DATA = ksba.m4
+
+CLEANFILES = asn1-gentables
+DISTCLEANFILES = asn1-tables.c
 
 AM_CPPFLAGS =  -I$(top_builddir)/gl -I$(top_srcdir)/gl
 AM_CFLAGS = $(GPG_ERROR_CFLAGS)
@@ -106,27 +107,25 @@ libksba_la_SOURCES = \
 	sexp-parse.h \
 	asn1-tables.c
 
-asn1_gentables_SOURCES = asn1-gentables.c asn1-parse.c asn1-func.c oid.c util.c
-asn1_gentables_LDADD = $(GPG_ERROR_LIBS) ../gl/libgnu.la
-# Note that we need to use per-target flags to force renaming of the 
-# object files to avoid clashes with libtool.
-asn1_gentables_CFLAGS = $(AM_CFLAGS)
-
 ber_dump_SOURCES = ber-dump.c \
                    ber-decoder.c ber-help.c reader.c writer.c asn1-parse.c \
                    asn1-func.c oid.c util.c
 ber_dump_LDADD = $(GPG_ERROR_LIBS) ../gl/libgnu.la
 ber_dump_CFLAGS = $(AM_CFLAGS)
 
-asn1-parse.c : asn1-func.h
+asn1-parse.c : asn1-func.h gen-help.h
 
-if ! CROSS_COMPILING
-asn1-tables.c : $(asn1_modules)
-	$(MAKE) $(AM_MAKEFLAGS) asn1-gentables
+asn1-gentables: asn1-gentables.c asn1-parse.c asn1-func.c gen-help.c gen-help.h
+	$(CC_FOR_BUILD) -I$(srcdir) -DBUILD_GENTOOLS -o $@ \
+		$(srcdir)/asn1-gentables.c \
+                `test -f 'asn1-parse.c' || echo '$(srcdir)/'`asn1-parse.c  \
+                $(srcdir)/asn1-func.c      \
+                $(srcdir)/gen-help.c
+
+asn1-tables.c : $(asn1_modules) asn1-gentables
 	@set -e; list=""; \
 	  for file in $(asn1_modules); do list="$$list $(srcdir)/$$file";done;\
 	  ./asn1-gentables $$list > asn1-tables.c	
-endif
 
 
 install-data-local: install-def-file

@@ -124,10 +124,11 @@ union asn_value_u {
   unsigned long v_ulong;
 };
 
-/******************************************************/
-/* Structure definition used for the node of the tree */
-/* that rappresent an ASN.1 DEFINITION.               */
-/******************************************************/
+
+/*
+ * Structure definition used for the node of the tree that represents
+ * an ASN.1 DEFINITION.
+ */
 #ifndef HAVE_TYPEDEFD_ASNNODE
 typedef struct asn_node_struct *AsnNode; 
 typedef struct asn_node_struct *asn_node_t; 
@@ -167,10 +168,11 @@ typedef struct static_struct_asn {
 } static_asn;
 
 
+/*-- asn1-parse.y --*/
+void _ksba_asn_release_nodes (AsnNode node);
 
-/***************************************/
-/*  Functions used by ASN.1 parser     */
-/***************************************/
+
+/*-- asn1-func.c --*/
 void _ksba_asn_set_value (AsnNode node, enum asn_value_type vtype,
                           const void *value, size_t len);
 void _ksba_asn_set_name (AsnNode node, const char *name);
@@ -186,11 +188,6 @@ void _ksba_asn_type_set_config (AsnNode node);
 AsnNode _ksba_asn_expand_tree (AsnNode parse_tree, const char *name);
 AsnNode _ksba_asn_insert_copy (AsnNode node);
 
-/*-- asn1-parse.y --*/
-void _ksba_asn_release_nodes (AsnNode node);
-
-
-/*-- asn1-func.c --*/
 int _ksba_asn_is_primitive (node_type_t type);
 AsnNode _ksba_asn_new_node (node_type_t type);
 void _ksba_asn_node_dump (AsnNode p, FILE *fp);
@@ -204,7 +201,7 @@ AsnNode _ksba_asn_find_type_value (const unsigned char *image,
 int _ksba_asn_delete_structure (AsnNode root);
 
 /*-- asn2-func.c --*/
-
+/*(functions are all declared in ksba.h)*/
 
 /*-- asn1-tables.c (generated) --*/
 const static_asn *_ksba_asn_lookup_table (const char *name,

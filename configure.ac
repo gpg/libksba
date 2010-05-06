@@ -100,6 +100,18 @@ gl_EARLY
 AC_PROG_YACC
 AC_C_INLINE
 
+# We need to compile and run a program on the build machine.
+#   The AC_PROG_CC_FOR_BUILD macro in the AC archive is broken for
+#   autoconf 2.57.
+AC_MSG_CHECKING(for cc for build)
+if test "$cross_compiling" = "yes"; then
+  CC_FOR_BUILD="${CC_FOR_BUILD-cc}"
+else
+  CC_FOR_BUILD="${CC_FOR_BUILD-$CC}"
+fi
+AC_MSG_RESULT($CC_FOR_BUILD)
+AC_ARG_VAR(CC_FOR_BUILD,[build system C compiler])
+
 
 # This is handy for debugging so the compiler doesn't rearrange
 # things and eliminate variables.
@@ -371,11 +383,3 @@ echo "
         Platform:  $host
 
 "
-if test x$cross_compiling != xno; then
-echo "Hint: If you encounter make problems like
-  \"No rule to make target 'asn1-tables.c'\"
-you should first do a native build without installing
-the software, then a \"make distclean\" and then
-run the cross compilation again.
-"
-fi

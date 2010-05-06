@@ -1,6 +1,6 @@
-/*
+/* asn1-parse.y - ASN.1 grammar
  *      Copyright (C) 2000,2001 Fabio Fiorina
- *      Copyright (C) 2001 Free Software Foundation, Inc.
+ *      Copyright (C) 2001, 2010 Free Software Foundation, Inc.
  *
  * This file is part of GNUTLS.
  *
@@ -28,7 +28,9 @@
 
 
 %{
-#include <config.h>
+#ifndef BUILD_GENTOOLS
+# include <config.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -36,8 +38,13 @@
 #include <ctype.h>
 #include <errno.h>
 
-#include "util.h"
-#include "ksba.h"
+#ifdef BUILD_GENTOOLS
+# include "gen-help.h"
+#else
+# include "util.h"
+# include "ksba.h"
+#endif
+
 #include "asn1-parse.h"
 #include "asn1-func.h"
 
@@ -992,7 +999,7 @@ ksba_asn_parse_file (const char *file_name, ksba_asn_tree_t *result, int debug)
   
   parsectl.fp = file_name? fopen (file_name, "r") : NULL;
   if ( !parsectl.fp )
-    return gpg_error_from_errno (errno);
+    return gpg_error_from_syserror ();
 
   parsectl.lineno = 0;
   parsectl.debug = debug;
@@ -1039,7 +1046,7 @@ ksba_asn_tree_release (ksba_asn_tree_t tree)
 void
 _ksba_asn_release_nodes (AsnNode node)
 {
-  /* FIXME: it does not work yet becuase the allocation function in
+  /* FIXME: it does not work yet because the allocation function in
      asn1-func.c does not link all nodes together */
   release_all_nodes (node);
 }
