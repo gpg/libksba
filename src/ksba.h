@@ -1,5 +1,5 @@
-/* ksba.h - X509 library for the Aegypten project
- *      Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006 g10 Code GmbH
+/* ksba.h - X.509 library used by GnuPG
+ * Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2010 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
