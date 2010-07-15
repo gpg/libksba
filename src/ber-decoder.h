@@ -33,10 +33,12 @@ gpg_error_t _ksba_ber_decoder_set_reader (BerDecoder d, ksba_reader_t r);
 
 gpg_error_t _ksba_ber_decoder_dump (BerDecoder d, FILE *fp);
 gpg_error_t _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
+                                      unsigned int flags,
                                       AsnNode *r_root,
                                       unsigned char **r_image,
                                       size_t *r_imagelen);
 
+#define BER_DECODER_FLAG_FAST_STOP 1
 
 
 #endif /*BER_DECODER_H*/

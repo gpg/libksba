@@ -71,6 +71,7 @@ read_buffer (ksba_reader_t reader, char *buffer, size_t count)
 /* Create a new decoder and run it for the given element */
 static gpg_error_t
 create_and_run_decoder (ksba_reader_t reader, const char *elem_name,
+                        unsigned int flags,
                         AsnNode *r_root,
                         unsigned char **r_image, size_t *r_imagelen)
 {
@@ -105,7 +106,7 @@ create_and_run_decoder (ksba_reader_t reader, const char *elem_name,
       return err;
     }
   
-  err = _ksba_ber_decoder_decode (decoder, elem_name,
+  err = _ksba_ber_decoder_decode (decoder, elem_name, flags,
                                   r_root, r_image, r_imagelen);
   
   _ksba_ber_decoder_release (decoder);
@@ -335,7 +336,7 @@ parse_encrypted_content_info (ksba_reader_t reader,
           return err;
         }
 
-      /* Note: the tag may eithe denote a constructed or a primitve
+      /* Note: the tag may either denote a constructed or a primitve
          object.  Actually this should match the use of NDEF header
          but we don't ceck that */
       if ( ti.class == CLASS_CONTEXT && ti.tag == 0 )
@@ -746,6 +747,7 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
 
       err = create_and_run_decoder (cms->reader, 
                                     "CryptographicMessageSyntax.SignerInfo",
+                                    0,
                                     &si->root, &si->image, &si->imagelen);
       /* The signerInfo might be an empty set in the case of a certs-only
          signature.  Thus we have to allow for EOF here */
@@ -844,29 +846,74 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
     return gpg_error (GPG_ERR_INV_CMS_OBJ); 
 
   vtend = &cms->recp_info;
-  while (ti.length)
+  if (ti.ndef)
     {
-      size_t off1, off2;
+      for (;;)
+        {
+          struct tag_info ti2;
 
-      off1 = ksba_reader_tell (cms->reader);
-      vt = xtrycalloc (1, sizeof *vt);
-      if (!vt)
-        return gpg_error (GPG_ERR_ENOMEM);
+          err = _ksba_ber_read_tl (cms->reader, &ti2);
+          if (err)
+            return err;
 
-      err = create_and_run_decoder (cms->reader,
-                                    "CryptographicMessageSyntax.KeyTransRecipientInfo",
-                                    &vt->root, &vt->image, &vt->imagelen);
-      if (err)
-        return err;
+          if (!ti2.class && !ti2.tag)
+            break; /* End tag found: ready.  */
 
-      *vtend = vt;
-      vtend = &vt->next;
+          /* Not an end tag:  Push it back and run the decoder.  */
+          err = ksba_reader_unread (cms->reader, ti2.buf, ti2.nhdr);
+          if (err)
+            return err;
+          
+          vt = xtrycalloc (1, sizeof *vt);
+          if (!vt)
+            return gpg_error_from_syserror ();
+          
+          err = create_and_run_decoder
+            (cms->reader,
+             "CryptographicMessageSyntax.KeyTransRecipientInfo",
+             BER_DECODER_FLAG_FAST_STOP,
+             &vt->root, &vt->image, &vt->imagelen);
+          if (err)
+            {
+              xfree (vt);
+              return err;
+            }
+          
+          *vtend = vt;
+          vtend = &vt->next;
+        }
+    }
+  else
+    {
+      while (ti.length)
+        {
+          size_t off1, off2;
+          
+          off1 = ksba_reader_tell (cms->reader);
+          vt = xtrycalloc (1, sizeof *vt);
+          if (!vt)
+            return gpg_error_from_syserror ();
+          
+          err = create_and_run_decoder
+            (cms->reader,
+             "CryptographicMessageSyntax.KeyTransRecipientInfo",
+             0,
+             &vt->root, &vt->image, &vt->imagelen);
+          if (err)
+            {
+              xfree (vt);
+              return err;
+            }
+          
+          *vtend = vt;
+          vtend = &vt->next;
 
-      off2 = ksba_reader_tell (cms->reader);
-      if ( (off2 - off1) > ti.length )
-        ti.length = 0;
-      else
-        ti.length -= off2 - off1;
+          off2 = ksba_reader_tell (cms->reader);
+          if ( (off2 - off1) > ti.length )
+            ti.length = 0;
+          else
+            ti.length -= off2 - off1;
+        }
     }
 
   /* Now for the encryptedContentInfo */

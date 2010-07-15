@@ -36,6 +36,16 @@ dummy_hash_fnc (void *arg, const void *buffer, size_t length)
   (void)length;
 }
 
+static int
+dummy_writer_cb (void *cb_value, const void *buffer, size_t count)
+{
+  (void)cb_value;
+  (void)buffer;
+  (void)count;
+  return 0;
+}
+
+
 
 static void
 one_file (const char *fname)
@@ -43,6 +53,7 @@ one_file (const char *fname)
   gpg_error_t err;
   FILE *fp;
   ksba_reader_t r;
+  ksba_writer_t w;
   ksba_cms_t cms;
   int i;
   const char *algoid;
@@ -67,6 +78,13 @@ one_file (const char *fname)
     fail_if_err (err);
   err = ksba_reader_set_file (r, fp);
   fail_if_err (err);
+  /* Also create a writer so that cms.c won't return an error when
+     writing processed content.  */
+  err = ksba_writer_new (&w);
+  if (err)
+    fail_if_err (err);
+  err = ksba_writer_set_cb (w, dummy_writer_cb, NULL);
+  fail_if_err (err);
 
   switch (ksba_cms_identify (r))
     {
@@ -84,7 +102,7 @@ one_file (const char *fname)
   if (err)
     fail_if_err (err);
 
-  err = ksba_cms_set_reader_writer (cms, r, NULL);
+  err = ksba_cms_set_reader_writer (cms, r, w);
   fail_if_err (err);
 
   err = ksba_cms_parse (cms, &stopreason);

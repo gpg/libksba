@@ -1,3 +1,13 @@
+2010-07-15  Werner Koch  <wk@g10code.com>
+
+	* cms-parser.c (create_and_run_decoder): Add arg flags.
+	(_ksba_cms_parse_enveloped_data_part_1): Handle NDEF recipientInfo
+	sets.
+
+	* ber-decoder.h (BER_DECODER_FLAG_FAST_STOP): New.
+	* ber-decoder.c (_ksba_ber_decoder_decode): Add arg FLAGS.
+	(decoder_next): Implement fast stop hack.
+
 2010-05-06  Werner Koch  <wk@g10code.com>
 
 	* gen-help.c, gen-help.h: New.

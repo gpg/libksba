@@ -288,7 +288,7 @@ ksba_cert_read_der (ksba_cert_t cert, ksba_reader_t reader)
   if (err)
      goto leave;
 
-  err = _ksba_ber_decoder_decode (decoder, "TMTTv2.Certificate",
+  err = _ksba_ber_decoder_decode (decoder, "TMTTv2.Certificate", 0,
                                   &cert->root, &cert->image, &cert->imagelen);
   if (!err)
       cert->initialized = 1;

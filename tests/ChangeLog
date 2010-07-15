@@ -1,3 +1,8 @@
+2010-07-15  Werner Koch  <wk@g10code.com>
+
+	* t-cms-parser.c (dummy_writer_cb): New.
+	(one_file): Use the dummy writer.
+
 2010-01-22  Werner Koch  <wk@g10code.com>
 
 	* cert-basic.c (getenv) [__MINGW32CE__]: Add dummy.

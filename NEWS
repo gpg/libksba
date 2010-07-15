@@ -3,7 +3,9 @@ Noteworthy changes in version 1.0.8 (unreleased)
 
  * Support for WindowsCE.
 
- * Builds cleaning from SVN even when cross-compiling.
+ * Builds cleanly from SVN even when cross-compiling.
+
+ * Fixed a CMS parsing bug exhibited by Lotus Notes.
 
 
 Noteworthy changes in version 1.0.7 (2009-07-03)

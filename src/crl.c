@@ -714,7 +714,7 @@ create_and_run_decoder (ksba_reader_t reader, const char *elem_name,
       return err;
     }
   
-  err = _ksba_ber_decoder_decode (decoder, elem_name,
+  err = _ksba_ber_decoder_decode (decoder, elem_name, 0,
                                   r_root, r_image, r_imagelen);
   
   _ksba_ber_decoder_release (decoder);

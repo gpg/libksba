@@ -68,10 +68,11 @@ struct ber_decoder_s
      use a hack to ignore this garbage.  This hack is enabled for data
      starting with a fixed length sequence and this variable takes the
      length of this sequence.  If it is 0, the hack is not
-     acticated. */
+     activated. */
   unsigned long outer_sequence_length;
-  int ignore_garbage;  /* Set to indicate that garpage should be
+  int ignore_garbage;  /* Set to indicate that garbage should be
                           ignored. */
+  int fast_stop;       /* Yet another hack.  */
 
   int first_tag_seen;  /* Indicates whether the first tag of a decoder
                           run has been read. */
@@ -596,7 +597,7 @@ match_der (AsnNode root, const struct tag_info *ti,
           if (ds->cur.node->flags.in_array)
             fputs ("  This is in an array!\n", stderr);
           if (ds->cur.went_up)
-            fputs ("  And we going up!\n", stderr);
+            fputs ("  And we are going up!\n", stderr);
         }
       ds->cur.in_seq_of = 0;
 
@@ -771,6 +772,19 @@ decoder_next (BerDecoder d)
   gpg_error_t err;
   DECODER_STATE ds = d->ds;
   int debug = d->debug;
+
+  if (d->ignore_garbage && d->fast_stop)
+    {
+      /* I am not anymore sure why we have this ignore_garbage
+         machinery: The whole decoder needs and overhaul; it seems not
+         to honor the length specification and runs for longer than
+         expected. 
+
+         This here is another hack to not eat up an end tag - this is
+         required in in some cases and in theory should be used always
+         but we want to avoid any regression, thus this flag.  */
+      return gpg_error (GPG_ERR_EOF);
+    }
 
   err = _ksba_ber_read_tl (d->reader, &ti);
   if (err)
@@ -1112,6 +1126,7 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
 
 gpg_error_t
 _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
+                          unsigned int flags,
                           AsnNode *r_root,
                           unsigned char **r_image, size_t *r_imagelen)
 {
@@ -1135,6 +1150,7 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
   d->honor_module_end = 1;
   d->use_image = 1;
   d->image.buf = NULL;
+  d->fast_stop = !!(flags & BER_DECODER_FLAG_FAST_STOP);
 
   startoff = ksba_reader_tell (d->reader);
 
