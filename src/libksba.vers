@@ -85,13 +85,13 @@ KSBA_0.9 {
     ksba_reader_clear; ksba_reader_error; ksba_reader_new;
     ksba_reader_read; ksba_reader_release; ksba_reader_set_cb;
     ksba_reader_set_fd; ksba_reader_set_file; ksba_reader_set_mem;
-    ksba_reader_tell; ksba_reader_unread;
+    ksba_reader_tell; ksba_reader_unread; ksba_reader_set_release_notify;
  
     ksba_writer_error; ksba_writer_get_mem; ksba_writer_new;
     ksba_writer_release; ksba_writer_set_cb; ksba_writer_set_fd;
     ksba_writer_set_file; ksba_writer_set_filter; ksba_writer_set_mem;
     ksba_writer_snatch_mem; ksba_writer_tell; ksba_writer_write;
-    ksba_writer_write_octet_string;
+    ksba_writer_write_octet_string; ksba_writer_set_release_notify;
 
   local:
     *;

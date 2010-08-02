@@ -1,5 +1,5 @@
 /* reader.c - provides the Reader object
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2010 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -57,10 +57,35 @@ ksba_reader_release (ksba_reader_t r)
 {
   if (!r)
     return;
+  if (r->notify_cb)
+    {
+      void (*notify_fnc)(void*,ksba_reader_t) = r->notify_cb;
+
+      r->notify_cb = NULL;
+      notify_fnc (r->notify_cb_value, r);
+    }
   if (r->type == READER_TYPE_MEM)
     xfree (r->u.mem.buffer);
   xfree (r->unread.buf);
   xfree (r);
+}
+
+
+/* Set NOTIFY as function to be called by ksba_reader_release before
+   resources are actually deallocated.  NOTIFY_VALUE is passed to the
+   called function as its first argument.  Note that only the last
+   registered function will be called; passing NULL for NOTIFY removes
+   the notification.  */
+gpg_error_t
+ksba_reader_set_release_notify (ksba_reader_t r, 
+                                void (*notify)(void*,ksba_reader_t),
+                                void *notify_value)
+{
+  if (!r)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  r->notify_cb = notify;
+  r->notify_cb_value = notify_value;
+  return 0;
 }
 
 

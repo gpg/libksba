@@ -176,3 +176,6 @@ EXPORTS
       ksba_writer_write  @144
       ksba_writer_write_octet_string  @145
 
+      ksba_reader_set_release_notify  @146
+      ksba_writer_set_release_notify  @147
+

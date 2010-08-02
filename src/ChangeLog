@@ -1,3 +1,13 @@
+2010-08-02  Werner Koch  <wk@g10code.com>
+
+	* reader.c (ksba_reader_set_release_notify): New.
+	(ksba_reader_release): Call notify function.
+	* reader.h (struct ksba_reader_s): Add NOTIFY_CB and NOTIFY_CB_VALUE.
+	* writer.c (ksba_writer_set_release_notify): New.
+	(ksba_writer_release): Call notify function.
+	* writer.h (struct ksba_writer_s): Add NOTIFY_CB and NOTIFY_CB_VALUE.
+	* ksba.h, libksba.vers, libksba.def: Add new functions.
+
 2010-07-15  Werner Koch  <wk@g10code.com>
 
 	* cms-parser.c (create_and_run_decoder): Add arg flags.

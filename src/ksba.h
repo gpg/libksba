@@ -429,6 +429,9 @@ gpg_error_t ksba_certreq_build (ksba_certreq_t cr,
 /*-- reader.c --*/
 gpg_error_t ksba_reader_new (ksba_reader_t *r_r);
 void        ksba_reader_release (ksba_reader_t r);
+gpg_error_t ksba_reader_set_release_notify (ksba_reader_t r, 
+                                            void (*notify)(void*,ksba_reader_t),
+                                            void *notify_value);
 gpg_error_t ksba_reader_clear (ksba_reader_t r,
                                unsigned char **buffer, size_t *buflen);
 gpg_error_t ksba_reader_error (ksba_reader_t r);
@@ -449,6 +452,9 @@ unsigned long ksba_reader_tell (ksba_reader_t r);
 /*-- writer.c --*/
 gpg_error_t ksba_writer_new (ksba_writer_t *r_w);
 void        ksba_writer_release (ksba_writer_t w);
+gpg_error_t ksba_writer_set_release_notify (ksba_writer_t w, 
+                                            void (*notify)(void*,ksba_writer_t),
+                                            void *notify_value);
 int         ksba_writer_error (ksba_writer_t w);
 unsigned long ksba_writer_tell (ksba_writer_t w);
 gpg_error_t ksba_writer_set_fd (ksba_writer_t w, int fd);

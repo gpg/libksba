@@ -1,5 +1,5 @@
 /* writer.c - provides the Writer object
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2010 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -60,10 +60,36 @@ ksba_writer_release (ksba_writer_t w)
 {
   if (!w)
     return;
+  if (w->notify_cb)
+    {
+      void (*notify_fnc)(void*,ksba_writer_t) = w->notify_cb;
+
+      w->notify_cb = NULL;
+      notify_fnc (w->notify_cb_value, w);
+    }
   if (w->type == WRITER_TYPE_MEM)
     xfree (w->u.mem.buffer);
   xfree (w);
 }
+
+
+/* Set NOTIFY as function to be called by ksba_reader_release before
+   resources are actually deallocated.  NOTIFY_VALUE is passed to the
+   called function as its first argument.  Note that only the last
+   registered function will be called; passing NULL for NOTIFY removes
+   the notification.  */
+gpg_error_t
+ksba_writer_set_release_notify (ksba_writer_t w, 
+                                void (*notify)(void*,ksba_writer_t),
+                                void *notify_value)
+{
+  if (!w)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  w->notify_cb = notify;
+  w->notify_cb_value = notify_value;
+  return 0;
+}
+
 
 int
 ksba_writer_error (ksba_writer_t w)

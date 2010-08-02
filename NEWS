@@ -1,5 +1,10 @@
-Noteworthy changes in version 1.0.9 (unreleased)
+Noteworthy changes in version 1.1.0 (unreleased)
 ------------------------------------------------
+
+ * Interface changes relative to the 1.0.0 release:
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ksba_reader_set_release_notify   NEW
+ ksba_writer_set_release_notify   NEW
 
 
 Noteworthy changes in version 1.0.8 (2010-07-15)

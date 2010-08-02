@@ -1,5 +1,5 @@
 /* writer.h - internl definitions for the writer object.
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2010 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -54,6 +54,8 @@ struct ksba_writer_s {
       size_t size;
     } mem;   /* for WRITER_TYPE_MEM */
   } u;
+  void (*notify_cb)(void*,ksba_writer_t);
+  void *notify_cb_value;
 };
 
 

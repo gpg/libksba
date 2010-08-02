@@ -1,5 +1,5 @@
 /* reader.h - internl definitions for the reder object.
- *      Copyright (C) 2001 g10 Code GmbH
+ *      Copyright (C) 2001, 2010 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -55,6 +55,8 @@ struct ksba_reader_s {
       void *value;
     } cb;   /* for READER_TYPE_CB */
   } u;
+  void (*notify_cb)(void*,ksba_reader_t);
+  void *notify_cb_value;
 };
 
 
