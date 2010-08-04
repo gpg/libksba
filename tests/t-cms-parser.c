@@ -151,7 +151,7 @@ one_file (const char *fname)
           ksba_free (dn);
           putchar ('\n');
           printf ("recipient %d - serial: ", idx);
-          print_sexp (p);
+          print_sexp_hex (p);
           ksba_free (p);
           putchar ('\n');
   
@@ -177,7 +177,7 @@ one_file (const char *fname)
           ksba_free (dn);
           putchar ('\n');
           printf ("signer %d - serial: ", idx);
-          print_sexp (p);
+          print_sexp_hex (p);
           ksba_free (p);
           putchar ('\n');
   

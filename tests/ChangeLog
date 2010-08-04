@@ -1,3 +1,7 @@
+2010-08-04  Werner Koch  <wk@g10code.com>
+
+	* t-cms-parser.c (one_file): Use print_sexp_hex for the s/n.
+
 2010-07-15  Werner Koch  <wk@g10code.com>
 
 	* t-cms-parser.c (dummy_writer_cb): New.

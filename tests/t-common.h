@@ -155,7 +155,7 @@ print_sexp (ksba_const_sexp_t p)
     }
 }
 
-/* Variant of print_sexp which force printing the values in hex.  */
+/* Variant of print_sexp which forces printing the values in hex.  */
 void
 print_sexp_hex (ksba_const_sexp_t p)
 {
