@@ -464,7 +464,7 @@ static void
 append_ucs2_value (const unsigned char *value, size_t length,
                    struct stringbuf *sb)
 {
-  unsigned char tmp[2];
+  unsigned char tmp[3];
   const unsigned char *s;
   size_t n;
   unsigned int c;
