@@ -34,6 +34,13 @@
 # define  ATTR_PRINTF(a,b) 
 #endif
 
+#ifdef _WIN32
+#define DEVNULL_NAME "nul"
+#else
+#define DEVNULL_NAME "/dev/null"
+#endif
+
+
 /* keep track of parsing error */
 static int error_counter;
 
@@ -338,10 +345,10 @@ main (int argc, char **argv)
       FILE *nullfp;
 
       /* We first parse it to /dev/null to build up the string table.  */
-      nullfp = fopen ("/dev/null", "w");
+      nullfp = fopen (DEVNULL_NAME, "w");
       if (!nullfp)
         {
-          print_error ("can't open `/dev/null': %s\n", strerror (errno));
+          print_error ("can't open `%s': %s\n", DEVNULL_NAME, strerror (errno));
           exit (2);
         }
       for (i=0; i < argc; i++) 
