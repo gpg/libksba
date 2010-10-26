@@ -1,3 +1,11 @@
+2010-10-26  Werner Koch  <wk@g10code.com>
+
+	Release 1.1.0.
+
+	* configure.ac: Bump LT version to C18/A10/R0.
+        * config.guess: Update to version 2010-09-24.
+        * config.sub: Update to version 2010-09-11.
+
 2010-08-19  Werner Koch  <wk@g10code.com>
 
 	* configure.ac (AH_TOP, AH_BOTTOM): New.  Define
