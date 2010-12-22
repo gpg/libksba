@@ -1,3 +1,7 @@
+2010-12-22  Werner Koch  <wk@g10code.com>
+
+	* configure.ac: Add a git commit identifier to the version.
+
 2010-10-26  Werner Koch  <wk@g10code.com>
 
 	Release 1.1.0.
