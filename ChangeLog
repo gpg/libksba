@@ -1,3 +1,7 @@
+2011-01-03  Werner Koch  <wk@g10code.com>
+
+	* configure.ac [BUILD_REVISION]: Shorten git commit identifier.
+
 2010-12-22  Werner Koch  <wk@g10code.com>
 
 	* configure.ac: Add a git commit identifier to the version.
