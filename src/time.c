@@ -40,11 +40,11 @@
 gpg_error_t
 _ksba_asntime_to_iso (const char *buffer, size_t length, int is_utctime,
                       ksba_isotime_t timebuf)
-{ 
+{
   const char *s;
   size_t n;
   int year;
-  
+
   *timebuf = 0;
   for (s=buffer, n=0; n < length && digitp (s); n++, s++)
     ;
@@ -55,7 +55,7 @@ _ksba_asntime_to_iso (const char *buffer, size_t length, int is_utctime,
     }
   else if ((n != 12 && n != 14) || *s != 'Z')
     return gpg_error (GPG_ERR_INV_TIME);
-  
+
   s = buffer;
   if (n==12 || n == 10 ) /* UTCTime with or without seconds. */
     {
@@ -95,7 +95,7 @@ _ksba_assert_time_format (const ksba_isotime_t atime)
 
   if (!*atime)
     return gpg_error (GPG_ERR_NO_VALUE);
-  
+
   for (s=atime, i=0; i < 8; i++, s++)
     if (!digitp (s))
       return gpg_error (GPG_ERR_BUG);
@@ -122,7 +122,7 @@ _ksba_copy_time (ksba_isotime_t d, const ksba_isotime_t s)
       fprintf (stderr, "BUG: invalid isotime buffer\n");
       abort ();
     }
-  else  
+  else
     strcpy (d, s);
 }
 
@@ -130,8 +130,8 @@ _ksba_copy_time (ksba_isotime_t d, const ksba_isotime_t s)
 /* Compare the time strings A and B. Return 0 if they show the very
    same time, return 1 if A is newer than B and -1 if A is older than
    B. */
-int 
-_ksba_cmp_time (const ksba_isotime_t a, const ksba_isotime_t b) 
+int
+_ksba_cmp_time (const ksba_isotime_t a, const ksba_isotime_t b)
 {
   return strcmp (a, b);
 }
@@ -144,7 +144,7 @@ _ksba_current_time (ksba_isotime_t timebuf)
   struct tm *tp;
 #ifdef HAVE_GMTIME_R
   struct tm tmbuf;
-    
+
   tp = gmtime_r ( &epoch, &tmbuf);
 #else
   tp = gmtime ( &epoch );
@@ -153,4 +153,3 @@ _ksba_current_time (ksba_isotime_t timebuf)
            1900 + tp->tm_year, tp->tm_mon+1, tp->tm_mday,
            tp->tm_hour, tp->tm_min, tp->tm_sec);
 }
-

@@ -62,11 +62,3 @@ struct ksba_writer_s {
 
 
 #endif /*WRITER_H*/
-
-
-
-
-
-
-
-

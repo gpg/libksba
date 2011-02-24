@@ -133,7 +133,7 @@ print_sexp (ksba_const_sexp_t p)
                   break;
               need_hex = (i<n);
               if (!n /* n==0 is not allowed, but anyway.  */
-                  || (!need_hex 
+                  || (!need_hex
                       && !((*p >='A' && *p <= 'Z') || (*p >='a' && *p <='z'))))
                 printf ("%lu:", n);
 
@@ -190,7 +190,7 @@ print_names (int indent, ksba_name_t name)
       fputs ("none\n", stdout);
       return;
     }
-  
+
   for (idx=0; (s = ksba_name_enum (name, idx)); idx++)
     {
       char *p = ksba_name_get_uri (name, idx);
@@ -200,7 +200,7 @@ print_names (int indent, ksba_name_t name)
 }
 
 
-/* Return the description for OID; if no description is available 
+/* Return the description for OID; if no description is available
    NULL is returned. */
 static const char *
 get_oid_desc (const char *oid)
@@ -240,7 +240,7 @@ print_oid_list (int indent, char *list)
     {
       printf ("%*s", indent_all?indent:0, "");
       indent_all = 1;
-      
+
       if (!(lf = strchr (list, '\n')))
         lf = list + strlen (list);
 
@@ -258,7 +258,7 @@ print_oid_list (int indent, char *list)
     }
 }
 
-          
+
 
 
 static void
@@ -285,7 +285,7 @@ list_extensions (ksba_cert_t cert)
   if (err && gpg_err_code (err) != GPG_ERR_EOF )
     {
       fprintf (stderr,
-               "%s:%d: enumerating extensions failed: %s\n", 
+               "%s:%d: enumerating extensions failed: %s\n",
                __FILE__, __LINE__, gpg_strerror (err));
       errorcount++;
     }
@@ -334,16 +334,16 @@ list_extensions (ksba_cert_t cert)
         }
     }
   else
-    { 
-      fprintf (stderr, "%s:%d: ksba_cert_get_auth_key_id: %s\n", 
+    {
+      fprintf (stderr, "%s:%d: ksba_cert_get_auth_key_id: %s\n",
                __FILE__, __LINE__, gpg_strerror (err));
       errorcount++;
-    } 
+    }
 
   err = ksba_cert_is_ca (cert, &is_ca, &pathlen);
   if (err)
     {
-      fprintf (stderr, "%s:%d: ksba_cert_is_ca failed: %s\n", 
+      fprintf (stderr, "%s:%d: ksba_cert_is_ca failed: %s\n",
                __FILE__, __LINE__, gpg_strerror (err));
       errorcount++;
     }
@@ -354,31 +354,31 @@ list_extensions (ksba_cert_t cert)
   if (gpg_err_code (err) == GPG_ERR_NO_DATA)
     printf ("KeyUsage: Not specified\n");
   else if (err)
-    { 
-      fprintf (stderr, "%s:%d: ksba_cert_get_key_usage failed: %s\n", 
+    {
+      fprintf (stderr, "%s:%d: ksba_cert_get_key_usage failed: %s\n",
                __FILE__, __LINE__, gpg_strerror (err));
       errorcount++;
-    } 
+    }
   else
     {
       fputs ("KeyUsage:", stdout);
       if ( (usage & KSBA_KEYUSAGE_DIGITAL_SIGNATURE))
         fputs (" digitalSignature", stdout);
-      if ( (usage & KSBA_KEYUSAGE_NON_REPUDIATION))  
+      if ( (usage & KSBA_KEYUSAGE_NON_REPUDIATION))
         fputs (" nonRepudiation", stdout);
-      if ( (usage & KSBA_KEYUSAGE_KEY_ENCIPHERMENT)) 
+      if ( (usage & KSBA_KEYUSAGE_KEY_ENCIPHERMENT))
         fputs (" keyEncipherment", stdout);
       if ( (usage & KSBA_KEYUSAGE_DATA_ENCIPHERMENT))
         fputs (" dataEncripherment", stdout);
-      if ( (usage & KSBA_KEYUSAGE_KEY_AGREEMENT))    
+      if ( (usage & KSBA_KEYUSAGE_KEY_AGREEMENT))
         fputs (" keyAgreement", stdout);
       if ( (usage & KSBA_KEYUSAGE_KEY_CERT_SIGN))
         fputs (" certSign", stdout);
-      if ( (usage & KSBA_KEYUSAGE_CRL_SIGN))  
+      if ( (usage & KSBA_KEYUSAGE_CRL_SIGN))
         fputs (" crlSign", stdout);
       if ( (usage & KSBA_KEYUSAGE_ENCIPHER_ONLY))
         fputs (" encipherOnly", stdout);
-      if ( (usage & KSBA_KEYUSAGE_DECIPHER_ONLY))  
+      if ( (usage & KSBA_KEYUSAGE_DECIPHER_ONLY))
         fputs (" decipherOnly", stdout);
       putchar ('\n');
     }
@@ -386,11 +386,11 @@ list_extensions (ksba_cert_t cert)
   if (gpg_err_code (err) == GPG_ERR_NO_DATA)
     printf ("ExtKeyUsages: none\n");
   else if (err)
-    { 
-      fprintf (stderr, "%s:%d: ksba_cert_ext_key_usages failed: %s\n", 
+    {
+      fprintf (stderr, "%s:%d: ksba_cert_ext_key_usages failed: %s\n",
                __FILE__, __LINE__, gpg_strerror (err));
       errorcount++;
-    } 
+    }
   else
     {
       fputs ("ExtKeyUsages: ", stdout);
@@ -403,11 +403,11 @@ list_extensions (ksba_cert_t cert)
   if (gpg_err_code (err) == GPG_ERR_NO_DATA)
     printf ("CertificatePolicies: none\n");
   else if (err)
-    { 
-      fprintf (stderr, "%s:%d: ksba_cert_get_cert_policies failed: %s\n", 
+    {
+      fprintf (stderr, "%s:%d: ksba_cert_get_cert_policies failed: %s\n",
                __FILE__, __LINE__, gpg_strerror (err));
       errorcount++;
-    } 
+    }
   else
     {
       /* for display purposes we replace the linefeeds by commas */
@@ -452,11 +452,11 @@ list_extensions (ksba_cert_t cert)
       ksba_name_release (name2);
     }
   if (err && gpg_err_code (err) != GPG_ERR_EOF)
-    { 
-      fprintf (stderr, "%s:%d: ksba_cert_get_crl_dist_point failed: %s\n", 
+    {
+      fprintf (stderr, "%s:%d: ksba_cert_get_crl_dist_point failed: %s\n",
                __FILE__, __LINE__, gpg_strerror (err));
       errorcount++;
-    } 
+    }
 
   /* authorityInfoAccess. */
   for (idx=0; !(err=ksba_cert_get_authority_info_access (cert, idx,
@@ -470,12 +470,12 @@ list_extensions (ksba_cert_t cert)
       ksba_free (string);
     }
   if (err && gpg_err_code (err) != GPG_ERR_EOF)
-    { 
+    {
       fprintf (stderr, "%s:%d: "
-               "ksba_cert_get_authority_info_access failed: %s\n", 
+               "ksba_cert_get_authority_info_access failed: %s\n",
                __FILE__, __LINE__, gpg_strerror (err));
       errorcount++;
-    } 
+    }
 
   /* subjectInfoAccess. */
   for (idx=0; !(err=ksba_cert_get_subject_info_access (cert, idx,
@@ -489,12 +489,12 @@ list_extensions (ksba_cert_t cert)
       ksba_free (string);
     }
   if (err && gpg_err_code (err) != GPG_ERR_EOF)
-    { 
+    {
       fprintf (stderr, "%s:%d: "
-               "ksba_cert_get_subject_info_access failed: %s\n", 
+               "ksba_cert_get_subject_info_access failed: %s\n",
                __FILE__, __LINE__, gpg_strerror (err));
       errorcount++;
-    } 
+    }
 
 }
 
@@ -515,7 +515,7 @@ one_file (const char *fname)
   fp = fopen (fname, "rb");
   if (!fp)
     {
-      fprintf (stderr, "%s:%d: can't open `%s': %s\n", 
+      fprintf (stderr, "%s:%d: can't open `%s': %s\n",
                __FILE__, __LINE__, fname, strerror (errno));
       exit (1);
     }
@@ -541,7 +541,7 @@ one_file (const char *fname)
   ksba_free (sexp);
   putchar ('\n');
 
-  for (idx=0;(dn = ksba_cert_get_issuer (cert, idx));idx++) 
+  for (idx=0;(dn = ksba_cert_get_issuer (cert, idx));idx++)
     {
       fputs (idx?"         aka: ":"  issuer....: ", stdout);
       print_dn (dn);
@@ -549,7 +549,7 @@ one_file (const char *fname)
       putchar ('\n');
     }
 
-  for (idx=0;(dn = ksba_cert_get_subject (cert, idx));idx++) 
+  for (idx=0;(dn = ksba_cert_get_subject (cert, idx));idx++)
     {
       fputs (idx?"         aka: ":"  subject...: ", stdout);
       print_dn (dn);
@@ -579,7 +579,7 @@ one_file (const char *fname)
     public = ksba_cert_get_public_key (cert);
     if (!public)
       {
-        fprintf (stderr, "%s:%d: public key not found\n", 
+        fprintf (stderr, "%s:%d: public key not found\n",
                  __FILE__, __LINE__);
         errorcount++;
       }
@@ -598,11 +598,11 @@ one_file (const char *fname)
         err = _ksba_keyinfo_from_sexp (public, &der, &derlen);
         if (err)
           {
-            fprintf (stderr, "%s:%d: converting public key failed: %s\n", 
+            fprintf (stderr, "%s:%d: converting public key failed: %s\n",
                      __FILE__, __LINE__, gpg_strerror (err));
             errorcount++;
           }
-        else 
+        else
           {
             ksba_sexp_t tmp;
 
@@ -616,7 +616,7 @@ one_file (const char *fname)
             if (err)
               {
                 fprintf (stderr,
-                         "%s:%d: re-converting public key failed: %s\n", 
+                         "%s:%d: re-converting public key failed: %s\n",
                          __FILE__, __LINE__, gpg_strerror (err));
                 errorcount++;
               }
@@ -629,14 +629,14 @@ one_file (const char *fname)
                 if (err)
                   {
                     fprintf (stderr, "%s:%d: re-re-converting "
-                             "public key failed: %s\n", 
+                             "public key failed: %s\n",
                              __FILE__, __LINE__, gpg_strerror (err));
                     errorcount++;
                   }
                 else if (derlen != derlen2 || memcmp (der, der2, derlen))
                   {
                     fprintf (stderr, "%s:%d: mismatch after "
-                             "re-re-converting public key\n", 
+                             "re-re-converting public key\n",
                              __FILE__, __LINE__);
                     errorcount++;
                     xfree (der2);
@@ -668,7 +668,7 @@ one_file (const char *fname)
   err = ksba_cert_read_der (cert, r);
   if (err && gpg_err_code (err) != GPG_ERR_EOF)
     {
-      fprintf (stderr, "%s:%d: expected EOF but got: %s\n", 
+      fprintf (stderr, "%s:%d: expected EOF but got: %s\n",
                __FILE__, __LINE__, gpg_strerror (err));
       errorcount++;
     }
@@ -682,11 +682,11 @@ one_file (const char *fname)
 
 
 
-int 
+int
 main (int argc, char **argv)
 {
   const char *srcdir = getenv ("srcdir");
-  
+
   if (!srcdir)
     srcdir = ".";
 
@@ -713,10 +713,10 @@ main (int argc, char **argv)
         "cert_dfn_pca01.der",
         "cert_dfn_pca15.der",
         "cert_g10code_test1.der",
-        NULL 
+        NULL
       };
       int idx;
-      
+
       for (idx=0; files[idx]; idx++)
         {
           char *fname;
@@ -732,4 +732,3 @@ main (int argc, char **argv)
 
   return !!errorcount;
 }
-

@@ -53,7 +53,3 @@ int _ksba_node_with_oid_to_digest_algo (const unsigned char *image,
 
 
 #endif /*KEYINFO_H*/
-
-
-
-

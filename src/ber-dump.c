@@ -33,7 +33,7 @@
 #if (__GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 5 ))
 # define  ATTR_PRINTF(a,b)  __attribute__ ((format (printf,a,b)))
 #else
-# define  ATTR_PRINTF(a,b) 
+# define  ATTR_PRINTF(a,b)
 #endif
 
 /* keep track of parsing error */
@@ -45,7 +45,7 @@ static void print_error (const char *fmt, ... )  ATTR_PRINTF(1,2);
 
 
 static void
-print_error (const char *fmt, ... )  
+print_error (const char *fmt, ... )
 {
   va_list arg_ptr ;
 
@@ -57,7 +57,7 @@ print_error (const char *fmt, ... )
 }
 
 static void
-fatal (const char *fmt, ... )  
+fatal (const char *fmt, ... )
 {
   va_list arg_ptr ;
 
@@ -91,7 +91,7 @@ one_file (FILE *fp, const char *fname, ksba_asn_tree_t asn_tree)
   err = _ksba_ber_decoder_set_reader (d, r);
   if (err)
     fatal ("ksba_ber_decoder_set_reader failed: rc=%d\n", err);
-  
+
   if (asn_tree)
     {
       err = _ksba_ber_decoder_set_module (d, asn_tree);
@@ -102,7 +102,7 @@ one_file (FILE *fp, const char *fname, ksba_asn_tree_t asn_tree)
   err = _ksba_ber_decoder_dump (d, stdout);
   if (err)
     print_error ("ksba_ber_decoder_dump failed: rc=%d\n", err);
-  
+
   _ksba_ber_decoder_release (d);
   ksba_reader_release (r);
 }
@@ -125,7 +125,7 @@ main (int argc, char **argv)
   if (!argc || (argc > 1 &&
                 (!strcmp (argv[1],"--help") || !strcmp (argv[1],"-h"))) )
     usage (0);
-  
+
   argc--; argv++;
   if (argc && !strcmp (*argv,"--module"))
     {
@@ -146,15 +146,15 @@ main (int argc, char **argv)
         }
     }
 
-  
+
   if (!argc)
     one_file (stdin, "-", asn_tree);
   else
     {
-      for (; argc; argc--, argv++) 
+      for (; argc; argc--, argv++)
         {
           FILE *fp;
-          
+
           fp = fopen (*argv, "r");
           if (!fp)
               print_error ("can't open `%s': %s\n", *argv, strerror (errno));
@@ -165,9 +165,8 @@ main (int argc, char **argv)
             }
         }
     }
-  
+
   ksba_asn_tree_release (asn_tree);
 
   return error_counter? 1:0;
 }
-

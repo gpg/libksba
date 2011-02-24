@@ -24,7 +24,7 @@
 #include <stdio.h>
 
 #ifdef __cplusplus
-extern "C" { 
+extern "C" {
 #if 0
  }
 #endif
@@ -48,7 +48,7 @@ extern "C" {
 
 typedef gpg_error_t KsbaError _KSBA_DEPRECATED;
 
-typedef enum 
+typedef enum
   {
     KSBA_CT_NONE = 0,
     KSBA_CT_DATA = 1,
@@ -57,8 +57,8 @@ typedef enum
     KSBA_CT_DIGESTED_DATA = 4,
     KSBA_CT_ENCRYPTED_DATA = 5,
     KSBA_CT_AUTH_DATA = 6,
-    KSBA_CT_PKCS12 = 7   
-  } 
+    KSBA_CT_PKCS12 = 7
+  }
 ksba_content_type_t;
 typedef ksba_content_type_t KsbaContentType _KSBA_DEPRECATED;
 
@@ -78,7 +78,7 @@ typedef enum
     KSBA_SR_BEGIN_ITEMS = 9,
     KSBA_SR_GOT_ITEM = 10,
     KSBA_SR_END_ITEMS = 11
-  } 
+  }
 ksba_stop_reason_t;
 typedef ksba_stop_reason_t KsbaStopReason _KSBA_DEPRECATED;
 
@@ -95,7 +95,7 @@ typedef enum
     KSBA_CRLREASON_PRIVILEGE_WITHDRAWN = 512,
     KSBA_CRLREASON_AA_COMPROMISE = 1024,
     KSBA_CRLREASON_OTHER = 32768
-  } 
+  }
 ksba_crl_reason_t;
 typedef ksba_crl_reason_t KsbaCRLReason _KSBA_DEPRECATED;
 
@@ -110,7 +110,7 @@ typedef enum
     KSBA_OCSP_RSPSTATUS_REPLAYED = 253,
     KSBA_OCSP_RSPSTATUS_OTHER = 254,
     KSBA_OCSP_RSPSTATUS_NONE = 255
-  } 
+  }
 ksba_ocsp_response_status_t;
 
 typedef enum
@@ -130,11 +130,11 @@ typedef enum
     KSBA_KEYUSAGE_KEY_ENCIPHERMENT  =  4,
     KSBA_KEYUSAGE_DATA_ENCIPHERMENT =  8,
     KSBA_KEYUSAGE_KEY_AGREEMENT     = 16,
-    KSBA_KEYUSAGE_KEY_CERT_SIGN     = 32,     
+    KSBA_KEYUSAGE_KEY_CERT_SIGN     = 32,
     KSBA_KEYUSAGE_CRL_SIGN          = 64,
     KSBA_KEYUSAGE_ENCIPHER_ONLY    = 128,
     KSBA_KEYUSAGE_DECIPHER_ONLY    = 256
-  } 
+  }
 ksba_key_usage_t;
 typedef ksba_key_usage_t KsbaKeyUsage _KSBA_DEPRECATED;
 
@@ -204,7 +204,7 @@ typedef unsigned char *ksba_sexp_t;
 typedef unsigned char *KsbaSexp _KSBA_DEPRECATED;
 typedef const unsigned char *ksba_const_sexp_t;
 typedef const unsigned char *KsbaConstSexp _KSBA_DEPRECATED;
-   
+
 
 /*-- cert.c --*/
 gpg_error_t ksba_cert_new (ksba_cert_t *acert);
@@ -224,7 +224,7 @@ gpg_error_t ksba_cert_hash (ksba_cert_t cert,
                             int what,
                             void (*hasher)(void *,
                                            const void *,
-                                           size_t length), 
+                                           size_t length),
                             void *hasher_arg);
 const char *ksba_cert_get_digest_algo (ksba_cert_t cert);
 ksba_sexp_t ksba_cert_get_serial (ksba_cert_t cert);
@@ -334,7 +334,7 @@ void        ksba_crl_set_hash_function (ksba_crl_t crl,
                                         void *hash_fnc_arg);
 const char *ksba_crl_get_digest_algo (ksba_crl_t crl);
 gpg_error_t ksba_crl_get_issuer (ksba_crl_t crl, char **r_issuer);
-gpg_error_t ksba_crl_get_extension (ksba_crl_t crl, int idx, 
+gpg_error_t ksba_crl_get_extension (ksba_crl_t crl, int idx,
                                     char const **oid, int *critical,
                                     unsigned char const **der, size_t *derlen);
 gpg_error_t ksba_crl_get_auth_key_id (ksba_crl_t crl,
@@ -367,7 +367,7 @@ size_t ksba_ocsp_set_nonce (ksba_ocsp_t ocsp,
 gpg_error_t ksba_ocsp_prepare_request (ksba_ocsp_t ocsp);
 gpg_error_t ksba_ocsp_hash_request (ksba_ocsp_t ocsp,
                                     void (*hasher)(void *, const void *,
-                                                   size_t length), 
+                                                   size_t length),
                                     void *hasher_arg);
 gpg_error_t ksba_ocsp_set_sig_val (ksba_ocsp_t ocsp,
                                    ksba_const_sexp_t sigval);
@@ -384,7 +384,7 @@ const char *ksba_ocsp_get_digest_algo (ksba_ocsp_t ocsp);
 gpg_error_t ksba_ocsp_hash_response (ksba_ocsp_t ocsp,
                                      const unsigned char *msg, size_t msglen,
                                      void (*hasher)(void *, const void *,
-                                                    size_t length), 
+                                                    size_t length),
                                      void *hasher_arg);
 ksba_sexp_t ksba_ocsp_get_sig_val (ksba_ocsp_t ocsp,
                                    ksba_isotime_t produced_at);
@@ -401,7 +401,7 @@ gpg_error_t ksba_ocsp_get_status (ksba_ocsp_t ocsp, ksba_cert_t cert,
 gpg_error_t ksba_ocsp_get_extension (ksba_ocsp_t ocsp, ksba_cert_t cert,
                                      int idx,
                                      char const **r_oid, int *r_crit,
-                                     unsigned char const **r_der, 
+                                     unsigned char const **r_der,
                                      size_t *r_derlen);
 
 
@@ -429,7 +429,7 @@ gpg_error_t ksba_certreq_build (ksba_certreq_t cr,
 /*-- reader.c --*/
 gpg_error_t ksba_reader_new (ksba_reader_t *r_r);
 void        ksba_reader_release (ksba_reader_t r);
-gpg_error_t ksba_reader_set_release_notify (ksba_reader_t r, 
+gpg_error_t ksba_reader_set_release_notify (ksba_reader_t r,
                                             void (*notify)(void*,ksba_reader_t),
                                             void *notify_value);
 gpg_error_t ksba_reader_clear (ksba_reader_t r,
@@ -440,7 +440,7 @@ gpg_error_t ksba_reader_set_mem (ksba_reader_t r,
                                const void *buffer, size_t length);
 gpg_error_t ksba_reader_set_fd (ksba_reader_t r, int fd);
 gpg_error_t ksba_reader_set_file (ksba_reader_t r, FILE *fp);
-gpg_error_t ksba_reader_set_cb (ksba_reader_t r, 
+gpg_error_t ksba_reader_set_cb (ksba_reader_t r,
                               int (*cb)(void*,char *,size_t,size_t*),
                               void *cb_value );
 
@@ -452,20 +452,20 @@ unsigned long ksba_reader_tell (ksba_reader_t r);
 /*-- writer.c --*/
 gpg_error_t ksba_writer_new (ksba_writer_t *r_w);
 void        ksba_writer_release (ksba_writer_t w);
-gpg_error_t ksba_writer_set_release_notify (ksba_writer_t w, 
+gpg_error_t ksba_writer_set_release_notify (ksba_writer_t w,
                                             void (*notify)(void*,ksba_writer_t),
                                             void *notify_value);
 int         ksba_writer_error (ksba_writer_t w);
 unsigned long ksba_writer_tell (ksba_writer_t w);
 gpg_error_t ksba_writer_set_fd (ksba_writer_t w, int fd);
 gpg_error_t ksba_writer_set_file (ksba_writer_t w, FILE *fp);
-gpg_error_t ksba_writer_set_cb (ksba_writer_t w, 
+gpg_error_t ksba_writer_set_cb (ksba_writer_t w,
                                 int (*cb)(void*,const void *,size_t),
                                 void *cb_value);
 gpg_error_t ksba_writer_set_mem (ksba_writer_t w, size_t initial_size);
 const void *ksba_writer_get_mem (ksba_writer_t w, size_t *nbytes);
 void *      ksba_writer_snatch_mem (ksba_writer_t w, size_t *nbytes);
-gpg_error_t ksba_writer_set_filter (ksba_writer_t w, 
+gpg_error_t ksba_writer_set_filter (ksba_writer_t w,
                                     gpg_error_t (*filter)(void*,
                                              const void *,size_t, size_t *,
                                              void *, size_t, size_t *),
@@ -494,7 +494,7 @@ gpg_error_t ksba_oid_from_str (const char *string,
 gpg_error_t ksba_dn_der2str (const void *der, size_t derlen, char **r_string);
 gpg_error_t ksba_dn_str2der (const char *string,
                              unsigned char **rder, size_t *rderlen);
-gpg_error_t ksba_dn_teststr (const char *string, int seq, 
+gpg_error_t ksba_dn_teststr (const char *string, int seq,
                              size_t *rerroff, size_t *rerrlen);
 
 

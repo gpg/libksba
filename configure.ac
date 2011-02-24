@@ -1,19 +1,19 @@
 # configure.ac - for libksba
 # Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
 #               2010  g10 Code GmbH
-# 
+#
 # This file is part of KSBA
-# 
+#
 # KSBA is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # KSBA is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
@@ -216,7 +216,7 @@ AM_CONDITIONAL(HAVE_W32_SYSTEM, test "$have_w32_system" = yes)
 AM_CONDITIONAL(HAVE_W32CE_SYSTEM, test "$have_w32ce_system" = yes)
 
 
-# For some systems we know that we have ld_version scripts.  
+# For some systems we know that we have ld_version scripts.
 # Use it then as default.
 have_ld_version_script=no
 case "${host}" in
@@ -236,7 +236,7 @@ AC_ARG_ENABLE([ld-version-script],
 AM_CONDITIONAL(HAVE_LD_VERSION_SCRIPT, test "$have_ld_version_script" = "yes")
 
 
-#            
+#
 # Check for ELF visibility support.
 #
 AC_CACHE_CHECK(whether the visibility attribute is supported,
@@ -246,15 +246,15 @@ AC_CACHE_CHECK(whether the visibility attribute is supported,
           [[int foo __attribute__ ((visibility ("hidden"))) = 1;
             int bar __attribute__ ((visibility ("protected"))) = 1;
           ]])])
-        
+
         if ${CC-cc} -Werror -S conftest.c -o conftest.s \
                   1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD ; then
             if grep '\.hidden.*foo' conftest.s >/dev/null 2>&1 ; then
                 if grep '\.protected.*bar' conftest.s >/dev/null 2>&1; then
                     ksba_cv_visibility_attribute=yes
                 fi
-            fi  
-        fi  
+            fi
+        fi
        ])
 if test "$ksba_cv_visibility_attribute" = "yes"; then
     AC_CACHE_CHECK(for broken visibility attribute,
@@ -266,7 +266,7 @@ if test "$ksba_cv_visibility_attribute" = "yes"; then
                             __attribute__ ((visibility ("hidden")));
             int bar (int x) { return x; }
           ]])])
-                  
+
         if ${CC-cc} -Werror -S conftest.c -o conftest.s \
                   1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD ; then
            if grep '\.hidden@<:@ 	_@:>@foo' conftest.s >/dev/null 2>&1;
@@ -312,7 +312,7 @@ fi
 if test "$ksba_cv_visibility_attribute" = "yes" \
    && test "$ksba_cv_broken_visibility_attribute" != "yes" \
    && test "$ksba_cv_broken_alias_attribute" != "yes" \
-   && test "$ksba_cv_gcc_has_f_visibility" = "yes"  
+   && test "$ksba_cv_gcc_has_f_visibility" = "yes"
  then
    AC_DEFINE(KSBA_USE_VISIBILITY, 1,
                [Define to use the GNU C visibility attribute.])
@@ -371,7 +371,7 @@ AM_CONDITIONAL(CROSS_COMPILING, test x$cross_compiling != xno)
 # Generate extended version information for W32.
 if test "$have_w32_system" = yes; then
    BUILD_TIMESTAMP=`date --iso-8601=minutes`
-   changequote(,)dnl 
+   changequote(,)dnl
    BUILD_FILEVERSION=`echo "$VERSION" | sed 's/\([0-9.]*\).*/\1./;s/\./,/g'`
    changequote([,])dnl
    BUILD_FILEVERSION="${BUILD_FILEVERSION}${BUILD_REVISION}"
@@ -379,7 +379,7 @@ fi
 AC_SUBST(BUILD_REVISION)
 AC_SUBST(BUILD_TIMESTAMP)
 AC_SUBST(BUILD_FILEVERSION)
-AC_DEFINE_UNQUOTED(BUILD_REVISION, "$BUILD_REVISION", 
+AC_DEFINE_UNQUOTED(BUILD_REVISION, "$BUILD_REVISION",
                    [Subversion revision used to build this package])
 
 
@@ -398,7 +398,7 @@ AC_OUTPUT
 
 echo "
         Libksba v${VERSION} has been configured as follows:
-        
+
         Platform:  $host
 
 "

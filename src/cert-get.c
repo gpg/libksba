@@ -38,11 +38,11 @@ ksba_cert_get_string_attr (ksba_cert_t cert, ksba_attr_t what, int idx,
 
   switch (what)
     {
-      
+
     default:
       return gpg_error (GPG_ERR_INV_ATTR,);
     }
-  
+
   return 0;
 }
 
@@ -58,11 +58,10 @@ ksba_cert_get_time_attr (ksba_cert_t cert, ksba_attr_t what, int idx,
 
   switch (what)
     {
-      
+
     default:
       return gpg_error (GPG_ERR_INV_ATTR,);
     }
-  
+
   return 0;
 }
-

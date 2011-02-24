@@ -67,7 +67,7 @@ prepend_srcdir (const char *fname)
   if (!srcdir)
     if(!(srcdir = getenv ("srcdir")))
       srcdir = ".";
-  
+
   result = xmalloc (strlen (srcdir) + 1 + strlen (fname) + 1);
   strcpy (result, srcdir);
   strcat (result, "/");
@@ -225,4 +225,3 @@ print_time (ksba_isotime_t t)
   else
     printf ("%.4s-%.2s-%.2s %.2s:%.2s:%s", t, t+4, t+6, t+9, t+11, t+13);
 }
-

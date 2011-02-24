@@ -61,5 +61,3 @@ gpg_error_t _ksba_der_encode_tree (AsnNode root,
 
 
 #endif /*DER_ENCODER_H*/
-
-

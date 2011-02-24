@@ -38,7 +38,7 @@ struct ksba_reader_s {
   struct {
     unsigned char *buf;
     size_t size;    /* allocated size */
-    size_t length;  /* used size */ 
+    size_t length;  /* used size */
     size_t readpos; /* offset where to start the next read */
   } unread;
   enum reader_type type;
@@ -63,11 +63,3 @@ struct ksba_reader_s {
 
 
 #endif /*READER_H*/
-
-
-
-
-
-
-
-

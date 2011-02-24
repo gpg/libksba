@@ -1,4 +1,4 @@
-/* util.h 
+/* util.h
  *      Copyright (C) 2001, 2009 g10 Code GmbH
  *
  * This file is part of KSBA.
@@ -107,4 +107,3 @@ int _ksba_ascii_memcasecmp (const void *a_arg, const void *b_arg, size_t n);
 #define xtoi_2(p)   ((xtoi_1(p) * 16) + xtoi_1((p)+1))
 
 #endif /* UTIL_H */
-

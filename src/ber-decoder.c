@@ -54,7 +54,7 @@ typedef struct decoder_state_s *DECODER_STATE;
 
 
 /* Context for a decoder. */
-struct ber_decoder_s 
+struct ber_decoder_s
 {
   AsnNode module;    /* the ASN.1 structure */
   ksba_reader_t reader;
@@ -77,10 +77,10 @@ struct ber_decoder_s
   int first_tag_seen;  /* Indicates whether the first tag of a decoder
                           run has been read. */
 
-  int honor_module_end; 
+  int honor_module_end;
   int debug;
   int use_image;
-  struct 
+  struct
   {
     unsigned char *buf;
     size_t used;
@@ -91,10 +91,10 @@ struct ber_decoder_s
     int primitive;  /* current value is a primitive one */
     int length;     /* length of the primitive one */
     int nhdr;       /* length of the header */
-    int tag; 
+    int tag;
     int is_endtag;
     AsnNode node;   /* NULL or matching node */
-  } val; 
+  } val;
 };
 
 
@@ -119,8 +119,8 @@ new_decoder_state (void)
   ds->cur.nread = 0;
   return ds;
 }
-       
-static void        
+
+static void
 release_decoder_state (DECODER_STATE ds)
 {
   xfree (ds);
@@ -174,7 +174,7 @@ pop_decoder_state (DECODER_STATE ds)
 static int
 set_error (BerDecoder d, AsnNode node, const char *text)
 {
-  fprintf (stderr,"ber-decoder: node `%s': %s\n", 
+  fprintf (stderr,"ber-decoder: node `%s': %s\n",
            node? node->name:"?", text);
   d->last_errdesc = text;
   return gpg_error (GPG_ERR_BAD_BER);
@@ -249,7 +249,7 @@ dump_tlv (const struct tag_info *ti, FILE *fp)
   if (tagname)
     fputs (tagname, fp);
   else
-    fprintf (fp, "[%s %lu]", 
+    fprintf (fp, "[%s %lu]",
              ti->class == CLASS_UNIVERSAL? "UNIVERSAL" :
              ti->class == CLASS_APPLICATION? "APPLICATION" :
              ti->class == CLASS_CONTEXT? "CONTEXT-SPECIFIC" : "PRIVATE",
@@ -277,7 +277,7 @@ clear_help_flags (AsnNode node)
         }
       p->flags.skip_this = 0;
     }
-  
+
 }
 
 static void
@@ -288,7 +288,7 @@ prepare_copied_tree (AsnNode node)
   clear_help_flags (node);
   for (p=node; p; p = _ksba_asn_walk_tree (node, p))
     p->off = -1;
-  
+
 }
 
 static void
@@ -325,13 +325,13 @@ _ksba_ber_decoder_release (BerDecoder d)
 
 /**
  * _ksba_ber_decoder_set_module:
- * @d: Decoder object 
+ * @d: Decoder object
  * @module: ASN.1 Parse tree
- * 
+ *
  * Initialize the decoder with the ASN.1 module.  Note, that this is a
  * shallow copy of the module.  Hmmm: What about ref-counting of
  * AsnNodes?
- * 
+ *
  * Return value: 0 on success or an error code
  **/
 gpg_error_t
@@ -354,7 +354,7 @@ _ksba_ber_decoder_set_reader (BerDecoder d, ksba_reader_t r)
     return gpg_error (GPG_ERR_INV_VALUE);
   if (d->reader)
     return gpg_error (GPG_ERR_CONFLICT); /* reader already set */
-  
+
   d->reader = r;
   return 0;
 }
@@ -380,7 +380,7 @@ read_byte (ksba_reader_t reader)
 
 /* Read COUNT bytes into buffer.  BUFFER may be NULL to skip over
    COUNT bytes.  Return 0 on success or -1 on error. */
-static int 
+static int
 read_buffer (ksba_reader_t reader, char *buffer, size_t count)
 {
   size_t nread;
@@ -419,7 +419,7 @@ cmp_tag (AsnNode node, const struct tag_info *ti)
   if (node->flags.class != ti->class)
     {
       if (node->flags.class == CLASS_UNIVERSAL && node->type == TYPE_ANY)
-        return ti->is_constructed? 2:1; 
+        return ti->is_constructed? 2:1;
       return 0;
     }
   if (node->type == TYPE_TAG)
@@ -436,7 +436,7 @@ cmp_tag (AsnNode node, const struct tag_info *ti)
       if (node->type == TYPE_SET_OF && ti->tag == TYPE_SET)
         return 1;
       if (node->type == TYPE_ANY)
-        return _ksba_asn_is_primitive (ti->tag)? 1:2; 
+        return _ksba_asn_is_primitive (ti->tag)? 1:2;
     }
 
   return 0;
@@ -462,14 +462,14 @@ find_anchor_node (AsnNode root, const struct tag_info *ti)
         return NULL; /* not found */
       else if (node->right)
         node = node->right;
-      else 
+      else
         { /* go up and right */
           do
             {
               while (node->left && node->left->right == node)
                 node = node->left;
               node = node->left;
-              
+
               if (!node || node == root)
                 return NULL; /* back at the root -> not found */
             }
@@ -631,9 +631,9 @@ match_der (AsnNode root, const struct tag_info *ti,
                 }
             }
         }
-      else 
+      else
         node = node->down;
-      
+
     }
   if (!node)
     return -1;
@@ -678,7 +678,7 @@ match_der (AsnNode root, const struct tag_info *ti,
       *retnode = node;
       return rc==2? 4:3;
     }
-    
+
   if (node->type == TYPE_CHOICE)
     {
       if (debug)
@@ -716,7 +716,7 @@ match_der (AsnNode root, const struct tag_info *ti,
         fprintf (stderr, "   skipping non matching choice\n");
       return 1;
     }
-  
+
   if (node->flags.is_optional)
     {
       if (debug)
@@ -740,7 +740,7 @@ match_der (AsnNode root, const struct tag_info *ti,
 }
 
 
-static gpg_error_t 
+static gpg_error_t
 decoder_init (BerDecoder d, const char *start_name)
 {
   d->ds = new_decoder_state ();
@@ -778,7 +778,7 @@ decoder_next (BerDecoder d)
       /* I am not anymore sure why we have this ignore_garbage
          machinery: The whole decoder needs and overhaul; it seems not
          to honor the length specification and runs for longer than
-         expected. 
+         expected.
 
          This here is another hack to not eat up an end tag - this is
          required in in some cases and in theory should be used always
@@ -841,7 +841,7 @@ decoder_next (BerDecoder d)
       memcpy (d->image.buf + d->image.used, ti.buf, ti.nhdr);
       d->image.used += ti.nhdr;
     }
-  
+
 
   if (!d->bypass)
     {
@@ -850,22 +850,22 @@ decoder_next (BerDecoder d)
       do
         {
           again = endtag = 0;
-          switch ( ds->cur.in_any? 4 
+          switch ( ds->cur.in_any? 4
                    : (ti.class == CLASS_UNIVERSAL && !ti.tag)? (endtag=1,5)
                    : match_der (d->root, &ti, ds, &node, debug))
-            { 
+            {
             case -1:
               if (debug)
                 {
                   fprintf (stderr, "   FAIL <");
-                  dump_tlv (&ti, stderr); 
+                  dump_tlv (&ti, stderr);
                   fprintf (stderr, ">\n");
                 }
               if (d->honor_module_end)
                 {
                   /* We must push back the stuff we already read */
                   ksba_reader_unread (d->reader, ti.buf, ti.nhdr);
-                  return gpg_error (GPG_ERR_EOF); 
+                  return gpg_error (GPG_ERR_EOF);
                 }
               else
                 d->bypass = 1;
@@ -889,7 +889,7 @@ decoder_next (BerDecoder d)
               if (debug)
                   fprintf (stderr, "  ANY");
               ds->cur.in_any = 1;
-            case 3: /* match */ 
+            case 3: /* match */
             case 5: /* end tag */
               if (debug)
                 {
@@ -899,7 +899,7 @@ decoder_next (BerDecoder d)
                 }
               /* Increment by the header length */
               ds->cur.nread += ti.nhdr;
-                  
+
               if (!ti.is_constructed)
                   ds->cur.nread += ti.length;
 
@@ -923,10 +923,10 @@ decoder_next (BerDecoder d)
                   if ( ds->idx
                        && !ds->stack[ds->idx-1].ndef_length
                        && (ds->cur.nread
-                           > ds->stack[ds->idx-1].length)) 
+                           > ds->stack[ds->idx-1].length))
                     {
                       fprintf (stderr, "  ERROR: object length field "
-                               "%d octects too large\n",   
+                               "%d octects too large\n",
                               ds->cur.nread > ds->cur.length);
                       ds->cur.nread = ds->cur.length;
                     }
@@ -934,7 +934,7 @@ decoder_next (BerDecoder d)
                        && (endtag
                            || (!ds->stack[ds->idx-1].ndef_length
                                && (ds->cur.nread
-                                   >= ds->stack[ds->idx-1].length)))) 
+                                   >= ds->stack[ds->idx-1].length))))
                     {
                       int n = ds->cur.nread;
                       pop_decoder_state (ds);
@@ -947,7 +947,7 @@ decoder_next (BerDecoder d)
                       && !ds->stack[ds->idx-1].ndef_length
                       && (ds->cur.nread
                           >= ds->stack[ds->idx-1].length));
-                  
+
               if (ti.is_constructed && (ti.length || ti.ndef))
                 {
                   /* prepare for the next level */
@@ -965,7 +965,7 @@ decoder_next (BerDecoder d)
               break;
             default:
               never_reached ();
-              abort (); 
+              abort ();
               break;
             }
         }
@@ -976,11 +976,11 @@ decoder_next (BerDecoder d)
   d->val.length = ti.length;
   d->val.nhdr = ti.nhdr;
   d->val.tag  = ti.tag; /* kludge to fix TYPE_ANY probs */
-  d->val.is_endtag = (ti.class == CLASS_UNIVERSAL && !ti.tag); 
+  d->val.is_endtag = (ti.class == CLASS_UNIVERSAL && !ti.tag);
   d->val.node = d->bypass? NULL : node;
   if (debug)
     dump_decoder_state (ds);
-  
+
   return 0;
 }
 
@@ -988,7 +988,7 @@ static gpg_error_t
 decoder_skip (BerDecoder d)
 {
   if (d->val.primitive)
-    { 
+    {
       if (read_buffer (d->reader, NULL, d->val.length))
         return eof_or_error (d, 1);
     }
@@ -1018,10 +1018,10 @@ distance (AsnNode root, AsnNode node)
 /**
  * _ksba_ber_decoder_dump:
  * @d: Decoder object
- * 
+ *
  * Dump a textual representation of the encoding to the given stream.
- * 
- * Return value: 
+ *
+ * Return value:
  **/
 gpg_error_t
 _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
@@ -1065,7 +1065,7 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
         {
           int i, n, c;
           char *p;
-      
+
           if (!buf || buflen < d->val.length)
             {
               xfree (buf);
@@ -1236,7 +1236,7 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
           d->root = NULL;
           err = gpg_error (GPG_ERR_EOF);
         }
-      
+
       fixup_type_any (d->root);
       *r_root = d->root;
       d->root = NULL;
@@ -1245,8 +1245,8 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
       *r_imagelen = d->image.used;
       if (d->debug)
         {
-          fputs ("Value Tree:\n", stderr); 
-          _ksba_asn_node_dump_all (*r_root, stderr); 
+          fputs ("Value Tree:\n", stderr);
+          _ksba_asn_node_dump_all (*r_root, stderr);
         }
     }
 
@@ -1254,5 +1254,3 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
   xfree (buf);
   return err;
 }
-
-

@@ -47,7 +47,7 @@ my_hasher (void *arg, const void *buffer, size_t length)
 }
 
 
-/* Return the description for OID; if no description is available 
+/* Return the description for OID; if no description is available
    NULL is returned. */
 static const char *
 get_oid_desc (const char *oid)
@@ -77,7 +77,7 @@ print_names (int indent, ksba_name_t name)
       fputs ("none\n", stdout);
       return;
     }
-  
+
   for (idx=0; (s = ksba_name_enum (name, idx)); idx++)
     {
       char *p = ksba_name_get_uri (name, idx);
@@ -116,7 +116,7 @@ one_file (const char *fname)
   fp = fopen (fname, "r");
   if (!fp)
     {
-      fprintf (stderr, "%s:%d: can't open `%s': %s\n", 
+      fprintf (stderr, "%s:%d: can't open `%s': %s\n",
                __FILE__, __LINE__, fname, strerror (errno));
       exit (1);
     }
@@ -137,7 +137,7 @@ one_file (const char *fname)
   if (hashlog)
     ksba_crl_set_hash_function (crl, my_hasher, hashlog);
 
-  do 
+  do
     {
       err = ksba_crl_parse (crl, &stopreason);
       fail_if_err2 (fname, err);
@@ -270,15 +270,15 @@ one_file (const char *fname)
       {
         const char *s = get_oid_desc (oid);
         printf ("%sExtn: %s%s%s%s   (%lu octets)\n",
-                crit? "Crit":"", 
+                crit? "Crit":"",
                 s?" (":"", s?s:"", s?")":"",
                 oid, (unsigned long)derlen);
       }
-    if (err && gpg_err_code (err) != GPG_ERR_EOF 
+    if (err && gpg_err_code (err) != GPG_ERR_EOF
         && gpg_err_code (err) != GPG_ERR_NO_DATA )
       fail_if_err (err);
-  }      
-  
+  }
+
 
   {
     ksba_sexp_t sigval;
@@ -302,11 +302,11 @@ one_file (const char *fname)
 
 
 
-int 
+int
 main (int argc, char **argv)
 {
   const char *srcdir = getenv ("srcdir");
-  
+
   if (!srcdir)
     srcdir = ".";
 
@@ -319,10 +319,10 @@ main (int argc, char **argv)
     {
       const char *files[] = {
         "crl_testpki_testpca.der",
-        NULL 
+        NULL
       };
       int idx;
-      
+
       for (idx=0; files[idx]; idx++)
         {
           char *fname;
@@ -338,4 +338,3 @@ main (int argc, char **argv)
 
   return 0;
 }
-

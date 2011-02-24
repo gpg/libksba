@@ -20,7 +20,7 @@
 #include <config.h>
 #include <stdarg.h>
 
-#define _KSBA_INCLUDED_BY_VISIBILITY_C 
+#define _KSBA_INCLUDED_BY_VISIBILITY_C
 #include "util.h"
 
 /*--version.c --*/
@@ -32,7 +32,7 @@ ksba_check_version (const char *req_version)
 
 
 /*-- util.c --*/
-void 
+void
 ksba_set_malloc_hooks ( void *(*new_alloc_func)(size_t n),
                         void *(*new_realloc_func)(void *p, size_t n),
                         void (*new_free_func)(void*) )
@@ -41,7 +41,7 @@ ksba_set_malloc_hooks ( void *(*new_alloc_func)(size_t n),
 }
 
 
-void 
+void
 ksba_set_hash_buffer_function ( gpg_error_t (*fnc)
                                 (void *arg, const char *oid,
                                  const void *buffer, size_t length,
@@ -86,7 +86,7 @@ ksba_free ( void *a )
 
 
 /*-- cert.c --*/
-gpg_error_t 
+gpg_error_t
 ksba_cert_new (ksba_cert_t *acert)
 {
   return _ksba_cert_new (acert);
@@ -152,7 +152,7 @@ ksba_cert_hash (ksba_cert_t cert,
                 int what,
                 void (*hasher)(void *,
                                const void *,
-                               size_t length), 
+                               size_t length),
                 void *hasher_arg)
 {
   return _ksba_cert_hash (cert, what, hasher, hasher_arg);
@@ -180,7 +180,7 @@ ksba_cert_get_issuer (ksba_cert_t cert, int idx)
 }
 
 
-gpg_error_t 
+gpg_error_t
 ksba_cert_get_validity (ksba_cert_t cert, int what,
                         ksba_isotime_t r_time)
 {
@@ -195,7 +195,7 @@ ksba_cert_get_subject (ksba_cert_t cert, int idx)
 }
 
 
-ksba_sexp_t 
+ksba_sexp_t
 ksba_cert_get_public_key (ksba_cert_t cert)
 {
   return _ksba_cert_get_public_key (cert);
@@ -210,12 +210,12 @@ ksba_cert_get_sig_val (ksba_cert_t cert)
 
 
 
-gpg_error_t 
+gpg_error_t
 ksba_cert_get_extension (ksba_cert_t cert, int idx,
                          char const **r_oid, int *r_crit,
                          size_t *r_deroff, size_t *r_derlen)
 {
-  return _ksba_cert_get_extension (cert, idx, r_oid, r_crit, 
+  return _ksba_cert_get_extension (cert, idx, r_oid, r_crit,
                                    r_deroff, r_derlen);
 }
 
@@ -249,7 +249,7 @@ ksba_cert_get_ext_key_usages (ksba_cert_t cert, char **result)
 }
 
 
-gpg_error_t 
+gpg_error_t
 ksba_cert_get_crl_dist_point (ksba_cert_t cert, int idx,
                               ksba_name_t *r_distpoint,
                               ksba_name_t *r_issuer,
@@ -284,7 +284,7 @@ ksba_cert_get_authority_info_access (ksba_cert_t cert, int idx,
                                      char **r_method,
                                      ksba_name_t *r_location)
 {
-  return _ksba_cert_get_authority_info_access (cert, idx, 
+  return _ksba_cert_get_authority_info_access (cert, idx,
                                                r_method, r_location);
 }
 
@@ -591,7 +591,7 @@ ksba_crl_get_issuer (ksba_crl_t crl, char **r_issuer)
 
 
 gpg_error_t
-ksba_crl_get_extension (ksba_crl_t crl, int idx, 
+ksba_crl_get_extension (ksba_crl_t crl, int idx,
                         char const **oid, int *critical,
                         unsigned char const **der, size_t *derlen)
 {
@@ -707,7 +707,7 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
 gpg_error_t
 ksba_ocsp_hash_request (ksba_ocsp_t ocsp,
                         void (*hasher)(void *, const void *,
-                                       size_t length), 
+                                       size_t length),
                         void *hasher_arg)
 {
   return _ksba_ocsp_hash_request (ocsp, hasher, hasher_arg);
@@ -760,7 +760,7 @@ gpg_error_t
 ksba_ocsp_hash_response (ksba_ocsp_t ocsp,
                          const unsigned char *msg, size_t msglen,
                          void (*hasher)(void *, const void *,
-                                        size_t length), 
+                                        size_t length),
                          void *hasher_arg)
 {
   return _ksba_ocsp_hash_response (ocsp, msg, msglen, hasher, hasher_arg);
@@ -808,10 +808,10 @@ gpg_error_t
 ksba_ocsp_get_extension (ksba_ocsp_t ocsp, ksba_cert_t cert,
                          int idx,
                          char const **r_oid, int *r_crit,
-                         unsigned char const **r_der, 
+                         unsigned char const **r_der,
                          size_t *r_derlen)
 {
-  return _ksba_ocsp_get_extension (ocsp, cert, idx, r_oid, r_crit, 
+  return _ksba_ocsp_get_extension (ocsp, cert, idx, r_oid, r_crit,
                                    r_der, r_derlen);
 }
 
@@ -946,7 +946,7 @@ ksba_reader_set_file (ksba_reader_t r, FILE *fp)
 
 
 gpg_error_t
-ksba_reader_set_cb (ksba_reader_t r, 
+ksba_reader_set_cb (ksba_reader_t r,
                     int (*cb)(void*,char *,size_t,size_t*),
                     void *cb_value )
 {
@@ -1022,7 +1022,7 @@ ksba_writer_set_file (ksba_writer_t w, FILE *fp)
 
 
 gpg_error_t
-ksba_writer_set_cb (ksba_writer_t w, 
+ksba_writer_set_cb (ksba_writer_t w,
                     int (*cb)(void*,const void *,size_t),
                     void *cb_value)
 {
@@ -1052,7 +1052,7 @@ ksba_writer_snatch_mem (ksba_writer_t w, size_t *nbytes)
 
 
 gpg_error_t
-ksba_writer_set_filter (ksba_writer_t w, 
+ksba_writer_set_filter (ksba_writer_t w,
                         gpg_error_t (*filter)(void*,
                                               const void *,size_t, size_t *,
                                               void *, size_t, size_t *),
@@ -1081,7 +1081,7 @@ ksba_writer_write_octet_string (ksba_writer_t w,
 
 
 /*-- asn1-parse.y --*/
-int 
+int
 ksba_asn_parse_file (const char *filename, ksba_asn_tree_t *result,
                      int debug)
 {
@@ -1156,7 +1156,7 @@ ksba_dn_str2der (const char *string,
 
 
 gpg_error_t
-ksba_dn_teststr (const char *string, int seq, 
+ksba_dn_teststr (const char *string, int seq,
                  size_t *rerroff, size_t *rerrlen)
 {
   return _ksba_dn_teststr (string, seq, rerroff, rerrlen);
@@ -1199,5 +1199,3 @@ ksba_name_get_uri (ksba_name_t name, int idx)
 {
   return _ksba_name_get_uri (name, idx);
 }
-
-

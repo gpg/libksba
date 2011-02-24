@@ -31,7 +31,7 @@
 #if (__GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 5 ))
 # define  ATTR_PRINTF(a,b)  __attribute__ ((format (printf,a,b)))
 #else
-# define  ATTR_PRINTF(a,b) 
+# define  ATTR_PRINTF(a,b)
 #endif
 
 #ifdef _WIN32
@@ -61,7 +61,7 @@ static void print_error (const char *fmt, ... )  ATTR_PRINTF(1,2);
 
 
 static void
-print_error (const char *fmt, ... )  
+print_error (const char *fmt, ... )
 {
   va_list arg_ptr ;
 
@@ -70,7 +70,7 @@ print_error (const char *fmt, ... )
   vfprintf (stderr, fmt, arg_ptr);
   va_end (arg_ptr);
   error_counter++;
-  
+
 }
 
 static size_t
@@ -84,7 +84,7 @@ insert_string (const char *name)
       string_table_tail = &string_table;
       insert_string ("");
     }
-  
+
   if (string_table_offset && !*name)
     return 0;
 
@@ -95,7 +95,7 @@ insert_string (const char *name)
           return off + n;
       off += strlen (item->name) + 1;
     }
-  
+
   item = xmalloc ( sizeof *item + strlen (name));
   strcpy (item->name, name);
   item->next = NULL;
@@ -121,7 +121,7 @@ sort_string_table (void)
   struct name_list_s *item;
   struct name_list_s **array;
   size_t i, arraylen;
-  
+
   if (!string_table || !string_table->next)
     return; /* Nothing to sort.  */
 
@@ -159,7 +159,7 @@ write_string_table (FILE *fp)
     {
       for (s=item->name, pos=0; *s; s++)
         {
-          if (!(pos++ % 16)) 
+          if (!(pos++ % 16))
             fprintf (fp, "%s  ", pos>1? "\n":"");
           fprintf (fp, "'%c',", *s);
         }
@@ -245,7 +245,7 @@ create_static_structure (AsnNode pointer, const char *file_name, FILE *fp)
       fputs ("}", fp);
 
       if (p->valuetype == VALTYPE_CSTR)
-	fprintf (fp, ",%u", 
+	fprintf (fp, ",%u",
                  (unsigned int)insert_string (p->value.v_cstr));
       else if (p->valuetype == VALTYPE_LONG
                && p->type == TYPE_INTEGER && p->flags.assignment)
@@ -279,7 +279,7 @@ one_file (const char *fname, int *count, FILE *fp)
 {
   ksba_asn_tree_t tree;
   int rc;
-    
+
   rc = ksba_asn_parse_file (fname, &tree, check_only);
   if (rc)
     print_error ("error parsing `%s': %s\n", fname, gpg_strerror (rc) );
@@ -319,7 +319,7 @@ main (int argc, char **argv)
              stderr);
       return 0;
     }
-  
+
   argc--; argv++;
   if (argc && !strcmp (*argv,"--check"))
     {
@@ -351,14 +351,14 @@ main (int argc, char **argv)
           print_error ("can't open `%s': %s\n", DEVNULL_NAME, strerror (errno));
           exit (2);
         }
-      for (i=0; i < argc; i++) 
+      for (i=0; i < argc; i++)
         one_file (argv[i], &count, nullfp);
       fclose (nullfp);
 
       sort_string_table ();
 
       count = 0;
-      for (; argc; argc--, argv++) 
+      for (; argc; argc--, argv++)
         {
           nl = one_file (*argv, &count, stdout);
           if (nl)
@@ -370,7 +370,7 @@ main (int argc, char **argv)
     }
 
   if (all_names && !error_counter)
-    { 
+    {
       /* Write the string table. */
       putchar ('\n');
       write_string_table (stdout);
@@ -389,4 +389,3 @@ main (int argc, char **argv)
 
   return error_counter? 1:0;
 }
-

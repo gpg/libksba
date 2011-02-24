@@ -32,10 +32,10 @@
 
 /**
  * ksba_writer_new:
- * 
+ *
  * Create a new but uninitialized ksba_writer_t Object.  Using this
  * write object in unitialized state does always return an error.
- * 
+ *
  * Return value: ksba_writer_t object or an error code.
  **/
 gpg_error_t
@@ -52,7 +52,7 @@ ksba_writer_new (ksba_writer_t *r_w)
 /**
  * ksba_writer_release:
  * @w: Writer Object (or NULL)
- * 
+ *
  * Release this object
  **/
 void
@@ -79,7 +79,7 @@ ksba_writer_release (ksba_writer_t w)
    registered function will be called; passing NULL for NOTIFY removes
    the notification.  */
 gpg_error_t
-ksba_writer_set_release_notify (ksba_writer_t w, 
+ksba_writer_set_release_notify (ksba_writer_t w,
                                 void (*notify)(void*,ksba_writer_t),
                                 void *notify_value)
 {
@@ -108,11 +108,11 @@ ksba_writer_tell (ksba_writer_t w)
  * ksba_writer_set_fd:
  * @w: Writer object
  * @fd: file descriptor
- * 
+ *
  * Initialize the Writer object with a file descriptor, so that write
  * operations on this object are excuted on this file descriptor.
- * 
- * Return value: 
+ *
+ * Return value:
  **/
 gpg_error_t
 ksba_writer_set_fd (ksba_writer_t w, int fd)
@@ -133,11 +133,11 @@ ksba_writer_set_fd (ksba_writer_t w, int fd)
  * ksba_writer_set_file:
  * @w: Writer object
  * @fp: file pointer
- * 
+ *
  * Initialize the Writer object with a stdio file pointer, so that write
  * operations on this object are excuted on this stream
- * 
- * Return value: 
+ *
+ * Return value:
  **/
 gpg_error_t
 ksba_writer_set_file (ksba_writer_t w, FILE *fp)
@@ -160,29 +160,29 @@ ksba_writer_set_file (ksba_writer_t w, FILE *fp)
  * @w: Writer object
  * @cb: Callback function
  * @cb_value: Value passed to the callback function
- * 
+ *
  * Initialize the writer object with a callback function.
  * This callback function is defined as:
  * <literal>
- * typedef int (*cb) (void *cb_value, 
+ * typedef int (*cb) (void *cb_value,
  *                    const void *buffer, size_t count);
  * </literal>
  *
  * The callback is expected to process all @count bytes from @buffer
  * @count should not be 0 and @buffer should not be %NULL
  * The callback should return 0 on success or an %KSBA_xxx error code.
- * 
+ *
  * Return value: 0 on success or an error code
  **/
 gpg_error_t
-ksba_writer_set_cb (ksba_writer_t w, 
+ksba_writer_set_cb (ksba_writer_t w,
                     int (*cb)(void*,const void *,size_t), void *cb_value )
 {
   if (!w || !cb)
     return gpg_error (GPG_ERR_INV_VALUE);
   if (w->type)
     return gpg_error (GPG_ERR_CONFLICT);
-  
+
   w->error = 0;
   w->type = WRITER_TYPE_CB;
   w->u.cb.fnc = cb;
@@ -206,7 +206,7 @@ ksba_writer_set_mem (ksba_writer_t w, size_t initial_size)
 
       if (!initial_size)
         initial_size = 1024;
-      
+
       w->u.mem.buffer = xtrymalloc (initial_size);
       if (!w->u.mem.buffer)
         return gpg_error (GPG_ERR_ENOMEM);
@@ -224,7 +224,7 @@ ksba_writer_set_mem (ksba_writer_t w, size_t initial_size)
    operations takes place (because they might reallocate the buffer).
    if NBYTES is not NULL, it will receive the number of bytes in this
    buffer which is the same value ksba_writer_tell() returns.
-   
+
    In case of an error NULL is returned.
   */
 const void *
@@ -242,7 +242,7 @@ ksba_writer_get_mem (ksba_writer_t w, size_t *nbytes)
    ksab_writer_set_xxx () must be used before all other operations.
    if NBYTES is not NULL, it will receive the number of bytes in this
    buffer which is the same value ksba_writer_tell() returns.
-   
+
    In case of an error NULL is returned.  */
 void *
 ksba_writer_snatch_mem (ksba_writer_t w, size_t *nbytes)
@@ -263,7 +263,7 @@ ksba_writer_snatch_mem (ksba_writer_t w, size_t *nbytes)
 
 
 gpg_error_t
-ksba_writer_set_filter (ksba_writer_t w, 
+ksba_writer_set_filter (ksba_writer_t w,
                         gpg_error_t (*filter)(void*,
                                             const void *,size_t, size_t *,
                                             void *, size_t, size_t *),
@@ -271,7 +271,7 @@ ksba_writer_set_filter (ksba_writer_t w,
 {
   if (!w)
     return gpg_error (GPG_ERR_INV_VALUE);
-  
+
   w->filter = filter;
   w->filter_arg = filter_arg;
   return 0;
@@ -303,7 +303,7 @@ do_writer_write (ksba_writer_t w, const void *buffer, size_t length)
             newsize += 4096;
           else
             newsize += 16384;
-          
+
           p = xtryrealloc (w->u.mem.buffer, newsize);
           if (!p)
             {
@@ -318,7 +318,7 @@ do_writer_write (ksba_writer_t w, const void *buffer, size_t length)
           w->u.mem.size = newsize;
           /* Better check again in case of an overwrap. */
           if (w->nwritten + length > w->u.mem.size)
-            return gpg_error (GPG_ERR_ENOMEM); 
+            return gpg_error (GPG_ERR_ENOMEM);
         }
       memcpy (w->u.mem.buffer + w->nwritten, buffer, length);
       w->nwritten += length;
@@ -345,18 +345,18 @@ do_writer_write (ksba_writer_t w, const void *buffer, size_t length)
         return err;
       w->nwritten += length;
     }
-  else 
+  else
     return gpg_error (GPG_ERR_BUG);
-  
+
   return 0;
-} 
+}
 
 /**
  * ksba_writer_write:
  * @w: Writer object
  * @buffer: A buffer with the data to be written
  * @length: The length of this buffer
- * 
+ *
  * Write @length bytes from @buffer.
  *
  * Return value: 0 on success or an error code
@@ -397,9 +397,9 @@ ksba_writer_write (ksba_writer_t w, const void *buffer, size_t length)
     {
       err = do_writer_write (w, buffer, length);
     }
-  
+
   return err;
-} 
+}
 
 /* Write LENGTH bytes of BUFFER to W while encoding it as an BER
    encoded octet string.  With FLUSH set to 1 the octet stream will be
@@ -440,6 +440,3 @@ ksba_writer_write_octet_string (ksba_writer_t w,
 
   return err;
 }
-
-
-

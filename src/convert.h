@@ -1,4 +1,4 @@
-/* convert.h 
+/* convert.h
  *      Copyright (C) 2001 g10 Code GmbH
  *
  * This file is part of KSBA.
@@ -51,7 +51,3 @@ gpg_error_t _ksba_name_new_from_der (ksba_name_t *r_name,
 
 
 #endif /*CONVERT_H*/
-
-
-
-

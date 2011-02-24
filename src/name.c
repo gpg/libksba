@@ -85,7 +85,7 @@ ksba_name_release (ksba_name_t name)
 
 /* This is an internal function to create an ksba_name_t object from an
    DER encoded image which must point to an GeneralNames object */
-gpg_error_t 
+gpg_error_t
 _ksba_name_new_from_der (ksba_name_t *r_name,
                          const unsigned char *image, size_t imagelen)
 {
@@ -112,7 +112,7 @@ _ksba_name_new_from_der (ksba_name_t *r_name,
       err = _ksba_ber_parse_tl (&der, &derlen, &ti);
       if (err)
         return err;
-      if (ti.class != CLASS_CONTEXT) 
+      if (ti.class != CLASS_CONTEXT)
         return gpg_error (GPG_ERR_INV_CERT_OBJ); /* we expected a tag */
       if (ti.ndef)
         return gpg_error (GPG_ERR_NOT_DER_ENCODED);
@@ -125,7 +125,7 @@ _ksba_name_new_from_der (ksba_name_t *r_name,
         case 6: /* URI */
           n++;
           break;
-        default: 
+        default:
           break;
         }
 
@@ -197,7 +197,7 @@ _ksba_name_new_from_der (ksba_name_t *r_name,
           *p = 0; /* extra safeguard null */
           n++;
           break;
-        default: 
+        default:
           break;
         }
 

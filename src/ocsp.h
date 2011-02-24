@@ -31,7 +31,7 @@ struct ocsp_certlist_s {
 };
 
 /* A structre to save a way extensions. */
-struct ocsp_extension_s 
+struct ocsp_extension_s
 {
   struct ocsp_extension_s *next;
   size_t off;    /* Offset into DATA to the content of the octet string.  */

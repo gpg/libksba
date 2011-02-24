@@ -101,7 +101,7 @@ static int yylex (YYSTYPE *lvalp, void *parm);
 static void yyerror (const char *s);
 %}
 
-%token ASSIG "::=" 
+%token ASSIG "::="
 %token <str> NUM
 %token <str> IDENTIFIER
 %token OPTIONAL
@@ -134,7 +134,7 @@ static void yyerror (const char *s);
 %token TAGS
 %token BEGIN
 %token END
-%token UTCTime 
+%token UTCTime
 %token GeneralizedTime
 %token FROM
 %token IMPORTS
@@ -142,16 +142,16 @@ static void yyerror (const char *s);
 %token UTF8STRING
 %token NUMERICSTRING
 %token PRINTABLESTRING
-%token TELETEXSTRING  
+%token TELETEXSTRING
 %token IA5STRING
 %token UNIVERSALSTRING
 %token BMPSTRING
 
 
 
-%type <node> octet_string_def constant constant_list type_assig_right 
+%type <node> octet_string_def constant constant_list type_assig_right
 %type <node> integer_def type_assig type_assig_list sequence_def type_def
-%type <node> bit_string_def default size_def choise_def object_def 
+%type <node> bit_string_def default size_def choise_def object_def
 %type <node> boolean_def any_def size_def2 obj_constant obj_constant_list
 %type <node> constant_def type_constant type_constant_list definitions
 %type <node> definitions_id Time bit_element bit_element_list set_def
@@ -160,13 +160,13 @@ static void yyerror (const char *s);
 %type <node> utf8_string_def numeric_string_def printable_string_def
 %type <node> teletex_string_def ia5_string_def universal_string_def
 %type <node> bmp_string_def
-%type <str>  pos_num neg_num pos_neg_num pos_neg_identifier num_identifier 
+%type <str>  pos_num neg_num pos_neg_num pos_neg_identifier num_identifier
 %type <constant> class explicit_implicit
 
 
 %%
 
-input:  /* empty */  
+input:  /* empty */
        | input definitions
 ;
 
@@ -174,7 +174,7 @@ pos_num :   NUM       { strcpy($$,$1); }
           | '+' NUM   { strcpy($$,$2); }
 ;
 
-neg_num : '-' NUM    
+neg_num : '-' NUM
                 {
                   strcpy($$,"-");
                   strcat($$,$2);
@@ -193,15 +193,15 @@ pos_neg_identifier :  pos_neg_num    {strcpy($$,$1);}
                     | IDENTIFIER     {strcpy($$,$1);}
 ;
 
-constant: '(' pos_neg_num ')'  
+constant: '(' pos_neg_num ')'
                         {
-                          $$ = NEW_NODE (TYPE_CONSTANT); 
+                          $$ = NEW_NODE (TYPE_CONSTANT);
                           set_str_value ($$, $2);
                         }
           | IDENTIFIER'('pos_neg_num')'
                         {
-                          $$ = NEW_NODE (TYPE_CONSTANT); 
-                          set_name ($$, $1); 
+                          $$ = NEW_NODE (TYPE_CONSTANT);
+                          set_name ($$, $1);
                           set_str_value ($$, $3);
                         }
 ;
@@ -214,12 +214,12 @@ constant_list:  constant   { $$=$1; }
                   }
 ;
 
-identifier_list  :  IDENTIFIER  
+identifier_list  :  IDENTIFIER
                         {
                           $$ = NEW_NODE (TYPE_IDENTIFIER);
                           set_name($$,$1);
                         }
-                 | identifier_list IDENTIFIER  
+                 | identifier_list IDENTIFIER
                         {
                           AsnNode node;
 
@@ -230,22 +230,22 @@ identifier_list  :  IDENTIFIER
                         }
 ;
 
-obj_constant:  num_identifier   
-                 { 
-                   $$ = NEW_NODE (TYPE_CONSTANT); 
+obj_constant:  num_identifier
+                 {
+                   $$ = NEW_NODE (TYPE_CONSTANT);
                    set_str_value ($$, $1);
                  }
              | IDENTIFIER '(' NUM ')'
                  {
                    $$ = NEW_NODE (TYPE_CONSTANT);
-                   set_name ($$, $1); 
+                   set_name ($$, $1);
                    set_str_value ($$, $3);
                  }
 ;
 
-obj_constant_list:  obj_constant   
+obj_constant_list:  obj_constant
                         { $$=$1;}
-                  | obj_constant_list obj_constant 
+                  | obj_constant_list obj_constant
                         {
                           $$=$1;
                           append_right ($$, $2);
@@ -257,13 +257,13 @@ class :  UNIVERSAL    { $$ = CLASS_UNIVERSAL;   }
        | APPLICATION  { $$ = CLASS_APPLICATION; }
 ;
 
-tag_type :  '[' NUM ']'   
+tag_type :  '[' NUM ']'
                 {
-                  $$ = NEW_NODE (TYPE_TAG); 
+                  $$ = NEW_NODE (TYPE_TAG);
                   $$->flags.class = CLASS_CONTEXT;
                   set_ulong_value ($$, $2);
                 }
-          | '[' class NUM ']' 
+          | '[' class NUM ']'
                 {
                   $$ = NEW_NODE (TYPE_TAG);
                   $$->flags.class = $2;
@@ -273,40 +273,40 @@ tag_type :  '[' NUM ']'
 
 tag :  tag_type
          { $$ = $1; }
-     | tag_type EXPLICIT  
+     | tag_type EXPLICIT
          {
            $$ = $1;
            $$->flags.explicit = 1;
          }
-     | tag_type IMPLICIT 
+     | tag_type IMPLICIT
          {
            $$ = $1;
            $$->flags.implicit = 1;
          }
 ;
 
-default :  DEFAULT pos_neg_identifier 
+default :  DEFAULT pos_neg_identifier
                {
-                 $$ = NEW_NODE (TYPE_DEFAULT); 
+                 $$ = NEW_NODE (TYPE_DEFAULT);
                  set_str_value ($$, $2);
                }
-         | DEFAULT TRUE 
+         | DEFAULT TRUE
                {
                  $$ = NEW_NODE (TYPE_DEFAULT);
                  $$->flags.is_true = 1;
                }
-         | DEFAULT FALSE 
+         | DEFAULT FALSE
                {
                  $$ = NEW_NODE (TYPE_DEFAULT);
                  $$->flags.is_false = 1;
                }
 ;
 
-integer_def: INTEGER   
+integer_def: INTEGER
                {
                  $$ = NEW_NODE (TYPE_INTEGER);
                }
-           | INTEGER '{' constant_list '}' 
+           | INTEGER '{' constant_list '}'
                {
                  $$ = NEW_NODE (TYPE_INTEGER);
                  $$->flags.has_list = 1;
@@ -317,35 +317,35 @@ integer_def: INTEGER
                  $$ = NEW_NODE (TYPE_INTEGER);
                  $$->flags.has_min_max = 1;
                  /* the following is wrong.  Better use a union for the value*/
-                 set_down ($$, NEW_NODE (TYPE_SIZE) ); 
-                 set_str_value ($$->down, $6); 
+                 set_down ($$, NEW_NODE (TYPE_SIZE) );
+                 set_str_value ($$->down, $6);
                  set_name ($$->down, $3);
                }
 ;
 
-boolean_def: BOOLEAN  
+boolean_def: BOOLEAN
               {
                 $$ = NEW_NODE (TYPE_BOOLEAN);
               }
 ;
 
-Time:   UTCTime       
+Time:   UTCTime
           {
             $$ = NEW_NODE (TYPE_UTC_TIME);
-          } 
-      | GeneralizedTime  
-          { 
+          }
+      | GeneralizedTime
+          {
             $$ = NEW_NODE (TYPE_GENERALIZED_TIME);
-          } 
+          }
 ;
 
-size_def2: SIZE '(' num_identifier ')' 
+size_def2: SIZE '(' num_identifier ')'
              {
                $$ = NEW_NODE (TYPE_SIZE);
                $$->flags.one_param = 1;
                set_str_value ($$, $3);
              }
-        | SIZE '(' num_identifier '.' '.' num_identifier ')'  
+        | SIZE '(' num_identifier '.' '.' num_identifier ')'
              {
                $$ = NEW_NODE (TYPE_SIZE);
                $$->flags.has_min_max = 1;
@@ -354,17 +354,17 @@ size_def2: SIZE '(' num_identifier ')'
              }
 ;
 
-size_def:   size_def2          
+size_def:   size_def2
              {
                $$=$1;
              }
-          | '(' size_def2 ')'  
+          | '(' size_def2 ')'
              {
                $$=$2;
              }
 ;
 
-octet_string_def : OCTET STRING 
+octet_string_def : OCTET STRING
                      {
                        $$ = NEW_NODE (TYPE_OCTET_STRING);
                      }
@@ -392,10 +392,10 @@ numeric_string_def:   NUMERICSTRING  { $$ = NEW_NODE (TYPE_NUMERIC_STRING); }
                        set_down ($$,$2);
                      }
 ;
-printable_string_def:  PRINTABLESTRING 
+printable_string_def:  PRINTABLESTRING
                         { $$ = NEW_NODE (TYPE_PRINTABLE_STRING); }
                      | PRINTABLESTRING size_def
-                        { 
+                        {
                           $$ = NEW_NODE (TYPE_PRINTABLE_STRING);
                           $$->flags.has_size = 1;
                           set_down ($$,$2);
@@ -452,27 +452,27 @@ string_def:  utf8_string_def
 bit_element :  IDENTIFIER'('NUM')'
                  {
                    $$ = NEW_NODE (TYPE_CONSTANT);
-                   set_name ($$, $1); 
+                   set_name ($$, $1);
                    set_str_value ($$, $3);
                  }
 ;
 
-bit_element_list :  bit_element 
+bit_element_list :  bit_element
                       {
                         $$=$1;
                       }
-                  | bit_element_list ',' bit_element 
+                  | bit_element_list ',' bit_element
                       {
                         $$=$1;
                         append_right ($$, $3);
                       }
 ;
 
-bit_string_def : BIT STRING 
+bit_string_def : BIT STRING
                    {
                      $$ = NEW_NODE (TYPE_BIT_STRING);
                    }
-               | BIT STRING '{' bit_element_list '}' 
+               | BIT STRING '{' bit_element_list '}'
                    {
                      $$ = NEW_NODE (TYPE_BIT_STRING);
                      $$->flags.has_list = 1;
@@ -480,7 +480,7 @@ bit_string_def : BIT STRING
                    }
 ;
 
-enumerated_def : ENUMERATED '{' bit_element_list '}' 
+enumerated_def : ENUMERATED '{' bit_element_list '}'
                    {
                      $$ = NEW_NODE (TYPE_ENUMERATED);
                      $$->flags.has_list = 1;
@@ -488,13 +488,13 @@ enumerated_def : ENUMERATED '{' bit_element_list '}'
                    }
 ;
 
-object_def :  OBJECT STR_IDENTIFIER 
+object_def :  OBJECT STR_IDENTIFIER
                    {
                      $$ = NEW_NODE (TYPE_OBJECT_ID);
                    }
 ;
 
-type_assig_right: IDENTIFIER  
+type_assig_right: IDENTIFIER
                     {
                       $$ = NEW_NODE (TYPE_IDENTIFIER);
                       set_str_value ($$, $1);
@@ -510,7 +510,7 @@ type_assig_right: IDENTIFIER
                 | enumerated_def     {$$=$1;}
                 | boolean_def        {$$=$1;}
                 | string_def         {$$=$1;}
-                | Time            
+                | Time
                 | octet_string_def   {$$=$1;}
                 | bit_string_def     {$$=$1;}
                 | sequence_def       {$$=$1;}
@@ -518,13 +518,13 @@ type_assig_right: IDENTIFIER
                 | choise_def         {$$=$1;}
                 | any_def            {$$=$1;}
                 | set_def            {$$=$1;}
-                | TOKEN_NULL  
+                | TOKEN_NULL
                     {
                       $$ = NEW_NODE(TYPE_NULL);
                     }
 ;
 
-type_assig_right_tag :   type_assig_right  
+type_assig_right_tag :   type_assig_right
                            {
                              $$ = $1;
                            }
@@ -539,34 +539,34 @@ type_assig_right_tag :   type_assig_right
                            }
 ;
 
-type_assig_right_tag_default : type_assig_right_tag  
+type_assig_right_tag_default : type_assig_right_tag
                                  {
                                    $$ = $1;
                                  }
-                             | type_assig_right_tag default  
+                             | type_assig_right_tag default
                                  {
                                    $1->flags.has_default = 1;
                                    $$ = $1;
-                                   set_right ($2, $$->down); 
+                                   set_right ($2, $$->down);
                                    set_down ($$, $2);
                                  }
-                             | type_assig_right_tag OPTIONAL  
+                             | type_assig_right_tag OPTIONAL
                                  {
                                    $1->flags.is_optional = 1;
                                    $$ = $1;
                                  }
 ;
- 
+
 type_assig : IDENTIFIER type_assig_right_tag_default
                {
-                 set_name ($2, $1); 
+                 set_name ($2, $1);
                  $$ = $2;
                }
 ;
 
-type_assig_list : type_assig         
+type_assig_list : type_assig
                     { $$=$1; }
-                | type_assig_list ',' type_assig 
+                | type_assig_list ',' type_assig
                     {
                       $$=$1;
                       append_right ($$, $3);
@@ -578,7 +578,7 @@ sequence_def : SEQUENCE '{' type_assig_list '}'
                    $$ = NEW_NODE (TYPE_SEQUENCE);
                    set_down ($$, $3);
                  }
-             | SEQUENCE OF type_assig_right 
+             | SEQUENCE OF type_assig_right
                  {
                    $$ = NEW_NODE (TYPE_SEQUENCE_OF);
                    set_down ($$, $3);
@@ -590,7 +590,7 @@ sequence_def : SEQUENCE '{' type_assig_list '}'
                    set_right ($2,$4);
                    set_down ($$,$2);
                  }
-; 
+;
 
 set_def :  SET '{' type_assig_list '}'
              {
@@ -609,7 +609,7 @@ set_def :  SET '{' type_assig_list '}'
                set_right ($2, $4);
                set_down ($$, $2);
              }
-; 
+;
 
 choise_def :  CHOICE '{' type_assig_list '}'
                 {
@@ -618,11 +618,11 @@ choise_def :  CHOICE '{' type_assig_list '}'
                 }
 ;
 
-any_def :  ANY   
+any_def :  ANY
              {
                $$ = NEW_NODE (TYPE_ANY);
              }
-         | ANY DEFINED BY IDENTIFIER  
+         | ANY DEFINED BY IDENTIFIER
              {
                AsnNode node;
 
@@ -634,7 +634,7 @@ any_def :  ANY
              }
 ;
 
-type_def : IDENTIFIER "::=" type_assig_right_tag 
+type_def : IDENTIFIER "::=" type_assig_right_tag
              {
                set_name ($3, $1);
                $$ = $3;
@@ -645,7 +645,7 @@ constant_def : IDENTIFIER OBJECT STR_IDENTIFIER "::=" '{' obj_constant_list '}'
                  {
                    $$ = NEW_NODE (TYPE_OBJECT_ID);
                    $$->flags.assignment = 1;
-                   set_name ($$, $1);  
+                   set_name ($$, $1);
                    set_down ($$, $6);
                  }
              | IDENTIFIER IDENTIFIER "::=" '{' obj_constant_list '}'
@@ -653,7 +653,7 @@ constant_def : IDENTIFIER OBJECT STR_IDENTIFIER "::=" '{' obj_constant_list '}'
                    $$ = NEW_NODE (TYPE_OBJECT_ID);
                    $$->flags.assignment = 1;
                    $$->flags.one_param = 1;
-                   set_name ($$, $1);  
+                   set_name ($$, $1);
                    set_str_value ($$, $2);
                    set_down ($$, $5);
                  }
@@ -661,7 +661,7 @@ constant_def : IDENTIFIER OBJECT STR_IDENTIFIER "::=" '{' obj_constant_list '}'
                  {
                    $$ = NEW_NODE (TYPE_INTEGER);
                    $$->flags.assignment = 1;
-                   set_name ($$, $1);  
+                   set_name ($$, $1);
                    set_str_value ($$, $4);
                  }
 ;
@@ -670,16 +670,16 @@ type_constant:   type_def     { $$ = $1; }
                | constant_def { $$ = $1; }
 ;
 
-type_constant_list : type_constant  
+type_constant_list : type_constant
                        { $$ = $1; }
-                   | type_constant_list type_constant 
-                       { 
+                   | type_constant_list type_constant
+                       {
                          $$ = $1;
                          append_right ($$, $2);
                        }
 ;
 
-definitions_id : IDENTIFIER  '{' obj_constant_list '}' 
+definitions_id : IDENTIFIER  '{' obj_constant_list '}'
                    {
                      $$ = NEW_NODE (TYPE_OBJECT_ID);
                      set_down ($$, $3);
@@ -687,15 +687,15 @@ definitions_id : IDENTIFIER  '{' obj_constant_list '}'
                    }
 ;
 
-imports_def :  /* empty */ 
+imports_def :  /* empty */
                 { $$=NULL;}
-            | IMPORTS identifier_list FROM IDENTIFIER obj_constant_list 
+            | IMPORTS identifier_list FROM IDENTIFIER obj_constant_list
                 {
                   AsnNode node;
 
                   $$ = NEW_NODE (TYPE_IMPORTS);
                   node = NEW_NODE (TYPE_OBJECT_ID);
-                  set_name (node, $4);  
+                  set_name (node, $4);
                   set_down (node, $5);
                   set_down ($$, node);
                   set_right ($$, $2);
@@ -707,11 +707,11 @@ explicit_implicit :  EXPLICIT  { $$ = CONST_EXPLICIT; }
 ;
 
 definitions: definitions_id
-             DEFINITIONS explicit_implicit TAGS "::=" BEGIN imports_def 
+             DEFINITIONS explicit_implicit TAGS "::=" BEGIN imports_def
              type_constant_list END
                {
                  AsnNode node;
-                 
+
                  $$ = node = NEW_NODE (TYPE_DEFINITIONS);
 
                  if ($3 == CONST_EXPLICIT)
@@ -725,7 +725,7 @@ definitions: definitions_id
                  set_name ($$, $1->name);
                  set_name ($1, "");
 
-                 if (!node->flags.has_imports) 
+                 if (!node->flags.has_imports)
                    set_right ($1,$8);
                  else
                    {
@@ -763,9 +763,9 @@ const int key_word_token[]={
   ,SET,BY,EXPLICIT,IMPLICIT,DEFINITIONS,TAGS
   ,BEGIN,END,UTCTime,GeneralizedTime,FROM
   ,IMPORTS,TOKEN_NULL,ENUMERATED
-  ,UTF8STRING,NUMERICSTRING,PRINTABLESTRING,TELETEXSTRING  
+  ,UTF8STRING,NUMERICSTRING,PRINTABLESTRING,TELETEXSTRING
   ,IA5STRING,UNIVERSALSTRING,BMPSTRING
-};      
+};
 
 
 /*************************************************************/
@@ -774,7 +774,7 @@ const int key_word_token[]={
 /*  Return: int                                              */
 /*    Token identifier or ASCII code or 0(zero: End Of File) */
 /*************************************************************/
-static int 
+static int
 yylex (YYSTYPE *lvalp, void *parm)
 {
   int c,counter=0,k;
@@ -796,7 +796,7 @@ yylex (YYSTYPE *lvalp, void *parm)
       if(c==EOF)
         return 0;
 
-      if ( c=='(' || c==')' || c=='[' || c==']' 
+      if ( c=='(' || c==')' || c=='[' || c==']'
            || c=='{' || c=='}' || c==',' || c=='.' || c=='+')
         return c;
 
@@ -815,13 +815,13 @@ yylex (YYSTYPE *lvalp, void *parm)
                 ;
               if (c==EOF)
                 return 0;
-              else 
+              else
                 continue; /* repeat the search */
             }
         }
-      
+
       do
-        { 
+        {
           if (counter >= DIM (string)-1 )
             {
               fprintf (stderr,"%s:%d: token too long\n", "myfile:",
@@ -831,41 +831,41 @@ yylex (YYSTYPE *lvalp, void *parm)
           string[counter++]=c;
         }
       while ( !((c=fgetc(fp))==EOF
-                || c==' '|| c=='\t' || c=='\n' 
-                || c=='(' || c==')' || c=='[' || c==']' 
+                || c==' '|| c=='\t' || c=='\n'
+                || c=='(' || c==')' || c=='[' || c==']'
                 || c=='{' || c=='}' || c==',' || c=='.'));
-      
+
       ungetc (c,fp);
       string[counter]=0;
       /*fprintf (stderr, "yylex token `%s'\n", string);*/
 
       /* Is STRING a number? */
-      for (k=0; k<counter; k++) 
+      for (k=0; k<counter; k++)
         {
-          if(!isdigit(string[k])) 
+          if(!isdigit(string[k]))
             break;
         }
       if (k>=counter)
         {
-          strcpy (lvalp->str,string);  
+          strcpy (lvalp->str,string);
           if (PARSECTL->debug)
             fprintf (stderr,"%d: yylex found number `%s'\n",
                      PARSECTL->lineno, string);
           return NUM;
         }
-      
+
       /* Is STRING a keyword? */
       for (k=0; k<(sizeof(key_word)/sizeof(char*));k++ )
         {
-          if (!strcmp(string,key_word[k])) 
+          if (!strcmp(string,key_word[k]))
             {
               if (PARSECTL->debug)
                 fprintf (stderr,"%d: yylex found keyword `%s'\n",
                          PARSECTL->lineno, string);
-              return key_word_token[k]; 
+              return key_word_token[k];
             }
         }
-      
+
       /* STRING is an IDENTIFIER */
       strcpy(lvalp->str,string);
       if (PARSECTL->debug)
@@ -875,16 +875,16 @@ yylex (YYSTYPE *lvalp, void *parm)
     }
 }
 
-static void 
+static void
 yyerror (const char *s)
 {
   /* Sends the error description to stderr */
-  fprintf (stderr, "%s\n", s); 
+  fprintf (stderr, "%s\n", s);
   /* Why doesn't bison provide a way to pass the parm to yyerror ??*/
 }
 
 
- 
+
 static AsnNode
 new_node (struct parser_control_s *parsectl, node_type_t type)
 {
@@ -908,7 +908,7 @@ release_all_nodes (AsnNode node)
     {
       node2 = node->link_next;
       xfree (node->name);
-      
+
       if (node->valuetype == VALTYPE_CSTR)
         xfree (node->value.v_cstr);
       else if (node->valuetype == VALTYPE_MEM)
@@ -987,16 +987,16 @@ set_down (AsnNode node, AsnNode down)
  * @debug: Enable debug output
  *
  * Parse an ASN.1 file and return an syntax tree.
- * 
+ *
  * Return value: 0 for okay or an ASN_xx error code
  **/
-int 
+int
 ksba_asn_parse_file (const char *file_name, ksba_asn_tree_t *result, int debug)
 {
   struct parser_control_s parsectl;
-     
+
   *result = NULL;
-  
+
   parsectl.fp = file_name? fopen (file_name, "r") : NULL;
   if ( !parsectl.fp )
     return gpg_error_from_syserror ();
@@ -1010,11 +1010,11 @@ ksba_asn_parse_file (const char *file_name, ksba_asn_tree_t *result, int debug)
   if ( yyparse ((void*)&parsectl) || parsectl.result_parse )
     { /* error */
       fprintf (stderr, "%s:%d: parse error\n",
-               file_name?file_name:"-", parsectl.lineno ); 
+               file_name?file_name:"-", parsectl.lineno );
       release_all_nodes (parsectl.all_nodes);
       parsectl.all_nodes = NULL;
     }
-  else 
+  else
     { /* okay */
       ksba_asn_tree_t tree;
 

@@ -99,7 +99,7 @@ struct ksba_cms_s {
   void *hash_fnc_arg;
 
   ksba_stop_reason_t stop_reason;
-  
+
   struct {
     char *oid;
     unsigned long length;
@@ -113,8 +113,8 @@ struct ksba_cms_s {
     int digest_len;
   } data;
 
-  int cms_version;   
-  
+  int cms_version;
+
   struct oidlist_s *digest_algos;
   struct certlist_s *cert_list;
   char *inner_cont_oid; /* Encapsulated or Encrypted
@@ -130,7 +130,7 @@ struct ksba_cms_s {
                                         to be send with a signed message */
 
   struct oidparmlist_s *capability_list; /* A list of S/MIME capabilities. */
-  
+
   struct signer_info_s *signer_info;
 
   struct value_tree_s *recp_info;
@@ -154,5 +154,3 @@ gpg_error_t _ksba_cms_parse_enveloped_data_part_2 (ksba_cms_t cms);
 
 
 #endif /*CMS_H*/
-
-

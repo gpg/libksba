@@ -23,7 +23,7 @@
 #include "asn1-func.h"
 
 /* An object to keep parsed information about an extension. */
-struct cert_extn_info 
+struct cert_extn_info
 {
   char *oid;
   int crit;
@@ -48,7 +48,7 @@ struct cert_user_data
 
  /* Often we need to store only a few bytes as data.  By providing a
     fixed buffer we are able to avoid an extra malloc in this case. */
-  char databuf[sizeof (int)];  
+  char databuf[sizeof (int)];
 
   /* The key used to store the data object.  Dynamically allocated at
      object creation time.  */
@@ -57,7 +57,7 @@ struct cert_user_data
 
 
 /* The internal certificate object. */
-struct ksba_cert_s 
+struct ksba_cert_s
 {
   /* Certificate objects often play a central role and applications
      might want to associate other data with the certificate to avoid
@@ -69,7 +69,7 @@ struct ksba_cert_s
   /* This object has been initialized with an actual certificate.
      Note that UDATA may be used even without an initialized
      certificate. */
-  int initialized;    
+  int initialized;
 
   /* Because we often need to pass certificate objects to other
      functions, we use reference counting to keep resource overhead
@@ -109,4 +109,3 @@ gpg_error_t _ksba_cert_get_public_key_ptr (ksba_cert_t cert,
 
 
 #endif /*CERT_H*/
-

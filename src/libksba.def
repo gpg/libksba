@@ -178,4 +178,3 @@ EXPORTS
 
       ksba_reader_set_release_notify  @146
       ksba_writer_set_release_notify  @147
-

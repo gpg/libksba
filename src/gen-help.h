@@ -93,4 +93,3 @@ typedef struct ksba_asn_tree_s *ksba_asn_tree_t;
 
 
 #endif /*GEN_HELP_H*/
-

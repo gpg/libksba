@@ -95,17 +95,17 @@
 
 2009-01-14  Werner Koch  <wk@g10code.com>
 
-	* ocsp.c (ksba_ocsp_set_requestor, ksba_ocsp_hash_request) 
+	* ocsp.c (ksba_ocsp_set_requestor, ksba_ocsp_hash_request)
 	(ksba_ocsp_set_sig_val, ksba_ocsp_add_cert): Mark unused args.
 	* cms-parser.c (_ksba_cms_parse_enveloped_data_part_2): Ditto.
-	* cms.c (ct_parse_data, ct_parse_digested_data) 
-	(ct_parse_encrypted_data, ct_build_data, ct_build_digested_data) 
+	* cms.c (ct_parse_data, ct_parse_digested_data)
+	(ct_parse_encrypted_data, ct_build_data, ct_build_digested_data)
 	(ct_build_encrypted_data): Ditto.
 
-	* visibility.c (ksba_cms_release, ksba_cms_set_hash_function) 
-	(ksba_crl_release, ksba_crl_set_hash_function, ksba_ocsp_release) 
-	(ksba_certreq_release, ksba_certreq_set_hash_function) 
-	(ksba_reader_release, ksba_writer_release, ksba_asn_tree_release) 
+	* visibility.c (ksba_cms_release, ksba_cms_set_hash_function)
+	(ksba_crl_release, ksba_crl_set_hash_function, ksba_ocsp_release)
+	(ksba_certreq_release, ksba_certreq_set_hash_function)
+	(ksba_reader_release, ksba_writer_release, ksba_asn_tree_release)
 	(ksba_asn_tree_dump, ksba_name_ref, ksba_name_release): No return
 	vor a void fucntion.  Reported by Nelson H. F. Beebe.
 
@@ -192,11 +192,11 @@
 	* keyinfo.c (algo_table_s): Replace the unused DIGEST_ALGO int by
 	a string and changed all tables to use a string representation of
 	the digest algo.
-	(cryptval_to_sexp): Insert the hash algo element into the result. 
+	(cryptval_to_sexp): Insert the hash algo element into the result.
 
 2007-11-14  Werner Koch  <wk@g10code.com>
 
-	* ber-decoder.c (_ksba_ber_decoder_dump) 
+	* ber-decoder.c (_ksba_ber_decoder_dump)
 	(_ksba_ber_decoder_decode): Change envvar to KSBA_DEBUG_BER_DECODER.
 
 2007-11-07  Werner Koch  <wk@g10code.com>
@@ -327,7 +327,7 @@
 	* cert.c (ksba_cert_get_key_usage): Map GPG_ERR_NO_VALUE to
 	GPG_ERR_NO_DATA.  This is required in case no extensions at all
 	are available.
-	(ksba_cert_get_cert_policies, ksba_cert_get_ext_key_usages) 
+	(ksba_cert_get_cert_policies, ksba_cert_get_ext_key_usages)
 	(ksba_cert_get_auth_key_id, get_simple_octet_string_ext): Ditto.
 
 2006-08-31  Werner Koch  <wk@g10code.com>
@@ -503,12 +503,12 @@
 	* ksba.h (ksba_cert_get_subj_key_id): New.
 	* cert.c (get_simple_octet_string_ext): New.
 	(ksba_cert_get_subj_key_id): New.
-	* libksba.vers: Added ksba_cert_get_subj_key_id. 
+	* libksba.vers: Added ksba_cert_get_subj_key_id.
 
 	* cert.c (ksba_cert_get_auth_key_id): Add support for
 	keyIdentifier.
 	* crl.c (ksba_crl_get_auth_key_id): Ditto.
-	
+
 2005-01-31  Werner Koch  <wk@g10code.com>
 
 	* cms-parser.c (_ksba_cms_parse_signed_data_part_2): Allow NDEF
@@ -549,7 +549,7 @@
 
 	* ber-decoder.c (match_der): Fix for primitive implicit context
 	tags.  Argh, this whole decoder mess needs a full rewrite.
-	
+
 2004-08-16  Werner Koch  <wk@g10code.de>
 
 	* keyinfo.c: Fixed second DSA entry; a comma was missing.
@@ -637,7 +637,7 @@
 2004-02-12  Werner Koch  <wk@gnupg.org>
 
 	* cms.c (ksba_cms_identify): Detect pkcs#12.
-	* ksba.h: Add KSBA_CT_PCKS12. 
+	* ksba.h: Add KSBA_CT_PCKS12.
 
 2004-01-29  Werner Koch  <wk@gnupg.org>
 
@@ -711,9 +711,9 @@
 2003-11-14  Werner Koch  <wk@gnupg.org>
 
 	* cms.c (write_encrypted_cont): Fixed test on EOF.
-	* cert.c (ksba_cert_is_ca, ksba_cert_get_cert_policies) 
+	* cert.c (ksba_cert_is_ca, ksba_cert_get_cert_policies)
 	(ksba_cert_get_auth_key_id): Ditto.
-	* ber-decoder.c (_ksba_ber_decoder_dump) 
+	* ber-decoder.c (_ksba_ber_decoder_dump)
 	(_ksba_ber_decoder_decode): Ditto.
 
 2003-11-13  Werner Koch  <wk@gnupg.org>
@@ -722,7 +722,7 @@
 	provided error.
 	* crl.c (parse_to_next_update): Ditto.
 	* cms-parser.c (parse_cms_version): Ditto.
-	(_ksba_cms_parse_signed_data_part_1): 
+	(_ksba_cms_parse_signed_data_part_1):
 	* ber-help.c (eof_or_error): Ditto.
 	* reader.c (ksba_reader_error): Changed to return gpg_error_t.
 	* writer.c (ksba_writer_error): Ditto.
@@ -757,7 +757,7 @@
 2003-10-31  Werner Koch  <wk@gnupg.org>
 
 	Changed the representation of time.
-	
+
 	* ksba.h (ksba_isotime_t): New.
 	* convert.h, cms.h, crl.h: Changed all data structure to use that
 	new time object.
@@ -768,7 +768,7 @@
 	(_ksab_current_time): New.
 	* cert.c (ksba_cert_get_validity): Changed for new time data type.
 	* der-encoder.c (_ksba_der_store_time): Ditto.
-	* crl.c (ksba_crl_get_update_times, ksba_crl_get_item) 
+	* crl.c (ksba_crl_get_update_times, ksba_crl_get_item)
 	(parse_to_next_update, parse_crl_entry): Ditto.
 	* cms.c (ksba_cms_get_signing_time, ksba_cms_set_signing_time):
 	Ditto.
@@ -781,7 +781,7 @@
 	Reported by Stephane Corthesy.
 
 2003-08-20  Marcus Brinkmann  <marcus@g10code.de>
- 
+
 	* ber-decoder.c (new_decoder_state): Initialize DS->cur.in_any.
 
 2003-03-17  Werner Koch  <wk@gnupg.org>
@@ -794,7 +794,7 @@
 
 2002-12-12  Werner Koch  <wk@gnupg.org>
 
-	* keyinfo.c (sig_algo_table): Added sha-1WithRSAEncryption. 
+	* keyinfo.c (sig_algo_table): Added sha-1WithRSAEncryption.
 
 2002-12-03  Werner Koch  <wk@gnupg.org>
 
@@ -830,7 +830,7 @@
 	* crl.c (ksba_crl_get_issuer)
 	* cms.c (ksba_cms_get_issuer_serial)
 	(ksba_cms_get_sig_val)
-	(ksba_cms_get_enc_val) 
+	(ksba_cms_get_enc_val)
 	* cert.c (ksba_cert_get_image)
 	(ksba_cert_hash)
 	(ksba_cert_get_serial)
@@ -938,7 +938,7 @@
 	* name.c: New.
 	* ksba.h (KsbaName): New.  Added defintions for the name functions.
 	(KsbaCRLReason): Changed values to allow use as bit flags.
-	* cert.c (parse_distribution_point): New. 
+	* cert.c (parse_distribution_point): New.
 	(ksba_cert_get_crl_dist_point): New.
 
 2002-03-15  Werner Koch  <wk@gnupg.org>
@@ -1020,14 +1020,14 @@
 
 2002-01-24  Werner Koch  <wk@gnupg.org>
 
-	* cms.h: Add new member cert_info_list. 
+	* cms.h: Add new member cert_info_list.
 	* cms.c (ksba_cms_add_cert): New.
 	(ksba_cms_release): Release the cert info list.
 
 2002-01-23  Werner Koch  <wk@gnupg.org>
 
 	* crl.c (parse_to_next_update): Use measured length to fixup the
-	tbs_len after reading the name.  Check tbs_len before checking 
+	tbs_len after reading the name.  Check tbs_len before checking
 	for the entry list.
 
 	* ksba.h (KsbaKeyUsage): New.
@@ -1080,7 +1080,7 @@
 
 	* util.h (spacep): New.
 	(hexdigitp): Now takes a pointer as arg.
-	
+
 	* writer.c (do_writer_write): Set the error flag when we are out
 	of core.
 	(ksba_writer_snatch_mem): New.
@@ -1143,9 +1143,9 @@
 2001-12-13  Werner Koch  <wk@gnupg.org>
 
 	* cert.c (ksba_cert_get_issuer): Added an idx argument so that the
-	function can be used to enumerate alternate names. 
+	function can be used to enumerate alternate names.
 	(ksba_cert_get_subject): Ditto.
-	
+
 
  Copyright 2001, 2002, 2003, 2004, 2005, 2008, 2009 g10 Code GmbH
 

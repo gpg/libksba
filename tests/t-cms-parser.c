@@ -28,7 +28,7 @@
 
 #include "t-common.h"
 
-void 
+void
 dummy_hash_fnc (void *arg, const void *buffer, size_t length)
 {
   (void)arg;
@@ -68,7 +68,7 @@ one_file (const char *fname)
   fp = fopen (fname, "r");
   if (!fp)
     {
-      fprintf (stderr, "%s:%d: can't open `%s': %s\n", 
+      fprintf (stderr, "%s:%d: can't open `%s': %s\n",
                __FILE__, __LINE__, fname, strerror (errno));
       exit (1);
     }
@@ -128,13 +128,13 @@ one_file (const char *fname)
 
   ksba_cms_set_hash_function (cms, dummy_hash_fnc, NULL);
 
-  do 
+  do
     {
       err = ksba_cms_parse (cms, &stopreason);
       fail_if_err2 (fname, err);
       printf ("stop reason: %d\n", stopreason);
     }
-  while (stopreason != KSBA_SR_READY);   
+  while (stopreason != KSBA_SR_READY);
 
 
   if (ksba_cms_get_content_type (cms, 0) == KSBA_CT_ENVELOPED_DATA)
@@ -154,14 +154,14 @@ one_file (const char *fname)
           print_sexp_hex (p);
           ksba_free (p);
           putchar ('\n');
-  
+
           dn = ksba_cms_get_enc_val (cms, idx);
           printf ("recipient %d - enc_val %s\n", idx, dn? "found": "missing");
           ksba_free (dn);
         }
     }
   else
-    { 
+    {
       for (idx=0; idx < 1; idx++)
         {
           err = ksba_cms_get_issuer_serial (cms, idx, &dn, &p);
@@ -180,7 +180,7 @@ one_file (const char *fname)
           print_sexp_hex (p);
           ksba_free (p);
           putchar ('\n');
-  
+
           err = ksba_cms_get_message_digest (cms, idx, &dn, &n);
           fail_if_err2 (fname, err);
           printf ("signer %d - messageDigest: ", idx);
@@ -195,7 +195,7 @@ one_file (const char *fname)
           if (err != -1)
             {
               char *tmp;
-              
+
               for (tmp=dn; *tmp; tmp++)
                 if (*tmp == '\n')
                   *tmp = ' ';
@@ -227,7 +227,7 @@ one_file (const char *fname)
 
 
 
-int 
+int
 main (int argc, char **argv)
 {
   if (argc > 1)

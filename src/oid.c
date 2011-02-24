@@ -33,7 +33,7 @@
  * ksba_oid_to_str:
  * @buffer: A BER encoded OID
  * @length: The length of this OID
- * 
+ *
  * Take a buffer with an object identifier in BER encoding and return
  * a string representing this OID.  We do not use the ASN.1 syntax
  * here but delimit the arcs with dots, so it is easier to parse in
@@ -44,7 +44,7 @@
  * no interpretation of the OID.  The caller must free the returned
  * string using ksba_free() or the function he has registered as a
  * replacement.
- * 
+ *
  *
  * Return value: A allocated string or NULL in case of memory problem.
  **/
@@ -100,7 +100,7 @@ ksba_oid_to_str (const char *buffer, size_t length)
       sprintf (p, ".%lu", val);
       p += strlen (p);
     }
-    
+
   *p = 0;
   return string;
 
@@ -111,13 +111,13 @@ ksba_oid_to_str (const char *buffer, size_t length)
      with an arc that can't be represented in a 32 bit word is more
      than likely corrupt.  */
   xfree (string);
-  return xtrystrdup ("1.3.6.1.4.1.11591.2.12242973"); 
+  return xtrystrdup ("1.3.6.1.4.1.11591.2.12242973");
 }
 
 
 /* Take the OID at NODE and return it in string format */
 char *
-_ksba_oid_node_to_str (const unsigned char *image, AsnNode node) 
+_ksba_oid_node_to_str (const unsigned char *image, AsnNode node)
 {
   if (!node || node->type != TYPE_OBJECT_ID || node->off == -1)
     return NULL;
@@ -155,7 +155,7 @@ make_flagged_int (unsigned long value, char *buf, size_t buflen)
  * @string: A string with the OID in dotted decimal form
  * @rbuf:   Returns the DER encoded OID
  * @rlength: and its length
- * 
+ *
  * Convertes the OID given in dotted decimal form to an DER encoding
  * and returns it in allocated buffer rbuf and its length in rlength.
  * rbuf is set to NULL in case of an error is returned.
@@ -163,7 +163,7 @@ make_flagged_int (unsigned long value, char *buf, size_t buflen)
 
  * The caller must free the returned buffer using ksba_free() or the
  * function he has registered as a replacement.
- * 
+ *
  * Return value: 0 on success or an error value
  **/
 gpg_error_t
@@ -243,7 +243,7 @@ ksba_oid_from_str (const char *string, unsigned char **rbuf, size_t *rlength)
 
   *rbuf = buf;
   *rlength = buflen;
-  return 0; 
+  return 0;
 }
 
 

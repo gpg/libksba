@@ -161,7 +161,7 @@ parse_optional_boolean (unsigned char const **buf, size_t *len, int *r_bool)
     err = gpg_error (GPG_ERR_BAD_BER);
   else if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_BOOLEAN
            && !ti.is_constructed)
-    { 
+    {
       if (ti.length != 1)
         err = gpg_error (GPG_ERR_BAD_BER);
       *r_bool = !!**buf;
@@ -212,7 +212,7 @@ parse_asntime_into_isotime (unsigned char const **buf, size_t *len,
 {
   struct tag_info ti;
   gpg_error_t err;
- 
+
   err = _ksba_ber_parse_tl (buf, len, &ti);
   if (err)
     ;
@@ -223,7 +223,7 @@ parse_asntime_into_isotime (unsigned char const **buf, size_t *len,
   else if (!(err = _ksba_asntime_to_iso (*buf, ti.length,
                                          ti.tag == TYPE_UTC_TIME, isotime)))
     parse_skip (buf, len, &ti);
-  
+
   return err;
 }
 
@@ -242,7 +242,7 @@ parse_context_tag (unsigned char const **buf, size_t *len, struct tag_info *ti,
     err = gpg_error (GPG_ERR_INV_OBJ);
   else if (ti->length > *len)
     err = gpg_error (GPG_ERR_BAD_BER);
-  
+
   return err;
 }
 
@@ -292,7 +292,7 @@ void
 ksba_ocsp_release (ksba_ocsp_t ocsp)
 {
   struct ocsp_reqitem_s *ri;
-  
+
   if (!ocsp)
     return;
   xfree (ocsp->digest_oid);
@@ -353,7 +353,7 @@ ksba_ocsp_add_target (ksba_ocsp_t ocsp,
 
   if (!ocsp || !cert || !issuer_cert)
     return gpg_error (GPG_ERR_INV_VALUE);
-  
+
   ri = xtrycalloc (1, sizeof *ri);
   if (!ri)
     return gpg_error_from_errno (errno);
@@ -381,7 +381,7 @@ size_t
 ksba_ocsp_set_nonce (ksba_ocsp_t ocsp, unsigned char *nonce, size_t noncelen)
 {
   if (!ocsp)
-    return 0; 
+    return 0;
   if (!nonce)
     return sizeof ocsp->nonce;
   if (noncelen > sizeof ocsp->nonce)
@@ -657,8 +657,8 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
 
     } /* End of looping over single requests. */
 
-  /* Reuse writers; for clarity, use new names. */ 
-  w4 = w1; 
+  /* Reuse writers; for clarity, use new names. */
+  w4 = w1;
   w5 = w2;
   err = ksba_writer_set_mem (w4, 2048);
   if (!err)
@@ -687,7 +687,7 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
   /* Write the tbsRequest. */
 
   /* The version is default, thus we don't write it. */
-  
+
   /* The requesterName would go here. */
 
   /* Write the requestList. */
@@ -705,7 +705,7 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
   if (err)
     goto leave;
 
-  /* Reuse writers; for clarity, use new names. */ 
+  /* Reuse writers; for clarity, use new names. */
   w6 = w3;
   w7 = w4;
   err = ksba_writer_set_mem (w6, 2048);
@@ -769,10 +769,10 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
 }
 
 
-gpg_error_t 
+gpg_error_t
 ksba_ocsp_hash_request (ksba_ocsp_t ocsp,
                         void (*hasher)(void *, const void *,
-                                       size_t length), 
+                                       size_t length),
                         void *hasher_arg)
 {
   (void)ocsp;
@@ -782,7 +782,7 @@ ksba_ocsp_hash_request (ksba_ocsp_t ocsp,
 }
 
 
-gpg_error_t 
+gpg_error_t
 ksba_ocsp_set_sig_val (ksba_ocsp_t ocsp,
                        ksba_const_sexp_t sigval)
 {
@@ -792,7 +792,7 @@ ksba_ocsp_set_sig_val (ksba_ocsp_t ocsp,
 }
 
 
-gpg_error_t 
+gpg_error_t
 ksba_ocsp_add_cert (ksba_ocsp_t ocsp, ksba_cert_t cert)
 {
   (void)ocsp;
@@ -836,7 +836,7 @@ ksba_ocsp_build_request (ksba_ocsp_t ocsp,
 
 
 
-/* 
+/*
    Parse the response extensions and store them aways.  While doing
    this we also check the nonce extension.  A typical data ASN.1 blob
    with only the nonce extension as passed to this function is:
@@ -927,7 +927,7 @@ parse_response_extensions (ksba_ocsp_t ocsp,
 }
 
 
-/* 
+/*
    Parse single extensions and store them away.
 */
 static int
@@ -999,7 +999,7 @@ parse_single_extensions (struct ocsp_reqitem_s *ri,
      OCSPResponse ::= SEQUENCE {
         responseStatus         OCSPResponseStatus,
         responseBytes          [0] EXPLICIT ResponseBytes OPTIONAL }
-  
+
      OCSPResponseStatus ::= ENUMERATED {
          successful            (0),  --Response has valid confirmations
          malformedRequest      (1),  --Illegal confirmation request
@@ -1009,11 +1009,11 @@ parse_single_extensions (struct ocsp_reqitem_s *ri,
          sigRequired           (5),  --Must sign the request
          unauthorized          (6)   --Request unauthorized
      }
-  
+
      ResponseBytes ::=       SEQUENCE {
          responseType   OBJECT IDENTIFIER,
          response       OCTET STRING }
-  
+
    On success the RESPONSE_STATUS field of OCSP will be set to the
    response status and DATA will now point to the first byte in the
    octet string of the response; RLEN will be set to the length of
@@ -1179,7 +1179,7 @@ parse_single_response (ksba_ocsp_t ocsp,
   parse_skip (data, datalen, &ti);
 
   if (look_for_request)
-    { 
+    {
       for (request_item = ocsp->requestlist;
            request_item; request_item = request_item->next)
         if (!memcmp (request_item->issuer_name_hash, name_hash, 20)
@@ -1189,8 +1189,8 @@ parse_single_response (ksba_ocsp_t ocsp,
           break; /* Got it. */
     }
 
-  
-  /* 
+
+  /*
      CertStatus ::= CHOICE {
        good        [0]     IMPLICIT NULL,
        revoked     [1]     IMPLICIT RevokedInfo,
@@ -1272,7 +1272,7 @@ parse_single_response (ksba_ocsp_t ocsp,
           (*datalen)--;
           (*data)++;
         }
-      else /* The comment indicates that an enumeration may come here. */ 
+      else /* The comment indicates that an enumeration may come here. */
         {
           err = parse_enumerated (data, datalen, &ti, 0);
           if (err)
@@ -1360,7 +1360,7 @@ parse_single_response (ksba_ocsp_t ocsp,
            byKey                [2] KeyHash }
 
 
-*/     
+*/
 static gpg_error_t
 parse_response_data (ksba_ocsp_t ocsp,
                      unsigned char const **data, size_t *datalen)
@@ -1403,7 +1403,7 @@ parse_response_data (ksba_ocsp_t ocsp,
     { /* byName. */
       err = _ksba_derdn_to_str (*data, ti.length, &ocsp->responder_id.name);
       if (err)
-        return err; 
+        return err;
       parse_skip (data, datalen, &ti);
     }
   else if (ti.class == CLASS_CONTEXT && ti.tag == 2  && ti.is_constructed)
@@ -1418,7 +1418,7 @@ parse_response_data (ksba_ocsp_t ocsp,
         return gpg_error_from_errno (errno);
       memcpy (ocsp->responder_id.keyid, *data, ti.length);
       ocsp->responder_id.keyidlen = ti.length;
-      parse_skip (data, datalen, &ti); 
+      parse_skip (data, datalen, &ti);
     }
   else
     err = gpg_error (GPG_ERR_INV_OBJ);
@@ -1478,7 +1478,7 @@ parse_response (ksba_ocsp_t ocsp, const unsigned char *msg, size_t msglen)
   const char *s;
   size_t len;
 
-  
+
   msgstart = msg;
   err = parse_response_status (ocsp, &msg, &msglen, &len);
   if (err)
@@ -1544,7 +1544,7 @@ parse_response (ksba_ocsp_t ocsp, const unsigned char *msg, size_t msglen)
   if (gpg_err_code (err) == GPG_ERR_INV_OBJ)
     return 0; /* Not the right tag. Stop here. */
   if (err)
-    return err; 
+    return err;
   err = parse_sequence (&msg, &msglen, &ti);
   if (err)
     return err;
@@ -1674,9 +1674,9 @@ ksba_ocsp_get_digest_algo (ksba_ocsp_t ocsp)
 gpg_error_t
 ksba_ocsp_hash_response (ksba_ocsp_t ocsp,
                          const unsigned char *msg, size_t msglen,
-                         void (*hasher)(void *, const void *, size_t length), 
+                         void (*hasher)(void *, const void *, size_t length),
                          void *hasher_arg)
-                         
+
 {
   if (!ocsp || !msg || !hasher)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -1757,7 +1757,7 @@ ksba_ocsp_get_responder_id (ksba_ocsp_t ocsp,
     }
   else
     gpg_error (GPG_ERR_NO_DATA);
-  
+
   return 0;
 }
 
@@ -1864,7 +1864,7 @@ ksba_ocsp_get_extension (ksba_ocsp_t ocsp, ksba_cert_t cert, int idx,
           break;
       if (!ri)
         return gpg_error (GPG_ERR_NOT_FOUND);
-      
+
       for (ex=ri->single_extensions; ex && idx; ex = ex->next, idx--)
         ;
       if (!ex)
@@ -1890,4 +1890,3 @@ ksba_ocsp_get_extension (ksba_ocsp_t ocsp, ksba_cert_t cert, int idx,
 
   return 0;
 }
-

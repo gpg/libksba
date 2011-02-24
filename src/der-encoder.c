@@ -77,13 +77,13 @@ _ksba_der_encoder_release (DerEncoder d)
 
 /**
  * _ksba_der_encoder_set_module:
- * @d: Decoder object 
+ * @d: Decoder object
  * @module: ASN.1 Parse tree
- * 
+ *
  * Initialize the decoder with the ASN.1 module.  Note, that this is a
  * shallow copy of the module.  Fixme: What about ref-counting of
  * AsnNodes?
- * 
+ *
  * Return value: 0 on success or an error code
  **/
 gpg_error_t
@@ -106,7 +106,7 @@ _ksba_der_encoder_set_writer (DerEncoder d, ksba_writer_t w)
     return gpg_error (GPG_ERR_INV_VALUE);
   if (d->writer)
     return gpg_error (GPG_ERR_CONFLICT); /* reader already set */
-  
+
   d->writer = w;
   return 0;
 }
@@ -122,7 +122,7 @@ _ksba_der_encoder_set_writer (DerEncoder d, ksba_writer_t w)
 
   AlgorithmIdentifier ::= SEQUENCE {
       algorithm    OBJECT IDENTIFIER,
-      parameters   ANY DEFINED BY algorithm OPTIONAL 
+      parameters   ANY DEFINED BY algorithm OPTIONAL
   }
 
   where parameters will be set to NULL if parm is NULL or to an octet
@@ -272,7 +272,7 @@ _ksba_der_store_time (AsnNode node, const ksba_isotime_t atime)
             }
         }
     }
-  
+
   if (node->type == TYPE_GENERALIZED_TIME
       || node->type == TYPE_UTC_TIME)
     {
@@ -311,7 +311,7 @@ _ksba_der_store_integer (AsnNode node, const unsigned char *value)
   if (node->type == TYPE_INTEGER)
     {
       size_t len;
-      
+
       len = (value[0] << 24) | (value[1] << 16) | (value[2] << 8) | value[3];
       return store_value (node, value+4, len);
     }
@@ -390,7 +390,7 @@ _ksba_der_store_null (AsnNode node)
 }
 
 
-/* 
+/*
    Actual DER encoder
 */
 
@@ -406,7 +406,7 @@ set_nhdr_and_len (AsnNode node, unsigned long length)
   if (node->type == TYPE_SET_OF || node->type == TYPE_SEQUENCE_OF)
     buflen++;
   else if (node->type == TYPE_TAG)
-    buflen++; 
+    buflen++;
   else if (node->type < 0x1f || node->type == TYPE_PRE_SEQUENCE)
     buflen++;
   else
@@ -422,13 +422,13 @@ set_nhdr_and_len (AsnNode node, unsigned long length)
   else if (!length)
     buflen++; /* indefinite length */
   else if (length < 128)
-    buflen++; 
-  else 
+    buflen++;
+  else
     {
       buflen += (length <= 0xff ? 2:
-                 length <= 0xffff ? 3: 
+                 length <= 0xffff ? 3:
                  length <= 0xffffff ? 4: 5);
-    }        
+    }
 
   node->len = length;
   node->nhdr = buflen;
@@ -477,17 +477,17 @@ copy_nhdr_and_len (unsigned char *buffer, AsnNode node)
   else if (!length)
     *p++ = 0x80; /* indefinite length - can't happen! */
   else if (length < 128)
-    *p++ = length; 
-  else 
+    *p++ = length;
+  else
     {
       int i;
 
       /* fixme: if we know the sizeof an ulong we could support larger
          objects - however this is pretty ridiculous */
       i = (length <= 0xff ? 1:
-           length <= 0xffff ? 2: 
+           length <= 0xffff ? 2:
            length <= 0xffffff ? 3: 4);
-      
+
       *p++ = (0x80 | i);
       if (i > 3)
         *p++ = length >> 24;
@@ -496,7 +496,7 @@ copy_nhdr_and_len (unsigned char *buffer, AsnNode node)
       if (i > 1)
         *p++ = length >> 8;
       *p++ = length;
-    }        
+    }
 
   return p - buffer;
 }
@@ -550,7 +550,7 @@ _ksba_der_encode_tree (AsnNode root,
       n->len = 0;
       n->nhdr = 0;
     }
-     
+
   /* Set default values */
   /* FIXME */
 
@@ -572,12 +572,12 @@ _ksba_der_encode_tree (AsnNode root,
   /* set off to zero, so that it can be dumped */
   for (n=root; n ; n = _ksba_asn_walk_tree (root, n))
       n->off = 0;
-  fputs ("DER encoded value Tree:\n", stderr); 
-  _ksba_asn_node_dump_all (root, stderr); 
+  fputs ("DER encoded value Tree:\n", stderr);
+  _ksba_asn_node_dump_all (root, stderr);
   for (n=root; n ; n = _ksba_asn_walk_tree (root, n))
       n->off = -1;
 #endif
-  
+
   /* now we can create an encoding in image */
   image = xtrymalloc (imagelen);
   if (!image)

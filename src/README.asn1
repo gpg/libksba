@@ -1,10 +1,10 @@
 ------------------------------------------------  -*- text -*-
---   Readme file for ASN1 parser              --  
+--   Readme file for ASN1 parser              --
 --                                            --
 --   Originator:  Fabio Fiorina               --
 --   e-mail:      Fabio.Fiorina@alcatel.it    --
 --                fiorinaf@bgonline.it        --
---   Changed: wk@gnupg.org 
+--   Changed: wk@gnupg.org
 ------------------------------------------------
 
 
@@ -21,8 +21,8 @@ Other differences are:
 - negative integer are allowed in ASN.1 syntax files,
 - PKIX1Implicit88.txt instead of Certificate.txt for the
   Certificate description
-- functions naming 
-- an easier way to set INTEGER and get OBJECT IDENTFIER  
+- functions naming
+- an easier way to set INTEGER and get OBJECT IDENTFIER
 
 
 
@@ -35,7 +35,7 @@ asn1-parse.y (cert_ASN.y)     bison input file
 asn1-func.c (cert_asn1.c)     functions for ASN1 parser and for
                               reading and setting elements value
 asn1-func.h (cert_asn1.h)     contains constants for the
-                              gnutls_asn1.c.  Must be included in files 
+                              gnutls_asn1.c.  Must be included in files
                               that use ASN1 parser.
 
 CertificateExample.c          example based on Appendix D.1 of rfc2459
@@ -44,8 +44,8 @@ CertificateExample.c          example based on Appendix D.1 of rfc2459
 These files are not used:
 CrlExample.c         example based on Appendix D.4 of rfc2459
 PkixTabExample.c     the program used to create pkix_asn1_tab.c
-pkix.asn             certificate and CRL structures 
-pkix_asn1_tab.c      C vector to use with 'asn1_create_tree' function. 
+pkix.asn             certificate and CRL structures
+pkix_asn1_tab.c      C vector to use with 'asn1_create_tree' function.
                      It was created from pkix.asn file.
 
 
@@ -56,12 +56,12 @@ The parser is case sensitive. The comments begin with "-- " and end at
 the end of line.  An example is in "Certificate.txt" file.
 
 The ASN.1 declarations must have this form:
-      
+
       object_name {<object definition>}
 
       DEFINITIONS <EXPLICIT or IMPLICIT> TAGS ::=
 
-      BEGIN 
+      BEGIN
 
       <type and constants definitions>
 
@@ -70,7 +70,7 @@ The ASN.1 declarations must have this form:
 The token "::=" must be separate from others elements, so this is a
 wrong declaration:
 
-      Version ::=INTEGER 
+      Version ::=INTEGER
 
 the correct one is :
 
@@ -89,7 +89,7 @@ Here is the list of types that the parser can manage:
      GeneralizedTime
      SEQUENCE
      SEQUENCE OF
-     SET 
+     SET
      SET OF
      CHOICE
      ANY
@@ -110,7 +110,7 @@ If you have this definitions:
 
       DEFINITIONS EXPLICIT TAGS ::=
 
-      BEGIN 
+      BEGIN
 
       Group ::= SEQUENCE {
 	 id   OBJECT IDENTIFIER,
@@ -119,7 +119,7 @@ If you have this definitions:
 
       Value ::= SEQUENCE {
 	    value1  INTEGER,
-	    value2  BOOLEAN 
+	    value2  BOOLEAN
       }
 
       END
@@ -128,7 +128,7 @@ to identify the type 'Group' you have to use the null terminated
 string "Example.Group".  Others examples:
 
 Field 'id' in 'Group' type:  "Example.Group.id"
-Field 'value1' in filed 'value' in type 'Group': "Example.Group.value.value1" 
+Field 'value1' in filed 'value' in type 'Group': "Example.Group.value.value1"
 
 These strings are used in functions that are described below.
 Elements of structured types that don't have a name, receve the name
@@ -146,20 +146,20 @@ FUNCTIONS
 Creates the structures needed to manage the definitions included in
 *FILE_NAME file.
 
-Input Parameter: 
+Input Parameter:
 
   char *file_name: specify the path and the name of file that
                    contains ASN.1 declarations.
 
 Output Parameter:
 
-  node_asn **pointer : return the pointer to the structure created from 
-                       "file_name" ASN.1 declarations.  
+  node_asn **pointer : return the pointer to the structure created from
+                       "file_name" ASN.1 declarations.
 
 Return Value:
 
   ASN_OK:                   the file has a correct syntax and
-                            every identifier is known. 
+                            every identifier is known.
   ASN_FILE_NOT_FOUND:       an error occured while opening FILE_NAME.
   ASN_SYNTAX_ERROR:         the syntax is not correct.
   ASN_IDENTIFIER_NOT_FOUND: in the file there is an identifier that
@@ -172,12 +172,12 @@ Creates a file containing a C vector to use to manage the definitions
 included in *FILE_NAME file. If *FILE_NAME is "/aa/bb/xx.yy" the file
 created is "/aa/bb/xx_asn1_tab.c", and the vector is "xx_asn1_tab".
 
-Input Parameter: 
+Input Parameter:
   char *file_name: specify the path and the name of file that contains
   ASN.1 declarations.
 
 Return Value:
-  ASN_OK: the file has a correct syntax and every identifier is known. 
+  ASN_OK: the file has a correct syntax and every identifier is known.
   ASN_FILE_NOT_FOUND: an error occured while opening FILE_NAME.
   ASN_SYNTAX_ERROR: the syntax is not correct.
   ASN_IDENTIFIER_NOT_FOUND: in the file there is an identifier that is
@@ -185,12 +185,12 @@ Return Value:
 
 
   int asn1_create_tree(static_asn *root,node_asn **pointer);
-  --------------------------------------------------------- 
+  ---------------------------------------------------------
 Creates the structures needed to manage the ASN1 definitions. ROOT is
 a vector created by 'asn1_parser_asn1_file_c' function.
 
-Input Parameter: 
-  
+Input Parameter:
+
   static_asn *root: specify vector that contains ASN.1 declarations.
 
 Output Parameter:
@@ -199,7 +199,7 @@ Output Parameter:
   *ROOT ASN.1 declarations.
 
 Return Value:
-  ASN_OK: structure created correctly. 
+  ASN_OK: structure created correctly.
   ASN_GENERIC_ERROR: an error occured while structure creation.
 
 
@@ -219,7 +219,7 @@ Input Parameters:
 
 Output Parameter:
 
-  node_asn **pointer : pointer to the structure created. 
+  node_asn **pointer : pointer to the structure created.
 
 Return Value:
 
@@ -244,7 +244,7 @@ Input Parameters:
   char *name: the name of the element inside the structure that you
               want to set.
 
-  unsigned char *value: vector used to specify the value to set. If len is >0, 
+  unsigned char *value: vector used to specify the value to set. If len is >0,
                         *VALUE must be a two's complement form integer.
                         if len=0 *VALUE must be a null terminated
                         string with an integer value.
@@ -275,20 +275,20 @@ Examples:  description for each type
            value="FALSE" , len=1 -> boolean=FALSE
 
   OBJECT IDENTIFIER: VALUE must be a null terminated string with each number separated by
-                     a blank (e.g. "1 2 3 543 1"). 
+                     a blank (e.g. "1 2 3 543 1").
                      LEN != 0
            value="1 2 840 10040 4 3" , len=1 -> OID=dsa-with-sha
   UTCTime: VALUE must be a null terminated string in one of these formats:
            "YYMMDDhhmmssZ" "YYMMDDhhmmssZ" "YYMMDDhhmmss+hh'mm'" "YYMMDDhhmmss-hh'mm'"
-           "YYMMDDhhmm+hh'mm'" "YYMMDDhhmm-hh'mm'".  
+           "YYMMDDhhmm+hh'mm'" "YYMMDDhhmm-hh'mm'".
            LEN != 0
            value="9801011200Z" , len=1 -> time=Jannuary 1st, 1998 at 12h 00m  Greenwich Mean Time
   GeneralizedTime: VALUE must be in one of this format:
-                   "YYYYMMDDhhmmss.sZ" "YYYYMMDDhhmmss.sZ" "YYYYMMDDhhmmss.s+hh'mm'" 
-                   "YYYYMMDDhhmmss.s-hh'mm'" "YYYYMMDDhhmm+hh'mm'" "YYYYMMDDhhmm-hh'mm'" 
+                   "YYYYMMDDhhmmss.sZ" "YYYYMMDDhhmmss.sZ" "YYYYMMDDhhmmss.s+hh'mm'"
+                   "YYYYMMDDhhmmss.s-hh'mm'" "YYYYMMDDhhmm+hh'mm'" "YYYYMMDDhhmm-hh'mm'"
                    where ss.s indicates the seconds with any precision like "10.1" or "01.02".
                    LEN != 0
-           value="2001010112001.12-0700" , len=1 -> time=Jannuary 1st, 2001 at 12h 00m 01.12s 
+           value="2001010112001.12-0700" , len=1 -> time=Jannuary 1st, 2001 at 12h 00m 01.12s
                                                     Pacific Daylight Time
   OCTET STRING: VALUE contains the octet string and LEN is the number of octet.
            value="\x01\x02\x03" , len=3  -> three bytes octet string
@@ -301,14 +301,14 @@ Examples:  description for each type
           Using "pkix.asn":
           result=asn1_write_value(cert,"certificate1.tbsCertificate.subject","rdnSequence",1);
   ANY: VALUE indicates the der encoding of a structure.
-       LEN != 0 
+       LEN != 0
 
-  SEQUENCE OF: VALUE must be the null terminated string "NEW" and LEN != 0. With this 
+  SEQUENCE OF: VALUE must be the null terminated string "NEW" and LEN != 0. With this
                instruction another element is appended in the sequence. The name of this
                element will be "?1" if it's the first one, "?2" for the second and so on.
-          Using "pkix.asn":   
+          Using "pkix.asn":
           result=asn1_write_value(cert,"certificate1.tbsCertificate.subject.rdnSequence","NEW",1);
-  SET OF: the same as SEQUENCE OF. 
+  SET OF: the same as SEQUENCE OF.
           Using "pkix.asn":
           result=asn1_write_value(cert,"certificate1.tbsCertificate.subject.rdnSequence.?LAST","NEW",1);
 
@@ -324,7 +324,7 @@ Input Parameters:
   node_asn *pointer: pointer to a structure
   char *name: the name of the element inside a structure that you want to read.
 Output Parameters:
-  unsigned char *value: vector that will contain the element's content. 
+  unsigned char *value: vector that will contain the element's content.
                         VALUE must be a pointer to memory cells already allocated.
   int *len: number of bytes of *value: value[0]..value[len-1]
 Return Value:
@@ -342,10 +342,10 @@ Examples: a description for each type
   BOOLEAN: VALUE will be the null terminated string "TRUE" or "FALSE" and LEN=5 or LEN=6
 
   OBJECT IDENTIFIER: VALUE will be a null terminated string with each number separated by
-                     a blank (i.e. "1 2 3 543 1"). 
+                     a blank (i.e. "1 2 3 543 1").
                      LEN = strlen(VALUE)+1
 
-  UTCTime: VALUE will be a null terminated string in one of these formats: 
+  UTCTime: VALUE will be a null terminated string in one of these formats:
            "YYMMDDhhmmss+hh'mm'" or "YYMMDDhhmmss-hh'mm'"
            LEN=strlen(VALUE)+1
 
@@ -354,15 +354,15 @@ Examples: a description for each type
 
   OCTET STRING: VALUE will contain the octet string and LEN will be the number of octet.
 
-  BIT STRING: VALUE will contain the bit string organized by bytes and LEN will be the 
+  BIT STRING: VALUE will contain the bit string organized by bytes and LEN will be the
               number of bits.
 
   CHOICE: if NAME indicates a choice type, VALUE will specify the alternative selected
 
-  ANY: if NAME indicates an any type, VALUE will indicate the DER encoding of the structure 
+  ANY: if NAME indicates an any type, VALUE will indicate the DER encoding of the structure
        actually used.
 
-If an element is OPTIONAL and the function "read_value" returns ASN_ELEMENT_NOT_FOUND, it 
+If an element is OPTIONAL and the function "read_value" returns ASN_ELEMENT_NOT_FOUND, it
 means that this element wasn't present in the der encoding that created the structure.
 The first element of a SEQUENCE_OF or SET_OF is named "?1". The second one "?2" and so on.
 
@@ -374,7 +374,7 @@ Input Parameters:
   node_asn *pointer: pointer to a structure
   char *name: the name of the structure you want to encode (it must be inside *POINTER).
 Output Parameters:
-  unsigned char *der: vector that will contain the DER encoding. 
+  unsigned char *der: vector that will contain the DER encoding.
                       DER must be a pointer to memory cells already allocated.
   int *len: number of bytes of *der: der[0]..der[len-1]
 Return Value:
@@ -391,7 +391,7 @@ sructure must just be created with function 'create_stucture'.
 
 Input Parameters:
   node_asn *pointer:  Pointer to the structure that you want to fill.
-  unsigned char *der: Vector that contains the DER encoding. 
+  unsigned char *der: Vector that contains the DER encoding.
   int len:            Number of bytes of *der: der[0]..der[len-1]
 
 Return Value:
@@ -417,14 +417,14 @@ Input Parameters:
 
   node_asn *pointer:  The pointer to the structure that is already
                       setted with DER string.
-  unsigned char *der: Vector that contains the DER encoding. 
+  unsigned char *der: Vector that contains the DER encoding.
   int len:            Number of bytes of *der: der[0]..der[len-1]
   char *name_element: An element of NAME structure.
 
 Output Parameters:
 
   int *start: The position of the first byte of NAME_ELEMENT
-              decoding (der[*start]) 
+              decoding (der[*start])
   int *end:   The position of the last byte of NAME_ELEMENT
               decoding (der[*end])
 
@@ -434,11 +434,11 @@ Return Value:
   ASN_ELEMENT_NOT_FOUND:        NAME or NAME_ELEMENT is not a valid element.
   ASN_TAG_ERROR, ASN_DER_ERROR: the der encoding doesn't match the
                                 structure NAME.
-  
+
 
    int asn1_delete_structure(node_asn *pointer);
    ---------------------------------
-Deletes the structure *POINTER. 
+Deletes the structure *POINTER.
 Input Parameters:
   node_asn *pointer: pointer to the structure that you want to delete.
 Return Value:
@@ -456,17 +456,11 @@ NAME element inside the structure *POINTER.
 
 FUTURE DEVELOPMENTS
 -------------------
-1. type REAL 
-2. improve the error signaling with strings that give you more details. 
+1. type REAL
+2. improve the error signaling with strings that give you more details.
    Examples: in case of ASN1 syntax error you will have the line
    number where the error is,  if creating a der encoding the result
    is ASN_VALUE_NOT_FOUND you will have the name of the element
    without the value.
 3. improve the 'visit_tree' function and change the output from stdout
-   to a null terminated string.  
-
-
-
-
-
-
+   to a null terminated string.

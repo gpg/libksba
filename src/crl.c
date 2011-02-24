@@ -47,7 +47,7 @@ do_hash (ksba_crl_t crl, const void *buffer, size_t length)
   while (length)
     {
       size_t n = length;
-      
+
       if (crl->hashbuf.used + n > sizeof crl->hashbuf.buffer)
         n = sizeof crl->hashbuf.buffer - crl->hashbuf.used;
       memcpy (crl->hashbuf.buffer+crl->hashbuf.used, buffer, n);
@@ -165,9 +165,9 @@ parse_object_id_into_str (unsigned char const **buf, size_t *len, char **oid)
 
 /**
  * ksba_crl_new:
- * 
+ *
  * Create a new and empty CRL object
- * 
+ *
  * Return value: A CRL object or an error code.
  **/
 gpg_error_t
@@ -183,7 +183,7 @@ ksba_crl_new (ksba_crl_t *r_crl)
 /**
  * ksba_crl_release:
  * @crl: A CRL object
- * 
+ *
  * Release a CRL object.
  **/
 void
@@ -193,7 +193,7 @@ ksba_crl_release (ksba_crl_t crl)
     return;
   xfree (crl->algo.oid);
   xfree (crl->algo.parm);
-  
+
   _ksba_asn_release_nodes (crl->issuer.root);
   xfree (crl->issuer.image);
 
@@ -217,7 +217,7 @@ ksba_crl_set_reader (ksba_crl_t crl, ksba_reader_t r)
 {
   if (!crl || !r)
     return gpg_error (GPG_ERR_INV_VALUE);
-  
+
   crl->reader = r;
   return 0;
 }
@@ -237,7 +237,7 @@ ksba_crl_set_hash_function (ksba_crl_t crl,
 
 
 
-/* 
+/*
    access functions
 */
 
@@ -245,9 +245,9 @@ ksba_crl_set_hash_function (ksba_crl_t crl,
 /**
  * ksba_crl_get_digest_algo:
  * @cms: CMS object
- * 
+ *
  * Figure out the the digest algorithm used for the signature and return
- * its OID.  
+ * its OID.
  *
  * Return value: NULL if the signature algorithm is not yet available
  * or there is a mismatched between "tbsCertList.signature" and
@@ -270,10 +270,10 @@ ksba_crl_get_digest_algo (ksba_crl_t crl)
  * ksba_crl_get_issuer:
  * @cms: CMS object
  * @r_issuer: returns the issuer
- * 
+ *
  * This functions returns the issuer of the CRL.  The caller must
  * release the returned object.
- * 
+ *
  * Return value: 0 on success or an error code
  **/
 gpg_error_t
@@ -290,11 +290,11 @@ ksba_crl_get_issuer (ksba_crl_t crl, char **r_issuer)
 
   n = crl->issuer.root;
   image = crl->issuer.image;
-  
+
   if (!n || !n->down)
-    return gpg_error (GPG_ERR_NO_VALUE); 
+    return gpg_error (GPG_ERR_NO_VALUE);
   n = n->down; /* dereference the choice node */
-      
+
   if (n->off == -1)
     {
 /*        fputs ("get_issuer problem at node:\n", stderr); */
@@ -312,7 +312,7 @@ ksba_crl_get_issuer (ksba_crl_t crl, char **r_issuer)
    returned. Note, that the returned values are valid as long as the
    context is valid and no new parsing has been started. */
 gpg_error_t
-ksba_crl_get_extension (ksba_crl_t crl, int idx, 
+ksba_crl_get_extension (ksba_crl_t crl, int idx,
                         char const **oid, int *critical,
                         unsigned char const **der, size_t *derlen)
 {
@@ -346,9 +346,9 @@ ksba_crl_get_extension (ksba_crl_t crl, int idx,
    or only one using the keyIdentifier method is available and R_KEYID
    is NULL.
 
-   FIXME: This function shares a lot of code with the one in cert.c 
+   FIXME: This function shares a lot of code with the one in cert.c
 */
-gpg_error_t 
+gpg_error_t
 ksba_crl_get_auth_key_id (ksba_crl_t crl,
                           ksba_sexp_t *r_keyid,
                           ksba_name_t *r_name,
@@ -376,16 +376,16 @@ ksba_crl_get_auth_key_id (ksba_crl_t crl,
       break;
   if (!e)
     return gpg_error (GPG_ERR_NO_DATA); /* not available */
-    
+
   /* Check that there is only one */
   {
     crl_extn_t e2;
 
     for (e2 = e->next; e2; e2 = e2->next)
       if (!strcmp (e2->oid, oidstr_authorityKeyIdentifier))
-        return gpg_error (GPG_ERR_DUP_VALUE); 
+        return gpg_error (GPG_ERR_DUP_VALUE);
   }
-  
+
   der = e->der;
   derlen = e->derlen;
 
@@ -403,7 +403,7 @@ ksba_crl_get_auth_key_id (ksba_crl_t crl,
   err = _ksba_ber_parse_tl (&der, &derlen, &ti);
   if (err)
     return err;
-  if (ti.class != CLASS_CONTEXT) 
+  if (ti.class != CLASS_CONTEXT)
     return gpg_error (GPG_ERR_INV_CRL_OBJ); /* We expected a tag. */
   if (ti.ndef)
     return gpg_error (GPG_ERR_NOT_DER_ENCODED);
@@ -423,11 +423,11 @@ ksba_crl_get_auth_key_id (ksba_crl_t crl,
         goto build_keyid;
       if (!derlen)
         return gpg_error (GPG_ERR_NO_DATA); /* not available */
-        
+
       err = _ksba_ber_parse_tl (&der, &derlen, &ti);
       if (err)
         return err;
-      if (ti.class != CLASS_CONTEXT) 
+      if (ti.class != CLASS_CONTEXT)
         return gpg_error (GPG_ERR_INV_CRL_OBJ); /* we expected a tag */
       if (ti.ndef)
         return gpg_error (GPG_ERR_NOT_DER_ENCODED);
@@ -449,7 +449,7 @@ ksba_crl_get_auth_key_id (ksba_crl_t crl,
   err = _ksba_ber_parse_tl (&der, &derlen, &ti);
   if (err)
     return err;
-  if (ti.class != CLASS_CONTEXT) 
+  if (ti.class != CLASS_CONTEXT)
     return gpg_error (GPG_ERR_INV_CRL_OBJ); /* we expected a tag */
   if (ti.ndef)
     return gpg_error (GPG_ERR_NOT_DER_ENCODED);
@@ -458,7 +458,7 @@ ksba_crl_get_auth_key_id (ksba_crl_t crl,
 
   if (ti.tag != 2 || !derlen)
     return gpg_error (GPG_ERR_INV_CRL_OBJ);
- 
+
   sprintf (numbuf,"(%u:", (unsigned int)ti.length);
   numbuflen = strlen (numbuf);
   *r_serial = xtrymalloc (numbuflen + ti.length + 2);
@@ -489,7 +489,7 @@ ksba_crl_get_auth_key_id (ksba_crl_t crl,
 /* Return the optional crlNumber in NUMBER or GPG_ERR_NO_DATA if it is
    not available.  Caller must release NUMBER if the fuction retruned
    with success. */
-gpg_error_t 
+gpg_error_t
 ksba_crl_get_crl_number (ksba_crl_t crl, ksba_sexp_t *number)
 {
   gpg_error_t err;
@@ -509,23 +509,23 @@ ksba_crl_get_crl_number (ksba_crl_t crl, ksba_sexp_t *number)
       break;
   if (!e)
     return gpg_error (GPG_ERR_NO_DATA); /* not available */
-    
+
   /* Check that there is only one. */
   {
     crl_extn_t e2;
 
     for (e2 = e->next; e2; e2 = e2->next)
       if (!strcmp (e2->oid, oidstr_crlNumber))
-        return gpg_error (GPG_ERR_DUP_VALUE); 
+        return gpg_error (GPG_ERR_DUP_VALUE);
   }
-  
+
   der = e->der;
   derlen = e->derlen;
 
   err = parse_integer (&der, &derlen, &ti);
   if (err)
     return err;
- 
+
   sprintf (numbuf,"(%u:", (unsigned int)ti.length);
   numbuflen = strlen (numbuf);
   *number = xtrymalloc (numbuflen + ti.length + 2);
@@ -547,7 +547,7 @@ ksba_crl_get_crl_number (ksba_crl_t crl, ksba_sexp_t *number)
  * @crl: CRL object
  * @this: Returns the thisUpdate value
  * @next: Returns the nextUpdate value.
- * 
+ *
  * THIS and NEXT may be given as NULL if the value is not required.
  * Return value: 0 on success or an error code
  **/
@@ -577,21 +577,21 @@ ksba_crl_get_update_times (ksba_crl_t crl,
  * @r_serial: Returns a S-exp with the serial number; caller must free.
  * @r_revocation_date: Returns the recocation date
  * @r_reason: Return the reason for revocation
- * 
+ *
  * Return the serial number, revocation time and reason of the current
  * item.  Any of these arguments may be passed as %NULL if the value
  * is not of interest.  This function should be used after the parse
  * function came back with %KSBA_SR_GOT_ITEM.  For efficiency reasons
  * the function should be called only once, the implementation may
  * return an error for the second call.
- * 
+ *
  * Return value: 0 in success or an error code.
  **/
 gpg_error_t
 ksba_crl_get_item (ksba_crl_t crl, ksba_sexp_t *r_serial,
                    ksba_isotime_t r_revocation_date,
                    ksba_crl_reason_t *r_reason)
-{ 
+{
   if (r_revocation_date)
     *r_revocation_date = 0;
 
@@ -617,11 +617,11 @@ ksba_crl_get_item (ksba_crl_t crl, ksba_sexp_t *r_serial,
 /**
  * ksba_crl_get_sig_val:
  * @crl: CRL object
- * 
+ *
  * Return the actual signature in a format suitable to be used as
  * input to Libgcrypt's verification function.  The caller must free
  * the returned string.
- * 
+ *
  * Return value: NULL or a string with an S-Exp.
  **/
 ksba_sexp_t
@@ -634,7 +634,7 @@ ksba_crl_get_sig_val (ksba_crl_t crl)
 
   if (!crl->sigval)
     return NULL;
-  
+
   p = crl->sigval;
   crl->sigval = NULL;
   return p;
@@ -643,7 +643,7 @@ ksba_crl_get_sig_val (ksba_crl_t crl)
 
 
 /*
-  Parser functions 
+  Parser functions
 */
 
 /* read one byte */
@@ -661,7 +661,7 @@ read_byte (ksba_reader_t reader)
 }
 
 /* read COUNT bytes into buffer.  Return 0 on success */
-static int 
+static int
 read_buffer (ksba_reader_t reader, char *buffer, size_t count)
 {
   size_t nread;
@@ -713,10 +713,10 @@ create_and_run_decoder (ksba_reader_t reader, const char *elem_name,
       _ksba_ber_decoder_release (decoder);
       return err;
     }
-  
+
   err = _ksba_ber_decoder_decode (decoder, elem_name, 0,
                                   r_root, r_image, r_imagelen);
-  
+
   _ksba_ber_decoder_release (decoder);
   ksba_asn_tree_release (crl_tree);
   return err;
@@ -732,12 +732,12 @@ parse_one_extension (const unsigned char *der, size_t derlen,
   gpg_error_t err;
   struct tag_info ti;
   const unsigned char *start = der;
-  
+
   *oid = NULL;
   *critical = 0;
   *off = *len = 0;
 
-  /* 
+  /*
      Extension  ::=  SEQUENCE {
          extnID      OBJECT IDENTIFIER,
          critical    BOOLEAN DEFAULT FALSE,
@@ -758,7 +758,7 @@ parse_one_extension (const unsigned char *der, size_t derlen,
     return gpg_error (GPG_ERR_BAD_BER);
   if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_BOOLEAN
            && !ti.is_constructed)
-    { 
+    {
       if (ti.length != 1)
         goto bad_ber;
       *critical = !!*der;
@@ -840,10 +840,10 @@ parse_to_next_update (ksba_crl_t crl)
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
     return gpg_error (GPG_ERR_INV_CRL_OBJ);
-  outer_len = ti.length; 
+  outer_len = ti.length;
   outer_ndef = ti.ndef;
   if (!outer_ndef && outer_len < 10)
-    return gpg_error (GPG_ERR_TOO_SHORT); 
+    return gpg_error (GPG_ERR_TOO_SHORT);
 
   /* read the tbs sequence */
   err = _ksba_ber_read_tl (crl->reader, &ti);
@@ -864,10 +864,10 @@ parse_to_next_update (ksba_crl_t crl)
                                                outer sequence */
       outer_len -= ti.length;
     }
-  tbs_len = ti.length; 
+  tbs_len = ti.length;
   tbs_ndef = ti.ndef;
   if (!tbs_ndef && tbs_len < 10)
-    return gpg_error (GPG_ERR_TOO_SHORT); 
+    return gpg_error (GPG_ERR_TOO_SHORT);
 
   /* read the optional version integer */
   crl->crl_version = -1;
@@ -877,7 +877,7 @@ parse_to_next_update (ksba_crl_t crl)
   if ( ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_INTEGER)
     {
       if ( ti.is_constructed || !ti.length )
-        return gpg_error (GPG_ERR_INV_CRL_OBJ); 
+        return gpg_error (GPG_ERR_INV_CRL_OBJ);
       HASH (ti.buf, ti.nhdr);
       if (!tbs_ndef)
         {
@@ -885,14 +885,14 @@ parse_to_next_update (ksba_crl_t crl)
             return gpg_error (GPG_ERR_BAD_BER);
           tbs_len -= ti.nhdr;
           if (tbs_len < ti.length)
-            return gpg_error (GPG_ERR_BAD_BER); 
+            return gpg_error (GPG_ERR_BAD_BER);
           tbs_len -= ti.length;
         }
       /* fixme: we should also check the outer data length here and in
          the follwing code.  It might however be easier to to thsi at
          the end of this sequence */
       if (ti.length != 1)
-        return gpg_error (GPG_ERR_UNSUPPORTED_CRL_VERSION); 
+        return gpg_error (GPG_ERR_UNSUPPORTED_CRL_VERSION);
       if ( (c=read_byte (crl->reader)) == -1)
         {
           err = ksba_reader_error (crl->reader);
@@ -900,7 +900,7 @@ parse_to_next_update (ksba_crl_t crl)
         }
       if ( !(c == 0 || c == 1) )
         return gpg_error (GPG_ERR_UNSUPPORTED_CRL_VERSION);
-      { 
+      {
         unsigned char tmp = c;
         HASH (&tmp, 1);
       }
@@ -943,11 +943,11 @@ parse_to_next_update (ksba_crl_t crl)
   if (nread < ti.nhdr + ti.length)
     return gpg_error (GPG_ERR_TOO_SHORT);
 
-  
+
   /* read the name */
   {
     unsigned long n = ksba_reader_tell (crl->reader);
-    err = create_and_run_decoder (crl->reader, 
+    err = create_and_run_decoder (crl->reader,
                                   "TMTTv2.CertificateList.tbsCertList.issuer",
                                   &crl->issuer.root,
                                   &crl->issuer.image,
@@ -970,7 +970,7 @@ parse_to_next_update (ksba_crl_t crl)
   }
 
 
-  
+
   /* read the thisUpdate time */
   err = _ksba_ber_read_tl (crl->reader, &ti);
   if (err)
@@ -1043,7 +1043,7 @@ parse_to_next_update (ksba_crl_t crl)
               tbs_len -= ti.nhdr;
               if (!ti.ndef && tbs_len < ti.length)
                 return gpg_error (GPG_ERR_BAD_BER);
-              tbs_len -= ti.length; 
+              tbs_len -= ti.length;
             }
           crl->state.have_seqseq = 1;
           crl->state.seqseq_ndef = ti.ndef;
@@ -1115,9 +1115,9 @@ store_one_entry_extension (ksba_crl_t crl,
       if (err)
         return err;
       /* Note that we OR the values so that in case this extension is
-         repeated we can track all reason codes. */ 
+         repeated we can track all reason codes. */
       switch (*buf)
-        { 
+        {
         case  0: crl->item.reason |= KSBA_CRLREASON_UNSPECIFIED; break;
         case  1: crl->item.reason |= KSBA_CRLREASON_KEY_COMPROMISE; break;
         case  2: crl->item.reason |= KSBA_CRLREASON_CA_COMPROMISE; break;
@@ -1138,7 +1138,7 @@ store_one_entry_extension (ksba_crl_t crl,
     }
   else if (critical)
     err = gpg_error (GPG_ERR_UNKNOWN_CRIT_EXTN);
-  
+
   return err;
 }
 
@@ -1242,7 +1242,7 @@ parse_crl_entry (ksba_crl_t crl, int *got_entry)
   if (err)
     return err;
   HASH (tmpbuf, ti.nhdr+ti.length);
-  
+
   _ksba_asntime_to_iso (tmpbuf+ti.nhdr, ti.length,
                         ti.tag == TYPE_UTC_TIME, crl->item.revocation_date);
 
@@ -1315,9 +1315,9 @@ parse_crl_entry (ksba_crl_t crl, int *got_entry)
 
 /* This function is used when a [0] tag was encountered to read the
    crlExtensions */
-static gpg_error_t 
+static gpg_error_t
 parse_crl_extensions (ksba_crl_t crl)
-{ 
+{
   gpg_error_t err;
   struct tag_info ti = crl->state.ti;
   unsigned long ext_len, len;
@@ -1412,7 +1412,7 @@ parse_signature (ksba_crl_t crl)
   err = read_buffer (crl->reader, tmpbuf+ti.nhdr, ti.length);
   if (err)
     return err;
-  
+
   /* and append the bit string */
   err = _ksba_ber_read_tl (crl->reader, &ti);
   if (err)
@@ -1436,10 +1436,10 @@ parse_signature (ksba_crl_t crl)
 
 /* The actual parser which should be used with a new CRL object and
    run in a loop until the the KSBA_SR_READY is encountered */
-gpg_error_t 
+gpg_error_t
 ksba_crl_parse (ksba_crl_t crl, ksba_stop_reason_t *r_stopreason)
 {
-  enum { 
+  enum {
     sSTART,
     sCRLENTRY,
     sCRLEXT,
@@ -1525,7 +1525,7 @@ ksba_crl_parse (ksba_crl_t crl, ksba_stop_reason_t *r_stopreason)
     default:
       break;
     }
-  
+
   *r_stopreason = stop_reason;
   return 0;
 }

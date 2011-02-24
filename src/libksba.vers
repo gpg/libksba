@@ -19,18 +19,18 @@
 
 KSBA_0.9 {
   global:
-    ksba_check_version; ksba_set_hash_buffer_function; 
+    ksba_check_version; ksba_set_hash_buffer_function;
 
-    ksba_set_malloc_hooks; 
-    ksba_free; ksba_malloc; ksba_calloc; ksba_realloc; ksba_strdup; 
+    ksba_set_malloc_hooks;
+    ksba_free; ksba_malloc; ksba_calloc; ksba_realloc; ksba_strdup;
 
     ksba_asn_create_tree; ksba_asn_delete_structure; ksba_asn_parse_file;
-    ksba_asn_tree_dump; ksba_asn_tree_release; 
+    ksba_asn_tree_dump; ksba_asn_tree_release;
 
     ksba_cert_get_auth_key_id; ksba_cert_get_cert_policies;
     ksba_cert_get_crl_dist_point; ksba_cert_get_digest_algo;
     ksba_cert_get_ext_key_usages; ksba_cert_get_extension;
-    ksba_cert_get_image; ksba_cert_get_issuer; ksba_cert_get_key_usage; 
+    ksba_cert_get_image; ksba_cert_get_issuer; ksba_cert_get_key_usage;
     ksba_cert_get_public_key; ksba_cert_get_serial; ksba_cert_get_sig_val;
     ksba_cert_get_subject; ksba_cert_get_validity; ksba_cert_hash;
     ksba_cert_init_from_mem; ksba_cert_is_ca; ksba_cert_new;
@@ -40,17 +40,17 @@ KSBA_0.9 {
     ksba_cert_set_user_data; ksba_cert_get_user_data;
 
     ksba_certreq_add_subject; ksba_certreq_build; ksba_certreq_new;
-    ksba_certreq_release; ksba_certreq_set_hash_function; 
+    ksba_certreq_release; ksba_certreq_set_hash_function;
     ksba_certreq_set_public_key; ksba_certreq_set_sig_val;
-    ksba_certreq_set_writer; 
+    ksba_certreq_set_writer;
     ksba_certreq_add_extension;
 
-    ksba_cms_add_cert; ksba_cms_add_digest_algo; ksba_cms_add_recipient; 
+    ksba_cms_add_cert; ksba_cms_add_digest_algo; ksba_cms_add_recipient;
     ksba_cms_add_signer; ksba_cms_build; ksba_cms_get_cert;
     ksba_cms_get_content_enc_iv; ksba_cms_get_content_oid;
     ksba_cms_get_content_type; ksba_cms_get_digest_algo;
     ksba_cms_get_digest_algo_list; ksba_cms_get_enc_val;
-    ksba_cms_get_issuer_serial; ksba_cms_get_message_digest; 
+    ksba_cms_get_issuer_serial; ksba_cms_get_message_digest;
     ksba_cms_get_sig_val; ksba_cms_get_sigattr_oids;
     ksba_cms_get_signing_time; ksba_cms_hash_signed_attrs;
     ksba_cms_identify; ksba_cms_new; ksba_cms_parse; ksba_cms_release;
@@ -65,7 +65,7 @@ KSBA_0.9 {
     ksba_crl_parse; ksba_crl_release; ksba_crl_set_hash_function;
     ksba_crl_set_reader;
     ksba_crl_get_extension; ksba_crl_get_auth_key_id;
-    ksba_crl_get_crl_number;      
+    ksba_crl_get_crl_number;
 
     ksba_name_enum; ksba_name_get_uri; ksba_name_new; ksba_name_ref;
     ksba_name_release;
@@ -86,7 +86,7 @@ KSBA_0.9 {
     ksba_reader_read; ksba_reader_release; ksba_reader_set_cb;
     ksba_reader_set_fd; ksba_reader_set_file; ksba_reader_set_mem;
     ksba_reader_tell; ksba_reader_unread; ksba_reader_set_release_notify;
- 
+
     ksba_writer_error; ksba_writer_get_mem; ksba_writer_new;
     ksba_writer_release; ksba_writer_set_cb; ksba_writer_set_fd;
     ksba_writer_set_file; ksba_writer_set_filter; ksba_writer_set_mem;

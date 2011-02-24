@@ -41,7 +41,7 @@
 static AsnNode resolve_identifier (AsnNode root, AsnNode node, int nestlevel);
 
 
-static AsnNode 
+static AsnNode
 add_node (node_type_t type)
 {
   AsnNode punt;
@@ -74,30 +74,30 @@ _ksba_asn_is_primitive (node_type_t type)
 {
   switch (type)
     {
-    case TYPE_BOOLEAN:                               
-    case TYPE_INTEGER:                               
-    case TYPE_BIT_STRING:                            
-    case TYPE_OCTET_STRING:                          
-    case TYPE_NULL:                                  
-    case TYPE_OBJECT_ID:                             
-    case TYPE_OBJECT_DESCRIPTOR:                     
-    case TYPE_REAL:                                  
-    case TYPE_ENUMERATED:                            
-    case TYPE_UTF8_STRING:                           
-    case TYPE_REALTIVE_OID:                          
-    case TYPE_NUMERIC_STRING:                        
-    case TYPE_PRINTABLE_STRING:                      
-    case TYPE_TELETEX_STRING:                        
-    case TYPE_VIDEOTEX_STRING:                       
-    case TYPE_IA5_STRING:                            
-    case TYPE_UTC_TIME:                              
-    case TYPE_GENERALIZED_TIME:                      
-    case TYPE_GRAPHIC_STRING:                        
-    case TYPE_VISIBLE_STRING:                        
-    case TYPE_GENERAL_STRING:                        
-    case TYPE_UNIVERSAL_STRING:                      
-    case TYPE_CHARACTER_STRING:                      
-    case TYPE_BMP_STRING:                            
+    case TYPE_BOOLEAN:
+    case TYPE_INTEGER:
+    case TYPE_BIT_STRING:
+    case TYPE_OCTET_STRING:
+    case TYPE_NULL:
+    case TYPE_OBJECT_ID:
+    case TYPE_OBJECT_DESCRIPTOR:
+    case TYPE_REAL:
+    case TYPE_ENUMERATED:
+    case TYPE_UTF8_STRING:
+    case TYPE_REALTIVE_OID:
+    case TYPE_NUMERIC_STRING:
+    case TYPE_PRINTABLE_STRING:
+    case TYPE_TELETEX_STRING:
+    case TYPE_VIDEOTEX_STRING:
+    case TYPE_IA5_STRING:
+    case TYPE_UTC_TIME:
+    case TYPE_GENERALIZED_TIME:
+    case TYPE_GRAPHIC_STRING:
+    case TYPE_VISIBLE_STRING:
+    case TYPE_GENERAL_STRING:
+    case TYPE_UNIVERSAL_STRING:
+    case TYPE_CHARACTER_STRING:
+    case TYPE_BMP_STRING:
     case TYPE_PRE_SEQUENCE:
       return 1;
     default:
@@ -204,7 +204,7 @@ copy_value (AsnNode d, const AsnNode s)
   d->len = s->len;
 }
 
-static AsnNode 
+static AsnNode
 copy_node (const AsnNode s)
 {
   AsnNode d = add_node (s->type);
@@ -219,9 +219,9 @@ copy_node (const AsnNode s)
 
 
 
-/* Change the name field of the node to NAME.  
+/* Change the name field of the node to NAME.
    NAME may be NULL */
-void 
+void
 _ksba_asn_set_name (AsnNode node, const char *name)
 {
   return_if_fail (node);
@@ -237,7 +237,7 @@ _ksba_asn_set_name (AsnNode node, const char *name)
 }
 
 
-static AsnNode 
+static AsnNode
 set_right (AsnNode  node, AsnNode  right)
 {
   if (node == NULL)
@@ -250,7 +250,7 @@ set_right (AsnNode  node, AsnNode  right)
 }
 
 
-static AsnNode 
+static AsnNode
 set_down (AsnNode node, AsnNode down)
 {
   if (node == NULL)
@@ -280,7 +280,7 @@ _ksba_asn_remove_node (AsnNode  node)
 
 /* find the node with the given name.  A name part of "?LAST" matches
    the last element of a set of */
-static AsnNode 
+static AsnNode
 find_node (AsnNode root, const char *name, int resolve)
 {
   AsnNode p;
@@ -297,7 +297,7 @@ find_node (AsnNode root, const char *name, int resolve)
     buf[i++] = *s;
   buf[i] = 0;
   return_null_if_fail (i < DIM(buf)-1);
-          
+
   for (p = root; p && (!p->name || strcmp (p->name, buf)); p = p->right)
     ;
 
@@ -338,29 +338,29 @@ find_node (AsnNode root, const char *name, int resolve)
               if (resolve && p->name && p->type == TYPE_IDENTIFIER)
                 {
                   AsnNode p2;
-                  
+
                   p2 = resolve_identifier (root, p, 0);
                   if (p2 && p2->name && !strcmp (p2->name, buf))
                     break;
                 }
             }
-          
+
           if (resolve && p && p->type == TYPE_IDENTIFIER)
             p = resolve_identifier (root, p, 0);
 	}
     }
-  
+
   return p;
 }
 
-AsnNode 
+AsnNode
 _ksba_asn_find_node (AsnNode root, const char *name)
 {
   return find_node (root, name, 0);
 }
 
 
-static AsnNode 
+static AsnNode
 _asn1_find_left (AsnNode  node)
 {
   if ((node == NULL) || (node->left == NULL) || (node->left->down == node))
@@ -370,7 +370,7 @@ _asn1_find_left (AsnNode  node)
 }
 
 
-static AsnNode 
+static AsnNode
 find_up (AsnNode  node)
 {
   AsnNode p;
@@ -452,7 +452,7 @@ _ksba_asn_node_dump (AsnNode p, FILE *fp)
     case TYPE_UTF8_STRING:       typestr = "UTF8_STRING"; break;
     case TYPE_NUMERIC_STRING:    typestr = "NUMERIC_STRING"; break;
     case TYPE_PRINTABLE_STRING:  typestr = "PRINTABLE_STRING"; break;
-    case TYPE_TELETEX_STRING:    typestr = "TELETEX_STRING"; break; 
+    case TYPE_TELETEX_STRING:    typestr = "TELETEX_STRING"; break;
     case TYPE_IA5_STRING:        typestr = "IA5_STRING"; break;
     default:	            typestr = "ERROR\n"; break;
     }
@@ -463,13 +463,13 @@ _ksba_asn_node_dump (AsnNode p, FILE *fp)
   print_value (p, fp);
   fputs ("  ", fp);
   switch (p->flags.class)
-    { 
+    {
     case CLASS_UNIVERSAL:   fputs ("U", fp); break;
     case CLASS_PRIVATE:     fputs ("P", fp); break;
     case CLASS_APPLICATION: fputs ("A", fp); break;
     case CLASS_CONTEXT:     fputs ("C", fp); break;
     }
-  
+
   if (p->flags.explicit)
     fputs (",explicit", fp);
   if (p->flags.implicit)
@@ -514,7 +514,7 @@ _ksba_asn_node_dump (AsnNode p, FILE *fp)
     fputs (",is_any",fp);
   if (p->off != -1 )
     fprintf (fp, " %d.%d.%d", p->off, p->nhdr, p->len );
-  
+
 }
 
 void
@@ -570,7 +570,7 @@ _ksba_asn_node_dump_all (AsnNode root, FILE *fp)
  *
  * If the first character of the name is a '<' the expanded version of
  * the tree will be printed.
- * 
+ *
  * This function is a debugging aid.
  **/
 void
@@ -707,7 +707,7 @@ _ksba_asn_check_identifier (AsnNode node)
 	{
           if (strlen (node->name)+strlen(p->value.v_cstr)+2 > DIM(name2))
             return gpg_error (GPG_ERR_BUG); /* well identifier too long */
-          strcpy (name2, node->name); 
+          strcpy (name2, node->name);
           strcat (name2, ".");
 	  strcat (name2, p->value.v_cstr);
 	  p2 = _ksba_asn_find_node (node, name2);
@@ -724,7 +724,7 @@ _ksba_asn_check_identifier (AsnNode node)
 	{ /* an object ID in an assignment */
 	  p2 = p->down;
 	  if (p2 && (p2->type == TYPE_CONSTANT))
-            {  
+            {
 	      if (p2->valuetype == VALTYPE_CSTR && !isdigit (p2->value.v_cstr[0]))
 		{ /* the first constand below is a reference */
                   if (strlen (node->name)
@@ -740,7 +740,7 @@ _ksba_asn_check_identifier (AsnNode node)
                                name2);
                       return gpg_error (GPG_ERR_IDENTIFIER_NOT_FOUND);
                     }
-                  else if ( p2->type != TYPE_OBJECT_ID 
+                  else if ( p2->type != TYPE_OBJECT_ID
                             || !p2->flags.assignment )
 		    {
 		      fprintf (stderr,"`%s' is not an object id\n", name2);
@@ -1010,7 +1010,7 @@ copy_tree (AsnNode src_root, AsnNode s)
       if (link_nextp)
 	*link_nextp = d;
       link_nextp = &d->link_next;
-      
+
       if (!first)
         first = d;
       else
@@ -1030,7 +1030,7 @@ copy_tree (AsnNode src_root, AsnNode s)
 	      while (*link_nextp)
 		link_nextp = &(*link_nextp)->link_next;
 	    }
-	      
+
           if (d->down && tmp)
             { /* Need to merge it with the existing down */
               AsnNode x;
@@ -1040,7 +1040,7 @@ copy_tree (AsnNode src_root, AsnNode s)
               x->right = tmp;
               tmp->left = x;
             }
-          else 
+          else
             {
               d->down = tmp;
               if (d->down)
@@ -1102,7 +1102,7 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
       if (s->type == TYPE_SIZE)
         continue; /* this node gets in the way all the time.  It
                      should be an attribute to a node */
-      
+
       down = s->down;
       if (s->type == TYPE_IDENTIFIER)
         {
@@ -1197,7 +1197,7 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
               x->right = tmp;
               tmp->left = x;
             }
-          else 
+          else
             {
               d->down = tmp;
               if (d->down)
@@ -1209,7 +1209,7 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
   return first;
 }
 
-  
+
 /* Expand the syntax tree so that all references are resolved and we
    are able to store values right in the tree (except for set/sequence
    of).  This expanded tree is also an requirement for doing the DER
@@ -1253,7 +1253,7 @@ _ksba_asn_insert_copy (AsnNode node)
 
 /* Locate a type value sequence like
 
-  SEQUENCE { 
+  SEQUENCE {
      type    OBJECT IDENTIFIER
      value   ANY
   }
@@ -1283,7 +1283,7 @@ _ksba_asn_find_type_value (const unsigned char *image, AsnNode root, int idx,
               if ( !idx-- )
                 return noid->right;
             }
-          
+
         }
     }
   return NULL;

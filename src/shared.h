@@ -1,4 +1,4 @@
-/* shared.h - values shared with other software 
+/* shared.h - values shared with other software
  *      Copyright (C) 2001 g10 Code GmbH
  *
  * This file is part of KSBA.
@@ -20,7 +20,7 @@
 #ifndef SHARED_H
 #define SHARED_H
 
-#ifdef GCRYPT_VERSION 
+#ifdef GCRYPT_VERSION
 /* It is pretty useless to use this file if we would link this library
    to Libgcrypt anyway */
 #error please make shure that gcrypt.h is not included
@@ -41,7 +41,3 @@ enum gcry_md_algos {
 
 
 #endif /*SHARED_H*/
-
-
-
-

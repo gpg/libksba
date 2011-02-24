@@ -20,7 +20,7 @@
  */
 
 
-/* This is a simplified SHA01 versions taken from the libgrypt one. 
+/* This is a simplified SHA01 versions taken from the libgrypt one.
    We need this for some tests (e.g. OCSP).
 */
 
@@ -42,7 +42,7 @@
 #define HAVE_U32_TYPEDEF
 #endif
 
-typedef struct 
+typedef struct
 {
     u32  h0,h1,h2,h3,h4;
     u32  nblocks;
@@ -238,7 +238,7 @@ sha1_write( void *context, unsigned char *inbuf, size_t inlen)
         return;
     }
 
-  while( inlen >= 64 ) 
+  while( inlen >= 64 )
     {
       transform( hd, inbuf );
       hd->count = 0;
@@ -262,7 +262,7 @@ static void
 sha1_final(void *context)
 {
   sha1_context_t *hd = context;
-  
+
   u32 t, msb, lsb;
   unsigned char *p;
 

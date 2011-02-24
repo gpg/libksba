@@ -75,7 +75,7 @@ eof_or_error (ksba_reader_t reader, struct tag_info *ti, int premature)
 
 
 /*
-   Read the tag and the length part from the TLV triplet. 
+   Read the tag and the length part from the TLV triplet.
  */
 gpg_error_t
 _ksba_ber_read_tl (ksba_reader_t reader, struct tag_info *ti)
@@ -169,11 +169,11 @@ _ksba_ber_read_tl (ksba_reader_t reader, struct tag_info *ti)
         }
       ti->length = len;
     }
-  
+
   /* Without this kludge some example certs can't be parsed */
   if (ti->class == CLASS_UNIVERSAL && !ti->tag)
     ti->length = 0;
-  
+
   return 0;
 }
 
@@ -276,11 +276,11 @@ _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
         }
       ti->length = len;
     }
-  
+
   /* Without this kludge some example certs can't be parsed */
   if (ti->class == CLASS_UNIVERSAL && !ti->tag)
     ti->length = 0;
-  
+
   *buffer = buf;
   *size = length;
   return 0;
@@ -292,7 +292,7 @@ _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
    the value, if it is 0 undefinite length is assumed.  length is
    ignored for the NULL tag. */
 gpg_error_t
-_ksba_ber_write_tl (ksba_writer_t writer, 
+_ksba_ber_write_tl (ksba_writer_t writer,
                     unsigned long tag,
                     enum tag_class class,
                     int constructed,
@@ -320,17 +320,17 @@ _ksba_ber_write_tl (ksba_writer_t writer,
   else if (!length)
     buf[buflen++] = 0x80; /* indefinite length */
   else if (length < 128)
-    buf[buflen++] = length; 
-  else 
+    buf[buflen++] = length;
+  else
     {
       int i;
 
       /* fixme: if we know the sizeof an ulong we could support larger
          objects - however this is pretty ridiculous */
       i = (length <= 0xff ? 1:
-           length <= 0xffff ? 2: 
+           length <= 0xffff ? 2:
            length <= 0xffffff ? 3: 4);
-      
+
       buf[buflen++] = (0x80 | i);
       if (i > 3)
         buf[buflen++] = length >> 24;
@@ -339,7 +339,7 @@ _ksba_ber_write_tl (ksba_writer_t writer,
       if (i > 1)
         buf[buflen++] = length >> 8;
       buf[buflen++] = length;
-    }        
+    }
 
   return ksba_writer_write (writer, buf, buflen);
 }
@@ -352,7 +352,7 @@ _ksba_ber_write_tl (ksba_writer_t writer,
    using _ksba_ber_count_tl() in advance.  Returns 0 in case of an
    error or the length of the encoding.*/
 size_t
-_ksba_ber_encode_tl (unsigned char *buffer, 
+_ksba_ber_encode_tl (unsigned char *buffer,
                      unsigned long tag,
                      enum tag_class class,
                      int constructed,
@@ -379,17 +379,17 @@ _ksba_ber_encode_tl (unsigned char *buffer,
   else if (!length)
     *buf++ = 0x80; /* indefinite length */
   else if (length < 128)
-    *buf++ = length; 
-  else 
+    *buf++ = length;
+  else
     {
       int i;
 
       /* fixme: if we know the sizeof an ulong we could support larger
          objetcs - however this is pretty ridiculous */
       i = (length <= 0xff ? 1:
-           length <= 0xffff ? 2: 
+           length <= 0xffff ? 2:
            length <= 0xffffff ? 3: 4);
-      
+
       *buf++ = (0x80 | i);
       if (i > 3)
         *buf++ = length >> 24;
@@ -398,7 +398,7 @@ _ksba_ber_encode_tl (unsigned char *buffer,
       if (i > 1)
         *buf++ = length >> 8;
       *buf++ = length;
-    }        
+    }
 
   return buf - buffer;
 }
@@ -435,17 +435,17 @@ _ksba_ber_count_tl (unsigned long tag,
   else if (!length)
     buflen++; /* indefinite length */
   else if (length < 128)
-    buflen++; 
-  else 
+    buflen++;
+  else
     {
       int i;
 
       /* fixme: if we know the sizeof an ulong we could support larger
          objetcs - however this is pretty ridiculous */
       i = (length <= 0xff ? 1:
-           length <= 0xffff ? 2: 
+           length <= 0xffff ? 2:
            length <= 0xffffff ? 3: 4);
-      
+
       buflen++;
       if (i > 3)
         buflen++;
@@ -454,8 +454,7 @@ _ksba_ber_count_tl (unsigned long tag,
       if (i > 1)
         buflen++;
       buflen++;
-    }        
+    }
 
   return buflen;
 }
-

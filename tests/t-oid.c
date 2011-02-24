@@ -42,7 +42,7 @@ read_into_buffer (FILE *fp, size_t *r_length)
 #endif
   buffer = NULL;
   buflen = 0;
-  do 
+  do
     {
       bufsize += NCHUNK;
       buffer = realloc (buffer, bufsize);

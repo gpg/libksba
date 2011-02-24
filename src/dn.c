@@ -35,14 +35,14 @@ static const struct {
   int source; /* 0 = unknown
                  1 = rfc2253
                  2 = David Chadwick, July 2003
-                 <draft-ietf-pkix-dnstrings-02.txt> 
+                 <draft-ietf-pkix-dnstrings-02.txt>
                  3 = Peter Gutmann
               */
   const char *description;
   size_t      oidlen;
   const unsigned char *oid;  /* DER encoded OID.  */
   const char *oidstr;        /* OID as dotted string.  */
-} oid_name_tbl[] = { 
+} oid_name_tbl[] = {
 {"CN", 1, "CommonName",            3, "\x55\x04\x03", "2.5.4.3" },
 {"SN", 2, "Surname",               3, "\x55\x04\x04", "2.5.4.4" },
 {"SERIALNUMBER", 2, "SerialNumber",3, "\x55\x04\x05", "2.5.4.5" },
@@ -59,7 +59,7 @@ static const struct {
 {"POSTALCODE" , 0, "PostalCode",   3, "\x55\x04\x11", "2.5.4.17" },
 {"GN", 2, "GivenName",             3, "\x55\x04\x2a", "2.5.4.42" },
 {"PSEUDO", 2, "Pseudonym",         3, "\x55\x04\x41", "2.5.4.65" },
-{"DC", 1, "domainComponent",      10, 
+{"DC", 1, "domainComponent",      10,
     "\x09\x92\x26\x89\x93\xF2\x2C\x64\x01\x19", "0.9.2342.19200300.100.1.25" },
 {"UID", 1, "userid",              10,
     "\x09\x92\x26\x89\x93\xF2\x2C\x64\x01\x01", "0.9.2342.19200300.100.1.1 " },
@@ -72,13 +72,13 @@ static const struct {
 #define N 0x00
 #define P 0x01
 static unsigned char charclasses[128] = {
-  N, N, N, N, N, N, N, N,  N, N, N, N, N, N, N, N, 
-  N, N, N, N, N, N, N, N,  N, N, N, N, N, N, N, N, 
-  P, N, N, N, N, N, N, P,  P, P, N, P, P, P, P, P, 
-  P, P, P, P, P, P, P, P,  P, P, P, N, N, P, N, P, 
-  N, P, P, P, P, P, P, P,  P, P, P, P, P, P, P, P, 
-  P, P, P, P, P, P, P, P,  P, P, P, N, N, N, N, N, 
-  N, P, P, P, P, P, P, P,  P, P, P, P, P, P, P, P, 
+  N, N, N, N, N, N, N, N,  N, N, N, N, N, N, N, N,
+  N, N, N, N, N, N, N, N,  N, N, N, N, N, N, N, N,
+  P, N, N, N, N, N, N, P,  P, P, N, P, P, P, P, P,
+  P, P, P, P, P, P, P, P,  P, P, P, N, N, P, N, P,
+  N, P, P, P, P, P, P, P,  P, P, P, P, P, P, P, P,
+  P, P, P, P, P, P, P, P,  P, P, P, N, N, N, N, N,
+  N, P, P, P, P, P, P, P,  P, P, P, P, P, P, P, P,
   P, P, P, P, P, P, P, P,  P, P, P, N, N, N, N, N
 };
 #undef N
@@ -108,7 +108,7 @@ init_stringbuf (struct stringbuf *sb, int initiallen)
 static void
 deinit_stringbuf (struct stringbuf *sb)
 {
-  xfree (sb->buf); 
+  xfree (sb->buf);
   sb->buf = NULL;
   sb->out_of_core = 1; /* make sure the caller does an init before reuse */
 }
@@ -125,7 +125,7 @@ put_stringbuf (struct stringbuf *sb, const char *text)
   if (sb->len + n >= sb->size)
     {
       char *p;
-      
+
       sb->size += n + 100;
       p = xtryrealloc (sb->buf, sb->size);
       if ( !p)
@@ -148,7 +148,7 @@ put_stringbuf_mem (struct stringbuf *sb, const char *text, size_t n)
   if (sb->len + n >= sb->size)
     {
       char *p;
-      
+
       sb->size += n + 100;
       p = xtryrealloc (sb->buf, sb->size);
       if ( !p)
@@ -167,7 +167,7 @@ put_stringbuf_mem_skip (struct stringbuf *sb, const char *text, size_t n,
                         int skip)
 {
   char *p;
-      
+
   if (!skip)
     {
       put_stringbuf_mem (sb, text, n);
@@ -313,7 +313,7 @@ append_utf8_value (const unsigned char *value, size_t length,
         nmore = 5;  /* we will reduce the check length anyway */
 
       if (n+nmore > length)
-        nmore = length - n; /* oops, encoding to short */ 
+        nmore = length - n; /* oops, encoding to short */
 
       tmp[0] = *s++; n++;
       for (i=1; i <= nmore; i++)
@@ -445,7 +445,7 @@ append_ucs4_value (const unsigned char *value, size_t length,
           tmp[i++] = 0x80 | ((c >>  6) & 0x3f);
           tmp[i++] = 0x80 | ( c        & 0x3f);
         }
-      else 
+      else
         {
           tmp[i++] = 0xfc | ( c >> 30);
           tmp[i++] = 0x80 | ((c >> 24) & 0x3f);
@@ -509,7 +509,7 @@ append_ucs2_value (const unsigned char *value, size_t length,
           tmp[i++] = 0xc0 | ( c >>  6);
           tmp[i++] = 0x80 | ( c        & 0x3f);
         }
-      else 
+      else
         {
           tmp[i++] = 0xe0 | ( c >> 12);
           tmp[i++] = 0x80 | ((c >>  6) & 0x3f);
@@ -528,7 +528,7 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
   const char *name;
   int use_hex = 0;
   int i;
-  
+
   if (!node || node->type != TYPE_OBJECT_ID)
     return gpg_error (GPG_ERR_UNEXPECTED_TAG);
   if (node->off == -1)
@@ -560,7 +560,7 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
 
       for (i=0; *p && oid_name_tbl[i].name; i++)
         {
-          if (oid_name_tbl[i].source == 1 
+          if (oid_name_tbl[i].source == 1
               && !strcmp (p, oid_name_tbl[i].oidstr))
             {
               name = oid_name_tbl[i].name;
@@ -593,11 +593,11 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
       append_latin1_value (image+node->off+node->nhdr, node->len, sb);
       break;
 
-    case TYPE_UNIVERSAL_STRING: 
+    case TYPE_UNIVERSAL_STRING:
       append_ucs4_value (image+node->off+node->nhdr, node->len, sb);
       break;
 
-    case TYPE_BMP_STRING: 
+    case TYPE_BMP_STRING:
       append_ucs2_value (image+node->off+node->nhdr, node->len, sb);
       break;
 
@@ -605,7 +605,7 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
     default:
       put_stringbuf (sb, "#");
       for (i=0; i < node->len; i++)
-        { 
+        {
           char tmp[3];
           sprintf (tmp, "%02X", image[node->off+node->nhdr+i]);
           put_stringbuf (sb, tmp);
@@ -655,7 +655,7 @@ dn_to_str (const unsigned char *image, AsnNode root, struct stringbuf *sb)
       put_stringbuf (sb, ",");
       nset = nset->left;
     }
-      
+
   return 0;
 }
 
@@ -721,10 +721,10 @@ create_and_run_decoder (ksba_reader_t reader, const char *elem_name,
       _ksba_ber_decoder_release (decoder);
       return err;
     }
-  
+
   err = _ksba_ber_decoder_decode (decoder, elem_name, 0,
                                   r_root, r_image, r_imagelen);
-  
+
   _ksba_ber_decoder_release (decoder);
   ksba_asn_tree_release (crl_tree);
   return err;
@@ -735,7 +735,7 @@ gpg_error_t
 _ksba_derdn_to_str (const unsigned char *der, size_t derlen, char **r_string)
 {
   gpg_error_t err;
-  AsnNode root; 
+  AsnNode root;
   unsigned char *image;
   size_t imagelen;
   ksba_reader_t reader;
@@ -749,7 +749,7 @@ _ksba_derdn_to_str (const unsigned char *der, size_t derlen, char **r_string)
       ksba_reader_release (reader);
       return err;
     }
-  err = create_and_run_decoder (reader, 
+  err = create_and_run_decoder (reader,
                                 "TMTTv2.CertificateList.tbsCertList.issuer",
                                 &root, &image, &imagelen);
   ksba_reader_release (reader);
@@ -764,13 +764,13 @@ _ksba_derdn_to_str (const unsigned char *der, size_t derlen, char **r_string)
 
 
 /*
-   Convert a string back to DN 
+   Convert a string back to DN
 */
 
 /* Count the number of bytes in a quoted string, return a pointer to
    the character after the string or NULL in case of an paring error.
    The number of bytes needed to store the string verbatim will be
-   return as RESULT.  With V2COMAP true, the string is assumed to be 
+   return as RESULT.  With V2COMAP true, the string is assumed to be
    in v2 quoting (but w/o the leading quote character)
  */
 static const char *
@@ -790,7 +790,7 @@ count_quoted_string (const char *string, size_t *result,
         { /* pair */
           s++;
           if (*s == ',' || *s == '=' || *s == '+'
-              || *s == '<' || *s == '>' || *s == '#' || *s == ';' 
+              || *s == '<' || *s == '>' || *s == '#' || *s == ';'
               || *s == '\\' || *s == '\"' || *s == ' ')
             {
               if (!charclasses[*s])
@@ -823,7 +823,7 @@ count_quoted_string (const char *string, size_t *result,
                && (*s == ',' || *s == '=' || *s == '+'
                    || *s == '<' || *s == '>' || *s == '#' || *s == ';') )
         {
-          break; 
+          break;
         }
       else
         {
@@ -844,7 +844,7 @@ count_quoted_string (const char *string, size_t *result,
     *stringtype = TYPE_UTF8_STRING;
   else if (atsign)
     *stringtype = TYPE_IA5_STRING;
-  else 
+  else
     *stringtype = TYPE_PRINTABLE_STRING;
 
   *result = nbytes;
@@ -864,7 +864,7 @@ write_escaped (ksba_writer_t w, const unsigned char *buffer, size_t nbytes)
   for (s=buffer; nbytes; s++)
     {
       if (*s == '\\')
-        { 
+        {
           s++;
           if (hexdigitp (s) && hexdigitp (s+1))
             {
@@ -903,7 +903,7 @@ write_escaped (ksba_writer_t w, const unsigned char *buffer, size_t nbytes)
    ENDP. If ROFF or RLEN are not NULL, they will receive informaion
    useful for error reporting. */
 static gpg_error_t
-parse_rdn (const unsigned char *string, const char **endp, 
+parse_rdn (const unsigned char *string, const char **endp,
            ksba_writer_t writer, size_t *roff, size_t *rlen)
 {
   const unsigned char *orig_string = string;
@@ -937,7 +937,7 @@ parse_rdn (const unsigned char *string, const char **endp,
   if (!*string)
     return gpg_error (GPG_ERR_SYNTAX); /* empty elements are not allowed */
   s = string;
-  
+
   if ( ((*s == 'o' && s[1] == 'i' && s[2] == 'd')
         ||(*s == 'O' && s[1] == 'I' && s[2] == 'D'))
        && s[3] == '.' && digitp (s+4))
@@ -979,8 +979,8 @@ parse_rdn (const unsigned char *string, const char **endp,
       while (*s == ' ')
         s++;
       if (*s != '=')
-        return gpg_error (GPG_ERR_SYNTAX); 
-      
+        return gpg_error (GPG_ERR_SYNTAX);
+
       for (i=0; oid_name_tbl[i].name; i++)
         {
           if ( n == strlen (oid_name_tbl[i].name)
@@ -1110,11 +1110,11 @@ parse_rdn (const unsigned char *string, const char **endp,
     {
       *roff = s - orig_string;
       *rlen = 1;
-      err = gpg_error (GPG_ERR_NOT_IMPLEMENTED); 
+      err = gpg_error (GPG_ERR_NOT_IMPLEMENTED);
       goto leave;
     }
   *endp = *s? (s+1):s;
-  
+
   if (writer)
     { /* write out the data */
 
@@ -1123,16 +1123,16 @@ parse_rdn (const unsigned char *string, const char **endp,
       n1 += oidlen;
       n1 += _ksba_ber_count_tl (valuetype, CLASS_UNIVERSAL, 0, valuelen);
       n1 += valuelen;
-      
+
       /* The SET tag */
       n  = _ksba_ber_count_tl (TYPE_SET, CLASS_UNIVERSAL, 1, n);
       n += n1;
       err = _ksba_ber_write_tl (writer, TYPE_SET, CLASS_UNIVERSAL, 1, n);
-      
+
       /* The sequence tag */
       n = n1;
       err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
-      
+
       /* the OBJECT ID */
       err = _ksba_ber_write_tl (writer, TYPE_OBJECT_ID, CLASS_UNIVERSAL,
                                 0, oidlen);
@@ -1140,7 +1140,7 @@ parse_rdn (const unsigned char *string, const char **endp,
         err = ksba_writer_write (writer, oid, oidlen);
       if (err)
         goto leave;
-      
+
       /* the value.  Note that we don't need any conversion to the target
          characters set because the input is expected to be utf8 and the
          target type is either utf8, IA5 or printable string where the last
@@ -1151,7 +1151,7 @@ parse_rdn (const unsigned char *string, const char **endp,
         err = need_escaping? write_escaped (writer, value, valuelen)
           : ksba_writer_write (writer, value, valuelen);
     }
-  
+
  leave:
   xfree (oidbuf);
   xfree (valuebuf);
@@ -1228,7 +1228,7 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
   err = ksba_writer_set_mem (writer, buflen + 10);
   if (err)
     goto leave;
-  
+
   /* write the outer sequence */
   err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE,
                             CLASS_UNIVERSAL, 1, buflen);
@@ -1246,7 +1246,7 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
       err = gpg_error (GPG_ERR_ENOMEM);
       goto leave;
     }
-  
+
  leave:
   xfree (part_array);
   ksba_writer_release (writer);
@@ -1280,8 +1280,8 @@ ksba_dn_str2der (const char *string, unsigned char **rder, size_t *rderlen)
    symbolic name (like SN) is supported. SEQ should be passed as 0 for
    now.  RERROFF and RERRLEN may be passed as NULL if the caller is
    not interested at this value. */
-gpg_error_t 
-ksba_dn_teststr (const char *string, int seq, 
+gpg_error_t
+ksba_dn_teststr (const char *string, int seq,
                  size_t *rerroff, size_t *rerrlen)
 {
   size_t dummy_erroff, dummy_errlen;

@@ -1,18 +1,18 @@
 # Makefile.am - for the KSBA ASN.1 and X.509 library
 #       Copyright (C) 2001, 2002, 2004, 2005, 2007 g10 Code GmbH
-# 	
+#
 # This file is part of KSBA.
-# 
+#
 # KSBA is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # KSBA is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
@@ -42,7 +42,7 @@ AM_CFLAGS = $(GPG_ERROR_CFLAGS)
 if HAVE_LD_VERSION_SCRIPT
   libksba_version_script_cmd = -Wl,--version-script=$(srcdir)/libksba.vers
 else
-  libksba_version_script_cmd = 
+  libksba_version_script_cmd =
 endif
 
 
@@ -81,7 +81,7 @@ endif !HAVE_W32_SYSTEM
 libksba_la_LDFLAGS = $(no_undefined) $(export_symbols) \
       $(libksba_version_script_cmd) -version-info \
       @LIBKSBA_LT_CURRENT@:@LIBKSBA_LT_REVISION@:@LIBKSBA_LT_AGE@
-libksba_la_INCLUDES = -I$(top_srcdir)/lib 
+libksba_la_INCLUDES = -I$(top_srcdir)/lib
 libksba_la_DEPENDENCIES = $(srcdir)/libksba.vers $(ksba_deps)
 libksba_la_LIBADD = $(ksba_res) @LTLIBOBJS@ @GPG_ERROR_LIBS@
 
@@ -125,11 +125,9 @@ asn1-gentables: asn1-gentables.c asn1-parse.c asn1-func.c gen-help.c gen-help.h
 asn1-tables.c : $(asn1_modules) asn1-gentables
 	@set -e; list=""; \
 	  for file in $(asn1_modules); do list="$$list $(srcdir)/$$file";done;\
-	  ./asn1-gentables $$list > asn1-tables.c	
+	  ./asn1-gentables $$list > asn1-tables.c
 
 
 install-data-local: install-def-file
 
 uninstall-local: uninstall-def-file
-
-

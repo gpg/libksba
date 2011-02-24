@@ -48,9 +48,9 @@ static const char oidstr_subjectInfoAccess[]   = "1.3.6.1.5.5.7.1.11";
 
 /**
  * ksba_cert_new:
- * 
+ *
  * Create a new and empty certificate object
- * 
+ *
  * Return value: 0 on success or error code.  For a successful
  * operation, ACERT is set to the new certifixate obbject, otherwise
  * it is set to NULL.
@@ -78,7 +78,7 @@ ksba_cert_ref (ksba_cert_t cert)
 /**
  * ksba_cert_release:
  * @cert: A certificate object
- * 
+ *
  * Release a certificate object.
  **/
 void
@@ -99,7 +99,7 @@ ksba_cert_release (ksba_cert_t cert)
   if (cert->udata)
     {
       struct cert_user_data *ud = cert->udata;
-      cert->udata = NULL;  
+      cert->udata = NULL;
       do
         {
           struct cert_user_data *ud2 = ud->next;
@@ -110,7 +110,7 @@ ksba_cert_release (ksba_cert_t cert)
         }
       while (ud);
     }
-  
+
   xfree (cert->cache.digest_algo);
   if (cert->cache.extns_valid)
     {
@@ -245,12 +245,12 @@ ksba_cert_get_user_data (ksba_cert_t cert, const char *key,
  * ksba_cert_read_der:
  * @cert: An unitialized certificate object
  * @reader: A KSBA Reader object
- * 
+ *
  * Read the next certificate from the reader and store it in the
  * certificate object for future access.  The certificate is parsed
  * and rejected if it has any syntactical or semantical error
  * (i.e. does not match the ASN.1 description).
- * 
+ *
  * Return value: 0 on success or an error value
  **/
 gpg_error_t
@@ -283,7 +283,7 @@ ksba_cert_read_der (ksba_cert_t cert, ksba_reader_t reader)
   err = _ksba_ber_decoder_set_reader (decoder, reader);
   if (err)
     goto leave;
-  
+
   err = _ksba_ber_decoder_set_module (decoder, cert->asn_tree);
   if (err)
      goto leave;
@@ -292,7 +292,7 @@ ksba_cert_read_der (ksba_cert_t cert, ksba_reader_t reader)
                                   &cert->root, &cert->image, &cert->imagelen);
   if (!err)
       cert->initialized = 1;
-  
+
  leave:
   _ksba_ber_decoder_release (decoder);
 
@@ -333,7 +333,7 @@ ksba_cert_get_image (ksba_cert_t cert, size_t *r_length )
     return NULL;
 
   n = _ksba_asn_find_node (cert->root, "Certificate");
-  if (!n) 
+  if (!n)
     return NULL;
 
   if (n->off == -1)
@@ -381,7 +381,7 @@ _ksba_cert_cmp (ksba_cert_t a, ksba_cert_t b)
 
 gpg_error_t
 ksba_cert_hash (ksba_cert_t cert, int what,
-                void (*hasher)(void *, const void *, size_t length), 
+                void (*hasher)(void *, const void *, size_t length),
                 void *hasher_arg)
 {
   AsnNode n;
@@ -414,12 +414,12 @@ ksba_cert_hash (ksba_cert_t cert, int what,
 /**
  * ksba_cert_get_digest_algo:
  * @cert: Initialized certificate object
- * 
+ *
  * Figure out the the digest algorithm used for the signature and
  * return its OID
  *
  * This function is intended as a helper for the ksba_cert_hash().
- * 
+ *
  * Return value: NULL for error otherwise a constant string with the OID.
  * This string is valid as long the certificate object is valid.
  **/
@@ -444,7 +444,7 @@ ksba_cert_get_digest_algo (ksba_cert_t cert)
 
   if (cert->cache.digest_algo)
     return cert->cache.digest_algo;
-  
+
 /*   n = _ksba_asn_find_node (cert->root, */
 /*                            "Certificate.signatureAlgorithm.algorithm"); */
 /*   algo = _ksba_oid_node_to_str (cert->image, n); */
@@ -461,7 +461,7 @@ ksba_cert_get_digest_algo (ksba_cert_t cert)
                                             n->nhdr + n->len, &nread, &algo);
   if (err)
     cert->last_error = err;
-  else 
+  else
     cert->cache.digest_algo = algo;
 
   return algo;
@@ -472,12 +472,12 @@ ksba_cert_get_digest_algo (ksba_cert_t cert)
 
 /**
  * ksba_cert_get_serial:
- * @cert: certificate object 
- * 
+ * @cert: certificate object
+ *
  * This function returnes the serial number of the certificate.  The
  * serial number is an integer returned as an canonical encoded
  * S-expression with just one element.
- * 
+ *
  * Return value: An allocated S-Exp or NULL for no value.
  **/
 ksba_sexp_t
@@ -490,7 +490,7 @@ ksba_cert_get_serial (ksba_cert_t cert)
 
   if (!cert || !cert->initialized)
     return NULL;
-  
+
   n = _ksba_asn_find_node (cert->root,
                            "Certificate.tbsCertificate.serialNumber");
   if (!n)
@@ -502,7 +502,7 @@ ksba_cert_get_serial (ksba_cert_t cert)
 /*        _ksba_asn_node_dump_all (n, stderr); */
       return NULL;
     }
-  
+
   sprintf (numbuf,"(%u:", (unsigned int)n->len);
   numbuflen = strlen (numbuf);
   p = xtrymalloc (numbuflen + n->len + 2);
@@ -593,7 +593,7 @@ get_name (ksba_cert_t cert, int idx, int use_subject, char **result)
       n = n->down; /* dereference the choice node */
       if (n->off == -1)
         return gpg_error (GPG_ERR_NO_VALUE);
-      
+
       err = _ksba_dn_to_str (cert->image, n, &p);
       if (err)
         return err;
@@ -611,11 +611,11 @@ get_name (ksba_cert_t cert, int idx, int use_subject, char **result)
     }
   if (err)
       return err; /* no alt name or error*/
-  
+
   der = cert->image + off;
 
 
-  /* FIXME: We should use _ksba_name_new_from_der and ksba_name_enum here */ 
+  /* FIXME: We should use _ksba_name_new_from_der and ksba_name_enum here */
 
   err = _ksba_ber_parse_tl (&der, &derlen, &ti);
   if (err)
@@ -636,7 +636,7 @@ get_name (ksba_cert_t cert, int idx, int use_subject, char **result)
       err = _ksba_ber_parse_tl (&der, &derlen, &ti);
       if (err)
         return err;
-      if (ti.class != CLASS_CONTEXT) 
+      if (ti.class != CLASS_CONTEXT)
         return gpg_error (GPG_ERR_INV_CERT_OBJ); /* we expected a tag */
       if (ti.ndef)
         return gpg_error (GPG_ERR_NOT_DER_ENCODED);
@@ -681,14 +681,14 @@ get_name (ksba_cert_t cert, int idx, int use_subject, char **result)
           *p++ = ')';
           *p = 0;
           return 0;
-        } 
+        }
 
       /* advance pointer */
       der += ti.length;
       derlen -= ti.length;
     }
-  
-  return gpg_error (GPG_ERR_EOF);     
+
+  return gpg_error (GPG_ERR_EOF);
 }
 
 
@@ -696,13 +696,13 @@ get_name (ksba_cert_t cert, int idx, int use_subject, char **result)
 /**
  * ksba_cert_get_issuer:
  * @cert: certificate object
- * 
+ *
  * With @idx == 0 this function returns the Distinguished Name (DN) of
  * the certificate issuer which in most cases is a CA.  The format of
  * the returned string is in accordance with RFC-2253.  NULL is
  * returned if the DN is not available which is an error and should
  * have been catched by the certificate reading function.
- * 
+ *
  * With @idx > 0 the function may be used to enumerate alternate
  * issuer names. The function returns NULL if there are no more
  * alternate names.  The function does only return alternate names
@@ -717,10 +717,10 @@ get_name (ksba_cert_t cert, int idx, int use_subject, char **result)
  * strlen may return a length shorther than actually used, the real
  * length is implictly given by the structure of the S-Exp, an extra
  * null is appended for safety reasons.
- * 
+ *
  * The caller must free the returned string using ksba_free() or the
  * function he has registered as a replacement.
- * 
+ *
  * Return value: An allocated string or NULL for error.
  **/
 char *
@@ -761,11 +761,11 @@ ksba_cert_get_subject (ksba_cert_t cert, int idx)
  * @cert: certificate object
  * @what: 0 for notBefore, 1 for notAfter
  * @timebuf: Returns the time.
- * 
+ *
  * Return the validity object from the certificate.  If no value is
  * available 0 is returned because we can safely assume that this is
  * not a valid date.
- * 
+ *
  * Return value: The time value an 0 or an error code.
  **/
 gpg_error_t
@@ -778,7 +778,7 @@ ksba_cert_get_validity (ksba_cert_t cert, int what, ksba_isotime_t timebuf)
   *timebuf = 0;
   if (!cert->initialized)
     return gpg_error (GPG_ERR_NO_DATA);
-  
+
   n = _ksba_asn_find_node (cert->root,
         what == 0? "Certificate.tbsCertificate.validity.notBefore"
                  : "Certificate.tbsCertificate.validity.notAfter");
@@ -848,7 +848,7 @@ _ksba_cert_get_public_key_ptr (ksba_cert_t cert,
   if (!cert || !cert->initialized || !ptr || !length)
     return gpg_error (GPG_ERR_INV_VALUE);
 
-  n = _ksba_asn_find_node (cert->root, 
+  n = _ksba_asn_find_node (cert->root,
                            "Certificate.tbsCertificate.subjectPublicKeyInfo");
   if (!n || !n->down || !n->down->right)
     return gpg_error (GPG_ERR_NO_VALUE); /* oops - should be there */
@@ -914,7 +914,7 @@ ksba_cert_get_sig_val (ksba_cert_t cert)
 
 /* Read all extensions into the cache */
 static gpg_error_t
-read_extensions (ksba_cert_t cert) 
+read_extensions (ksba_cert_t cert)
 {
   AsnNode start, n;
   int count;
@@ -943,11 +943,11 @@ read_extensions (ksba_cert_t cert)
         n = start->down;
         if (!n || n->type != TYPE_OBJECT_ID)
           goto no_value;
-        
+
         cert->cache.extns[count].oid = _ksba_oid_node_to_str (cert->image, n);
         if (!cert->cache.extns[count].oid)
           goto no_value;
-        
+
         n = n->right;
         if (n && n->type == TYPE_BOOLEAN)
           {
@@ -955,18 +955,18 @@ read_extensions (ksba_cert_t cert)
               cert->cache.extns[count].crit = 1;
             n = n->right;
           }
-        
+
         if (!n || n->type != TYPE_OCTET_STRING || n->off == -1)
           goto no_value;
-        
+
         cert->cache.extns[count].off = n->off + n->nhdr;
         cert->cache.extns[count].len = n->len;
       }
-    
+
     assert (count == cert->cache.n_extns);
     cert->cache.extns_valid = 1;
     return 0;
-    
+
   no_value:
     for (count=0; count < cert->cache.n_extns; count++)
       xfree (cert->cache.extns[count].oid);
@@ -1003,7 +1003,7 @@ ksba_cert_get_extension (ksba_cert_t cert, int idx,
 
   if (idx < 0 || idx >= cert->cache.n_extns)
     return gpg_error (GPG_ERR_INV_INDEX);
-  
+
   if (r_oid)
     *r_oid = cert->cache.extns[idx].oid;
   if (r_crit)
@@ -1047,17 +1047,17 @@ ksba_cert_is_ca (ksba_cert_t cert, int *r_ca, int *r_pathlen)
       return 0; /* no such constraint */
   if (err)
     return err;
-    
+
   /* check that there is only one */
   for (idx++; !(err=ksba_cert_get_extension (cert, idx, &oid, NULL,
                                              NULL, NULL)); idx++)
     {
       if (!strcmp (oid, oidstr_basicConstraints))
-        return gpg_error (GPG_ERR_DUP_VALUE); 
+        return gpg_error (GPG_ERR_DUP_VALUE);
     }
-  
+
   der = cert->image + off;
- 
+
   err = _ksba_ber_parse_tl (&der, &derlen, &ti);
   if (err)
     return err;
@@ -1080,11 +1080,11 @@ ksba_cert_is_ca (ksba_cert_t cert, int *r_ca, int *r_pathlen)
     return gpg_error (GPG_ERR_BAD_BER);
   seqlen -= ti.nhdr;
   if (seqlen < ti.length)
-    return gpg_error (GPG_ERR_BAD_BER); 
+    return gpg_error (GPG_ERR_BAD_BER);
   seqlen -= ti.length;
 
   if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_BOOLEAN)
-    { 
+    {
       if (ti.length != 1)
         return gpg_error (GPG_ERR_ENCODING_PROBLEM);
       if (r_ca)
@@ -1106,11 +1106,11 @@ ksba_cert_is_ca (ksba_cert_t cert, int *r_ca, int *r_pathlen)
 
   if (!(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_INTEGER))
     return gpg_error (GPG_ERR_INV_CERT_OBJ);
-  
+
   for (value=0; ti.length; ti.length--)
     {
       value <<= 8;
-      value |= (*der++) & 0xff; 
+      value |= (*der++) & 0xff;
       derlen--;
     }
   if (r_pathlen)
@@ -1154,17 +1154,17 @@ ksba_cert_get_key_usage (ksba_cert_t cert, unsigned int *r_flags)
       return gpg_error (GPG_ERR_NO_DATA); /* no key usage */
   if (err)
     return err;
-    
+
   /* check that there is only one */
   for (idx++; !(err=ksba_cert_get_extension (cert, idx, &oid, NULL,
                                              NULL, NULL)); idx++)
     {
       if (!strcmp (oid, oidstr_keyUsage))
-        return gpg_error (GPG_ERR_DUP_VALUE); 
+        return gpg_error (GPG_ERR_DUP_VALUE);
     }
-  
+
   der = cert->image + off;
- 
+
   err = _ksba_ber_parse_tl (&der, &derlen, &ti);
   if (err)
     return err;
@@ -1194,7 +1194,7 @@ ksba_cert_get_key_usage (ksba_cert_t cert, unsigned int *r_flags)
     full--;
   else {
     bits &= ~mask;
-    mask = 0; 
+    mask = 0;
   }
   if (bits & 0x80)
     *r_flags |= KSBA_KEYUSAGE_DIGITAL_SIGNATURE;
@@ -1221,7 +1221,7 @@ ksba_cert_get_key_usage (ksba_cert_t cert, unsigned int *r_flags)
     full--;
   else {
     bits &= mask;
-    mask = ~0; 
+    mask = ~0;
   }
   if (bits & 0x80)
     *r_flags |= KSBA_KEYUSAGE_DECIPHER_ONLY;
@@ -1253,9 +1253,9 @@ append_cert_policy (char **policies, const char *oid, int crit)
       *policies = tmp;
       p = stpcpy (tmp+strlen (tmp), "\n");;
     }
-  
+
   strcpy (stpcpy (p, oid), crit? ":C:": ":N:");
-  return 0;   
+  return 0;
 }
 
 
@@ -1287,7 +1287,7 @@ ksba_cert_get_cert_policies (ksba_cert_t cert, char **r_policies)
           char *suboid;
 
           der = cert->image + off;
- 
+
           err = _ksba_ber_parse_tl (&der, &derlen, &ti);
           if (err)
             goto leave;
@@ -1353,7 +1353,7 @@ ksba_cert_get_cert_policies (ksba_cert_t cert, char **r_policies)
                   goto leave;
                 }
               seqseqlen -= ti.nhdr;
-              
+
               suboid = ksba_oid_to_str (der, ti.length);
               if (!suboid)
                 {
@@ -1419,7 +1419,7 @@ ksba_cert_get_ext_key_usages (ksba_cert_t cert, char **result)
           char *suboid;
 
           der = cert->image + off;
- 
+
           err = _ksba_ber_parse_tl (&der, &derlen, &ti);
           if (err)
             goto leave;
@@ -1449,7 +1449,7 @@ ksba_cert_get_ext_key_usages (ksba_cert_t cert, char **result)
                   err = gpg_error (GPG_ERR_INV_CERT_OBJ);
                   goto leave;
                 }
-              
+
               suboid = ksba_oid_to_str (der, ti.length);
               if (!suboid)
                 {
@@ -1486,7 +1486,7 @@ ksba_cert_get_ext_key_usages (ksba_cert_t cert, char **result)
 
 /* Helper function for ksba_cert_get_crl_dist_point */
 static gpg_error_t
-parse_distribution_point (const unsigned char *der, size_t derlen, 
+parse_distribution_point (const unsigned char *der, size_t derlen,
                           ksba_name_t *distpoint, ksba_name_t *issuer,
                           ksba_crl_reason_t *reason)
 {
@@ -1496,7 +1496,7 @@ parse_distribution_point (const unsigned char *der, size_t derlen,
   err = _ksba_ber_parse_tl (&der, &derlen, &ti);
   if (err)
     return err;
-  if (ti.class != CLASS_CONTEXT) 
+  if (ti.class != CLASS_CONTEXT)
     return gpg_error (GPG_ERR_INV_CERT_OBJ); /* we expected a tag */
   if (ti.ndef)
     return gpg_error (GPG_ERR_NOT_DER_ENCODED);
@@ -1508,7 +1508,7 @@ parse_distribution_point (const unsigned char *der, size_t derlen,
       err = _ksba_ber_parse_tl (&der, &derlen, &ti);
       if (err)
         return err;
-      if (ti.class != CLASS_CONTEXT) 
+      if (ti.class != CLASS_CONTEXT)
         return gpg_error (GPG_ERR_INV_CERT_OBJ); /* we expected a tag */
       if (ti.ndef)
         return gpg_error (GPG_ERR_NOT_DER_ENCODED);
@@ -1540,7 +1540,7 @@ parse_distribution_point (const unsigned char *der, size_t derlen,
       err = _ksba_ber_parse_tl (&der, &derlen, &ti);
       if (err)
         return err;
-      if (ti.class != CLASS_CONTEXT) 
+      if (ti.class != CLASS_CONTEXT)
         return gpg_error (GPG_ERR_INV_CERT_OBJ); /* we expected a tag */
       if (ti.ndef)
         return gpg_error (GPG_ERR_NOT_DER_ENCODED);
@@ -1552,7 +1552,7 @@ parse_distribution_point (const unsigned char *der, size_t derlen,
     { /* reasonFlags */
       unsigned int bits, mask;
       int i, unused, full;
-      
+
       unused = *der++; derlen--;
       ti.length--;
       if ((!ti.length && unused) || unused/8 > ti.length)
@@ -1563,18 +1563,18 @@ parse_distribution_point (const unsigned char *der, size_t derlen,
       mask = 0;
       for (i=1; unused; i <<= 1, unused--)
         mask |= i;
-      
+
       /* we are only required to look at the first octect */
       if (ti.length && reason)
         {
-          bits = *der; 
+          bits = *der;
           if (full)
             full--;
           else {
             bits &= ~mask;
-            mask = 0; 
+            mask = 0;
           }
-          
+
           if (bits & 0x80)
             *reason |= KSBA_CRLREASON_UNSPECIFIED;
           if (bits & 0x40)
@@ -1590,7 +1590,7 @@ parse_distribution_point (const unsigned char *der, size_t derlen,
           if (bits & 0x02)
             *reason |= KSBA_CRLREASON_CERTIFICATE_HOLD;
         }
-        
+
       der += ti.length;
       derlen -= ti.length;
 
@@ -1601,7 +1601,7 @@ parse_distribution_point (const unsigned char *der, size_t derlen,
       err = _ksba_ber_parse_tl (&der, &derlen, &ti);
       if (err)
         return err;
-      if (ti.class != CLASS_CONTEXT) 
+      if (ti.class != CLASS_CONTEXT)
         return gpg_error (GPG_ERR_INV_CERT_OBJ); /* we expected a tag */
       if (ti.ndef)
         return gpg_error (GPG_ERR_NOT_DER_ENCODED);
@@ -1643,7 +1643,7 @@ parse_distribution_point (const unsigned char *der, size_t derlen,
    and R_ISSUER must be released by the caller using
    ksba_name_release(). */
 
-gpg_error_t 
+gpg_error_t
 ksba_cert_get_crl_dist_point (ksba_cert_t cert, int idx,
                               ksba_name_t *r_distpoint,
                               ksba_name_t *r_issuer,
@@ -1671,7 +1671,7 @@ ksba_cert_get_crl_dist_point (ksba_cert_t cert, int idx,
            size_t seqlen;
 
           der = cert->image + off;
-          
+
           err = _ksba_ber_parse_tl (&der, &derlen, &ti);
           if (err)
             return err;
@@ -1701,7 +1701,7 @@ ksba_cert_get_crl_dist_point (ksba_cert_t cert, int idx,
                 return gpg_error (GPG_ERR_BAD_BER);
               seqlen -= ti.nhdr;
               if (seqlen < ti.length)
-                return gpg_error (GPG_ERR_BAD_BER); 
+                return gpg_error (GPG_ERR_BAD_BER);
 
               if (idx)
                 { /* skip because we are not yet at the desired index */
@@ -1709,13 +1709,13 @@ ksba_cert_get_crl_dist_point (ksba_cert_t cert, int idx,
                   derlen -= ti.length;
                   seqlen -= ti.length;
                   idx--;
-                  continue;  
+                  continue;
                 }
-              
-              if (!ti.length)
-                return 0;  
 
-              err = parse_distribution_point (der, ti.length, 
+              if (!ti.length)
+                return 0;
+
+              err = parse_distribution_point (der, ti.length,
                                               r_distpoint, r_issuer, r_reason);
               if (err && r_distpoint)
                 {
@@ -1729,7 +1729,7 @@ ksba_cert_get_crl_dist_point (ksba_cert_t cert, int idx,
                 }
               if (err && r_reason)
                 *r_reason = 0;
-              
+
               return err;
             }
         }
@@ -1743,7 +1743,7 @@ ksba_cert_get_crl_dist_point (ksba_cert_t cert, int idx,
    R_KEYID.  GPG_ERR_NO_DATA is returned if no authorityKeyIdentifier
    or only one using the keyIdentifier method is available and R_KEYID
    is NULL. */
-gpg_error_t 
+gpg_error_t
 ksba_cert_get_auth_key_id (ksba_cert_t cert,
                            ksba_sexp_t *r_keyid,
                            ksba_name_t *r_name,
@@ -1759,7 +1759,7 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
   struct tag_info ti;
   char numbuf[30];
   size_t numbuflen;
- 
+
   if (r_keyid)
     *r_keyid = NULL;
   if (!r_name || !r_serial)
@@ -1778,15 +1778,15 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
     return gpg_error (GPG_ERR_NO_DATA); /* not available */
   if (err)
     return err;
-    
+
   /* check that there is only one */
   for (idx++; !(err=ksba_cert_get_extension (cert, idx, &oid, NULL,
                                              NULL, NULL)); idx++)
     {
       if (!strcmp (oid, oidstr_authorityKeyIdentifier))
-        return gpg_error (GPG_ERR_DUP_VALUE); 
+        return gpg_error (GPG_ERR_DUP_VALUE);
     }
-  
+
   der = cert->image + off;
 
   err = _ksba_ber_parse_tl (&der, &derlen, &ti);
@@ -1803,7 +1803,7 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
   err = _ksba_ber_parse_tl (&der, &derlen, &ti);
   if (err)
     return err;
-  if (ti.class != CLASS_CONTEXT) 
+  if (ti.class != CLASS_CONTEXT)
     return gpg_error (GPG_ERR_INV_CERT_OBJ); /* we expected a tag */
   if (ti.ndef)
     return gpg_error (GPG_ERR_NOT_DER_ENCODED);
@@ -1826,7 +1826,7 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
       err = _ksba_ber_parse_tl (&der, &derlen, &ti);
       if (err)
         return err;
-      if (ti.class != CLASS_CONTEXT) 
+      if (ti.class != CLASS_CONTEXT)
         return gpg_error (GPG_ERR_INV_CERT_OBJ); /* we expected a tag */
       if (ti.ndef)
         return gpg_error (GPG_ERR_NOT_DER_ENCODED);
@@ -1848,7 +1848,7 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
   err = _ksba_ber_parse_tl (&der, &derlen, &ti);
   if (err)
     return err;
-  if (ti.class != CLASS_CONTEXT) 
+  if (ti.class != CLASS_CONTEXT)
     return gpg_error (GPG_ERR_INV_CERT_OBJ); /* we expected a tag */
   if (ti.ndef)
     return gpg_error (GPG_ERR_NOT_DER_ENCODED);
@@ -1857,7 +1857,7 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
 
   if (ti.tag != 2 || !derlen)
     return gpg_error (GPG_ERR_INV_CERT_OBJ);
- 
+
   sprintf (numbuf,"(%u:", (unsigned int)ti.length);
   numbuflen = strlen (numbuf);
   *r_serial = xtrymalloc (numbuflen + ti.length + 2);
@@ -1892,7 +1892,7 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
    available, GPG_ERR_DUP_VALUE if more than one is available.  If
    R_CRIT is not NULL, the critical extension flag will be stored at
    that address. */
-static gpg_error_t 
+static gpg_error_t
 get_simple_octet_string_ext (ksba_cert_t cert, const char *oid,
                              int *r_crit, ksba_sexp_t *r_data)
 {
@@ -1904,7 +1904,7 @@ get_simple_octet_string_ext (ksba_cert_t cert, const char *oid,
   struct tag_info ti;
   char numbuf[30];
   size_t numbuflen;
- 
+
   if (!r_data)
     return gpg_error (GPG_ERR_INV_VALUE);
   *r_data = NULL;
@@ -1922,15 +1922,15 @@ get_simple_octet_string_ext (ksba_cert_t cert, const char *oid,
         return gpg_error (GPG_ERR_NO_DATA);
       return err;
     }
-    
+
   /* Check that there is only one */
   for (idx++; !(err=ksba_cert_get_extension (cert, idx, &tmpoid, NULL,
                                              NULL, NULL)); idx++)
     {
       if (!strcmp (tmpoid, oid))
-        return gpg_error (GPG_ERR_DUP_VALUE); 
+        return gpg_error (GPG_ERR_DUP_VALUE);
     }
-  
+
   der = cert->image + off;
 
   err = _ksba_ber_parse_tl (&der, &derlen, &ti);
@@ -1966,7 +1966,7 @@ get_simple_octet_string_ext (ksba_cert_t cert, const char *oid,
    GPG_ERR_NO_DATA if no such extension is available or any other
    error code.  If R_CRIT is not passed as NULL, the criticla flag of
    this is extension is stored there. */
-gpg_error_t 
+gpg_error_t
 ksba_cert_get_subj_key_id (ksba_cert_t cert, int *r_crit, ksba_sexp_t *r_keyid)
 {
   return get_simple_octet_string_ext (cert, oidstr_subjectKeyIdentifier,
@@ -1980,7 +1980,7 @@ ksba_cert_get_subj_key_id (ksba_cert_t cert, int *r_crit, ksba_sexp_t *r_keyid)
 
    Caller must release METHOD and LOCATION if the function returned
    with success; on error both variables will point to NULL.
- */   
+ */
 static gpg_error_t
 get_info_access (ksba_cert_t cert, int idx, int mode,
                  char **method, ksba_name_t *location)
@@ -2011,10 +2011,10 @@ get_info_access (ksba_cert_t cert, int idx, int mode,
           der = cert->image + off;
 
           /* What we are going to parse is:
-           *   
+           *
            *    AuthorityInfoAccessSyntax  ::=
            *            SEQUENCE SIZE (1..MAX) OF AccessDescription
-           *   
+           *
            *    AccessDescription  ::=  SEQUENCE {
            *            accessMethod          OBJECT IDENTIFIER,
            *            accessLocation        GeneralName  }
@@ -2048,7 +2048,7 @@ get_info_access (ksba_cert_t cert, int idx, int mode,
                 return gpg_error (GPG_ERR_BAD_BER);
               seqlen -= ti.nhdr;
               if (seqlen < ti.length)
-                return gpg_error (GPG_ERR_BAD_BER); 
+                return gpg_error (GPG_ERR_BAD_BER);
 
               if (idx)
                 { /* Skip because we are not yet at the desired index. */
@@ -2056,7 +2056,7 @@ get_info_access (ksba_cert_t cert, int idx, int mode,
                   derlen -= ti.length;
                   seqlen -= ti.length;
                   idx--;
-                  continue;  
+                  continue;
                 }
               /* We only need the next object, thus we can (and
                  actually need to) limit the DERLEN to the length of
@@ -2132,5 +2132,3 @@ ksba_cert_get_subject_info_access (ksba_cert_t cert, int idx,
     return gpg_error (GPG_ERR_INV_VALUE);
   return get_info_access (cert, idx, 1, r_method, r_location);
 }
-
-

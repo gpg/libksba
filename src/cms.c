@@ -45,7 +45,7 @@ static gpg_error_t ct_build_enveloped_data (ksba_cms_t cms);
 static gpg_error_t ct_build_digested_data (ksba_cms_t cms);
 static gpg_error_t ct_build_encrypted_data (ksba_cms_t cms);
 
-static struct { 
+static struct {
   const char *oid;
   ksba_content_type_t ct;
   gpg_error_t (*parse_handler)(ksba_cms_t);
@@ -57,9 +57,9 @@ static struct {
      ct_parse_signed_data   , ct_build_signed_data    },
   {  "1.2.840.113549.1.7.3", KSBA_CT_ENVELOPED_DATA,
      ct_parse_enveloped_data, ct_build_enveloped_data },
-  {  "1.2.840.113549.1.7.5", KSBA_CT_DIGESTED_DATA, 
+  {  "1.2.840.113549.1.7.5", KSBA_CT_DIGESTED_DATA,
      ct_parse_digested_data , ct_build_digested_data  },
-  {  "1.2.840.113549.1.7.6", KSBA_CT_ENCRYPTED_DATA, 
+  {  "1.2.840.113549.1.7.6", KSBA_CT_ENCRYPTED_DATA,
      ct_parse_encrypted_data, ct_build_encrypted_data },
   {  "1.2.840.113549.1.9.16.1.2", KSBA_CT_AUTH_DATA   },
   { NULL }
@@ -94,7 +94,7 @@ read_hash_block (ksba_cms_t cms, unsigned long nleft)
         return err;
       nleft -= nread;
       if (cms->hash_fnc)
-        cms->hash_fnc (cms->hash_fnc_arg, buffer, nread); 
+        cms->hash_fnc (cms->hash_fnc_arg, buffer, nread);
       if (cms->writer)
         err = ksba_writer_write (cms->writer, buffer, nread);
       if (err)
@@ -121,7 +121,7 @@ read_and_hash_cont (ksba_cms_t cms)
           err = _ksba_ber_read_tl (cms->reader, &ti);
           if (err)
             return err;
-          
+
           if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OCTET_STRING
               && !ti.is_constructed)
             { /* next chunk */
@@ -149,14 +149,14 @@ read_and_hash_cont (ksba_cms_t cms)
                     }
                   else if (ti.class == CLASS_UNIVERSAL && !ti.tag
                            && !ti.is_constructed)
-                    break; /* ready with this chunk */ 
+                    break; /* ready with this chunk */
                   else
                     return gpg_error (GPG_ERR_ENCODING_PROBLEM);
                 }
             }
           else if (ti.class == CLASS_UNIVERSAL && !ti.tag
                    && !ti.is_constructed)
-            return 0; /* ready */ 
+            return 0; /* ready */
           else
             return gpg_error (GPG_ERR_ENCODING_PROBLEM);
         }
@@ -199,14 +199,14 @@ read_and_hash_cont (ksba_cms_t cms)
                 }
               else if (ti.class == CLASS_UNIVERSAL && !ti.tag
                        && !ti.is_constructed)
-                break; /* Ready with this chunk */ 
+                break; /* Ready with this chunk */
               else
                 return gpg_error (GPG_ERR_ENCODING_PROBLEM);
             }
         }
       else if (ti.class == CLASS_UNIVERSAL && !ti.tag
                && !ti.is_constructed)
-        return 0; /* ready */ 
+        return 0; /* ready */
       else
         {
           err = read_hash_block (cms, nleft);
@@ -240,7 +240,7 @@ read_encrypted_cont (ksba_cms_t cms)
           err = _ksba_ber_read_tl (cms->reader, &ti);
           if (err)
             return err;
-          
+
           if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OCTET_STRING
               && !ti.is_constructed)
             { /* next chunk */
@@ -285,14 +285,14 @@ read_encrypted_cont (ksba_cms_t cms)
                     }
                   else if (ti.class == CLASS_UNIVERSAL && !ti.tag
                            && !ti.is_constructed)
-                    break; /* ready with this chunk */ 
+                    break; /* ready with this chunk */
                   else
                     return gpg_error (GPG_ERR_ENCODING_PROBLEM);
                 }
             }
           else if (ti.class == CLASS_UNIVERSAL && !ti.tag
                    && !ti.is_constructed)
-            return 0; /* ready */ 
+            return 0; /* ready */
           else
             return gpg_error (GPG_ERR_ENCODING_PROBLEM);
         }
@@ -352,7 +352,7 @@ write_encrypted_cont (ksba_cms_t cms)
    function will also identify those files and return KSBA_CT_PKCS12;
    there is and will be no other pkcs#12 support in this library. */
 ksba_content_type_t
-ksba_cms_identify (ksba_reader_t reader) 
+ksba_cms_identify (ksba_reader_t reader)
 {
   struct tag_info ti;
   unsigned char buffer[24];
@@ -371,17 +371,17 @@ ksba_cms_identify (ksba_reader_t reader)
   ----------- ++++++++++++++++++++++++++++++++
   SEQUENCE    OID (signedData)
   (2 byte len)
- 
+
      For a pkcs12 message we have this:
 
   30 82 08 59 02 01 03 30 82 08 1F 06 09 2A 86 48 86 F7 0D 01 07 01 A0 82
-  ----------- ++++++++ ----------- ++++++++++++++++++++++++++++++++ 
+  ----------- ++++++++ ----------- ++++++++++++++++++++++++++++++++
   SEQUENCE    INTEGER  SEQUENCE    OID (data)
-  
-    This we need to read at least 22 bytes, we add 2 bytes to cope with 
+
+    This we need to read at least 22 bytes, we add 2 bytes to cope with
     length headers store with 4 bytes.
   */
-  
+
   for (count = sizeof buffer; count; count -= n)
     {
       if (ksba_reader_read (reader, buffer+sizeof (buffer)-count, count, &n))
@@ -436,9 +436,9 @@ ksba_cms_identify (ksba_reader_t reader)
 
 /**
  * ksba_cms_new:
- * 
+ *
  * Create a new and empty CMS object
- * 
+ *
  * Return value: A CMS object or an error code.
  **/
 gpg_error_t
@@ -467,7 +467,7 @@ release_value_tree (struct value_tree_s *tree)
 /**
  * ksba_cms_release:
  * @cms: A CMS object
- * 
+ *
  * Release a CMS object.
  **/
 void
@@ -524,7 +524,7 @@ ksba_cms_release (ksba_cms_t cms)
       cms->sig_val = tmp;
     }
   while (cms->capability_list)
-    { 
+    {
       struct oidparmlist_s *tmp = cms->capability_list->next;
       xfree (cms->capability_list->oid);
       xfree (cms->capability_list);
@@ -542,7 +542,7 @@ ksba_cms_set_reader_writer (ksba_cms_t cms, ksba_reader_t r, ksba_writer_t w)
     return gpg_error (GPG_ERR_INV_VALUE);
   if ((r && cms->reader) || (w && cms->writer) )
     return gpg_error (GPG_ERR_CONFLICT); /* already set */
-  
+
   cms->reader = r;
   cms->writer = w;
   return 0;
@@ -586,7 +586,7 @@ ksba_cms_parse (ksba_cms_t cms, ksba_stop_reason_t *r_stopreason)
     }
   else
     return gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
-  
+
   *r_stopreason = cms->stop_reason;
   return 0;
 }
@@ -618,7 +618,7 @@ ksba_cms_build (ksba_cms_t cms, ksba_stop_reason_t *r_stopreason)
     }
   else
     return gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
-  
+
   *r_stopreason = cms->stop_reason;
   return 0;
 }
@@ -691,7 +691,7 @@ ksba_cms_get_content_enc_iv (ksba_cms_t cms, void *iv,
  * ksba_cert_get_digest_algo_list:
  * @cert: Initialized certificate object
  * @idx: enumerator
- * 
+ *
  * Figure out the the digest algorithm used for the signature and
  * return its OID.  Note that the algos returned are just hints on
  * what to hash.
@@ -721,10 +721,10 @@ ksba_cms_get_digest_algo_list (ksba_cms_t cms, int idx)
  * @idx: index number
  * @r_issuer: returns the issuer
  * @r_serial: returns the serial number
- * 
+ *
  * This functions returns the issuer and serial number either from the
  * sid or the rid elements of a CMS object.
- * 
+ *
  * Return value: 0 on success or an error code.  An error code of -1
  * is returned to indicate that there is no issuer with that idx,
  * GPG_ERR_No_Data is returned to indicate that there is no issuer at
@@ -774,14 +774,14 @@ ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
     }
   else
     return gpg_error (GPG_ERR_NO_DATA);
-  
+
   if (r_issuer)
     {
       n = _ksba_asn_find_node (root, issuer_path);
       if (!n || !n->down)
-        return gpg_error (GPG_ERR_NO_VALUE); 
+        return gpg_error (GPG_ERR_NO_VALUE);
       n = n->down; /* dereference the choice node */
-      
+
       if (n->off == -1)
         {
 /*            fputs ("get_issuer problem at node:\n", stderr); */
@@ -802,8 +802,8 @@ ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
       /* fixme: we do not release the r_issuer stuff on error */
       n = _ksba_asn_find_node (root, serial_path);
       if (!n)
-        return gpg_error (GPG_ERR_NO_VALUE); 
-      
+        return gpg_error (GPG_ERR_NO_VALUE);
+
       if (n->off == -1)
         {
 /*            fputs ("get_serial problem at node:\n", stderr); */
@@ -832,7 +832,7 @@ ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
  * ksba_cms_get_digest_algo:
  * @cms: CMS object
  * @idx: index of signer
- * 
+ *
  * Figure out the the digest algorithm used by the signer @idx return
  * its OID.  This is the algorithm acually used to calculate the
  * signature.
@@ -852,7 +852,7 @@ ksba_cms_get_digest_algo (ksba_cms_t cms, int idx)
   if (!cms->signer_info)
     return NULL;
   if (idx < 0)
-    return NULL; 
+    return NULL;
 
   for (si=cms->signer_info; si && idx; si = si->next, idx-- )
     ;
@@ -861,7 +861,7 @@ ksba_cms_get_digest_algo (ksba_cms_t cms, int idx)
 
   if (si->cache.digest_algo)
     return si->cache.digest_algo;
-  
+
   n = _ksba_asn_find_node (si->root, "SignerInfo.digestAlgorithm.algorithm");
   algo = _ksba_oid_node_to_str (si->image, n);
   if (algo)
@@ -876,12 +876,12 @@ ksba_cms_get_digest_algo (ksba_cms_t cms, int idx)
  * ksba_cms_get_cert:
  * @cms: CMS object
  * @idx: enumerator
- * 
+ *
  * Get the certificate out of a CMS.  The caller should use this in a
  * loop to get all certificates.  The returned certificate is a
  * shallow copy of the original one; the caller must still use
  * ksba_cert_release() to free it.
- * 
+ *
  * Return value: A Certificate object or NULL for end of list or error
  **/
 ksba_cert_t
@@ -901,13 +901,13 @@ ksba_cms_get_cert (ksba_cms_t cms, int idx)
 }
 
 
-/* 
-   Return the extension attribute messageDigest 
+/*
+   Return the extension attribute messageDigest
 */
 gpg_error_t
 ksba_cms_get_message_digest (ksba_cms_t cms, int idx,
                              char **r_digest, size_t *r_digest_len)
-{ 
+{
   AsnNode nsiginfo, n;
   struct signer_info_s *si;
 
@@ -923,7 +923,7 @@ ksba_cms_get_message_digest (ksba_cms_t cms, int idx,
   if (!si)
     return -1;
 
-  
+
   *r_digest = NULL;
   *r_digest_len = 0;
   nsiginfo = _ksba_asn_find_node (si->root, "SignerInfo.signedAttrs");
@@ -962,7 +962,7 @@ ksba_cms_get_message_digest (ksba_cms_t cms, int idx,
    signing time available. */
 gpg_error_t
 ksba_cms_get_signing_time (ksba_cms_t cms, int idx, ksba_isotime_t r_sigtime)
-{ 
+{
   AsnNode nsiginfo, n;
   struct signer_info_s *si;
 
@@ -978,7 +978,7 @@ ksba_cms_get_signing_time (ksba_cms_t cms, int idx, ksba_isotime_t r_sigtime)
     ;
   if (!si)
     return -1;
-  
+
   *r_sigtime = 0;
   nsiginfo = _ksba_asn_find_node (si->root, "SignerInfo.signedAttrs");
   if (!nsiginfo)
@@ -1019,7 +1019,7 @@ ksba_cms_get_signing_time (ksba_cms_t cms, int idx, ksba_isotime_t r_sigtime)
 gpg_error_t
 ksba_cms_get_sigattr_oids (ksba_cms_t cms, int idx,
                            const char *reqoid, char **r_value)
-{ 
+{
   gpg_error_t err;
   AsnNode nsiginfo, n;
   struct signer_info_s *si;
@@ -1040,7 +1040,7 @@ ksba_cms_get_sigattr_oids (ksba_cms_t cms, int idx,
     ;
   if (!si)
     return -1; /* no more signers */
-  
+
   nsiginfo = _ksba_asn_find_node (si->root, "SignerInfo.signedAttrs");
   if (!nsiginfo)
     return -1; /* this is okay, because signedAttribs are optional */
@@ -1048,7 +1048,7 @@ ksba_cms_get_sigattr_oids (ksba_cms_t cms, int idx,
   err = ksba_oid_from_str (reqoid, &reqoidbuf, &reqoidlen);
   if(err)
     return err;
-  
+
   for (i=0; (n = _ksba_asn_find_type_value (si->image, nsiginfo,
                                             i, reqoidbuf, reqoidlen)); i++)
     {
@@ -1115,11 +1115,11 @@ ksba_cms_get_sigattr_oids (ksba_cms_t cms, int idx,
  * ksba_cms_get_sig_val:
  * @cms: CMS object
  * @idx: index of signer
- * 
+ *
  * Return the actual signature of signer @idx in a format suitable to
  * be used as input to Libgcrypt's verification function.  The caller
  * must free the returned string.
- * 
+ *
  * Return value: NULL or a string with a S-Exp.
  **/
 ksba_sexp_t
@@ -1135,7 +1135,7 @@ ksba_cms_get_sig_val (ksba_cms_t cms, int idx)
   if (!cms->signer_info)
     return NULL;
   if (idx < 0)
-    return NULL; 
+    return NULL;
 
   for (si=cms->signer_info; si && idx; si = si->next, idx-- )
     ;
@@ -1168,11 +1168,11 @@ ksba_cms_get_sig_val (ksba_cms_t cms, int idx)
  * ksba_cms_get_enc_val:
  * @cms: CMS object
  * @idx: index of recipient info
- * 
+ *
  * Return the encrypted value (the session key) of recipient @idx in a
  * format suitable to be used as input to Libgcrypt's decryption
  * function.  The caller must free the returned string.
- * 
+ *
  * Return value: NULL or a string with a S-Exp.
  **/
 ksba_sexp_t
@@ -1254,13 +1254,13 @@ ksba_cms_hash_signed_attrs (ksba_cms_t cms, int idx)
     ;
   if (!si)
     return -1;
-      
+
   n = _ksba_asn_find_node (si->root, "SignerInfo.signedAttrs");
   if (!n || n->off == -1)
-    return gpg_error (GPG_ERR_NO_VALUE); 
+    return gpg_error (GPG_ERR_NO_VALUE);
 
   /* We don't hash the implicit tag [0] but a SET tag */
-  cms->hash_fnc (cms->hash_fnc_arg, "\x31", 1); 
+  cms->hash_fnc (cms->hash_fnc_arg, "\x31", 1);
   cms->hash_fnc (cms->hash_fnc_arg,
                  si->image + n->off + 1, n->nhdr + n->len - 1);
 
@@ -1268,7 +1268,7 @@ ksba_cms_hash_signed_attrs (ksba_cms_t cms, int idx)
 }
 
 
-/* 
+/*
   Code to create CMS structures
 */
 
@@ -1278,10 +1278,10 @@ ksba_cms_hash_signed_attrs (ksba_cms_t cms, int idx)
  * @cms: A CMS object
  * @what: 0 for content type, 1 for inner content type
  * @type: Tyep constant
- * 
+ *
  * Set the content type used for build operations.  This should be the
  * first operation before starting to create a CMS message.
- * 
+ *
  * Return value: 0 on success or an error code
  **/
 gpg_error_t
@@ -1323,12 +1323,12 @@ ksba_cms_set_content_type (ksba_cms_t cms, int what, ksba_content_type_t type)
 
 /**
  * ksba_cms_add_digest_algo:
- * @cms:  A CMS object 
+ * @cms:  A CMS object
  * @oid: A stringified object OID describing the hash algorithm
- * 
+ *
  * Set the algorithm to be used for creating the hash. Note, that we
  * currently can't do a per-signer hash.
- * 
+ *
  * Return value: 0 on success or an error code
  **/
 gpg_error_t
@@ -1342,7 +1342,7 @@ ksba_cms_add_digest_algo (ksba_cms_t cms, const char *oid)
   ol = xtrymalloc (sizeof *ol);
   if (!ol)
     return gpg_error (GPG_ERR_ENOMEM);
-  
+
   ol->oid = xtrystrdup (oid);
   if (!ol->oid)
     {
@@ -1359,7 +1359,7 @@ ksba_cms_add_digest_algo (ksba_cms_t cms, const char *oid)
  * ksba_cms_add_signer:
  * @cms: A CMS object
  * @cert: A certificate used to describe the signer.
- * 
+ *
  * This functions starts assembly of a new signed data content or adds
  * another signer to the list of signers.
  *
@@ -1372,7 +1372,7 @@ ksba_cms_add_signer (ksba_cms_t cms, ksba_cert_t cert)
 
   if (!cms)
     return gpg_error (GPG_ERR_INV_VALUE);
-  
+
   cl = xtrycalloc (1,sizeof *cl);
   if (!cl)
       return gpg_error (GPG_ERR_ENOMEM);
@@ -1394,7 +1394,7 @@ ksba_cms_add_signer (ksba_cms_t cms, ksba_cert_t cert)
  * ksba_cms_add_cert:
  * @cms: A CMS object
  * @cert: A certificate to be send along with the signed data.
- * 
+ *
  * This functions adds a certificate to the list of certificates send
  * along with the signed data.  Using this is optional but it is very
  * common to include at least the certificate of the signer it self.
@@ -1488,20 +1488,20 @@ ksba_cms_add_smime_capability (ksba_cms_t cms, const char *oid,
  * @idx: The index of the signer
  * @digest: a message digest
  * @digest_len: the length of the message digest
- * 
+ *
  * Set a message digest into the signedAttributes of the signer with
  * the index IDX.  The index of a signer is determined by the sequence
  * of ksba_cms_add_signer() calls; the first signer has the index 0.
  * This function is to be used when the hash value of the data has
  * been calculated and before the create function requests the sign
  * operation.
- * 
+ *
  * Return value: 0 on success or an error code
  **/
 gpg_error_t
-ksba_cms_set_message_digest (ksba_cms_t cms, int idx, 
+ksba_cms_set_message_digest (ksba_cms_t cms, int idx,
                              const unsigned char *digest, size_t digest_len)
-{ 
+{
   struct certlist_s *cl;
 
   if (!cms || !digest)
@@ -1525,16 +1525,16 @@ ksba_cms_set_message_digest (ksba_cms_t cms, int idx,
  * @cms: A CMS object
  * @idx: The index of the signer
  * @sigtime: a time or an empty value to use the current time
- * 
+ *
  * Set a signing time into the signedAttributes of the signer with
  * the index IDX.  The index of a signer is determined by the sequence
  * of ksba_cms_add_signer() calls; the first signer has the index 0.
- * 
+ *
  * Return value: 0 on success or an error code
  **/
 gpg_error_t
 ksba_cms_set_signing_time (ksba_cms_t cms, int idx, const ksba_isotime_t sigtime)
-{ 
+{
   struct certlist_s *cl;
 
   if (!cms)
@@ -1546,13 +1546,13 @@ ksba_cms_set_signing_time (ksba_cms_t cms, int idx, const ksba_isotime_t sigtime
     ;
   if (!cl)
     return gpg_error (GPG_ERR_INV_INDEX); /* no certificate to store it */
-  
+
   /* Fixme: We might want to check the validity of the passed time
      string. */
   if (!*sigtime)
     _ksba_current_time (cl->signing_time);
   else
-    _ksba_copy_time (cl->signing_time, sigtime); 
+    _ksba_copy_time (cl->signing_time, sigtime);
   return 0;
 }
 
@@ -1567,7 +1567,7 @@ ksba_cms_set_signing_time (ksba_cms_t cms, int idx, const ksba_isotime_t sigtime
   The sexp must be in canonical form.
   Note the <algo> must be given as a stringified OID or the special
   string "rsa".
- 
+
   Note that IDX is only used for consistency checks.
  */
 gpg_error_t
@@ -1591,19 +1591,19 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
   for (i=0, sv_tail=&cms->sig_val; *sv_tail; sv_tail=&(*sv_tail)->next, i++)
     ;
   if (i != idx)
-    return gpg_error (GPG_ERR_INV_INDEX); 
+    return gpg_error (GPG_ERR_INV_INDEX);
 
   if (!(n = snext (&s)))
-    return gpg_error (GPG_ERR_INV_SEXP); 
+    return gpg_error (GPG_ERR_INV_SEXP);
   if (!smatch (&s, 7, "sig-val"))
     return gpg_error (GPG_ERR_UNKNOWN_SEXP);
   if (*s != '(')
     return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
   s++;
- 
+
   /* Break out the algorithm ID. */
   if (!(n = snext (&s)))
-    return gpg_error (GPG_ERR_INV_SEXP); 
+    return gpg_error (GPG_ERR_INV_SEXP);
 
   sv = xtrycalloc (1, sizeof *sv);
   if (!sv)
@@ -1644,10 +1644,10 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
     {
       xfree (sv->algo);
       xfree (sv);
-      return gpg_error (GPG_ERR_INV_SEXP); 
+      return gpg_error (GPG_ERR_INV_SEXP);
     }
   s += n; /* ignore the name of the parameter */
-  
+
   if (!digitp(s))
     {
       xfree (sv->algo);
@@ -1660,11 +1660,11 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
     {
       xfree (sv->algo);
       xfree (sv);
-      return gpg_error (GPG_ERR_INV_SEXP); 
+      return gpg_error (GPG_ERR_INV_SEXP);
     }
 
   if (n > 1 && !*s)
-    { /* We might have a leading zero due to the way we encode 
+    { /* We might have a leading zero due to the way we encode
          MPIs - this zero should not go into the OCTECT STRING.  */
       s++;
       n--;
@@ -1695,7 +1695,7 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
       xfree (sv->value);
       xfree (sv->algo);
       xfree (sv);
-      return gpg_error (GPG_ERR_INV_SEXP); 
+      return gpg_error (GPG_ERR_INV_SEXP);
     }
 
   *sv_tail = sv;
@@ -1733,7 +1733,7 @@ ksba_cms_set_content_enc_algo (ksba_cms_t cms,
 }
 
 
-/* 
+/*
  * encval is expected to be a canonical encoded  S-Exp of this form:
  *  (enc-val
  *	(<algo>
@@ -1755,7 +1755,7 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
   if (!cms)
     return gpg_error (GPG_ERR_INV_VALUE);
   if (idx < 0)
-    return gpg_error (GPG_ERR_INV_INDEX); 
+    return gpg_error (GPG_ERR_INV_INDEX);
   for (cl=cms->cert_list; cl && idx; cl = cl->next, idx--)
     ;
   if (!cl)
@@ -1809,19 +1809,19 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
   n = strtoul (s, (char**)&endp, 10);
   s = endp;
   if (!n || *s != ':')
-    return gpg_error (GPG_ERR_INV_SEXP); 
+    return gpg_error (GPG_ERR_INV_SEXP);
   s++;
   s += n; /* ignore the name of the parameter */
-  
+
   if (!digitp(s))
     return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
   n = strtoul (s, (char**)&endp, 10);
   s = endp;
   if (!n || *s != ':')
-    return gpg_error (GPG_ERR_INV_SEXP); 
+    return gpg_error (GPG_ERR_INV_SEXP);
   s++;
   if (n > 1 && !*s)
-    { /* We might have a leading zero due to the way we encode 
+    { /* We might have a leading zero due to the way we encode
          MPIs - this zero should not go into the OCTECT STRING.  */
       s++;
       n--;
@@ -1840,7 +1840,7 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
 
   /* we need 2 closing parenthesis */
   if ( *s != ')' || s[1] != ')')
-    return gpg_error (GPG_ERR_INV_SEXP); 
+    return gpg_error (GPG_ERR_INV_SEXP);
 
   return 0;
 }
@@ -1852,13 +1852,13 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
  * ksba_cms_add_recipient:
  * @cms: A CMS object
  * @cert: A certificate used to describe the recipient.
- * 
+ *
  * This functions starts assembly of a new enveloped data content or adds
  * another recipient to the list of recipients.
  *
  * Note: after successful completion of this function ownership of
- * @cert is transferred to @cms.  
- * 
+ * @cert is transferred to @cms.
+ *
  * Return value: 0 on success or an error code.
  **/
 gpg_error_t
@@ -1875,7 +1875,7 @@ ksba_cms_add_recipient (ksba_cms_t cms, ksba_cert_t cert)
    Content handler for parsing messages
 */
 
-static gpg_error_t 
+static gpg_error_t
 ct_parse_data (ksba_cms_t cms)
 {
   (void)cms;
@@ -1883,10 +1883,10 @@ ct_parse_data (ksba_cms_t cms)
 }
 
 
-static gpg_error_t 
+static gpg_error_t
 ct_parse_signed_data (ksba_cms_t cms)
 {
-  enum { 
+  enum {
     sSTART,
     sGOT_HASH,
     sIN_DATA,
@@ -1921,7 +1921,7 @@ ct_parse_signed_data (ksba_cms_t cms)
     err = gpg_error (GPG_ERR_INV_STATE);
   else if (stop_reason)
     err = gpg_error (GPG_ERR_BUG);
-  
+
   if (err)
     return err;
 
@@ -1947,8 +1947,8 @@ ct_parse_signed_data (ksba_cms_t cms)
              to hash the data now, he can do this also later. */
           stop_reason = KSBA_SR_NEED_HASH;
         }
-      else 
-        { /* The user must now provide a hash function so that we can 
+      else
+        { /* The user must now provide a hash function so that we can
              hash the data in the next round */
           stop_reason = KSBA_SR_BEGIN_DATA;
         }
@@ -1957,16 +1957,16 @@ ct_parse_signed_data (ksba_cms_t cms)
     stop_reason = KSBA_SR_END_DATA;
   else if (state ==sGOT_HASH)
     stop_reason = KSBA_SR_READY;
-    
+
   cms->stop_reason = stop_reason;
   return 0;
 }
 
 
-static gpg_error_t 
+static gpg_error_t
 ct_parse_enveloped_data (ksba_cms_t cms)
 {
-  enum { 
+  enum {
     sSTART,
     sREST,
     sINDATA,
@@ -1998,7 +1998,7 @@ ct_parse_enveloped_data (ksba_cms_t cms)
     err = gpg_error (GPG_ERR_INV_STATE);
   else if (stop_reason)
     err = gpg_error (GPG_ERR_BUG);
-  
+
   if (err)
     return err;
 
@@ -2025,13 +2025,13 @@ ct_parse_enveloped_data (ksba_cms_t cms)
     stop_reason = KSBA_SR_END_DATA;
   else if (state ==sREST)
     stop_reason = KSBA_SR_READY;
-    
+
   cms->stop_reason = stop_reason;
   return 0;
 }
 
 
-static gpg_error_t 
+static gpg_error_t
 ct_parse_digested_data (ksba_cms_t cms)
 {
   (void)cms;
@@ -2039,7 +2039,7 @@ ct_parse_digested_data (ksba_cms_t cms)
 }
 
 
-static gpg_error_t 
+static gpg_error_t
 ct_parse_encrypted_data (ksba_cms_t cms)
 {
   (void)cms;
@@ -2052,7 +2052,7 @@ ct_parse_encrypted_data (ksba_cms_t cms)
    Content handlers for building messages
 */
 
-static gpg_error_t 
+static gpg_error_t
 ct_build_data (ksba_cms_t cms)
 {
   (void)cms;
@@ -2085,18 +2085,18 @@ build_signed_data_header (ksba_cms_t cms)
   xfree (buf);
   if (err)
     return err;
-  
+
   err = _ksba_ber_write_tl (cms->writer, 0, CLASS_CONTEXT, 1, 0);
   if (err)
     return err;
-  
+
   /* The SEQUENCE */
   err = _ksba_ber_write_tl (cms->writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, 0);
   if (err)
     return err;
 
   /* figure out the CMSVersion to be used */
-  if (0 /* fixme: have_attribute_certificates 
+  if (0 /* fixme: have_attribute_certificates
            || encapsulated_content != data
            || any_signer_info_is_version_3*/ )
     s = "\x03";
@@ -2108,7 +2108,7 @@ build_signed_data_header (ksba_cms_t cms)
   err = ksba_writer_write (cms->writer, s, 1);
   if (err)
     return err;
-  
+
   /* SET OF DigestAlgorithmIdentifier */
   {
     unsigned char *value;
@@ -2124,7 +2124,7 @@ build_signed_data_header (ksba_cms_t cms)
         ksba_writer_release (tmpwrt);
         return err;
       }
-    
+
     for (i=0; (s = ksba_cms_get_digest_algo_list (cms, i)); i++)
       {
         int j;
@@ -2146,7 +2146,7 @@ build_signed_data_header (ksba_cms_t cms)
               }
           }
       }
-      
+
     value = ksba_writer_snatch_mem (tmpwrt, &valuelen);
     ksba_writer_release (tmpwrt);
     if (!value)
@@ -2193,7 +2193,7 @@ build_signed_data_header (ksba_cms_t cms)
 }
 
 /* Set the issuer/serial from the cert to the node.
-   mode 0: sid 
+   mode 0: sid
    mode 1: rid
  */
 static gpg_error_t
@@ -2249,7 +2249,7 @@ store_smime_capability_sequence (AsnNode node,
       ksba_writer_release (tmpwrt);
       return err;
     }
-    
+
   for (cap=capabilities; cap; cap = cap->next)
     {
       /* (avoid writing duplicates) */
@@ -2268,7 +2268,7 @@ store_smime_capability_sequence (AsnNode node,
              some profiles (e.g. tmttv2) even explicitly suggested to
              use NULL.  */
           err = _ksba_der_write_algorithm_identifier
-                 (tmpwrt, cap->oid, 
+                 (tmpwrt, cap->oid,
                   cap->parmlen?cap->parm:(const void*)"", cap->parmlen);
           if (err)
             {
@@ -2277,7 +2277,7 @@ store_smime_capability_sequence (AsnNode node,
             }
         }
     }
-  
+
   value = ksba_writer_snatch_mem (tmpwrt, &valuelen);
   if (!value)
     err = gpg_error (GPG_ERR_ENOMEM);
@@ -2316,7 +2316,7 @@ compare_attrarray (const void *a_v, const void *b_v)
       return *ap - *bp;
 
   return (an == bn)? 0 : (an > bn)? 1 : -1;
-}     
+}
 
 
 
@@ -2324,7 +2324,7 @@ compare_attrarray (const void *a_v, const void *b_v)
 /* Write the END of data NULL tag and everything we can write before
    the user can calculate the signature */
 static gpg_error_t
-build_signed_data_attributes (ksba_cms_t cms) 
+build_signed_data_attributes (ksba_cms_t cms)
 {
   gpg_error_t err;
   int signer;
@@ -2333,7 +2333,7 @@ build_signed_data_attributes (ksba_cms_t cms)
   struct oidlist_s *digestlist;
   struct signer_info_s *si, **si_tail;
   AsnNode root = NULL;
-  struct attrarray_s attrarray[4]; 
+  struct attrarray_s attrarray[4];
   int attridx = 0;
   int i;
 
@@ -2354,7 +2354,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       unsigned long totallen = 0;
       const unsigned char *der;
       size_t n;
-      
+
       for (certlist = cms->cert_info_list; certlist; certlist = certlist->next)
         {
           if (!ksba_cert_get_image (certlist->cert, &n))
@@ -2370,7 +2370,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       for (certlist = cms->cert_info_list; certlist; certlist = certlist->next)
         {
           if (!(der=ksba_cert_get_image (certlist->cert, &n)))
-            return gpg_error (GPG_ERR_BUG); 
+            return gpg_error (GPG_ERR_BUG);
           err = ksba_writer_write (cms->writer, der, n);
           if (err )
             return err;
@@ -2429,7 +2429,7 @@ build_signed_data_attributes (ksba_cms_t cms)
 	}
 
       /* Include the pretty important message digest. */
-      attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+      attr = _ksba_asn_expand_tree (cms_tree->parse_tree,
                                     "CryptographicMessageSyntax.Attribute");
       if (!attr)
         {
@@ -2463,7 +2463,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       attridx++;
 
       /* Include the content-type attribute. */
-      attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+      attr = _ksba_asn_expand_tree (cms_tree->parse_tree,
                                     "CryptographicMessageSyntax.Attribute");
       if (!attr)
         {
@@ -2500,7 +2500,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       /* Include the signing time */
       if (certlist->signing_time)
         {
-          attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+          attr = _ksba_asn_expand_tree (cms_tree->parse_tree,
                                      "CryptographicMessageSyntax.Attribute");
           if (!attr)
             {
@@ -2539,7 +2539,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       /* Include the S/MIME capabilities with the first signer. */
       if (cms->capability_list && !signer)
         {
-          attr = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+          attr = _ksba_asn_expand_tree (cms_tree->parse_tree,
                                     "CryptographicMessageSyntax.Attribute");
           if (!attr)
             {
@@ -2581,20 +2581,20 @@ build_signed_data_attributes (ksba_cms_t cms)
 
       /* Now copy them to an SignerInfo tree.  This tree is not
          complete but suitable for ksba_cms_hash_signed_attributes() */
-      root = _ksba_asn_expand_tree (cms_tree->parse_tree,  
-                                    "CryptographicMessageSyntax.SignerInfo"); 
+      root = _ksba_asn_expand_tree (cms_tree->parse_tree,
+                                    "CryptographicMessageSyntax.SignerInfo");
       n = _ksba_asn_find_node (root, "SignerInfo.signedAttrs");
-      if (!n || !n->down) 
+      if (!n || !n->down)
         {
-	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND); 
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
 	  goto leave;
 	}
       /* This is another ugly hack to move to the element we want */
       for (n = n->down->down; n && n->type != TYPE_SEQUENCE; n = n->right)
         ;
-      if (!n) 
+      if (!n)
         {
-	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND); 
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
 	  goto leave;
 	}
 
@@ -2621,7 +2621,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       err = _ksba_der_encode_tree (root, &image, NULL);
       if (err)
         goto leave;
-      
+
       si = xtrycalloc (1, sizeof *si);
       if (!si)
         return gpg_error (GPG_ERR_ENOMEM);
@@ -2650,8 +2650,8 @@ build_signed_data_attributes (ksba_cms_t cms)
 
 /* The user has calculated the signatures and we can therefore write
    everything left over to do. */
-static gpg_error_t 
-build_signed_data_rest (ksba_cms_t cms) 
+static gpg_error_t
+build_signed_data_rest (ksba_cms_t cms)
 {
   gpg_error_t err;
   int signer;
@@ -2709,7 +2709,7 @@ build_signed_data_rest (ksba_cms_t cms)
 	  goto leave;
 	}
 
-      root = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+      root = _ksba_asn_expand_tree (cms_tree->parse_tree,
                                     "CryptographicMessageSyntax.SignerInfo");
 
       /* We store a version of 1 because we use the issuerAndSerialNumber */
@@ -2757,15 +2757,15 @@ build_signed_data_rest (ksba_cms_t cms)
 
       /* and the signed attributes */
       n = _ksba_asn_find_node (root, "SignerInfo.signedAttrs");
-      if (!n || !n->down) 
+      if (!n || !n->down)
         {
-	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND); 
+	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
 	  goto leave;
 	}
       assert (si->root);
       assert (si->image);
       n2 = _ksba_asn_find_node (si->root, "SignerInfo.signedAttrs");
-      if (!n2 || !n->down) 
+      if (!n2 || !n->down)
         {
 	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
 	  goto leave;
@@ -2867,10 +2867,10 @@ build_signed_data_rest (ksba_cms_t cms)
 
 
 
-static gpg_error_t 
+static gpg_error_t
 ct_build_signed_data (ksba_cms_t cms)
 {
-  enum { 
+  enum {
     sSTART,
     sDATAREADY,
     sGOTSIG,
@@ -2904,7 +2904,7 @@ ct_build_signed_data (ksba_cms_t cms)
     err = gpg_error (GPG_ERR_INV_STATE);
   else if (stop_reason)
     err = gpg_error (GPG_ERR_BUG);
-  
+
   if (err)
     return err;
 
@@ -2946,7 +2946,7 @@ ct_build_signed_data (ksba_cms_t cms)
     stop_reason = KSBA_SR_NEED_SIG;
   else if (state == sGOTSIG)
     stop_reason = KSBA_SR_READY;
-    
+
   cms->stop_reason = stop_reason;
   return 0;
 }
@@ -2980,11 +2980,11 @@ build_enveloped_data_header (ksba_cms_t cms)
   xfree (buf);
   if (err)
     return err;
-  
+
   err = _ksba_ber_write_tl (cms->writer, 0, CLASS_CONTEXT, 1, 0);
   if (err)
     return err;
-  
+
   /* The SEQUENCE */
   err = _ksba_ber_write_tl (cms->writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, 0);
   if (err)
@@ -2997,11 +2997,11 @@ build_enveloped_data_header (ksba_cms_t cms)
      shall be 2.  If unprotectedAttrs is present, then version shall
      be 2.  If originatorInfo is absent, all of the RecipientInfo
      structures are version 0, and unprotectedAttrs is absent, then
-     version shall be 0. 
-     
+     version shall be 0.
+
      For SPHINX the version number must be 0.
   */
-  s = "\x00"; 
+  s = "\x00";
   err = _ksba_ber_write_tl (cms->writer, TYPE_INTEGER, CLASS_UNIVERSAL, 0, 1);
   if (err)
     return err;
@@ -3044,7 +3044,7 @@ build_enveloped_data_header (ksba_cms_t cms)
           goto leave;
         }
 
-      root = _ksba_asn_expand_tree (cms_tree->parse_tree, 
+      root = _ksba_asn_expand_tree (cms_tree->parse_tree,
                                 "CryptographicMessageSyntax.RecipientInfo");
 
       /* We store a version of 0 because we are only allowed to use
@@ -3074,7 +3074,7 @@ build_enveloped_data_header (ksba_cms_t cms)
       /* store the keyEncryptionAlgorithm */
       if (!certlist->enc_val.algo || !certlist->enc_val.value)
         return gpg_error (GPG_ERR_MISSING_VALUE);
-      n = _ksba_asn_find_node (root, 
+      n = _ksba_asn_find_node (root,
                   "RecipientInfo.ktri.keyEncryptionAlgorithm.algorithm");
       if (!n)
         {
@@ -3084,7 +3084,7 @@ build_enveloped_data_header (ksba_cms_t cms)
       err = _ksba_der_store_oid (n, certlist->enc_val.algo);
       if (err)
         goto leave;
-      n = _ksba_asn_find_node (root, 
+      n = _ksba_asn_find_node (root,
                   "RecipientInfo.ktri.keyEncryptionAlgorithm.parameters");
       if (!n)
         {
@@ -3117,7 +3117,7 @@ build_enveloped_data_header (ksba_cms_t cms)
        * standards despite we didn't intended so.
        */
 
-      err = _ksba_der_store_null (n); 
+      err = _ksba_der_store_null (n);
       if (err)
         goto leave;
 
@@ -3178,7 +3178,7 @@ build_enveloped_data_header (ksba_cms_t cms)
       goto leave;
   }
 
-  
+
   /* Write the (inner) encryptedContentInfo */
   err = _ksba_ber_write_tl (cms->writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, 0);
   if (err)
@@ -3195,7 +3195,7 @@ build_enveloped_data_header (ksba_cms_t cms)
     return err;
 
   /* and the encryptionAlgorithm */
-  err = _ksba_der_write_algorithm_identifier (cms->writer, 
+  err = _ksba_der_write_algorithm_identifier (cms->writer,
                                               cms->encr_algo_oid,
                                               cms->encr_iv,
                                               cms->encr_ivlen);
@@ -3217,10 +3217,10 @@ build_enveloped_data_header (ksba_cms_t cms)
 }
 
 
-static gpg_error_t 
+static gpg_error_t
 ct_build_enveloped_data (ksba_cms_t cms)
 {
-  enum { 
+  enum {
     sSTART,
     sINDATA,
     sREST,
@@ -3243,7 +3243,7 @@ ct_build_enveloped_data (ksba_cms_t cms)
     err = gpg_error (GPG_ERR_INV_STATE);
   else if (stop_reason)
     err = gpg_error (GPG_ERR_BUG);
-  
+
   if (err)
     return err;
 
@@ -3290,7 +3290,7 @@ ct_build_enveloped_data (ksba_cms_t cms)
 }
 
 
-static gpg_error_t 
+static gpg_error_t
 ct_build_digested_data (ksba_cms_t cms)
 {
   (void)cms;
@@ -3298,11 +3298,9 @@ ct_build_digested_data (ksba_cms_t cms)
 }
 
 
-static gpg_error_t 
+static gpg_error_t
 ct_build_encrypted_data (ksba_cms_t cms)
 {
   (void)cms;
   return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
 }
-
-

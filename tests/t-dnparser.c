@@ -52,14 +52,14 @@ test_0 (void)
           fprintf (stderr, "%s:%d: ksba_dn_str2der failed for `%s': %s\n",
                    __FILE__,__LINE__, good_strings[i], gpg_strerror (err));
           exit (1);
-        } 
+        }
       err = ksba_dn_teststr (good_strings[i], 0, &off, &len);
       if (err)
         {
           fprintf (stderr, "%s:%d: ksba_dn_teststr failed for `%s': %s\n",
                    __FILE__,__LINE__, good_strings[i], gpg_strerror (err));
           exit (1);
-        } 
+        }
       xfree (buf);
     }
 }
@@ -129,7 +129,7 @@ test_2 (void)
 
 
 
-int 
+int
 main (int argc, char **argv)
 {
   char inputbuf[4096];
@@ -137,13 +137,13 @@ main (int argc, char **argv)
   unsigned char *buf;
   size_t len;
   gpg_error_t err;
-  
+
   if (argc == 2 && !strcmp (argv[1], "--to-str") )
     { /* Read the DER encoded DN from stdin write the string to stdout */
       inputlen = fread (inputbuf, 1, sizeof inputbuf, stdin);
       if (!feof (stdin))
         fail ("read error or input too large");
-      
+
       fail ("no yet implemented");
 
     }
@@ -152,7 +152,7 @@ main (int argc, char **argv)
       inputlen = fread (inputbuf, 1, sizeof inputbuf, stdin);
       if (!feof (stdin))
         fail ("read error or input too large");
-      
+
       err = ksba_dn_str2der (inputbuf, &buf, &len);
       fail_if_err (err);
       fwrite (buf, len, 1, stdout);
@@ -171,4 +171,3 @@ main (int argc, char **argv)
 
   return 0;
 }
-

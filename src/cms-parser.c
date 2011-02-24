@@ -53,7 +53,7 @@ read_byte (ksba_reader_t reader)
 }
 
 /* read COUNT bytes into buffer.  Return 0 on success */
-static int 
+static int
 read_buffer (ksba_reader_t reader, char *buffer, size_t count)
 {
   size_t nread;
@@ -105,10 +105,10 @@ create_and_run_decoder (ksba_reader_t reader, const char *elem_name,
       _ksba_ber_decoder_release (decoder);
       return err;
     }
-  
+
   err = _ksba_ber_decoder_decode (decoder, elem_name, flags,
                                   r_root, r_image, r_imagelen);
-  
+
   _ksba_ber_decoder_release (decoder);
   ksba_asn_tree_release (cms_tree);
   return err;
@@ -121,8 +121,8 @@ create_and_run_decoder (ksba_reader_t reader, const char *elem_name,
    the core for parsing ContentInfo and EncapsulatedContentInfo.
 
    ContentInfo ::= SEQUENCE {
-      contentType ContentType, 
-      content [0] EXPLICIT ANY DEFINED BY contentType 
+      contentType ContentType,
+      content [0] EXPLICIT ANY DEFINED BY contentType
    }
    ContentType ::= OBJECT IDENTIFIER
 
@@ -149,7 +149,7 @@ parse_content_info (ksba_reader_t reader,
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
     return gpg_error (GPG_ERR_INV_CMS_OBJ);
-  content_len = ti.length; 
+  content_len = ti.length;
   content_ndef = ti.ndef;
   if (!content_ndef && content_len < 3)
     return gpg_error (GPG_ERR_TOO_SHORT); /* to encode an OID */
@@ -160,7 +160,7 @@ parse_content_info (ksba_reader_t reader,
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OBJECT_ID
          && !ti.is_constructed && ti.length) )
-    return gpg_error (GPG_ERR_INV_CMS_OBJ); 
+    return gpg_error (GPG_ERR_INV_CMS_OBJ);
   if (!content_ndef)
     {
       if (content_len < ti.nhdr)
@@ -204,7 +204,7 @@ parse_content_info (ksba_reader_t reader,
       else /* neither [0] nor NULL */
         {
           xfree (oid);
-          return gpg_error (GPG_ERR_INV_CMS_OBJ); 
+          return gpg_error (GPG_ERR_INV_CMS_OBJ);
         }
       if (!content_ndef)
         {
@@ -261,7 +261,7 @@ parse_encrypted_content_info (ksba_reader_t reader,
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
     return gpg_error (GPG_ERR_INV_CMS_OBJ);
-  content_len = ti.length; 
+  content_len = ti.length;
   content_ndef = ti.ndef;
   if (!content_ndef && content_len < 3)
     return gpg_error (GPG_ERR_TOO_SHORT); /* to encode an OID */
@@ -272,7 +272,7 @@ parse_encrypted_content_info (ksba_reader_t reader,
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OBJECT_ID
          && !ti.is_constructed && ti.length) )
-    return gpg_error (GPG_ERR_INV_CMS_OBJ); 
+    return gpg_error (GPG_ERR_INV_CMS_OBJ);
   if (!content_ndef)
     {
       if (content_len < ti.nhdr)
@@ -345,10 +345,10 @@ parse_encrypted_content_info (ksba_reader_t reader,
           if (!content_ndef)
             {
               if (content_len < ti.nhdr)
-                return gpg_error (GPG_ERR_BAD_BER); 
+                return gpg_error (GPG_ERR_BAD_BER);
               content_len -= ti.nhdr;
               if (!ti.ndef && content_len < ti.length)
-                return gpg_error (GPG_ERR_BAD_BER); 
+                return gpg_error (GPG_ERR_BAD_BER);
             }
         }
       else /* not what we want - push it back */
@@ -374,8 +374,8 @@ parse_encrypted_content_info (ksba_reader_t reader,
    position is then located at the value of content.
 
    ContentInfo ::= SEQUENCE {
-      contentType ContentType, 
-      content [0] EXPLICIT ANY DEFINED BY contentType 
+      contentType ContentType,
+      content [0] EXPLICIT ANY DEFINED BY contentType
    }
    ContentType ::= OBJECT IDENTIFIER
 
@@ -434,7 +434,7 @@ parse_cms_version (ksba_reader_t reader, int *r_version,
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
          && ti.is_constructed) )
     return gpg_error (GPG_ERR_INV_CMS_OBJ);
-  data_len = ti.length; 
+  data_len = ti.length;
   data_ndef = ti.ndef;
   if (!data_ndef && data_len < 3)
     return gpg_error (GPG_ERR_TOO_SHORT); /*to encode the version*/
@@ -445,7 +445,7 @@ parse_cms_version (ksba_reader_t reader, int *r_version,
     return err;
   if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_INTEGER
          && !ti.is_constructed && ti.length) )
-    return gpg_error (GPG_ERR_INV_CMS_OBJ); 
+    return gpg_error (GPG_ERR_INV_CMS_OBJ);
   if (!data_ndef)
     {
       if (data_len < ti.nhdr)
@@ -456,7 +456,7 @@ parse_cms_version (ksba_reader_t reader, int *r_version,
       data_len -= ti.length;
     }
   if (ti.length != 1)
-    return gpg_error (GPG_ERR_UNSUPPORTED_CMS_VERSION); 
+    return gpg_error (GPG_ERR_UNSUPPORTED_CMS_VERSION);
   if ( (c=read_byte (reader)) == -1)
     {
       err = ksba_reader_error (reader);
@@ -482,7 +482,7 @@ parse_cms_version (ksba_reader_t reader, int *r_version,
      certificates [0] IMPLICIT CertificateSet OPTIONAL,
      crls [1] IMPLICIT CertificateRevocationLists OPTIONAL,
      signerInfos SignerInfos }
-   
+
    AlgorithmIdentifier ::= SEQUENCE {
     algorithm    OBJECT IDENTIFIER,
     parameters   ANY DEFINED BY algorithm OPTIONAL
@@ -526,9 +526,9 @@ _ksba_cms_parse_signed_data_part_1 (ksba_cms_t cms)
         return gpg_error (GPG_ERR_BAD_BER); /* triplet larger that sequence */
       signed_data_len -= ti.length;
     }
-  algo_set_len = ti.length; 
+  algo_set_len = ti.length;
   algo_set_ndef = ti.ndef;
-  
+
   /* fixme: we are not able to read ndef length algorithm indentifiers. */
   if (algo_set_ndef)
     return gpg_error (GPG_ERR_UNSUPPORTED_ENCODING);
@@ -573,13 +573,13 @@ _ksba_cms_parse_signed_data_part_1 (ksba_cms_t cms)
   /* Now for the encapsulatedContentInfo */
   off = ksba_reader_tell (cms->reader);
   err = parse_content_info (cms->reader,
-                            &encap_cont_len, &encap_cont_ndef, 
+                            &encap_cont_len, &encap_cont_ndef,
                             &oid, &has_content);
   if (err)
     return err;
   cms->inner_cont_len = encap_cont_len;
   cms->inner_cont_ndef = encap_cont_ndef;
-  cms->inner_cont_oid = oid; 
+  cms->inner_cont_oid = oid;
   cms->detached_data = !has_content;
   if (!signed_data_ndef)
     {
@@ -628,7 +628,7 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
       int expect_endtag;
 
       expect_endtag = !!ti.ndef;
-      
+
       for (;;)
         {
           struct certlist_s *cl;
@@ -679,7 +679,7 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
           cms->cert_list = cl;
         }
     }
-      
+
   if (ti.class == CLASS_CONTEXT && ti.tag == 1 && ti.is_constructed)
     {  /* implicit SET OF certificateList.  We should delegate the
           parsing to a - not yet existing - ksba_crl module.  CRLs are
@@ -714,7 +714,7 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
           if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
                  && ti.is_constructed))
             break; /* not a sequence, so we are ready with the set */
-          
+
           while (ti.length)
             {
               size_t n, nread;
@@ -732,20 +732,20 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
   /* expect a SET OF signerInfo */
   if ( !(ti.class == CLASS_UNIVERSAL
          && ti.tag == TYPE_SET && ti.is_constructed))
-    return gpg_error (GPG_ERR_INV_CMS_OBJ); 
+    return gpg_error (GPG_ERR_INV_CMS_OBJ);
 
   si_tail = &cms->signer_info;
 
   while (ti.length)
     {
       size_t off1, off2;
-      
+
       off1 = ksba_reader_tell (cms->reader);
       si = xtrycalloc (1, sizeof *si);
       if (!si)
         return gpg_error (GPG_ERR_ENOMEM);
 
-      err = create_and_run_decoder (cms->reader, 
+      err = create_and_run_decoder (cms->reader,
                                     "CryptographicMessageSyntax.SignerInfo",
                                     0,
                                     &si->root, &si->image, &si->imagelen);
@@ -843,7 +843,7 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
   /* Next one is the SET OF recipientInfos */
   if ( !(ti.class == CLASS_UNIVERSAL
          && ti.tag == TYPE_SET && ti.is_constructed))
-    return gpg_error (GPG_ERR_INV_CMS_OBJ); 
+    return gpg_error (GPG_ERR_INV_CMS_OBJ);
 
   vtend = &cms->recp_info;
   if (ti.ndef)
@@ -863,11 +863,11 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
           err = ksba_reader_unread (cms->reader, ti2.buf, ti2.nhdr);
           if (err)
             return err;
-          
+
           vt = xtrycalloc (1, sizeof *vt);
           if (!vt)
             return gpg_error_from_syserror ();
-          
+
           err = create_and_run_decoder
             (cms->reader,
              "CryptographicMessageSyntax.KeyTransRecipientInfo",
@@ -878,7 +878,7 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
               xfree (vt);
               return err;
             }
-          
+
           *vtend = vt;
           vtend = &vt->next;
         }
@@ -888,12 +888,12 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
       while (ti.length)
         {
           size_t off1, off2;
-          
+
           off1 = ksba_reader_tell (cms->reader);
           vt = xtrycalloc (1, sizeof *vt);
           if (!vt)
             return gpg_error_from_syserror ();
-          
+
           err = create_and_run_decoder
             (cms->reader,
              "CryptographicMessageSyntax.KeyTransRecipientInfo",
@@ -904,7 +904,7 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
               xfree (vt);
               return err;
             }
-          
+
           *vtend = vt;
           vtend = &vt->next;
 
@@ -919,7 +919,7 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
   /* Now for the encryptedContentInfo */
   off = ksba_reader_tell (cms->reader);
   err = parse_encrypted_content_info (cms->reader,
-                                      &encr_cont_len, &encr_cont_ndef, 
+                                      &encr_cont_len, &encr_cont_ndef,
                                       &cont_oid,
                                       &algo_oid,
                                       &algo_parm, &algo_parmlen,
@@ -928,9 +928,9 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
     return err;
   cms->inner_cont_len = encr_cont_len;
   cms->inner_cont_ndef = encr_cont_ndef;
-  cms->inner_cont_oid = cont_oid; 
+  cms->inner_cont_oid = cont_oid;
   cms->detached_data = !has_content;
-  cms->encr_algo_oid = algo_oid; 
+  cms->encr_algo_oid = algo_oid;
   cms->encr_iv = algo_parm; algo_parm = NULL;
   cms->encr_ivlen = algo_parmlen;
   if (!env_data_ndef)

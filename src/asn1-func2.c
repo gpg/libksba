@@ -19,7 +19,7 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-/* 
+/*
    This file has functions which rely on on the asn1-gentables created
    asn1-tables.c - we can't put this into asn1-func.c because this one
    is needed by asn1-gentables ;-)
@@ -37,7 +37,7 @@
 #include "asn1-func.h"
 
 
-static AsnNode 
+static AsnNode
 set_right (AsnNode  node, AsnNode  right)
 {
   if (node == NULL)
@@ -50,7 +50,7 @@ set_right (AsnNode  node, AsnNode  right)
 }
 
 
-static AsnNode 
+static AsnNode
 set_down (AsnNode node, AsnNode down)
 {
   if (node == NULL)
@@ -63,7 +63,7 @@ set_down (AsnNode node, AsnNode down)
 }
 
 
-static AsnNode 
+static AsnNode
 find_up (AsnNode  node)
 {
   AsnNode p;
@@ -84,19 +84,19 @@ find_up (AsnNode  node)
 /**
  * Creates the structures needed to manage the ASN1 definitions. ROOT is
  * a vector created by the asn1-gentable tool.
- * 
- * Input Parameter: 
- *   
+ *
+ * Input Parameter:
+ *
  *   Name of the module
- * 
+ *
  * Output Parameter:
- * 
+ *
  *   KsbaAsntree *result : return the pointer to an object to be used
  *   with other functions.
- * 
+ *
  * Return Value:
- *   0: structure created correctly. 
- *   GPG_ERR_GENERAL: an error occured while structure creation.  
+ *   0: structure created correctly.
+ *   GPG_ERR_GENERAL: an error occured while structure creation.
  *   GPG_ERR_MODULE_NOT_FOUND: No such module NAME
  */
 gpg_error_t
@@ -145,7 +145,7 @@ ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result)
               _ksba_asn_set_value (p, VALTYPE_ULONG, &val, sizeof(val));
             }
           else
-            _ksba_asn_set_value (p, VALTYPE_CSTR, 
+            _ksba_asn_set_value (p, VALTYPE_CSTR,
                                  strgtbl+root[k].stringvalue_off, 0);
         }
 
@@ -212,4 +212,3 @@ ksba_asn_create_tree (const char *mod_name, ksba_asn_tree_t *result)
 
   return rc;
 }
-

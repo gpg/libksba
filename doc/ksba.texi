@@ -105,14 +105,14 @@ Indices
 
 Introduction
 
-* Getting Started::             
-* Features::                    
-* Overview::                    
+* Getting Started::
+* Features::
+* Overview::
 
 Preparation
 
-* Header::                      
-* Building the source::         
+* Header::
+* Building the source::
 
 Certificate Handling
 
@@ -123,8 +123,8 @@ Certificate Handling
 
 Mastering the Cryptographic Message Syntax
 
-* CMS Basics::                  
-* CMS Parser::                  
+* CMS Basics::
+* CMS Parser::
 
 @end detailmenu
 @end menu
@@ -135,9 +135,9 @@ Mastering the Cryptographic Message Syntax
 certificates, CMS data and related data more easy.
 
 @menu
-* Getting Started::             
-* Features::                    
-* Overview::                    
+* Getting Started::
+* Features::
+* Overview::
 @end menu
 
 @node Getting Started
@@ -205,9 +205,9 @@ library is initialized, and how the requirements of the library are
 verified.
 
 @menu
-* Header::                      
+* Header::
 * Version Check::
-* Building the source::         
+* Building the source::
 @end menu
 
 
@@ -310,7 +310,7 @@ The @code{ksba_cert_t} type is a handle for an X.509 certificate.
 The @code{ksba_sexp_t} type describes a canonically encoded S-expression
 stored in a memory buffer.  It is alias for @code{unsigned char *}.
 Note that a length argument is not required because the length of such
-an S-expression is intrinsically available. 
+an S-expression is intrinsically available.
 @end deftp
 
 @menu
@@ -325,7 +325,7 @@ an S-expression is intrinsically available.
 @section How to create a certificate object
 
 This section explains how to create a certificate object, initialize it,
-copy it and eventually destroy it. 
+copy it and eventually destroy it.
 
 @deftypefun ksba_cert_t ksba_cert_new (void)
 The function @code{ksba_cert_new} creates a new certificate object and
@@ -383,7 +383,7 @@ certificate in a well defined manner.  An error will be returned if the
 certificate object has not yet been initialized by means of
 @code{ksba_cert_read_der} or @code{ksba_cert_init_from_mem}.
 
-@deftypefun {const unsigned char *} ksba_cert_get_image (@w{ksba_cert_t @var{cert}}, @w{size_t *@var{r_length}}) 
+@deftypefun {const unsigned char *} ksba_cert_get_image (@w{ksba_cert_t @var{cert}}, @w{size_t *@var{r_length}})
 
 This function returns a pointer to the @acronym{DER} encoded buffer with
 the raw certificate.  The length of that buffer gets stored at
@@ -427,7 +427,7 @@ the certificate object is valid.
 The function returns the serial number of the certificate @var{cert}.
 The serial number is an integer returned as an canonical encoded
 S-expression with just one element.  The caller must free the returned
-value.  The value @code{NULL} is returned in case of error. 
+value.  The value @code{NULL} is returned in case of error.
 @end deftypefun
 
 @deftypefun {char *} ksba_cert_get_issuer (@w{ksba_cert_t @var{cert}, int @var{idx}})
@@ -439,7 +439,7 @@ format of the returned string is in accordance with RFC-2253.
 @code{NULL} is returned if the @acronym{DN} is not available; This is a
 severe error and actually should have been caught by the certificate
 reading function.
- 
+
 With @var{idx} greater than zero, the function may be used to enumerate
 alternate issuer names.  The function returns @code{NULL} when there are
 no more alternate names. Only alternate names recognized by
@@ -453,7 +453,7 @@ opening parenthesis should be used to detect this encoding. The name may
 include binary null characters, thus strlen may return a length shorter
 than actually used.  The real length is implicitly given by the structure
 of the S-expression, an extra null is appended for safety reasons.
- 
+
 The caller must free the returned string using @code{ksba_free} or
 whatever function has been registered as a replacement.
 @end deftypefun
@@ -478,7 +478,7 @@ opening parenthesis should be used to detect this encoding, the name may
 include binary null characters, thus strlen may return a length shorter
 than actually used.  The real length is implicitly given by the structure
 of the S-expression, an extra null is appended for safety reasons.
- 
+
 The caller must free the returned string using @code{ksba_free} or
 whatever function has been registered as a replacement.
 @end deftypefun
@@ -508,7 +508,7 @@ copy_time (ksba_isotime_t d, const ksba_isotime_t s)
 @{
   if (!*s)
     memset (d, 0, 16);
-  else  
+  else
     strcpy (d, s);
 @}
 @end example
@@ -517,8 +517,8 @@ For reasons of documentation a special function should also be used to
 compare such times:
 
 @example
-int 
-cmp_time (const ksba_isotime_t a, const ksba_isotime_t b) 
+int
+cmp_time (const ksba_isotime_t a, const ksba_isotime_t b)
 @{
   return strcmp (a, b);
 @}
@@ -575,7 +575,7 @@ test each bit using symbolic constants, which tells you if that usage
 is set on the certificate. The constants are
 
 @table @code
-@item KSBA_KEYUSAGE_DIGITAL_SIGNATURE 
+@item KSBA_KEYUSAGE_DIGITAL_SIGNATURE
 Usable for digitalSignature.
 @item KSBA_KEYUSAGE_NON_REPUDIATION
 Usable for nonRepudiation.
@@ -598,9 +598,9 @@ Usable for decipherOnly.
 These are the basic constraints on usage of a certificate. If you need
 to get additional constraints, see @code{ksba_cert_get_ext_key_usages}.
 @end deftypefun
- 
+
 @deftypefun gpg_error_t ksba_cert_get_ext_key_usages (@w{ksba_cert_t @var{cert}, char **@var{result}})
- 
+
 Return a string containing the extended usages for the certificate,
 delimited by linefeeds.
 @end deftypefun
@@ -667,7 +667,7 @@ that OID.  The returned values for @var{r_method} and @var{r_location}
 must be released by the caller unless the function returned an error;
 the function will however make sure that @var{r_method} and
 @var{r_location} will point to @code{NULL} if the function returns an
-error. 
+error.
 
 See RFC-2459, section 4.2.2.1 for the definition of this attribute.
 @end deftypefun
@@ -682,7 +682,7 @@ that OID.  The returned values for @var{r_method} and @var{r_location}
 must be released by the caller unless the function returned an error;
 the function will however make sure that @var{r_method} and
 @var{r_location} will point to @code{NULL} if the function returns an
-error. 
+error.
 
 See RFC-2459, section 4.2.2.2 for the definition of this attribute.
 @end deftypefun
@@ -745,8 +745,8 @@ like OpenPGP.  It is heavily based on X.509 semantics and for example
 used with the email encryption protocol S/MIME.
 
 @menu
-* CMS Basics::                  
-* CMS Parser::                  
+* CMS Basics::
+* CMS Parser::
 @end menu
 
 @node CMS Basics
@@ -771,7 +771,7 @@ may fail is an out-of-memory condition in which case @code{NULL} is
 returned.  It is safe for the caller to translate this to the standard
 error code @code{GPG_ERR_ENOMEM}.  Any object created
 with this function should be released after use by using
-@code{ksba_cms_release}.  
+@code{ksba_cms_release}.
 @end deftypefun
 
 @deftypefun void ksba_cms_release (@w{ksba_cms_t @var{cms}})
@@ -825,7 +825,7 @@ the caller did not setup things correctly for certain stop reasons.
 The use of this function is best explained by an example, leaving out all
 error checking.
 @example
-  do 
+  do
     @{
       ksba_cms_parse (cms, &stopreason);
       if (stopreason == KSBA_SR_BEGIN_DATA)
@@ -839,16 +839,16 @@ error checking.
           remove_padding ();
         @}
     @}
-  while (stopreason != KSBA_SR_READY);   
+  while (stopreason != KSBA_SR_READY);
 @end example
 This function assumes that the parsed data is so called `enveloped data'.
- 
+
 @c FIXME: Reference to a list of stop reasons used here.
 
 As @acronym{CMS} provides a common framework for a variety of data
 formats, it is probably very useful to check the type of that data very
 early.  This can be accomplished by hooking into the stop reason
-@code{KSBA_SR_GOT_CONTENT} and retrieving the content using the following 
+@code{KSBA_SR_GOT_CONTENT} and retrieving the content using the following
 function.
 
 
@@ -863,7 +863,7 @@ The @code{ksba_content_t} type is an enumeration used to describe the
 content of a CMS message.  Here is a list of possible values:
 
 @table @code
-@item KSBA_CT_NONE 
+@item KSBA_CT_NONE
 No content type known (value @code{0})
 
 @item KSBA_CT_DATA
@@ -962,7 +962,7 @@ extra null is appended for safety reasons.  One common format return is
 a Universal Resource Identifier which has the S-expression:
 @samp{(uri <urivalue>)}.
 
-The returned string has the same lifetime as @var{name}. 
+The returned string has the same lifetime as @var{name}.
 @end deftypefun
 
 @deftypefun {char *} ksba_name_get_uri (@w{ksba_name_t @var{name}, int @var{idx}})
@@ -1071,7 +1071,7 @@ The only exception is that success (i.e. no error) is defined to be
 
 
 @c The following table lists the error codes as used by this library.
-@c 
+@c
 @c @table @code
 @c
 @c @end table
@@ -1085,15 +1085,15 @@ components:
 
 @multitable {SERIALNUMBER} {organizationalUnit}  {xxx}
 @item Label   @tab  Component           @tab OID
-@item 
-@item C       @tab  countryName         @tab 2.5.4.6 
-@item CN      @tab  commonName          @tab 2.5.4.3 
-@item DC      @tab  domainComponent     @tab 0.9.2342.19200300.100.1.25 
-@item L       @tab  localityName        @tab 2.5.4.7 
+@item
+@item C       @tab  countryName         @tab 2.5.4.6
+@item CN      @tab  commonName          @tab 2.5.4.3
+@item DC      @tab  domainComponent     @tab 0.9.2342.19200300.100.1.25
+@item L       @tab  localityName        @tab 2.5.4.7
 @item O       @tab  organizationName    @tab 2.5.4.10
 @item OU      @tab  organizationalUnit  @tab 2.5.4.11
-@item ST      @tab  stateOrProvince     @tab 2.5.4.8 
-@item STREET  @tab  streetAddress       @tab 2.5.4.9                   
+@item ST      @tab  stateOrProvince     @tab 2.5.4.8
+@item STREET  @tab  streetAddress       @tab 2.5.4.9
 @item UID     @tab  userid              @tab 0.9.2342.19200300.100.1.1
 
 @end multitable
@@ -1107,16 +1107,16 @@ representation, KSBA recognizes the following extra labels:
 
 @multitable {SERIALNUMBER} {organizationalUnit}  {xxx}
 @item Label        @tab  Component        @tab OID
-@item 
+@item
 @item ADDR         @tab  postalAddress    @tab 2.5.4.16
 @item BC           @tab  businessCategory @tab 2.5.4.15
 @item D            @tab  description      @tab 2.5.4.13
-@item EMAIL        @tab  emailAddress     @tab 1.2.840.113549.1.9.1           
+@item EMAIL        @tab  emailAddress     @tab 1.2.840.113549.1.9.1
 @item GN           @tab  givenName        @tab 2.5.4.42
 @item POSTALCODE   @tab  postalCode       @tab 2.5.4.17
 @item PSEUDO       @tab  pseudonym        @tab 2.5.4.65
-@item SERIALNUMBER @tab  serialNumber     @tab 2.5.4.5 
-@item SN           @tab  surname          @tab 2.5.4.4 
+@item SERIALNUMBER @tab  serialNumber     @tab 2.5.4.5
+@item SN           @tab  surname          @tab 2.5.4.4
 @item T            @tab  title            @tab 2.5.4.12
 
 @end multitable
@@ -1180,4 +1180,3 @@ KSBA  provides these subsystems:
 
   Abstraction objects to access memory areas, files or file
   descriptor.
-

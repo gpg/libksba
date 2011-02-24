@@ -78,7 +78,7 @@ struct ksba_crl_s {
 
   struct {
     int used;
-    char buffer[8192]; 
+    char buffer[8192];
   } hashbuf;
 
 };
@@ -88,5 +88,3 @@ struct ksba_crl_s {
 
 
 #endif /*CRL_H*/
-
-

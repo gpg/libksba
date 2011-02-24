@@ -1,6 +1,6 @@
 # mkoidtbl.awk  - Create OID table from Peter Gutmann's dumpasn1.cfg
 # Copyright (C) 2004 g10 Code GmbH
-# 
+#
 # This file is free software; as a special exception the author gives
 # unlimited permission to copy and/or distribute it, with or without
 # modifications, as long as this notice is preserved.
@@ -20,7 +20,7 @@
 #  And creates a new table in IETF notation with lines like
 #  0.2.262.1.10 Telesec Deutsche Telekom
 #  comment lines may also occur in the output.
-#      
+#
 
 
 BEGIN {
@@ -30,7 +30,7 @@ BEGIN {
 /^[ \t]*#/ { next }
 /^OID/     { flush() }
 /^Comment/ { comment = substr($0, index($0, "=") + 2 )
-             gsub(/\r/, "", comment) 
+             gsub(/\r/, "", comment)
              gsub (/\\/, "\\\\", comment)
              gsub (/"/, "\\\"", comment)
 }

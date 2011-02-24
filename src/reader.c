@@ -30,10 +30,10 @@
 
 /**
  * ksba_reader_new:
- * 
+ *
  * Create a new but uninitialized ksba_reader_t Object.  Using this
  * reader object in unitialized state does always yield eof.
- * 
+ *
  * Return value: ksba_reader_t object or an error code.
  **/
 gpg_error_t
@@ -49,7 +49,7 @@ ksba_reader_new (ksba_reader_t *r_r)
 /**
  * ksba_reader_release:
  * @r: Reader Object (or NULL)
- * 
+ *
  * Release this object
  **/
 void
@@ -77,7 +77,7 @@ ksba_reader_release (ksba_reader_t r)
    registered function will be called; passing NULL for NOTIFY removes
    the notification.  */
 gpg_error_t
-ksba_reader_set_release_notify (ksba_reader_t r, 
+ksba_reader_set_release_notify (ksba_reader_t r,
                                 void (*notify)(void*,ksba_reader_t),
                                 void *notify_value)
 {
@@ -103,7 +103,7 @@ ksba_reader_clear (ksba_reader_t r, unsigned char **buffer, size_t *buflen)
 
   if (!r)
     return gpg_error (GPG_ERR_INV_VALUE);
-      
+
   r->eof = 0;
   r->error = 0;
   r->nread = 0;
@@ -123,7 +123,7 @@ ksba_reader_clear (ksba_reader_t r, unsigned char **buffer, size_t *buflen)
           *buflen = n;
         }
     }
-      
+
   return 0;
 }
 
@@ -146,12 +146,12 @@ ksba_reader_tell (ksba_reader_t r)
  * @r: Reader object
  * @buffer: Data
  * @length: Length of Data (bytes)
- * 
+ *
  * Intialize the reader object with @length bytes from @buffer and set
  * the read position to the beginning.  It is possible to reuse this
  * reader object with another buffer if the reader object has
  * already been initialized using this function.
- * 
+ *
  * Return value: 0 on success or an error code.
  **/
 gpg_error_t
@@ -184,11 +184,11 @@ ksba_reader_set_mem (ksba_reader_t r, const void *buffer, size_t length)
  * ksba_reader_set_fd:
  * @r: Reader object
  * @fd: file descriptor
- * 
+ *
  * Initialize the Reader object with a file descriptor, so that read
  * operations on this object are excuted on this file descriptor.
- * 
- * Return value: 
+ *
+ * Return value:
  **/
 gpg_error_t
 ksba_reader_set_fd (ksba_reader_t r, int fd)
@@ -209,11 +209,11 @@ ksba_reader_set_fd (ksba_reader_t r, int fd)
  * ksba_reader_set_file:
  * @r: Reader object
  * @fp: file pointer
- * 
+ *
  * Initialize the Reader object with a stdio file pointer, so that read
  * operations on this object are excuted on this stream
- * 
- * Return value: 
+ *
+ * Return value:
  **/
 gpg_error_t
 ksba_reader_set_file (ksba_reader_t r, FILE *fp)
@@ -236,11 +236,11 @@ ksba_reader_set_file (ksba_reader_t r, FILE *fp)
  * @r: Reader object
  * @cb: Callback function
  * @cb_value: Value passed to the callback function
- * 
+ *
  * Initialize the reader object with a callback function.
  * This callback function is defined as:
  * <literal>
- * typedef int (*cb) (void *cb_value, 
+ * typedef int (*cb) (void *cb_value,
  *                    char *buffer, size_t count,
  *                    size_t *nread);
  * </literal>
@@ -252,18 +252,18 @@ ksba_reader_set_file (ksba_reader_t r, FILE *fp)
  * 0.  The callback may support passing %NULL for @buffer and @nread
  * and %0 for count as an indication to reset its internal read
  * pointer.
- * 
+ *
  * Return value: 0 on success or an error code
  **/
 gpg_error_t
-ksba_reader_set_cb (ksba_reader_t r, 
+ksba_reader_set_cb (ksba_reader_t r,
                     int (*cb)(void*,char *,size_t,size_t*), void *cb_value )
 {
   if (!r || !cb)
     return gpg_error (GPG_ERR_INV_VALUE);
   if (r->type)
     return gpg_error (GPG_ERR_CONFLICT);
-  
+
   r->eof = 0;
   r->type = READER_TYPE_CB;
   r->u.cb.fnc = cb;
@@ -279,7 +279,7 @@ ksba_reader_set_cb (ksba_reader_t r,
  * @buffer: A buffer for returning the data
  * @length: The length of this buffer
  * @nread:  Number of bytes actually read.
- * 
+ *
  * Read data from the current read position to the supplied @buffer,
  * max. @length bytes are read and the actual number of bytes read are
  * returned in @nread.  If there are no more bytes available %GPG_ERR_EOF is
@@ -290,7 +290,7 @@ ksba_reader_set_cb (ksba_reader_t r,
  * This does only work for objects initialized from memory; if the
  * object is not capable of this it will return the error
  * GPG_ERR_NOT_IMPLEMENTED
- * 
+ *
  * Return value: 0 on success, GPG_ERR_EOF or another error code
  **/
 gpg_error_t
@@ -319,7 +319,7 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
       nbytes = r->unread.length - r->unread.readpos;
       if (!nbytes)
         return gpg_error (GPG_ERR_BUG);
-      
+
       if (nbytes > length)
         nbytes = length;
       memcpy (buffer, r->unread.buf + r->unread.readpos, nbytes);
@@ -345,7 +345,7 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
           r->eof = 1;
           return gpg_error (GPG_ERR_EOF);
         }
-      
+
       if (nbytes > length)
         nbytes = length;
       memcpy (buffer, r->u.mem.buffer + r->u.mem.readpos, nbytes);
@@ -359,7 +359,7 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
 
       if (r->eof)
         return gpg_error (GPG_ERR_EOF);
-      
+
       if (!length)
         {
           *nread = 0;
@@ -387,7 +387,7 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
     {
       if (r->eof)
         return gpg_error (GPG_ERR_EOF);
-      
+
       if (r->u.cb.fnc (r->u.cb.value, buffer, length, nread))
         {
           *nread = 0;
@@ -396,11 +396,11 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
         }
       r->nread += *nread;
     }
-  else 
+  else
     return gpg_error (GPG_ERR_BUG);
 
   return 0;
-} 
+}
 
 gpg_error_t
 ksba_reader_unread (ksba_reader_t r, const void *buffer, size_t count)
@@ -414,7 +414,7 @@ ksba_reader_unread (ksba_reader_t r, const void *buffer, size_t count)
      Otherwise r->nread won't have a clear semantic. */
   if (r->nread < count)
     return gpg_error (GPG_ERR_CONFLICT);
-  
+
   if (!r->unread.buf)
     {
       r->unread.size = count + 100;
@@ -437,6 +437,3 @@ ksba_reader_unread (ksba_reader_t r, const void *buffer, size_t count)
 
   return 0;
 }
-
-
-

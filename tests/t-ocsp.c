@@ -37,7 +37,7 @@ int verbose;
 int debug;
 int no_nonce;
 
-/* Return the description for OID; if no description is available 
+/* Return the description for OID; if no description is available
    NULL is returned. */
 static const char *
 get_oid_desc (const char *oid)
@@ -59,14 +59,14 @@ read_file (const char *fname, size_t *r_length)
   struct stat st;
   char *buf;
   size_t buflen;
-  
+
   fp = fopen (fname, "rb");
   if (!fp)
     {
       fprintf (stderr, "can't open `%s': %s\n", fname, strerror (errno));
       return NULL;
     }
-  
+
   if (fstat (fileno(fp), &st))
     {
       fprintf (stderr, "can't stat `%s': %s\n", fname, strerror (errno));
@@ -102,7 +102,7 @@ get_one_cert (const char *fname)
   fp = fopen (fname, "r");
   if (!fp)
     {
-      fprintf (stderr, "%s:%d: can't open `%s': %s\n", 
+      fprintf (stderr, "%s:%d: can't open `%s': %s\n",
                __FILE__, __LINE__, fname, strerror (errno));
       exit (1);
     }
@@ -138,7 +138,7 @@ one_request (const char *cert_fname, const char *issuer_cert_fname)
 
   err = ksba_ocsp_new (&ocsp);
   fail_if_err (err);
-  
+
   err = ksba_ocsp_add_target (ocsp, cert, issuer_cert);
   fail_if_err (err);
   ksba_cert_release (cert);
@@ -161,12 +161,12 @@ one_request (const char *cert_fname, const char *issuer_cert_fname)
       fail ("can't write output");
     fclose (fp);
   }
-  
+
   xfree (request);
 }
 
 
-void 
+void
 one_response (const char *cert_fname, const char *issuer_cert_fname,
               char *response_fname)
 {
@@ -206,13 +206,13 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
   switch (response_status)
     {
     case KSBA_OCSP_RSPSTATUS_SUCCESS:      t = "success"; break;
-    case KSBA_OCSP_RSPSTATUS_MALFORMED:    t = "malformed"; break;  
-    case KSBA_OCSP_RSPSTATUS_INTERNAL:     t = "internal error"; break;  
-    case KSBA_OCSP_RSPSTATUS_TRYLATER:     t = "try later"; break;      
-    case KSBA_OCSP_RSPSTATUS_SIGREQUIRED:  t = "must sign request"; break;  
-    case KSBA_OCSP_RSPSTATUS_UNAUTHORIZED: t = "unauthorized"; break;  
-    case KSBA_OCSP_RSPSTATUS_REPLAYED:     t = "replay detected"; break;  
-    case KSBA_OCSP_RSPSTATUS_OTHER:        t = "other (unknown)"; break;  
+    case KSBA_OCSP_RSPSTATUS_MALFORMED:    t = "malformed"; break;
+    case KSBA_OCSP_RSPSTATUS_INTERNAL:     t = "internal error"; break;
+    case KSBA_OCSP_RSPSTATUS_TRYLATER:     t = "try later"; break;
+    case KSBA_OCSP_RSPSTATUS_SIGREQUIRED:  t = "must sign request"; break;
+    case KSBA_OCSP_RSPSTATUS_UNAUTHORIZED: t = "unauthorized"; break;
+    case KSBA_OCSP_RSPSTATUS_REPLAYED:     t = "replay detected"; break;
+    case KSBA_OCSP_RSPSTATUS_OTHER:        t = "other (unknown)"; break;
     case KSBA_OCSP_RSPSTATUS_NONE:         t = "no status"; break;
     default: fail ("impossible response_status"); break;
     }
@@ -259,16 +259,16 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
           printf ("revocation time ..: ");
           print_time (revocation_time);
           printf ("\nrevocation reason : %s\n",
-                  reason == KSBA_CRLREASON_UNSPECIFIED?   "unspecified":        
+                  reason == KSBA_CRLREASON_UNSPECIFIED?   "unspecified":
                   reason == KSBA_CRLREASON_KEY_COMPROMISE? "key compromise":
                   reason == KSBA_CRLREASON_CA_COMPROMISE?   "CA compromise":
                   reason == KSBA_CRLREASON_AFFILIATION_CHANGED?
                                                        "affiliation changed":
                   reason == KSBA_CRLREASON_SUPERSEDED?   "superseeded":
                   reason == KSBA_CRLREASON_CESSATION_OF_OPERATION?
-                                                      "cessation of operation": 
+                                                      "cessation of operation":
                   reason == KSBA_CRLREASON_CERTIFICATE_HOLD?
-                                                      "certificate on hold":   
+                                                      "certificate on hold":
                   reason == KSBA_CRLREASON_REMOVE_FROM_CRL? "removed from CRL":
                   reason == KSBA_CRLREASON_PRIVILEGE_WITHDRAWN?
                                                        "privilege withdrawn":
@@ -295,15 +295,15 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
         const char *oid;
         const unsigned char *der;
         size_t derlen;
-        
+
         for (idx=0; !(err=ksba_ocsp_get_extension (ocsp, NULL, idx,
                                                    &oid, &crit,
                                                    &der, &derlen)); idx++)
           {
             const char *s = get_oid_desc (oid);
             printf ("%sresp-extn ..%s: %s%s%s%s  (",
-                    crit? "crit. ":"", 
-                    crit?"":"......", 
+                    crit? "crit. ":"",
+                    crit?"":"......",
                     s?"(":"", s?s:"", s?") ":"", oid);
             print_hex (der, derlen);
             putchar (')');
@@ -318,8 +318,8 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
           {
             const char *s = get_oid_desc (oid);
             printf ("%ssngl-extn ..%s: %s%s%s%s  (",
-                    crit? "crit. ":"", 
-                    crit?"":"......", 
+                    crit? "crit. ":"",
+                    crit?"":"......",
                     s?"(":"", s?s:"", s?") ":"", oid);
             print_hex (der, derlen);
             putchar (')');
@@ -329,7 +329,7 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
           fail_if_err (err);
       }
     }
-  
+
 
   ksba_cert_release (cert);
   ksba_ocsp_release (ocsp);
@@ -337,18 +337,18 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
 }
 
 
-static gpg_error_t 
+static gpg_error_t
 my_hash_buffer (void *arg, const char *oid,
                 const void *buffer, size_t length, size_t resultsize,
                 unsigned char *result, size_t *resultlen)
 {
   (void)arg; /* Not used.  */
 
-  if (oid && strcmp (oid, "1.3.14.3.2.26")) 
-    return gpg_error (GPG_ERR_NOT_SUPPORTED); /* We only support SHA-1. */ 
+  if (oid && strcmp (oid, "1.3.14.3.2.26"))
+    return gpg_error (GPG_ERR_NOT_SUPPORTED); /* We only support SHA-1. */
   if (resultsize < 20)
     return gpg_error (GPG_ERR_BUFFER_TOO_SHORT);
-  sha1_hash_buffer (result, buffer, length); 
+  sha1_hash_buffer (result, buffer, length);
   *resultlen = 20;
   return 0;
 }
@@ -356,7 +356,7 @@ my_hash_buffer (void *arg, const char *oid,
 
 
 
-/* ( printf "POST / HTTP/1.0\r\nContent-Type: application/ocsp-request\r\nContent-Length: `wc -c <a.req | tr -d ' '`\r\n\r\n"; cat a.req ) |  nc -v ocsp.openvalidation.org 8088   | sed '1,/^\r$/d' >a.rsp 
+/* ( printf "POST / HTTP/1.0\r\nContent-Type: application/ocsp-request\r\nContent-Length: `wc -c <a.req | tr -d ' '`\r\n\r\n"; cat a.req ) |  nc -v ocsp.openvalidation.org 8088   | sed '1,/^\r$/d' >a.rsp
 
     Openvalidation test reponders:
 
@@ -380,18 +380,18 @@ my_hash_buffer (void *arg, const char *oid,
 
 */
 
-int 
+int
 main (int argc, char **argv)
 {
   int last_argc = -1;
   int response_mode = 0;
   const char *srcdir = getenv ("srcdir");
-  
+
   if (!srcdir)
     srcdir = ".";
 
   ksba_set_hash_buffer_function (my_hash_buffer, NULL);
- 
+
   if (argc)
     {
       argc--; argv++;
@@ -428,9 +428,9 @@ main (int argc, char **argv)
           no_nonce = 1;
           argc--; argv++;
         }
-    }          
+    }
 
- 
+
   if (response_mode)
     {
       for ( ; argc > 2; argc -=3, argv += 3)
@@ -456,7 +456,7 @@ main (int argc, char **argv)
         { NULL }
       };
       int idx;
-      
+
       for (idx=0; files[idx].cert_fname; idx++)
         {
           char *f1, *f2;
@@ -468,7 +468,6 @@ main (int argc, char **argv)
           xfree (f1);
         }
     }
-  
+
   return 0;
 }
-

@@ -36,7 +36,7 @@
 
 
 /* Constants used for the public key algorithms.  */
-typedef enum 
+typedef enum
   {
     PKALGO_RSA,
     PKALGO_DSA,
@@ -64,29 +64,29 @@ struct algo_table_s {
 static const struct algo_table_s pk_algo_table[] = {
 
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
-    "1.2.840.113549.1.1.1", /* rsaEncryption (RSAES-PKCA1-v1.5) */ 
-    "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01", 9, 
+    "1.2.840.113549.1.1.1", /* rsaEncryption (RSAES-PKCA1-v1.5) */
+    "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01", 9,
     1, PKALGO_RSA, "rsa", "-ne", "\x30\x02\x02" },
 
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.7 */
-    "1.2.840.113549.1.1.7", /* RSAES-OAEP */ 
-    "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x07", 9, 
+    "1.2.840.113549.1.1.7", /* RSAES-OAEP */
+    "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x07", 9,
     0, PKALGO_RSA, "rsa", "-ne", "\x30\x02\x02"}, /* (patent problems) */
 
   { /* */
     "2.5.8.1.1", /* rsa (ambiguous due to missing padding rules)*/
-    "\x55\x08\x01\x01", 4, 
+    "\x55\x08\x01\x01", 4,
     1, PKALGO_RSA, "ambiguous-rsa", "-ne", "\x30\x02\x02" },
 
   { /* iso.member-body.us.x9-57.x9cm.1 */
     "1.2.840.10040.4.1", /*  dsa */
-    "\x2a\x86\x48\xce\x38\x04\x01", 7, 
-    1, PKALGO_DSA, "dsa", "y", "\x02", "-pqg", "\x30\x02\x02\x02" }, 
- 
+    "\x2a\x86\x48\xce\x38\x04\x01", 7,
+    1, PKALGO_DSA, "dsa", "y", "\x02", "-pqg", "\x30\x02\x02\x02" },
+
   { /* iso.member-body.us.ansi-x9-62.2.1 */
     "1.2.840.10045.2.1", /*  ecPublicKey */
-    "\x2a\x86\x48\xce\x3d\x02\x01", 7, 
-    1, PKALGO_ECC, "ecc", "q", "\x80" }, 
+    "\x2a\x86\x48\xce\x3d\x02\x01", 7,
+    1, PKALGO_ECC, "ecc", "q", "\x80" },
 
   {NULL}
 };
@@ -94,73 +94,73 @@ static const struct algo_table_s pk_algo_table[] = {
 
 static const struct algo_table_s sig_algo_table[] = {
   {  /* iso.member-body.us.rsadsi.pkcs.pkcs-1.5 */
-    "1.2.840.113549.1.1.5", /* sha1WithRSAEncryption */ 
-    "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x05", 9, 
+    "1.2.840.113549.1.1.5", /* sha1WithRSAEncryption */
+    "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x05", 9,
     1, PKALGO_RSA, "rsa", "s", "\x82", NULL, NULL, "sha1" },
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.4 */
-    "1.2.840.113549.1.1.4", /* md5WithRSAEncryption */ 
-    "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x04", 9, 
+    "1.2.840.113549.1.1.4", /* md5WithRSAEncryption */
+    "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x04", 9,
     1, PKALGO_RSA, "rsa", "s", "\x82", NULL, NULL, "md5" },
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.2 */
-    "1.2.840.113549.1.1.2", /* md2WithRSAEncryption */ 
-    "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x02", 9, 
+    "1.2.840.113549.1.1.2", /* md2WithRSAEncryption */
+    "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x02", 9,
     0, PKALGO_RSA, "rsa", "s", "\x82", NULL, NULL, "md2" },
   { /* iso.member-body.us.x9-57.x9cm.1 */
     "1.2.840.10040.4.3", /* dsa */
-    "\x2a\x86\x48\xce\x38\x04\x01", 7, 
-    1, PKALGO_DSA, "dsa", "-rs", "\x30\x02\x02" }, 
+    "\x2a\x86\x48\xce\x38\x04\x01", 7,
+    1, PKALGO_DSA, "dsa", "-rs", "\x30\x02\x02" },
   { /* iso.member-body.us.x9-57.x9cm.3 */
     "1.2.840.10040.4.3", /*  dsaWithSha1 */
-    "\x2a\x86\x48\xce\x38\x04\x03", 7, 
-    1, PKALGO_DSA, "dsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha1" }, 
+    "\x2a\x86\x48\xce\x38\x04\x03", 7,
+    1, PKALGO_DSA, "dsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha1" },
   { /* Teletrust signature algorithm.  */
     "1.3.36.8.5.1.2.2", /* dsaWithRIPEMD160 */
     "\x2b\x24\x08\x05\x01\x02\x02", 7,
-    1, PKALGO_DSA, "dsa", "-rs", "\x30\x02\x02", NULL, NULL, "rmd160" }, 
+    1, PKALGO_DSA, "dsa", "-rs", "\x30\x02\x02", NULL, NULL, "rmd160" },
   { /* NIST Algorithm */
     "2.16.840.1.101.3.4.3.1", /* dsaWithSha224 */
     "\x06\x09\x60\x86\x48\x01\x65\x03\x04\x03\x01", 11,
-    1, PKALGO_DSA, "dsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha224" }, 
+    1, PKALGO_DSA, "dsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha224" },
   { /* NIST Algorithm (the draft also used .1 but we better use .2) */
     "2.16.840.1.101.3.4.3.2", /* dsaWithSha256 */
     "\x06\x09\x60\x86\x48\x01\x65\x03\x04\x03\x01", 11,
-    1, PKALGO_DSA, "dsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha256" }, 
+    1, PKALGO_DSA, "dsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha256" },
 
   { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha1 */
     "1.2.840.10045.4.1", /*  ecdsa */
-    "\x2a\x86\x48\xce\x3d\x04\x01", 7, 
-    1, PKALGO_ECC, "ecdsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha1" }, 
+    "\x2a\x86\x48\xce\x3d\x04\x01", 7,
+    1, PKALGO_ECC, "ecdsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha1" },
 
   { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-specified */
-    "1.2.840.10045.4.3", 
-    "\x2a\x86\x48\xce\x3d\x04\x03", 7, 
-    1, PKALGO_ECC, "ecdsa", "-rs", "\x30\x02\x02", NULL, NULL, NULL }, 
-  /* The digest algorithm is given by the parameter.  */ 
+    "1.2.840.10045.4.3",
+    "\x2a\x86\x48\xce\x3d\x04\x03", 7,
+    1, PKALGO_ECC, "ecdsa", "-rs", "\x30\x02\x02", NULL, NULL, NULL },
+  /* The digest algorithm is given by the parameter.  */
 
 
   { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha224 */
-    "1.2.840.10045.4.3.1", 
-    "\x2a\x86\x48\xce\x3d\x04\x03\x01", 8, 
-    1, PKALGO_ECC, "ecdsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha224" }, 
+    "1.2.840.10045.4.3.1",
+    "\x2a\x86\x48\xce\x3d\x04\x03\x01", 8,
+    1, PKALGO_ECC, "ecdsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha224" },
 
   { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha256 */
-    "1.2.840.10045.4.3.2", 
-    "\x2a\x86\x48\xce\x3d\x04\x03\x02", 8, 
-    1, PKALGO_ECC, "ecdsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha256" }, 
+    "1.2.840.10045.4.3.2",
+    "\x2a\x86\x48\xce\x3d\x04\x03\x02", 8,
+    1, PKALGO_ECC, "ecdsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha256" },
 
   { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha384 */
-    "1.2.840.10045.4.3.3", 
-    "\x2a\x86\x48\xce\x3d\x04\x03\x03", 8, 
-    1, PKALGO_ECC, "ecdsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha384" }, 
+    "1.2.840.10045.4.3.3",
+    "\x2a\x86\x48\xce\x3d\x04\x03\x03", 8,
+    1, PKALGO_ECC, "ecdsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha384" },
 
   { /* iso.member-body.us.ansi-x9-62.signatures.ecdsa-with-sha512 */
-    "1.2.840.10045.4.3.4", 
-    "\x2a\x86\x48\xce\x3d\x04\x03\x04", 8, 
-    1, PKALGO_ECC, "ecdsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha512" }, 
+    "1.2.840.10045.4.3.4",
+    "\x2a\x86\x48\xce\x3d\x04\x03\x04", 8,
+    1, PKALGO_ECC, "ecdsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha512" },
 
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
-    "1.2.840.113549.1.1.1", /* rsaEncryption used without hash algo*/ 
-    "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01", 9, 
+    "1.2.840.113549.1.1.1", /* rsaEncryption used without hash algo*/
+    "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01", 9,
     1, PKALGO_RSA, "rsa", "s", "\x82" },
   { /* from NIST's OIW - actually belongs in a pure hash table */
     "1.3.14.3.2.26",  /* sha1 */
@@ -198,14 +198,14 @@ static const struct algo_table_s sig_algo_table[] = {
     "1.3.36.3.4.3.2.2",     /* sigS_ISO9796-2rndWithrsa_ripemd160 */
     "\x2B\x24\x03\x04\x03\x02\x02", 7,
     0, PKALGO_RSA, "rsa", "s", "\x82", NULL, NULL, "rmd160" },
-  
+
   {NULL}
 };
 
 static const struct algo_table_s enc_algo_table[] = {
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
-    "1.2.840.113549.1.1.1", /* rsaEncryption (RSAES-PKCA1-v1.5) */ 
-    "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01", 9, 
+    "1.2.840.113549.1.1.1", /* rsaEncryption (RSAES-PKCA1-v1.5) */
+    "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01", 9,
     1, PKALGO_RSA, "rsa", "a", "\x82" },
   {NULL}
 };
@@ -215,19 +215,19 @@ static const struct algo_table_s enc_algo_table[] = {
    table is used by lib gcrypt.  */
 static const struct
 {
-  const char *oid; 
-  const char *name; 
-} curve_names[] = 
+  const char *oid;
+  const char *name;
+} curve_names[] =
   {
     { "1.2.840.10045.3.1.1", "NIST P-192" },
-    { "1.2.840.10045.3.1.1", "prime192v1" }, 
+    { "1.2.840.10045.3.1.1", "prime192v1" },
     { "1.2.840.10045.3.1.1", "secp192r1"  },
 
     { "1.3.132.0.33",        "secp224r1" },
 
-    { "1.2.840.10045.3.1.7", "NIST P-256", }, 
-    { "1.2.840.10045.3.1.7", "prime256v1" },          
-    { "1.2.840.10045.3.1.7", "secp256r1"  },          
+    { "1.2.840.10045.3.1.7", "NIST P-256", },
+    { "1.2.840.10045.3.1.7", "prime256v1" },
+    { "1.2.840.10045.3.1.7", "secp256r1"  },
 
     { "1.3.132.0.34",        "secp384r1" },
 
@@ -329,7 +329,7 @@ get_ecc_curve_oid (const unsigned char *buf, size_t buflen, size_t *r_oidlen)
    does point into the BIT STRING.
 
    mode 0: just get the algorithm identifier. FIXME: should be able to
-           handle BER Encoding. 
+           handle BER Encoding.
    mode 1: as described.
  */
 static gpg_error_t
@@ -355,14 +355,14 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
   c = *der++; derlen--;
   if ( c != 0x30 )
     return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not a SEQUENCE */
-  TLV_LENGTH(der); 
+  TLV_LENGTH(der);
   seqlen = len;
   startseq = der;
 
   /* get the object identifier */
   if (!derlen)
     return gpg_error (GPG_ERR_INV_KEYINFO);
-  c = *der++; derlen--; 
+  c = *der++; derlen--;
   if ( c != 0x06 )
     return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not an OBJECT IDENTIFIER */
   TLV_LENGTH(der);
@@ -387,19 +387,19 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
       if (!derlen)
         return gpg_error (GPG_ERR_INV_KEYINFO);
       c = *der++; derlen--;
-      if ( c == 0x05 ) 
+      if ( c == 0x05 )
         {
           /*printf ("parameter: NULL \n"); the usual case */
           if (!derlen)
             return gpg_error (GPG_ERR_INV_KEYINFO);
           c = *der++; derlen--;
-          if (c) 
+          if (c)
             return gpg_error (GPG_ERR_BAD_BER);  /* NULL must have a
                                                     length of 0 */
           seqlen -= 2;
         }
       else if (r_parm_pos && r_parm_len && c == 0x04)
-        { 
+        {
           /*  This is an octet string parameter and we need it.  */
           if (r_parm_type)
             *r_parm_type = TYPE_OCTET_STRING;
@@ -412,7 +412,7 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
           seqlen -= len;
         }
       else if (r_parm_pos && r_parm_len && c == 0x06)
-        { 
+        {
           /*  This is an object identifier.  */
           if (r_parm_type)
             *r_parm_type = TYPE_OBJECT_ID;
@@ -425,7 +425,7 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
           seqlen -= len;
         }
       else if (r_parm_pos && r_parm_len && c == 0x30)
-        { 
+        {
           /*  This is a sequence. */
           if (r_parm_type)
             *r_parm_type = TYPE_SEQUENCE;
@@ -458,7 +458,7 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
       if (!derlen)
         return gpg_error (GPG_ERR_INV_KEYINFO);
       c = *der++; derlen--;
-      
+
       if (c == 0x03)
         *r_bitstr = 1; /* BIT STRING */
       else if (c == 0x04)
@@ -504,7 +504,7 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
   *r_oid = ksba_oid_to_str (der+off, len);
   if (!*r_oid)
     return gpg_error (GPG_ERR_ENOMEM);
-  
+
   /* Special hack for ecdsaWithSpecified.  We replace the returned OID
      by the one in the parameter. */
   if (off2 && len2 && parm_type == TYPE_SEQUENCE
@@ -536,7 +536,7 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
           *r_parm = xtrymalloc (len2);
           if (!*r_parm)
             {
-              xfree (*r_oid); 
+              xfree (*r_oid);
               *r_oid = NULL;
               return gpg_error (GPG_ERR_ENOMEM);
             }
@@ -575,7 +575,7 @@ put_stringbuf_mem (struct stringbuf *sb, const char *text, size_t n)
   if (sb->len + n >= sb->size)
     {
       char *p;
-      
+
       sb->size += n + 100;
       p = xtryrealloc (sb->buf, sb->size);
       if ( !p)
@@ -632,17 +632,17 @@ get_stringbuf (struct stringbuf *sb)
 
 /* Assume that der is a buffer of length DERLEN with a DER encoded
  Asn.1 structure like this:
- 
+
   keyInfo ::= SEQUENCE {
-                 SEQUENCE { 
+                 SEQUENCE {
                     algorithm    OBJECT IDENTIFIER,
                     parameters   ANY DEFINED BY algorithm OPTIONAL }
                  publicKey  BIT STRING }
-  
+
   The function parses this structure and create a SEXP suitable to be
   used as a public key in Libgcrypt.  The S-Exp will be returned in a
-  string which the caller must free.  
-  
+  string which the caller must free.
+
   We don't pass an ASN.1 node here but a plain memory block.  */
 
 gpg_error_t
@@ -676,7 +676,7 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
                        &parm_off, &parm_len, &parm_type);
   if (err)
     return err;
-  
+
   /* look into our table of supported algorithms */
   for (algoidx=0; pk_algo_table[algoidx].oid; algoidx++)
     {
@@ -710,7 +710,7 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
           return gpg_error (GPG_ERR_INV_KEYINFO);
         }
       c = *der++; derlen--;
-      if (c) 
+      if (c)
         fprintf (stderr, "warning: number of unused bits is not zero\n");
     }
 
@@ -735,16 +735,16 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
 
   /* If parameters are given and we have a description for them, parse
      them. */
-  if (parmder && parmderlen 
+  if (parmder && parmderlen
       && pk_algo_table[algoidx].parmelem_string
       && pk_algo_table[algoidx].parmctrl_string)
     {
-      elem = pk_algo_table[algoidx].parmelem_string; 
-      ctrl = pk_algo_table[algoidx].parmctrl_string; 
+      elem = pk_algo_table[algoidx].parmelem_string;
+      ctrl = pk_algo_table[algoidx].parmctrl_string;
       for (; *elem; ctrl++, elem++)
         {
           int is_int;
-          
+
           if ( (*ctrl & 0x80) && !elem[1] )
             {
               /* Hack to allow reading a raw value.  */
@@ -768,9 +768,9 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
               TLV_LENGTH (parmder);
             }
           if (is_int && *elem != '-')  /* Take this integer.  */
-            { 
+            {
               char tmp[2];
-              
+
               put_stringbuf (&sb, "(");
               tmp[0] = *elem; tmp[1] = 0;
               put_stringbuf_sexp (&sb, tmp);
@@ -785,8 +785,8 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
 
   /* FIXME: We don't release the stringbuf in case of error
      better let the macro jump to a label */
-  elem = pk_algo_table[algoidx].elem_string; 
-  ctrl = pk_algo_table[algoidx].ctrl_string; 
+  elem = pk_algo_table[algoidx].elem_string;
+  ctrl = pk_algo_table[algoidx].ctrl_string;
   for (; *elem; ctrl++, elem++)
     {
       int is_int;
@@ -814,7 +814,7 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
           TLV_LENGTH (der);
         }
       if (is_int && *elem != '-')  /* Take this integer.  */
-        { 
+        {
           char tmp[2];
 
           put_stringbuf (&sb, "(");
@@ -897,7 +897,7 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
     int namelen;
     const unsigned char *value;
     int valuelen;
-  } parm[10]; 
+  } parm[10];
   int parmidx;
   int idxtbl[10];
   int idxtbllen;
@@ -950,18 +950,18 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
       n = strtoul (s, &endp, 10);
       s = endp;
       if (!n || *s != ':')
-        return gpg_error (GPG_ERR_INV_SEXP); 
+        return gpg_error (GPG_ERR_INV_SEXP);
       s++;
       parm[parmidx].name = s;
       parm[parmidx].namelen = n;
-      s += n; 
+      s += n;
       if (!digitp(s))
         return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* ... or invalid S-Exp. */
 
       n = strtoul (s, &endp, 10);
       s = endp;
       if (!n || *s != ':')
-        return gpg_error (GPG_ERR_INV_SEXP); 
+        return gpg_error (GPG_ERR_INV_SEXP);
       s++;
       parm[parmidx].value = s;
       parm[parmidx].valuelen = n;
@@ -973,7 +973,7 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
   s++;
   /* We need another closing parenthesis. */
   if ( *s != ')' )
-    return gpg_error (GPG_ERR_INV_SEXP); 
+    return gpg_error (GPG_ERR_INV_SEXP);
 
   /* Describe the parameters in the order we want them and construct
      IDXTBL to access them.  For DSA wie also set algoparmdesc so
@@ -986,7 +986,7 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
     case PKALGO_DSA: parmdesc = "y" ; algoparmdesc = "pqg"; break;
     case PKALGO_ECC: parmdesc = "Cq"; break;
     default: return gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
-    }      
+    }
 
   idxtbllen = 0;
   for (s = parmdesc; *s; s++)
@@ -1025,7 +1025,7 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
         return gpg_error (GPG_ERR_UNKNOWN_SEXP);
     }
 
-      
+
   /* Create write object. */
   err = ksba_writer_new (&writer);
   if (err)
@@ -1033,18 +1033,18 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
   err = ksba_writer_set_mem (writer, 1024);
   if (err)
     goto leave;
-  
+
   /* We create the keyinfo in 2 steps:
-     
+
      1. We build the inner one and encapsulate it in a bit string.
-  
+
      2. We create the outer sequence include the algorithm identifier
-        and the bit string from step 1. 
+        and the bit string from step 1.
    */
   if (pkalgo == PKALGO_ECC)
     {
       /* Write the bit string header and the number of unused bits. */
-      err = _ksba_ber_write_tl (writer, TYPE_BIT_STRING, CLASS_UNIVERSAL, 
+      err = _ksba_ber_write_tl (writer, TYPE_BIT_STRING, CLASS_UNIVERSAL,
                                 0, parm[idxtbl[1]].valuelen + 1);
       if (!err)
         err = ksba_writer_write (writer, "", 1);
@@ -1067,20 +1067,20 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
                                    parm[idxtbl[i]].valuelen);
           n += parm[idxtbl[i]].valuelen;
         }
-  
+
       n1 = 1; /* # of unused bits.  */
       if (idxtbllen > 1)
         n1 += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
       n1 += n;
-  
+
       /* Write the bit string header and the number of unused bits. */
-      err = _ksba_ber_write_tl (writer, TYPE_BIT_STRING, CLASS_UNIVERSAL, 
+      err = _ksba_ber_write_tl (writer, TYPE_BIT_STRING, CLASS_UNIVERSAL,
                                 0, n1);
       if (!err)
         err = ksba_writer_write (writer, "", 1);
       if (err)
         goto leave;
-      
+
       /* Write the sequence tag and the integers. */
       if (idxtbllen > 1)
         err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1,n);
@@ -1090,10 +1090,10 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
         {
           /* fixme: we should make sure that the integer conforms to the
              ASN.1 encoding rules. */
-          err  = _ksba_ber_write_tl (writer, TYPE_INTEGER, CLASS_UNIVERSAL, 0, 
+          err  = _ksba_ber_write_tl (writer, TYPE_INTEGER, CLASS_UNIVERSAL, 0,
                                      parm[idxtbl[i]].valuelen);
           if (!err)
-            err = ksba_writer_write (writer, parm[idxtbl[i]].value, 
+            err = ksba_writer_write (writer, parm[idxtbl[i]].value,
                                      parm[idxtbl[i]].valuelen);
           if (err)
             goto leave;
@@ -1107,7 +1107,7 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
       err = gpg_error (GPG_ERR_ENOMEM);
       goto leave;
     }
-  
+
   /* If the algorithmIdentifier requires a sequence with parameters,
      build them now.  We can reuse the IDXTBL for that.  */
   if (algoparmdesc)
@@ -1140,17 +1140,17 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
           n += parm[idxtbl[i]].valuelen;
         }
       //      n += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
-  
+
       /* Write the sequence tag followed by the integers. */
       err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
       if (err)
         goto leave;
       for (i=0; i < idxtbllen; i++)
         {
-          err = _ksba_ber_write_tl (writer, TYPE_INTEGER, CLASS_UNIVERSAL, 0, 
+          err = _ksba_ber_write_tl (writer, TYPE_INTEGER, CLASS_UNIVERSAL, 0,
                                     parm[idxtbl[i]].valuelen);
           if (!err)
-            err = ksba_writer_write (writer, parm[idxtbl[i]].value, 
+            err = ksba_writer_write (writer, parm[idxtbl[i]].value,
                                      parm[idxtbl[i]].valuelen);
           if (err)
             goto leave;
@@ -1234,7 +1234,7 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
   err = ksba_writer_write (writer, bitstr_value, bitstr_len);
   if (err)
     goto leave;
-  
+
   /* Get the result. */
   *r_der = ksba_writer_snatch_mem (writer, r_derlen);
   if (!*r_der)
@@ -1272,13 +1272,13 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
     algo_table = sig_algo_table;
   else
     algo_table = enc_algo_table;
-  
+
 
   err = get_algorithm (1, der, derlen, &nread, &off, &len, &is_bitstr,
                        NULL, NULL, NULL);
   if (err)
     return err;
-  
+
   /* look into our table of supported algorithms */
   for (algoidx=0; algo_table[algoidx].oid; algoidx++)
     {
@@ -1301,7 +1301,7 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
       if (!derlen)
         return gpg_error (GPG_ERR_INV_KEYINFO);
       c = *der++; derlen--;
-      if (c) 
+      if (c)
         fprintf (stderr, "warning: number of unused bits is not zero\n");
     }
 
@@ -1313,8 +1313,8 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
 
   /* FIXME: We don't release the stringbuf in case of error
      better let the macro jump to a label */
-  elem = algo_table[algoidx].elem_string; 
-  ctrl = algo_table[algoidx].ctrl_string; 
+  elem = algo_table[algoidx].elem_string;
+  ctrl = algo_table[algoidx].ctrl_string;
   for (; *elem; ctrl++, elem++)
     {
       int is_int;
@@ -1337,7 +1337,7 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
       if (is_int && *elem != '-')
         { /* take this integer */
           char tmp[2];
-          
+
           put_stringbuf (&sb, "(");
           tmp[0] = *elem; tmp[1] = 0;
           put_stringbuf_sexp (&sb, tmp);
@@ -1356,7 +1356,7 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
       put_stringbuf (&sb, ")");
     }
   put_stringbuf (&sb, ")");
-  
+
   *r_string = get_stringbuf (&sb);
   if (!*r_string)
     return gpg_error (GPG_ERR_ENOMEM);
@@ -1366,17 +1366,17 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
 
 /* Assume that DER is a buffer of length DERLEN with a DER encoded
    Asn.1 structure like this:
- 
-     SEQUENCE { 
+
+     SEQUENCE {
         algorithm    OBJECT IDENTIFIER,
         parameters   ANY DEFINED BY algorithm OPTIONAL }
-     signature  BIT STRING 
-  
+     signature  BIT STRING
+
   We only allow parameters == NULL.
 
   The function parses this structure and creates a S-Exp suitable to be
   used as signature value in Libgcrypt:
-  
+
   (sig-val
     (<algo>
       (<param_name1> <mpi>)
@@ -1396,17 +1396,17 @@ _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
 
 /* Assume that der is a buffer of length DERLEN with a DER encoded
  Asn.1 structure like this:
- 
-     SEQUENCE { 
+
+     SEQUENCE {
         algorithm    OBJECT IDENTIFIER,
         parameters   ANY DEFINED BY algorithm OPTIONAL }
-     encryptedKey  OCTET STRING 
-  
+     encryptedKey  OCTET STRING
+
   We only allow parameters == NULL.
 
   The function parses this structure and creates a S-Exp suitable to be
   used as encrypted value in Libgcrypt's public key functions:
-  
+
   (enc-val
     (<algo>
       (<param_name1> <mpi>)
@@ -1422,4 +1422,3 @@ _ksba_encval_to_sexp (const unsigned char *der, size_t derlen,
 {
   return cryptval_to_sexp (1, der, derlen, r_string);
 }
-

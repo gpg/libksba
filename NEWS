@@ -71,7 +71,7 @@ Noteworthy changes in version 1.0.3 (2008-02-12)
 
 Noteworthy changes in version 1.0.2 (2007-07-04)
 ------------------------------------------------
- 
+
  * Support for SHA-2.
 
  * Fixed a couple of memory leaks.
@@ -151,7 +151,7 @@ Noteworthy changes in version 0.9.13 (2005-11-24)
 Noteworthy changes in version 0.9.12 (2005-08-01)
 -------------------------------------------------
 
- * GeneralNames types dNSName and Uri are now supported. 
+ * GeneralNames types dNSName and Uri are now supported.
 
  * Minor changes to some function declarations.  This should not
    affect any compilation.
@@ -232,7 +232,7 @@ ksba_ocsp_get_cert                   NEW.
 ksba_cert_get_authority_info_access  NEW.
 ksba_cert_get_subject_info_access    NEW.
 ksba_cms_add_smime_capability        NEW.
- 
+
 
 Noteworthy changes in version 0.9.4 (2004-02-20)
 ------------------------------------------------
@@ -308,7 +308,7 @@ Noteworthy changes in version 0.9.0 (2003-11-17)
    Comparing is a mere strcmp.
 
  * All type names are nom conforming to the GNU coding standards, the
-   old names are still available as aliases but flagged as deprecated.       
+   old names are still available as aliases but flagged as deprecated.
 
  * All error codes have been replaced by libgpg-error ones.  Libksba
    now depends on this package.  Remember to use the gpg_err_code
@@ -364,7 +364,7 @@ ksba_cms_get_sigattr_oids        NEW
 Noteworthy changes in version 0.4.5 (2002-08-23)
 ------------------------------------------------
 
- * Removed some debugging output.  
+ * Removed some debugging output.
 
  * Added an autoconf macro.
 
@@ -402,7 +402,7 @@ Noteworthy changes in version 0.4.1 (2002-05-03)
 
 Noteworthy changes in version 0.4.0 (2002-04-15)
 ------------------------------------------------
- 
+
  * Nearly all stuff needed for the Aegypten project is now in place.
 
 

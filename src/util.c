@@ -53,7 +53,7 @@ ksba_set_malloc_hooks ( void *(*new_alloc_func)(size_t n),
 /* Register a has function for general use by libksba.  This is
    required to avoid dependencies to specific low-level
    crypolibraries.  The function should be used right at the startup
-   of the main program, similar to ksba_set_malloc_hooks. 
+   of the main program, similar to ksba_set_malloc_hooks.
 
    The function provided should behave like this:
 
@@ -69,11 +69,11 @@ ksba_set_malloc_hooks ( void *(*new_alloc_func)(size_t n),
    BUFFER of LENGTH and the result will be placed into the provided
    buffer RESULT which has been allocated by the caller with at LEAST
    RESULTSIZE bytes; the actual length of the result is put into
-   RESULTLEN. 
+   RESULTLEN.
 
    The function shall return 0 on success or any other appropriate
    gpg-error.
-*/ 
+*/
 void
 ksba_set_hash_buffer_function ( gpg_error_t (*fnc)
                                 (void *arg, const char *oid,
@@ -155,7 +155,7 @@ ksba_strdup (const char *str)
 }
 
 
-void 
+void
 ksba_free ( void *a )
 {
   if (a)
@@ -223,7 +223,7 @@ _ksba_stpcpy (char *a,const char *b)
 #endif
 
 
-static inline int 
+static inline int
 ascii_toupper (int c)
 {
   if (c >= 'a' && c <= 'z')
@@ -247,4 +247,3 @@ _ksba_ascii_memcasecmp (const void *a_arg, const void *b_arg, size_t n)
     }
   return 0;
 }
-
