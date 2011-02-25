@@ -25,7 +25,7 @@ min_automake_version="1.10"
 # Remember to change the version number immediately *after* a release.
 # Set my_issvn to "yes" for non-released code.  Remember to run an
 # "svn up" and "autogen.sh" right before creating a distribution.
-m4_define([my_version], [1.1.1])
+m4_define([my_version], [1.2.0])
 m4_define([my_issvn], [yes])
 
 m4_define([svn_revision], m4_esyscmd([printf "%d" $(svn info 2>/dev/null \
@@ -360,9 +360,11 @@ gl_INIT
 # To be used in ksba-config
 KSBA_CONFIG_LIBS="-lksba"
 KSBA_CONFIG_CFLAGS=""
+KSBA_CONFIG_HOST="$host"
 AC_SUBST(KSBA_CONFIG_LIBS)
 AC_SUBST(KSBA_CONFIG_CFLAGS)
 AC_SUBST(KSBA_CONFIG_API_VERSION)
+AC_SUBST(KSBA_CONFIG_HOST)
 
 # The Makefiles need to know about cross compiling
 AM_CONDITIONAL(CROSS_COMPILING, test x$cross_compiling != xno)

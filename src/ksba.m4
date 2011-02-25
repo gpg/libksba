@@ -21,7 +21,8 @@ dnl this features allows to prevent build against newer versions of libksba
 dnl with a changed API.
 dnl
 AC_DEFUN([AM_PATH_KSBA],
-[ AC_ARG_WITH(ksba-prefix,
+[AC_REQUIRE([AC_CANONICAL_HOST])
+ AC_ARG_WITH(ksba-prefix,
             AC_HELP_STRING([--with-ksba-prefix=PFX],
                            [prefix where KSBA is installed (optional)]),
      ksba_config_prefix="$withval", ksba_config_prefix="")
@@ -99,6 +100,19 @@ AC_DEFUN([AM_PATH_KSBA],
     KSBA_CFLAGS=`$KSBA_CONFIG $ksba_config_args --cflags`
     KSBA_LIBS=`$KSBA_CONFIG $ksba_config_args --libs`
     ifelse([$2], , :, [$2])
+    libksba_config_host=`$LIBKSBA_CONFIG $ksba_config_args --host 2>/dev/null || echo none`
+    if test x"$libksba_config_host" != xnone ; then
+      if test x"$libksba_config_host" != x"$host" ; then
+  AC_MSG_WARN([[
+***
+*** The config script $LIBKSBA_CONFIG was
+*** built for $libksba_config_host and thus may not match the
+*** used host $host.
+*** You may want to use the configure option --with-libksba-prefix
+*** to specify a matching config script.
+***]])
+      fi
+    fi
   else
     KSBA_CFLAGS=""
     KSBA_LIBS=""

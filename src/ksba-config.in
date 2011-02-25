@@ -1,5 +1,5 @@
 #!/bin/sh
-#    Copyright (C) 1999, 2002 Free Software Foundation, Inc.
+#    Copyright (C) 1999, 2002, 2011 Free Software Foundation, Inc.
 #
 # This file is free software; as a special exception the author gives
 # unlimited permission to copy and/or distribute it, with or without
@@ -15,6 +15,7 @@ cflags="@KSBA_CONFIG_CFLAGS@ @GPG_ERROR_CFLAGS@"
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 api_version="@KSBA_CONFIG_API_VERSION@"
+my_host="@KSBA_CONFIG_HOST@"
 
 includes=""
 libdirs=""
@@ -24,6 +25,7 @@ echo_cflags=no
 echo_prefix=no
 echo_exec_prefix=no
 echo_api_version=no
+echo_host=no
 
 
 usage()
@@ -37,6 +39,7 @@ Options:
         [--api-version]
 	[--libs]
 	[--cflags]
+        [--host]
 EOF
 	exit $1
 }
@@ -81,6 +84,9 @@ while test $# -gt 0; do
     --libs)
       echo_libs=yes
       ;;
+    --host)
+      echo_host=yes
+      ;;
     *)
       usage 1 1>&2
       ;;
@@ -98,6 +104,10 @@ fi
 
 if test "$echo_api_version" = "yes"; then
     echo "$api_version"
+fi
+
+if test "$echo_host" = "yes"; then
+    echo "$my_host"
 fi
 
 if test "$echo_cflags" = "yes"; then
