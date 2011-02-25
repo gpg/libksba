@@ -850,6 +850,20 @@ ksba_certreq_set_hash_function (ksba_certreq_t cr,
 
 
 gpg_error_t
+ksba_certreq_set_serial (ksba_certreq_t cr, ksba_const_sexp_t sn)
+{
+  return _ksba_certreq_set_serial (cr, sn);
+}
+
+
+gpg_error_t
+ksba_certreq_set_issuer (ksba_certreq_t cr, const char *name)
+{
+  return _ksba_certreq_set_issuer (cr, name);
+}
+
+
+gpg_error_t
 ksba_certreq_add_subject (ksba_certreq_t cr, const char *name)
 {
   return _ksba_certreq_add_subject (cr, name);
@@ -890,6 +904,12 @@ ksba_certreq_build (ksba_certreq_t cr,
 }
 
 
+gpg_error_t
+ksba_certreq_set_validity (ksba_certreq_t cr, int what,
+                           const ksba_isotime_t timebuf)
+{
+  return _ksba_certreq_set_validity (cr, what, timebuf);
+}
 
 
 /*-- reader.c --*/

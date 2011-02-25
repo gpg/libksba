@@ -1,5 +1,15 @@
 2011-02-25  Werner Koch  <wk@g10code.com>
 
+	* certreq.h (ksba_certreq_s): Add structure x509.
+	* certreq.c (ksba_certreq_release): Free new fields.
+	(ksba_certreq_set_serial, ksba_certreq_set_issuer)
+	(ksba_certreq_set_validity): New.
+	(build_extensions): Add arg certmode and allow building of X.509
+	extensions.
+	(build_cri): Add code to build an X.509 certificate.
+	* libksba.def, libksba.vers: Add new functions.
+	* visibility.c, visibility.h: Ditto.
+
 	* ksba-config.in: Add option --host.
 	* ksba.m4: Use --host for an consistency check.
 

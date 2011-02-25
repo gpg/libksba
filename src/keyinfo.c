@@ -1139,7 +1139,7 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
                                    parm[idxtbl[i]].valuelen);
           n += parm[idxtbl[i]].valuelen;
         }
-      //      n += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
+      /*  n += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n); */
 
       /* Write the sequence tag followed by the integers. */
       err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);

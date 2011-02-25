@@ -1,7 +1,7 @@
                                LIBKSBA
                               ---------
 
-      Copyright 2001, 2006, 2007, 2008, 2009, 2010 g10 Code GmbH
+      Copyright 2001, 2006, 2007, 2008, 2009, 2010, 2011 g10 Code GmbH
 
 This file is free software; as a special exception the author gives
 unlimited permission to copy and/or distribute it, with or without
@@ -40,5 +40,5 @@ provide hooks for easy integration with Libgcrypt.
 
 A standard info format reference manual is included.  However the OCSP
 feature has not yet been documented.  See the comments in src/ocsp.c
-and the example tests/t-ocsp.c.  The package dirmngr make extensive
-use of the ocsp feature and may be used as another example.
+and the example tests/t-ocsp.c.  The package gnupg part dirmngr makes
+extensive use of the ocsp feature and may be used as another example.

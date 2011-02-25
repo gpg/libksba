@@ -1,5 +1,13 @@
-Noteworthy changes in version 1.1.1
+Noteworthy changes in version 1.2.0
 ------------------------------------------------
+
+ * New functions to allow the creation of X.509 certificates.
+
+ * Interface changes relative to the 1.1.0 release:
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ ksba_certreq_set_serial          NEW.
+ ksba_certreq_set_issuer          NEW.
+ ksba_certreq_set_validity        NEW.
 
 
 Noteworthy changes in version 1.1.0 (2010-10-26)

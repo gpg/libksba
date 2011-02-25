@@ -62,6 +62,9 @@
 #define ksba_cert_set_user_data            _ksba_cert_set_user_data
 #define ksba_cert_get_user_data            _ksba_cert_get_user_data
 
+#define ksba_certreq_set_serial            _ksba_certreq_set_serial
+#define ksba_certreq_set_issuer            _ksba_certreq_set_issuer
+#define ksba_certreq_set_validity          _ksba_certreq_set_validity
 #define ksba_certreq_add_subject           _ksba_certreq_add_subject
 #define ksba_certreq_build                 _ksba_certreq_build
 #define ksba_certreq_new                   _ksba_certreq_new
@@ -252,6 +255,9 @@ int ksba_asn_delete_structure (void *dummy);
 #undef ksba_cert_set_user_data
 #undef ksba_cert_get_user_data
 
+#undef ksba_certreq_set_serial
+#undef ksba_certreq_set_issuer
+#undef ksba_certreq_set_validity
 #undef ksba_certreq_add_subject
 #undef ksba_certreq_build
 #undef ksba_certreq_new
@@ -411,6 +417,9 @@ MARK_VISIBLE (ksba_cert_get_subj_key_id)
 MARK_VISIBLE (ksba_cert_set_user_data)
 MARK_VISIBLE (ksba_cert_get_user_data)
 
+MARK_VISIBLE (ksba_certreq_set_serial)
+MARK_VISIBLE (ksba_certreq_set_issuer)
+MARK_VISIBLE (ksba_certreq_set_validity)
 MARK_VISIBLE (ksba_certreq_add_subject)
 MARK_VISIBLE (ksba_certreq_build)
 MARK_VISIBLE (ksba_certreq_new)

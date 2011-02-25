@@ -1,5 +1,5 @@
 /* ksba.h - X.509 library used by GnuPG
- * Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2010 g10 Code GmbH
+ * Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2010, 2011 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -424,6 +424,13 @@ gpg_error_t ksba_certreq_set_sig_val (ksba_certreq_t cr,
                                       ksba_const_sexp_t sigval);
 gpg_error_t ksba_certreq_build (ksba_certreq_t cr,
                                 ksba_stop_reason_t *r_stopreason);
+
+/* The functions below are used to switch to X.509 certificate creation.  */
+gpg_error_t ksba_certreq_set_serial (ksba_certreq_t cr, ksba_const_sexp_t sn);
+gpg_error_t ksba_certreq_set_issuer (ksba_certreq_t cr, const char *name);
+gpg_error_t ksba_certreq_set_validity (ksba_certreq_t cr, int what,
+                                       const ksba_isotime_t timebuf);
+
 
 
 /*-- reader.c --*/

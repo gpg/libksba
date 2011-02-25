@@ -62,9 +62,24 @@ struct ksba_certreq_s
   int any_build_done;
 
   struct {
+    struct {
+      char *der;  /* Malloced serialno; if this is set we want to
+                          build a real X.509 certificate.  */
+      size_t derlen;
+    } serial;
+    struct {
+      char *der;
+      size_t derlen;
+    } issuer;
+    ksba_isotime_t not_before;
+    ksba_isotime_t not_after;
+  } x509;
+
+  struct {
     char *der;
     size_t derlen;
   } subject;
+
   struct {
     unsigned char *der;
     size_t derlen;

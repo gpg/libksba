@@ -178,3 +178,7 @@ EXPORTS
 
       ksba_reader_set_release_notify  @146
       ksba_writer_set_release_notify  @147
+
+      ksba_certreq_set_serial    @148
+      ksba_certreq_set_issuer    @149
+      ksba_certreq_set_validity  @150
