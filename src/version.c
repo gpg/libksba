@@ -82,8 +82,7 @@ compare_versions (const char *my_version, const char *req_version)
       || (my_major == rq_major && my_minor == rq_minor
 	  && my_micro > rq_micro)
       || (my_major == rq_major && my_minor == rq_minor
-	  && my_micro == rq_micro
-	  && strcmp( my_plvl, rq_plvl ) >= 0))
+	  && my_micro == rq_micro))
     {
       return my_version;
     }
