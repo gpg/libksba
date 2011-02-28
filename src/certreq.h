@@ -73,6 +73,10 @@ struct ksba_certreq_s
     } issuer;
     ksba_isotime_t not_before;
     ksba_isotime_t not_after;
+    struct {
+      unsigned char *der;
+      size_t derlen;
+    } siginfo;
   } x509;
 
   struct {

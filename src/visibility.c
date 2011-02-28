@@ -912,6 +912,13 @@ ksba_certreq_set_validity (ksba_certreq_t cr, int what,
 }
 
 
+gpg_error_t
+ksba_certreq_set_siginfo (ksba_certreq_t cr, ksba_const_sexp_t siginfo)
+{
+  return _ksba_certreq_set_siginfo (cr, siginfo);
+}
+
+
 /*-- reader.c --*/
 gpg_error_t
 ksba_reader_new (ksba_reader_t *r_r)

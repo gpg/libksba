@@ -47,6 +47,7 @@ KSBA_0.9 {
     ksba_certreq_set_serial;
     ksba_certreq_set_issuer;
     ksba_certreq_set_validity;
+    ksba_certreq_set_siginfo;
 
     ksba_cms_add_cert; ksba_cms_add_digest_algo; ksba_cms_add_recipient;
     ksba_cms_add_signer; ksba_cms_build; ksba_cms_get_cert;

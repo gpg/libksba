@@ -430,6 +430,8 @@ gpg_error_t ksba_certreq_set_serial (ksba_certreq_t cr, ksba_const_sexp_t sn);
 gpg_error_t ksba_certreq_set_issuer (ksba_certreq_t cr, const char *name);
 gpg_error_t ksba_certreq_set_validity (ksba_certreq_t cr, int what,
                                        const ksba_isotime_t timebuf);
+gpg_error_t ksba_certreq_set_siginfo (ksba_certreq_t cr,
+                                      ksba_const_sexp_t siginfo);
 
 
 

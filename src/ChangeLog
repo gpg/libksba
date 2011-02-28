@@ -1,12 +1,22 @@
+2011-02-28  Werner Koch  <wk@g10code.com>
+
+	* keyinfo.c (_ksba_algoinfo_from_sexp): New.
+	(oid_from_buffer): Add arg WITH_SIG.
+	* certreq.c (ksba_certreq_set_signing_key): Rename to ..
+	(ksba_certreq_set_siginfo): new.  Use new parser function.
+	* libksba.def, libksba.vers, visibility.c, visibility.h: Change
+	accordingly.
+
 2011-02-25  Werner Koch  <wk@g10code.com>
 
 	* certreq.h (ksba_certreq_s): Add structure x509.
 	* certreq.c (ksba_certreq_release): Free new fields.
 	(ksba_certreq_set_serial, ksba_certreq_set_issuer)
-	(ksba_certreq_set_validity): New.
+	(ksba_certreq_set_validity, ksba_certreq_set_signing_key): New.
 	(build_extensions): Add arg certmode and allow building of X.509
 	extensions.
 	(build_cri): Add code to build an X.509 certificate.
+
 	* libksba.def, libksba.vers: Add new functions.
 	* visibility.c, visibility.h: Ditto.
 

@@ -68,6 +68,7 @@ ksba_certreq_release (ksba_certreq_t cr)
     return;
   xfree (cr->x509.serial.der);
   xfree (cr->x509.issuer.der);
+  xfree (cr->x509.siginfo.der);
   xfree (cr->subject.der);
   xfree (cr->key.der);
   xfree (cr->cri.der);
@@ -179,6 +180,32 @@ ksba_certreq_set_validity (ksba_certreq_t cr, int what,
 
   _ksba_copy_time (what?cr->x509.not_after:cr->x509.not_before, timebuf);
   return 0;
+}
+
+
+/* Store the signing key info.  This is used to extract the signing
+   algorithm; the signing itself needs to be done by the caller as
+   response to a stop code.  The expression SIGINFO is similar to a
+   sig-val one, however most parameters are not required.  The
+   expected structure of this canonical encoded s-expression is:
+
+     (sig-val
+       (<algo>
+          (<param_name1> <value>)
+          ...
+          (<param_namen> <value>)))
+
+*/
+gpg_error_t
+ksba_certreq_set_siginfo (ksba_certreq_t cr, ksba_const_sexp_t siginfo)
+{
+  if (!cr || !siginfo)
+    return gpg_error (GPG_ERR_INV_VALUE);
+  xfree (cr->x509.siginfo.der);
+  cr->x509.siginfo.der = NULL;
+
+  return _ksba_algoinfo_from_sexp (siginfo, &cr->x509.siginfo.der,
+                                   &cr->x509.siginfo.derlen);
 }
 
 
@@ -674,43 +701,15 @@ build_cri (ksba_certreq_t cr)
       if (err)
         goto leave;
 
-      /* Store the signature algorithm identifier.  That is easy
-         because we must take it from the public key. */
-      {
-        char *dummy_oid = NULL;
-        size_t algoinfolen;
-        struct tag_info ti;
-        const unsigned char *der;
-        size_t derlen, seqlen;
+      /* Store the signature algorithm identifier.  */
+      if (!cr->x509.siginfo.der)
+        err = gpg_error (GPG_ERR_MISSING_VALUE);
+      else
+        err = ksba_writer_write (writer,
+                                 cr->x509.siginfo.der, cr->x509.siginfo.derlen);
+      if (err)
+        goto leave;
 
-        der = cr->key.der;
-        derlen = cr->key.derlen;
-
-        err = _ksba_ber_parse_tl (&der, &derlen, &ti);
-        if (err)
-          goto leave;
-        if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_SEQUENCE
-               && ti.is_constructed) || ti.ndef)
-          {
-            err = gpg_error (GPG_ERR_INV_CERT_OBJ);
-            goto leave;
-          }
-        seqlen = ti.length;
-        if (seqlen > derlen)
-          {
-            err = gpg_error (GPG_ERR_BAD_BER);
-            goto leave;
-          }
-
-        err = _ksba_parse_algorithm_identifier (der, derlen,
-                                                &algoinfolen, &dummy_oid);
-        xfree (dummy_oid);
-        if (err)
-          goto leave;
-        err = ksba_writer_write (writer, der, algoinfolen);
-        if (err)
-          goto leave;
-      }
 
       /* Store the issuer DN.  If no issuer DN has been set we use the
          subject DN.  */
@@ -727,33 +726,73 @@ build_cri (ksba_certreq_t cr)
       /* Store the Validity.  */
       {
         unsigned char templ[36];
+        unsigned char *tp;
 
-        templ[0] = 0x30;
-        templ[1] = 0x22;
+        tp = templ;
+        *tp++ = 0x30;
+        *tp++ = 0x22;
 
-        templ[2] = 0x18;
-        templ[3] = 0x0F;
+        *tp++ = TYPE_GENERALIZED_TIME;
+        *tp++ = 15;
         if (cr->x509.not_before[0])
           {
-            memcpy (templ+4, cr->x509.not_before, 8);
-            memcpy (templ+12, cr->x509.not_before+9, 6);
+            if (_ksba_cmp_time (cr->x509.not_before, "20500101T000000") >= 0)
+              {
+                memcpy (tp, cr->x509.not_before, 8);
+                tp += 8;
+                memcpy (tp, cr->x509.not_before+9, 6);
+                tp += 6;
+              }
+            else
+              {
+                tp[-2] = TYPE_UTC_TIME;
+                tp[-1] = 13;
+                memcpy (tp, cr->x509.not_before, 6);
+                tp += 6;
+                memcpy (tp, cr->x509.not_before+9, 6);
+                tp += 6;
+              }
           }
         else
-          memcpy (templ+4, "20110101000000", 14);
-        templ[18] = 'Z';
+          {
+            tp[-2] = TYPE_UTC_TIME;
+            tp[-1] = 13;
+            memcpy (tp, "110101000000", 12);
+            tp += 12;
+          }
+        *tp++ = 'Z';
 
-        templ[19] = 0x18;
-        templ[20] = 0x0F;
+        *tp++ = TYPE_GENERALIZED_TIME;
+        *tp++ = 15;
         if (cr->x509.not_after[0])
           {
-            memcpy (templ+21, cr->x509.not_before, 8);
-            memcpy (templ+29, cr->x509.not_before+9, 6);
+            if (_ksba_cmp_time (cr->x509.not_after, "20500101T000000") >= 0)
+              {
+                memcpy (tp, cr->x509.not_after, 8);
+                tp += 8;
+                memcpy (tp, cr->x509.not_after+9, 6);
+                tp += 6;
               }
+            else
+              {
+                tp[-2] = TYPE_UTC_TIME;
+                tp[-1] = 13;
+                memcpy (tp, cr->x509.not_after+2, 6);
+                tp += 6;
+                memcpy (tp, cr->x509.not_after+9, 6);
+                tp += 6;
+              }
+          }
         else
-          memcpy (templ+21,"20630405170000", 14);
-        templ[35] = 'Z';
+          {
+            memcpy (tp,"20630405170000", 14);
+            tp += 14;
+          }
+        *tp++ = 'Z';
+        assert (tp - templ <= 36);
+        templ[1] = tp - templ - 2;  /* Fixup the sequence length.  */
 
-        err = ksba_writer_write (writer, templ, 36);
+        err = ksba_writer_write (writer, templ, tp - templ);
         if (err)
           goto leave;
       }
