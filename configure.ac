@@ -1,6 +1,6 @@
 # configure.ac - for libksba
 # Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-#               2010  g10 Code GmbH
+#               2010, 2011  g10 Code GmbH
 #
 # This file is part of KSBA
 #
@@ -26,7 +26,7 @@ min_automake_version="1.10"
 # Set my_issvn to "yes" for non-released code.  Remember to run an
 # "svn up" and "autogen.sh" right before creating a distribution.
 m4_define([my_version], [1.2.0])
-m4_define([my_issvn], [yes])
+m4_define([my_issvn], [no])
 
 m4_define([svn_revision], m4_esyscmd([printf "%d" $(svn info 2>/dev/null \
           | sed -n '/^Revision:/ s/[^0-9]//gp'|head -1)]))
@@ -42,8 +42,8 @@ AC_INIT([libksba],
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
 # Please remember to document interface changes in the NEWS file.
-LIBKSBA_LT_CURRENT=18
-LIBKSBA_LT_AGE=10
+LIBKSBA_LT_CURRENT=19
+LIBKSBA_LT_AGE=11
 LIBKSBA_LT_REVISION=0
 #-------------------
 # If the API is changed in an incompatible way: increment the next counter.
