@@ -747,7 +747,7 @@ build_cri (ksba_certreq_t cr)
               {
                 tp[-2] = TYPE_UTC_TIME;
                 tp[-1] = 13;
-                memcpy (tp, cr->x509.not_before, 6);
+                memcpy (tp, cr->x509.not_before+2, 6);
                 tp += 6;
                 memcpy (tp, cr->x509.not_before+9, 6);
                 tp += 6;
