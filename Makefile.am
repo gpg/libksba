@@ -21,7 +21,11 @@
 ACLOCAL_AMFLAGS = -I m4 -I gl/m4
 AUTOMAKE_OPTIONS = dist-bzip2
 
-EXTRA_DIST = autogen.sh
+EXTRA_DIST = autogen.sh 						\
+             ChangeLog-2011 doc/ChangeLog-2011 src/ChangeLog-2011 	\
+             tests/ChangeLog-2011 			     		\
+             build-aux/gitlog-to-changelog build-aux/git-log-footer	\
+             build-aux/git-log-fix
 
 
 if CROSS_COMPILING
@@ -33,8 +37,24 @@ endif
 
 SUBDIRS = m4 gl src ${tests} doc
 
-dist-hook:
+dist-hook: gen-ChangeLog
 	@set -e; echo "$(VERSION)" > $(distdir)/VERSION
+
+
+gen_start_date = 2011-12-01T00:00:00
+.PHONY: gen-ChangeLog
+gen-ChangeLog:
+	if test -d $(top_srcdir)/.git; then				\
+	  (cd $(top_srcdir) &&                      			\
+	    ./build-aux/gitlog-to-changelog				\
+	    --amend=build-aux/git-log-fix				\
+	    --since=$(gen_start_date) ) > $(distdir)/cl-t;		\
+          cat $(top_srcdir)/build-aux/git-log-footer >> $(distdir)/cl-t;\
+	  rm -f $(distdir)/ChangeLog;					\
+	  mv $(distdir)/cl-t $(distdir)/ChangeLog;			\
+	fi
+
+
 
 stowinstall:
 	$(MAKE) $(AM_MAKEFLAGS) install prefix=/usr/local/stow/libksba

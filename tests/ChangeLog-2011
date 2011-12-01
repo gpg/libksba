@@ -1,3 +1,10 @@
+2011-12-01  Werner Koch  <wk@g10code.com>
+
+	NB: ChangeLog files are no longer manually maintained.  Starting
+	on December 1st, 2011 we put change information only in the GIT
+	commit log, and generate a top-level ChangeLog file from logs at
+	"make dist".  See doc/HACKING for details.
+
 2010-08-04  Werner Koch  <wk@g10code.com>
 
 	* t-cms-parser.c (one_file): Use print_sexp_hex for the s/n.

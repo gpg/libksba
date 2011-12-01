@@ -20,6 +20,9 @@
 
 DISTCLEANFILES = ksba.cps
 
+EXTRA_DIST = HACKING
+
+
 info_TEXINFOS = ksba.texi
 ksba_TEXINFOS = gpl.texi
 
