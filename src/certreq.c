@@ -161,7 +161,7 @@ ksba_certreq_set_issuer (ksba_certreq_t cr, const char *name)
 {
   if (!cr || !name)
     return gpg_error (GPG_ERR_INV_VALUE);
-  if (cr->subject.der)
+  if (cr->x509.issuer.der)
     return gpg_error (GPG_ERR_CONFLICT); /* Already set */
   return _ksba_dn_from_str (name, &cr->x509.issuer.der,
                             &cr->x509.issuer.derlen);
