@@ -1,20 +1,32 @@
 /* sexp-parse.h - S-expression helper functions for canonical encodings.
  *	Copyright (C) 2002, 2003, 2007 Free Software Foundation, Inc.
+ *      Copyright (C) 2012 g10 Code GmbH
  *
- * This file is part of GnuPG.
+ * This file is part of KSBA.
  *
- * GnuPG is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ * KSBA is free software; you can redistribute it and/or modify
+ * it under the terms of either
  *
- * GnuPG is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *   - the GNU Lesser General Public License as published by the Free
+ *     Software Foundation; either version 3 of the License, or (at
+ *     your option) any later version.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, see <http://www.gnu.org/licenses/>.
+ * or
+ *
+ *   - the GNU General Public License as published by the Free
+ *     Software Foundation; either version 2 of the License, or (at
+ *     your option) any later version.
+ *
+ * or both in parallel, as here.
+ *
+ * KSBA is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+ * License for more details.
+ *
+ * You should have received a copies of the GNU General Public License
+ * and the GNU Lesser General Public License along with this program;
+ * if not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef SEXP_PARSE_H
@@ -82,7 +94,7 @@ sskip (unsigned char const **buf, int *depth)
 
 /* Check whether the the string at the address BUF points to matches
    the token.  Return true on match and update BUF to point behind the
-   token.  Return false and does not update the buffer if it does not
+   token.  Return false and do not update the buffer if it does not
    match. */
 static inline int
 smatch (unsigned char const **buf, size_t buflen, const char *token)
@@ -97,7 +109,7 @@ smatch (unsigned char const **buf, size_t buflen, const char *token)
 
 
 /* Format VALUE for use as the length indicatior of an S-expression.
-   The caler needs to provide a buffer HELP_BUFFER wth a length of
+   The caller needs to provide a buffer HELP_BUFFER with a length of
    HELP_BUFLEN.  The return value is a pointer into HELP_BUFFER with
    the formatted length string.  The colon and a trailing nul are
    appended.  HELP_BUFLEN must be at least 3 - a more useful value is

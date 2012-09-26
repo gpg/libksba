@@ -1,3 +1,12 @@
+Noteworthy changes in version 1.3.0 (unreleased)
+------------------------------------------------
+
+ * Changed the license of the library from GPLv3 to a LGPLv3/GPLv2;
+   see the file AUTHORS for details.
+
+ * Minor bug fixes
+
+
 Noteworthy changes in version 1.2.0 (2011-03-01)
 ------------------------------------------------
 

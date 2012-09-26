@@ -21,7 +21,7 @@
 ACLOCAL_AMFLAGS = -I m4 -I gl/m4
 AUTOMAKE_OPTIONS = dist-bzip2
 
-EXTRA_DIST = autogen.sh 						\
+EXTRA_DIST = autogen.sh COPYING.GPLv2 COPYING.GPLv3 COPYING.LGPLv3      \
              ChangeLog-2011 doc/ChangeLog-2011 src/ChangeLog-2011 	\
              tests/ChangeLog-2011 			     		\
              build-aux/gitlog-to-changelog build-aux/git-log-footer	\

@@ -1,21 +1,31 @@
 /* asn1-func.c - Fucntions for the ASN.1 data structures.
  *      Copyright (C) 2000, 2001 Fabio Fiorina
- *      Copyright (C) 2001, 2010 Free Software Foundation, Inc.
+ *      Copyright (C) 2001 Free Software Foundation, Inc.
+ *      Copyright (C) 2002, 2003, 2006, 2007, 2010, 2012 g10 Code GmbH
  *
- * This file is part of GNUTLS.
+ * KSBA is free software; you can redistribute it and/or modify
+ * it under the terms of either
  *
- * GNUTLS is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ *   - the GNU Lesser General Public License as published by the Free
+ *     Software Foundation; either version 3 of the License, or (at
+ *     your option) any later version.
  *
- * GNUTLS is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * or
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, see <http://www.gnu.org/licenses/>.
+ *   - the GNU General Public License as published by the Free
+ *     Software Foundation; either version 2 of the License, or (at
+ *     your option) any later version.
+ *
+ * or both in parallel, as here.
+ *
+ * KSBA is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+ * License for more details.
+ *
+ * You should have received a copies of the GNU General Public License
+ * and the GNU Lesser General Public License along with this program;
+ * if not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef BUILD_GENTOOLS

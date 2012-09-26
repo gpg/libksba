@@ -91,7 +91,7 @@ libksba_la_SOURCES = \
         visibility.c visibility.h \
 	reader.c reader.h \
 	writer.c writer.h \
-	asn1-parse.y asn1-parse.h \
+	asn1-parse.y \
 	asn1-func.c asn1-func2.c asn1-func.h \
 	ber-help.c ber-help.h \
 	ber-decoder.c ber-decoder.h \
