@@ -45,7 +45,6 @@
 # include "ksba.h"
 #endif
 
-#include "asn1-parse.h"
 #include "asn1-func.h"
 
 /* It would be better to make yyparse static but there is no way to do
