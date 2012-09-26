@@ -158,7 +158,7 @@ if test "$GCC" = yes; then
         AC_MSG_CHECKING([if gcc supports -Wno-missing-field-initializers])
         _gcc_cflags_save=$CFLAGS
         CFLAGS="-Wno-missing-field-initializers"
-        AC_COMPILE_IFELSE(AC_LANG_PROGRAM([]),_gcc_wopt=yes,_gcc_wopt=no)
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[])],_gcc_wopt=yes,_gcc_wopt=no)
         AC_MSG_RESULT($_gcc_wopt)
         CFLAGS=$_gcc_cflags_save;
         if test x"$_gcc_wopt" = xyes ; then
@@ -168,7 +168,7 @@ if test "$GCC" = yes; then
         AC_MSG_CHECKING([if gcc supports -Wdeclaration-after-statement])
         _gcc_cflags_save=$CFLAGS
         CFLAGS="-Wdeclaration-after-statement"
-        AC_COMPILE_IFELSE(AC_LANG_PROGRAM([]),_gcc_wopt=yes,_gcc_wopt=no)
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[])],_gcc_wopt=yes,_gcc_wopt=no)
         AC_MSG_RESULT($_gcc_wopt)
         CFLAGS=$_gcc_cflags_save;
         if test x"$_gcc_wopt" = xyes ; then
@@ -179,7 +179,7 @@ if test "$GCC" = yes; then
     AC_MSG_CHECKING([if gcc supports -Wpointer-arith])
     _gcc_cflags_save=$CFLAGS
     CFLAGS="-Wpointer-arith"
-    AC_COMPILE_IFELSE(AC_LANG_PROGRAM([]),_gcc_wopt=yes,_gcc_wopt=no)
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[])],_gcc_wopt=yes,_gcc_wopt=no)
     AC_MSG_RESULT($_gcc_wopt)
     CFLAGS=$_gcc_cflags_save;
     if test x"$_gcc_wopt" = xyes ; then
@@ -189,7 +189,7 @@ if test "$GCC" = yes; then
     AC_MSG_CHECKING([if gcc supports -Wno-pointer-sign])
     _gcc_cflags_save=$CFLAGS
     CFLAGS="-Wno-pointer-sign"
-    AC_COMPILE_IFELSE(AC_LANG_PROGRAM([]),_gcc_psign=yes,_gcc_psign=no)
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[])],_gcc_psign=yes,_gcc_psign=no)
     AC_MSG_RESULT($_gcc_psign)
     CFLAGS=$_gcc_cflags_save;
     if test x"$_gcc_psign" = xyes ; then
@@ -310,7 +310,7 @@ if test "$ksba_cv_visibility_attribute" = "yes"; then
        [ksba_cv_gcc_has_f_visibility=no
         _gcc_cflags_save=$CFLAGS
         CFLAGS="-fvisibility=hidden"
-        AC_COMPILE_IFELSE(AC_LANG_PROGRAM([]),
+        AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[])],
                           ksba_cv_gcc_has_f_visibility=yes)
         CFLAGS=$_gcc_cflags_save;
        ])
