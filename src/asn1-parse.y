@@ -63,9 +63,13 @@
    this.  Let's hope that this macros works. */
 #define yyparse _ksba_asn1_yyparse
 
-/*#define YYDEBUG 1*/
-#define YYERROR_VERBOSE = 1
+/* #define YYDEBUG 1 */
+#define YYERROR_VERBOSE 1
 #define MAX_STRING_LENGTH 129
+
+/* Dummy print so that yytoknum will be defined.  */
+#define YYPRINT(F, N, L)  do { } while (0);
+
 
 /* constants used in the grammar */
 enum {
@@ -112,51 +116,52 @@ static int yylex (YYSTYPE *lvalp, void *parm);
 static void yyerror (const char *s);
 %}
 
-%token ASSIG "::="
+%token-table
+
+%token ASSIG           "::="
 %token <str> NUM
 %token <str> IDENTIFIER
-%token OPTIONAL
-%token INTEGER
-%token SIZE
-%token OCTET
-%token STRING
-%token SEQUENCE
-%token BIT
-%token UNIVERSAL
-%token PRIVATE
-%token APPLICATION
-%token OPTIONAL
-%token DEFAULT
-%token CHOICE
-%token OF
-%token OBJECT
-%token STR_IDENTIFIER
-%token BOOLEAN
-%token TRUE
-%token FALSE
-%token TOKEN_NULL
-%token ANY
-%token DEFINED
-%token BY
-%token SET
-%token EXPLICIT
-%token IMPLICIT
-%token DEFINITIONS
-%token TAGS
-%token BEGIN
-%token END
-%token UTCTime
-%token GeneralizedTime
-%token FROM
-%token IMPORTS
-%token ENUMERATED
-%token UTF8STRING
-%token NUMERICSTRING
-%token PRINTABLESTRING
-%token TELETEXSTRING
-%token IA5STRING
-%token UNIVERSALSTRING
-%token BMPSTRING
+%token OPTIONAL        "OPTIONAL"
+%token INTEGER         "INTEGER"
+%token SIZE            "SIZE"
+%token OCTET           "OCTET"
+%token STRING          "STRING"
+%token SEQUENCE        "SEQUENCE"
+%token BIT             "BIT"
+%token UNIVERSAL       "UNIVERSAL"
+%token PRIVATE         "PRIVATE"
+%token DEFAULT         "DEFAULT"
+%token CHOICE          "CHOICE"
+%token OF              "OF"
+%token OBJECT          "OBJECT"
+%token STR_IDENTIFIER  "IDENTIFIER"
+%token ksba_BOOLEAN    "BOOLEAN"
+%token ksba_TRUE       "TRUE"
+%token ksba_FALSE      "FALSE"
+%token APPLICATION     "APPLICATION"
+%token ANY             "ANY"
+%token DEFINED         "DEFINED"
+%token SET             "SET"
+%token BY              "BY"
+%token EXPLICIT        "EXPLICIT"
+%token IMPLICIT        "IMPLICIT"
+%token DEFINITIONS     "DEFINITIONS"
+%token TAGS            "TAGS"
+%token ksba_BEGIN      "BEGIN"
+%token ksba_END        "END"
+%token UTCTime         "UTCTime"
+%token GeneralizedTime "GeneralizedTime"
+%token FROM            "FROM"
+%token IMPORTS         "IMPORTS"
+%token TOKEN_NULL      "NULL"
+%token ENUMERATED      "ENUMERATED"
+%token UTF8STRING      "UTF8String"
+%token NUMERICSTRING   "NumericString"
+%token PRINTABLESTRING "PrintableString"
+%token TELETEXSTRING   "TeletexString"
+%token IA5STRING       "IA5String"
+%token UNIVERSALSTRING "UniversalString"
+%token BMPSTRING       "BMPString"
 
 
 
@@ -301,12 +306,12 @@ default :  DEFAULT pos_neg_identifier
                  $$ = NEW_NODE (TYPE_DEFAULT);
                  set_str_value ($$, $2);
                }
-         | DEFAULT TRUE
+         | DEFAULT ksba_TRUE
                {
                  $$ = NEW_NODE (TYPE_DEFAULT);
                  $$->flags.is_true = 1;
                }
-         | DEFAULT FALSE
+         | DEFAULT ksba_FALSE
                {
                  $$ = NEW_NODE (TYPE_DEFAULT);
                  $$->flags.is_false = 1;
@@ -334,7 +339,7 @@ integer_def: INTEGER
                }
 ;
 
-boolean_def: BOOLEAN
+boolean_def: ksba_BOOLEAN
               {
                 $$ = NEW_NODE (TYPE_BOOLEAN);
               }
@@ -718,8 +723,8 @@ explicit_implicit :  EXPLICIT  { $$ = CONST_EXPLICIT; }
 ;
 
 definitions: definitions_id
-             DEFINITIONS explicit_implicit TAGS "::=" BEGIN imports_def
-             type_constant_list END
+             DEFINITIONS explicit_implicit TAGS "::=" ksba_BEGIN imports_def
+             type_constant_list ksba_END
                {
                  AsnNode node;
 
@@ -755,29 +760,6 @@ definitions: definitions_id
 
 %%
 
-const char *key_word[]={
-  "::=","OPTIONAL","INTEGER","SIZE","OCTET","STRING"
-  ,"SEQUENCE","BIT","UNIVERSAL","PRIVATE","OPTIONAL"
-  ,"DEFAULT","CHOICE","OF","OBJECT","IDENTIFIER"
-  ,"BOOLEAN","TRUE","FALSE","APPLICATION","ANY","DEFINED"
-  ,"SET","BY","EXPLICIT","IMPLICIT","DEFINITIONS","TAGS"
-  ,"BEGIN","END","UTCTime","GeneralizedTime","FROM"
-  ,"IMPORTS","NULL","ENUMERATED"
-  ,"UTF8String","NumericString","PrintableString","TeletexString"
-  ,"IA5String","UniversalString","BMPString"
-};
-const int key_word_token[]={
-   ASSIG,OPTIONAL,INTEGER,SIZE,OCTET,STRING
-  ,SEQUENCE,BIT,UNIVERSAL,PRIVATE,OPTIONAL
-  ,DEFAULT,CHOICE,OF,OBJECT,STR_IDENTIFIER
-  ,BOOLEAN,TRUE,FALSE,APPLICATION,ANY,DEFINED
-  ,SET,BY,EXPLICIT,IMPLICIT,DEFINITIONS,TAGS
-  ,BEGIN,END,UTCTime,GeneralizedTime,FROM
-  ,IMPORTS,TOKEN_NULL,ENUMERATED
-  ,UTF8STRING,NUMERICSTRING,PRINTABLESTRING,TELETEXSTRING
-  ,IA5STRING,UNIVERSALSTRING,BMPSTRING
-};
-
 
 /*************************************************************/
 /*  Function: yylex                                          */
@@ -790,6 +772,7 @@ yylex (YYSTYPE *lvalp, void *parm)
 {
   int c,counter=0,k;
   char string[MAX_STRING_LENGTH];
+  size_t len;
   FILE *fp = PARSECTL->fp;
 
   if (!PARSECTL->lineno)
@@ -866,15 +849,13 @@ yylex (YYSTYPE *lvalp, void *parm)
         }
 
       /* Is STRING a keyword? */
-      for (k=0; k<(sizeof(key_word)/sizeof(char*));k++ )
+      len = strlen (string);
+      for (k = 0; k < YYNTOKENS; k++)
         {
-          if (!strcmp(string,key_word[k]))
-            {
-              if (PARSECTL->debug)
-                fprintf (stderr,"%d: yylex found keyword `%s'\n",
-                         PARSECTL->lineno, string);
-              return key_word_token[k];
-            }
+          if (yytname[k] && yytname[k][0] == '\"'
+              && !strncmp (yytname[k] + 1, string, len)
+              && yytname[k][len + 1] == '\"' && !yytname[k][len + 2])
+            return yytoknum[k];
         }
 
       /* STRING is an IDENTIFIER */
@@ -1017,7 +998,7 @@ ksba_asn_parse_file (const char *file_name, ksba_asn_tree_t *result, int debug)
   parsectl.result_parse = gpg_error (GPG_ERR_SYNTAX);
   parsectl.parse_tree = NULL;
   parsectl.all_nodes = NULL;
-  /*yydebug = 1;*/
+  /* yydebug = 1; */
   if ( yyparse ((void*)&parsectl) || parsectl.result_parse )
     { /* error */
       fprintf (stderr, "%s:%d: parse error\n",
