@@ -5,7 +5,7 @@ case "$myhost:$myhostsub" in
     extraoptions=
     ;;
   w32:)
-    extraoptions="--enable-gpgtar"
+    extraoptions=
     ;;
 esac
 
