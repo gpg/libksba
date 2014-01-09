@@ -135,19 +135,19 @@ if test $ret -eq 0; then
     # Handle y_tab.c and y_tab.h output by DOS
     if test $y_tab_nodot = "yes"; then
       if test $from = "y.tab.c"; then
-    	from="y_tab.c"
+        from="y_tab.c"
       else
-    	if test $from = "y.tab.h"; then
-    	  from="y_tab.h"
-    	fi
+        if test $from = "y.tab.h"; then
+          from="y_tab.h"
+        fi
       fi
     fi
     if test -f "$from"; then
       # If $2 is an absolute path name, then just use that,
       # otherwise prepend `../'.
       case "$2" in
-    	[\\/]* | ?:[\\/]*) target="$2";;
-    	*) target="../$2";;
+        [\\/]* | ?:[\\/]*) target="$2";;
+        *) target="../$2";;
       esac
 
       # We do not want to overwrite a header file if it hasn't
