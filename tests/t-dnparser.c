@@ -133,14 +133,13 @@ int
 main (int argc, char **argv)
 {
   char inputbuf[4096];
-  int inputlen;
   unsigned char *buf;
   size_t len;
   gpg_error_t err;
 
   if (argc == 2 && !strcmp (argv[1], "--to-str") )
     { /* Read the DER encoded DN from stdin write the string to stdout */
-      inputlen = fread (inputbuf, 1, sizeof inputbuf, stdin);
+      fread (inputbuf, 1, sizeof inputbuf, stdin);
       if (!feof (stdin))
         fail ("read error or input too large");
 
@@ -149,7 +148,7 @@ main (int argc, char **argv)
     }
   else if (argc == 2 && !strcmp (argv[1], "--to-der") )
     { /* Read the String from stdin write the DER encoding to stdout */
-      inputlen = fread (inputbuf, 1, sizeof inputbuf, stdin);
+      fread (inputbuf, 1, sizeof inputbuf, stdin);
       if (!feof (stdin))
         fail ("read error or input too large");
 
