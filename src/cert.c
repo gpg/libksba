@@ -443,10 +443,8 @@ ksba_cert_get_digest_algo (ksba_cert_t cert)
   size_t nread;
 
   if (!cert)
-    {
-       cert->last_error = gpg_error (GPG_ERR_INV_VALUE);
-       return NULL;
-    }
+    return NULL;  /* Ooops (can't set cert->last_error :-().  */
+
   if (!cert->initialized)
     {
        cert->last_error = gpg_error (GPG_ERR_NO_DATA);
