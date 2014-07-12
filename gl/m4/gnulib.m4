@@ -21,6 +21,7 @@ LTALLOCA=`echo "$ALLOCA" | sed 's/\.[^.]* /.lo /g;s/\.[^.]*$/.lo/'`
 changequote([, ])dnl
 AC_SUBST(LTALLOCA)
   gl_FUNC_ALLOCA
+  gl_VALGRIND_TESTS
 ])
 
 dnl Usage: gl_MODULES(module1 module2 ...)

@@ -362,7 +362,7 @@ AC_CHECK_FUNCS([memmove strchr strtol strtoul stpcpy gmtime_r getenv])
 # GNUlib checks
 gl_SOURCE_BASE(gl)
 gl_M4_BASE(gl/m4)
-gl_MODULES(alloca)
+gl_MODULES(alloca valgrind-tests)
 gl_INIT
 
 # To be used in ksba-config

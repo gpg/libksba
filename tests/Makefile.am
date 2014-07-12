@@ -60,3 +60,5 @@ oidtranstbl.h: Makefile mkoidtbl.awk
                  /usr/share ; do \
           if test -f $$i/dumpasn1.cfg; then f=$$i/dumpasn1.cfg; break; fi; \
         done; $(AWK) -f $(srcdir)/mkoidtbl.awk $$f >$@
+
+LOG_COMPILER = $(VALGRIND)
