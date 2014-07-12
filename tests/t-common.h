@@ -110,6 +110,7 @@ print_sexp (ksba_const_sexp_t p)
           else if (*p == ')')
             {
               putchar (*p);
+              p++;
               if (--level <= 0 )
                 return;
             }
@@ -176,6 +177,7 @@ print_sexp_hex (ksba_const_sexp_t p)
           else if (*p == ')')
             {
               putchar (*p);
+              p++;
               if (--level <= 0 )
                 return;
             }
