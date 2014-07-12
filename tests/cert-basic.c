@@ -520,11 +520,15 @@ one_file (const char *fname)
                              __FILE__, __LINE__);
                     errorcount++;
                     xfree (der2);
+                  } else {
+                    /* Don't leak memory if everything is ok. */
+                    xfree (der2);
                   }
                 xfree (tmp);
               }
             xfree (der);
           }
+        ksba_free (public);
       }
   }
 #endif
