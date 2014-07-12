@@ -28,6 +28,7 @@
 #include "../src/keyinfo.h"
 
 #include "oidtranstbl.h"
+#include "t-common.h"
 
 #ifdef __MINGW32CE__
 #define getenv(a) (NULL)
@@ -52,127 +53,6 @@
 
 static int verbose;
 static int errorcount = 0;
-
-
-static void *
-xmalloc (size_t n)
-{
-  char *p = ksba_malloc (n);
-  if (!p)
-    {
-      fprintf (stderr, "out of core\n");
-      exit (1);
-    }
-  return p;
-}
-
-
-void
-print_hex (const unsigned char *p, size_t n)
-{
-  if (!p)
-    fputs ("none", stdout);
-  else
-    {
-      for (; n; n--, p++)
-        printf ("%02X", *p);
-    }
-}
-
-
-
-static void
-print_sexp (ksba_const_sexp_t p)
-{
-  int level = 0;
-
-  if (!p)
-    fputs ("[none]", stdout);
-  else
-    {
-      for (;;)
-        {
-          if (*p == '(')
-            {
-              putchar (*p);
-              p++;
-              level++;
-            }
-          else if (*p == ')')
-            {
-              putchar (*p);
-              p++;
-              if (--level <= 0 )
-                return;
-            }
-          else if (!digitp (p))
-            {
-              fputs ("[invalid s-exp]", stdout);
-              return;
-            }
-          else
-            {
-              char *endp;
-              unsigned long n, i;
-              int need_hex;
-
-              n = strtoul (p, &endp, 10);
-              p = endp;
-              if (*p != ':')
-                {
-                  fputs ("[invalid s-exp]", stdout);
-                  return;
-                }
-              p++;
-              for (i=0; i < n; i++)
-                if ( !((p[i] >='A' && p[i] <= 'Z')
-                       || (p[i] >='a' && p[i] <='z')
-                       || (p[i] >='0' && p[i] <='9')
-                       || p[i] == '-'
-                       || p[i] == '.'))
-                  break;
-              need_hex = (i<n);
-              if (!n /* n==0 is not allowed, but anyway.  */
-                  || (!need_hex
-                      && !((*p >='A' && *p <= 'Z') || (*p >='a' && *p <='z'))))
-                printf ("%lu:", n);
-
-              if (need_hex)
-                {
-                  putchar('#');
-                  for (; n; n--, p++)
-                    printf ("%02X", *p);
-                  putchar('#');
-                }
-              else
-                {
-                  for (; n; n--, p++)
-                    putchar (*p);
-                }
-              putchar(' ');
-            }
-        }
-    }
-}
-
-static void
-print_time (ksba_isotime_t t)
-{
-  if (!t || !*t)
-    fputs ("none", stdout);
-  else
-    printf ("%.4s-%.2s-%.2s %.2s:%.2s:%s", t, t+4, t+6, t+9, t+11, t+13);
-}
-
-static void
-print_dn (char *p)
-{
-
-  if (!p)
-    fputs ("error", stdout);
-  else
-    printf ("`%s'", p);
-}
 
 
 static void
