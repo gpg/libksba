@@ -28,11 +28,15 @@ BEGIN {
 }
 
 /^[ \t]*#/ { next }
-/^OID/     { flush() }
+/^OID/     { flush()
+             oid = substr($0, index($0, "=") + 2)
+             gsub (/[ \t]+/, ".", oid)
+}
 /^Comment/ { comment = substr($0, index($0, "=") + 2 )
              gsub(/\r/, "", comment)
              gsub (/\\/, "\\\\", comment)
              gsub (/"/, "\\\"", comment)
+             gsub (/\(\?\?\?\)/, "(?)", comment)
 }
 /^Description/ {
   desc = substr($0, index($0, "=") + 2)
@@ -40,11 +44,11 @@ BEGIN {
   if (match (desc, /\([0-9 \t]+\)/) > 2) {
     oid = substr(desc, RSTART+1, RLENGTH-2 )
     desc = substr(desc, 1, RSTART-1);
-    gsub (/[ \t]+/, ".", oid)
-    gsub (/\\/, "\\\\", desc)
-    gsub (/"/, "\\\"", desc)
-    sub (/[ \t]*$/, "", desc)
   }
+  gsub (/[ \t]+/, ".", oid)
+  gsub (/\\/, "\\\\", desc)
+  gsub (/"/, "\\\"", desc)
+  sub (/[ \t]*$/, "", desc)
 }
 
 END { flush();  print "  { NULL, NULL, NULL }\n};"  }
