@@ -1150,6 +1150,8 @@ store_one_entry_extension (ksba_crl_t crl,
   else if (critical)
     err = gpg_error (GPG_ERR_UNKNOWN_CRIT_EXTN);
 
+  xfree (oid);
+
   return err;
 }
 
