@@ -1,4 +1,6 @@
 Program: Libksba
+Download: ftp://ftp.gnupg.org/gcrypt/libksba/
+Repository: git://git.gnupg.org/libksba.git
 Maintainer: Werner Koch <wk@gnupg.org>
 Bug reports: http://bugs.gnupg.org
 Security related bug reports: <security@gnupg.org>

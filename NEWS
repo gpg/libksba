@@ -1,5 +1,9 @@
-Noteworthy changes in version 1.3.1 (unreleased)
+Noteworthy changes in version 1.3.1 (2014-09-18)
 ------------------------------------------------
+
+ * Fixed memory leak in CRL parsing.
+
+ * Build fixes for Windows, Android, and ppc64el.
 
 
 Noteworthy changes in version 1.3.0 (2012-09-27)
