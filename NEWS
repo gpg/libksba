@@ -1,5 +1,7 @@
-Noteworthy changes in version 1.3.2 (unreleased)
+Noteworthy changes in version 1.3.2 (2014-11-25) [C19/A11/R3]
 ------------------------------------------------
+
+ * Fixed a buffer overflow in ksba_oid_to_str.
 
 
 Noteworthy changes in version 1.3.1 (2014-09-18)
