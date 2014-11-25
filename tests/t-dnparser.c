@@ -143,7 +143,7 @@ main (int argc, char **argv)
       if (!feof (stdin))
         fail ("read error or input too large");
 
-      fail ("no yet implemented");
+      fail ("not yet implemented");
 
     }
   else if (argc == 2 && !strcmp (argv[1], "--to-der") )

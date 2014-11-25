@@ -94,6 +94,8 @@ ksba_oid_to_str (const char *buffer, size_t length)
         val <<= 7;
         val |= buf[n] & 0x7f;
       }
+    if (val < 80)
+      goto badoid;
     val -= 80;
     sprintf (p, "2.%lu", val);
     p += strlen (p);
