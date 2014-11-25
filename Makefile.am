@@ -41,7 +41,6 @@ endif
 SUBDIRS = m4 gl src ${tests} doc
 
 dist-hook: gen-ChangeLog
-	@set -e; echo "$(VERSION)" > $(distdir)/VERSION
 
 
 gen_start_date = 2011-12-01T00:00:00
