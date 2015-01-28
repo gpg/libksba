@@ -19,7 +19,7 @@
 
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.61)
-min_automake_version="1.10"
+min_automake_version="1.14"
 
 
 # To build a release you need to create a tag with the version number
@@ -66,7 +66,7 @@ VERSION=$PACKAGE_VERSION
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([src/ksba.h])
-AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
+AM_INIT_AUTOMAKE([serial-tests dist-bzip2 no-dist-gzip])
 AM_CONFIG_HEADER(config.h)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_HOST
