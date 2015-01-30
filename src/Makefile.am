@@ -59,6 +59,7 @@ SUFFIXES = .rc .lo
 ksba_res = versioninfo.lo
 no_undefined = -no-undefined
 export_symbols = -export-symbols $(srcdir)/libksba.def
+extra_ltoptions = -XCClinker -static-libgcc
 
 install-def-file:
 	$(INSTALL) $(srcdir)/libksba.def $(DESTDIR)$(libdir)/libksba.def
@@ -72,13 +73,14 @@ else !HAVE_W32_SYSTEM
 ksba_res =
 no_undefined =
 export_symbols =
+extra_ltoptions =
 ksba_deps =
 install-def-file:
 uninstall-def-file:
 endif !HAVE_W32_SYSTEM
 
 
-libksba_la_LDFLAGS = $(no_undefined) $(export_symbols) \
+libksba_la_LDFLAGS = $(no_undefined) $(export_symbols) $(extra_ltoptions) \
       $(libksba_version_script_cmd) -version-info \
       @LIBKSBA_LT_CURRENT@:@LIBKSBA_LT_REVISION@:@LIBKSBA_LT_AGE@
 libksba_la_INCLUDES = -I$(top_srcdir)/lib
