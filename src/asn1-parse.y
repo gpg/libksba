@@ -64,7 +64,6 @@
 #define yyparse _ksba_asn1_yyparse
 
 /* #define YYDEBUG 1 */
-#define YYERROR_VERBOSE 1
 #define MAX_STRING_LENGTH 129
 
 /* Dummy print so that yytoknum will be defined.  */
@@ -86,13 +85,13 @@ struct parser_control_s {
   AsnNode all_nodes;
 };
 #define PARSECTL ((struct parser_control_s *)parm)
-#define YYPARSE_PARAM parm
-#define YYLEX_PARAM parm
 
 %}
 
 
-%pure_parser
+%param  {void *parm}
+%define api.pure full
+%define parse.error verbose
 %expect 1
 
 %union {
@@ -113,7 +112,7 @@ static void set_down (AsnNode node, AsnNode down);
 
 
 static int yylex (YYSTYPE *lvalp, void *parm);
-static void yyerror (const char *s);
+static void yyerror (void *parm, const char *s);
 %}
 
 %token-table
@@ -868,11 +867,14 @@ yylex (YYSTYPE *lvalp, void *parm)
 }
 
 static void
-yyerror (const char *s)
+yyerror (void *parm, const char *s)
 {
+  (void)parm;
   /* Sends the error description to stderr */
   fprintf (stderr, "%s\n", s);
-  /* Why doesn't bison provide a way to pass the parm to yyerror ??*/
+  /* Why doesn't bison provide a way to pass the parm to yyerror?
+     Update: Newer bison versions allow for this.  We need to see how
+     we can make use of it.  */
 }
 
 
