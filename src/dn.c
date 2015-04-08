@@ -260,7 +260,7 @@ append_quoted (struct stringbuf *sb, const unsigned char *value, size_t length,
       n += skip;
       if ( *s < ' ' || *s > 126 )
         {
-          sprintf (tmp, "\\%02X", *s);
+          snprintf (tmp, sizeof tmp, "\\%02X", *s);
           put_stringbuf_mem (sb, tmp, 3);
         }
       else
@@ -300,7 +300,6 @@ append_utf8_value (const unsigned char *value, size_t length,
       length--;
     }
 
-  /* FIXME: check that the invalid encoding handling is correct */
   for (s=value, n=0;;)
     {
       for (value = s; n < length && !(*s & 0x80); n++, s++)
@@ -309,8 +308,9 @@ append_utf8_value (const unsigned char *value, size_t length,
         append_quoted (sb, value, s-value, 0);
       if (n==length)
         return; /* ready */
-      assert ((*s & 0x80));
-      if ( (*s & 0xe0) == 0xc0 )      /* 110x xxxx */
+      if (!(*s & 0x80))
+        nmore = 0; /* Not expected here: high bit not set.  */
+      else if ( (*s & 0xe0) == 0xc0 ) /* 110x xxxx */
         nmore = 1;
       else if ( (*s & 0xf0) == 0xe0 ) /* 1110 xxxx */
         nmore = 2;
@@ -320,21 +320,31 @@ append_utf8_value (const unsigned char *value, size_t length,
         nmore = 4;
       else if ( (*s & 0xfe) == 0xfc ) /* 1111 110x */
         nmore = 5;
-      else /* invalid encoding */
-        nmore = 5;  /* we will reduce the check length anyway */
+      else /* Invalid encoding */
+        nmore = 0;
 
-      if (n+nmore > length)
-        nmore = length - n; /* oops, encoding to short */
-
-      tmp[0] = *s++; n++;
-      for (i=1; i <= nmore; i++)
+      if (!nmore)
         {
-          if ( (*s & 0xc0) != 0x80)
-            break; /* invalid encoding - stop */
-          tmp[i] = *s++;
-          n++;
+          /* Encoding error:  We quote the bad byte.  */
+          snprintf (tmp, sizeof tmp, "\\%02X", *s);
+          put_stringbuf_mem (sb, tmp, 3);
+          s++; n++;
         }
-      put_stringbuf_mem (sb, tmp, i);
+      else
+        {
+          if (n+nmore > length)
+            nmore = length - n; /* Oops, encoding to short */
+
+          tmp[0] = *s++; n++;
+          for (i=1; i <= nmore; i++)
+            {
+              if ( (*s & 0xc0) != 0x80)
+                break; /* Invalid encoding - let the next cycle detect this. */
+              tmp[i] = *s++;
+              n++;
+            }
+          put_stringbuf_mem (sb, tmp, i);
+        }
     }
 }
 
@@ -618,7 +628,7 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
       for (i=0; i < node->len; i++)
         {
           char tmp[3];
-          sprintf (tmp, "%02X", image[node->off+node->nhdr+i]);
+          snprintf (tmp, sizeof tmp, "%02X", image[node->off+node->nhdr+i]);
           put_stringbuf (sb, tmp);
         }
       break;
