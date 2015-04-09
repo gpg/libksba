@@ -1,5 +1,5 @@
 /* ber-decoder.c - Basic Encoding Rules Decoder
- *      Copyright (C) 2001, 2004, 2006, 2012 g10 Code GmbH
+ * Copyright (C) 2001, 2004, 2006, 2012, 2015 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -175,26 +175,28 @@ dump_decoder_state (DECODER_STATE ds)
 }
 
 /* Push ITEM onto the stack */
-static void
+static gpg_error_t
 push_decoder_state (DECODER_STATE ds)
 {
   if (ds->idx >= ds->stacksize)
     {
-      fprintf (stderr, "ERROR: decoder stack overflow!\n");
-      abort ();
+      fprintf (stderr, "ksba: ber-decoder: stack overflow!\n");
+      return gpg_error (GPG_ERR_LIMIT_REACHED);
     }
   ds->stack[ds->idx++] = ds->cur;
+  return 0;
 }
 
-static void
+static gpg_error_t
 pop_decoder_state (DECODER_STATE ds)
 {
   if (!ds->idx)
     {
-      fprintf (stderr, "ERROR: decoder stack underflow!\n");
-      abort ();
+      fprintf (stderr, "ksba: ber-decoder: stack underflow!\n");
+      return gpg_error (GPG_ERR_INTERNAL);
     }
   ds->cur = ds->stack[--ds->idx];
+  return 0;
 }
 
 
@@ -202,7 +204,7 @@ pop_decoder_state (DECODER_STATE ds)
 static int
 set_error (BerDecoder d, AsnNode node, const char *text)
 {
-  fprintf (stderr,"ber-decoder: node `%s': %s\n",
+  fprintf (stderr,"ksba: ber-decoder: node `%s': %s\n",
            node? node->name:"?", text);
   d->last_errdesc = text;
   return gpg_error (GPG_ERR_BAD_BER);
@@ -955,9 +957,9 @@ decoder_next (BerDecoder d)
                        && (ds->cur.nread
                            > ds->stack[ds->idx-1].length))
                     {
-                      fprintf (stderr, "  ERROR: object length field "
+                      fprintf (stderr, "ksba: ERROR: object length field "
                                "%d octects too large\n",
-                              ds->cur.nread > ds->cur.length);
+                               ds->cur.nread - ds->cur.length);
                       ds->cur.nread = ds->cur.length;
                     }
                   if ( ds->idx
@@ -967,7 +969,9 @@ decoder_next (BerDecoder d)
                                    >= ds->stack[ds->idx-1].length))))
                     {
                       int n = ds->cur.nread;
-                      pop_decoder_state (ds);
+                      err = pop_decoder_state (ds);
+                      if (err)
+                        return err;
                       ds->cur.nread += n;
                       ds->cur.went_up++;
                     }
@@ -983,7 +987,9 @@ decoder_next (BerDecoder d)
                   /* prepare for the next level */
                   ds->cur.length = ti.length;
                   ds->cur.ndef_length = ti.ndef;
-                  push_decoder_state (ds);
+                  err = push_decoder_state (ds);
+                  if (err)
+                    return err;
                   ds->cur.length = 0;
                   ds->cur.ndef_length = 0;
                   ds->cur.nread = 0;
