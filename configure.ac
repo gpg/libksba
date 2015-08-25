@@ -380,19 +380,31 @@ AM_CONDITIONAL(CROSS_COMPILING, test x$cross_compiling != xno)
 
 # Generate extended version information for W32.
 if test "$have_w32_system" = yes; then
-   BUILD_TIMESTAMP=`date --iso-8601=minutes`
    changequote(,)dnl
    BUILD_FILEVERSION=`echo "$VERSION" | sed 's/\([0-9.]*\).*/\1./;s/\./,/g'`
    changequote([,])dnl
    BUILD_FILEVERSION="${BUILD_FILEVERSION}mym4_revision_dec"
 fi
 AC_SUBST(BUILD_REVISION)
-AC_SUBST(BUILD_TIMESTAMP)
 AC_SUBST(BUILD_FILEVERSION)
 BUILD_REVISION="mym4_revision"
 AC_SUBST(BUILD_REVISION)
 AC_DEFINE_UNQUOTED(BUILD_REVISION, "$BUILD_REVISION",
                    [GIT commit id revision used to build this package])
+
+AC_ARG_ENABLE([build-timestamp],
+  AC_HELP_STRING([--enable-build-timestamp],
+                 [set an explicit build timestamp for reproducibility.
+                  (default is the current time in ISO-8601 format)]),
+     [if test "$enableval" = "yes"; then
+        BUILD_TIMESTAMP=`date -u +%Y-%m-%dT%H:%M+0000 2>/dev/null || date`
+      else
+        BUILD_TIMESTAMP="$enableval"
+      fi],
+     [BUILD_TIMESTAMP="<none>"])
+AC_SUBST(BUILD_TIMESTAMP)
+AC_DEFINE_UNQUOTED(BUILD_TIMESTAMP, "$BUILD_TIMESTAMP",
+                   [The time this package was configured for a build])
 
 
 AC_CONFIG_FILES([
