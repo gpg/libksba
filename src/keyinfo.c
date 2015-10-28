@@ -322,10 +322,10 @@ get_ecc_curve_oid (const unsigned char *buf, size_t buflen, size_t *r_oidlen)
         if (buflen == strlen (curve_names[i].name)
             && !memcmp (buf, curve_names[i].name, buflen))
           break;
-      if (curve_names[i].oid)
+      if (!curve_names[i].oid)
         return NULL; /* Not found.  */
-      buf = curve_names[i].name;
-      buflen = strlen (curve_names[i].name);
+      buf = curve_names[i].oid;
+      buflen = strlen (curve_names[i].oid);
     }
 
   if (_ksba_oid_from_buf (buf, buflen, &der_oid, r_oidlen))
