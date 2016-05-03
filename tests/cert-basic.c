@@ -448,7 +448,8 @@ one_file (const char *fname)
 
   oid = ksba_cert_get_digest_algo (cert);
   s = get_oid_desc (oid);
-  printf ("  hash algo.: %s%s%s%s\n", oid, s?" (":"",s?s:"",s?")":"");
+  printf ("  hash algo.: %s%s%s%s\n",
+          oid?oid:"(null)", s?" (":"",s?s:"",s?")":"");
 
   /* Under Windows the _ksba_keyinfo_from_sexp are not exported.  */
 #ifndef __WIN32

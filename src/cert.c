@@ -464,7 +464,10 @@ ksba_cert_get_digest_algo (ksba_cert_t cert)
 
   n = _ksba_asn_find_node (cert->root, "Certificate.signatureAlgorithm");
   if (!n || n->off == -1)
-    err = gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
+    {
+      algo = NULL;
+      err = gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
+    }
   else
     err = _ksba_parse_algorithm_identifier (cert->image + n->off,
                                             n->nhdr + n->len, &nread, &algo);
