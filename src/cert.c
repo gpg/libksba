@@ -1335,9 +1335,15 @@ ksba_cert_get_cert_policies (ksba_cert_t cert, char **r_policies)
                   err = gpg_error (GPG_ERR_NOT_DER_ENCODED);
                   goto leave;
                 }
+              if (ti.length > derlen)
+                {
+                  err = gpg_error (GPG_ERR_BAD_BER);
+                  goto leave;
+                }
               if (!ti.length)
                 {
-                  err = gpg_error (GPG_ERR_INV_CERT_OBJ); /* no empty inner SEQ */
+                  /* We do not accept an empty inner SEQ */
+                  err = gpg_error (GPG_ERR_INV_CERT_OBJ);
                   goto leave;
                 }
               if (ti.nhdr+ti.length > seqlen)
@@ -1354,6 +1360,11 @@ ksba_cert_get_cert_policies (ksba_cert_t cert, char **r_policies)
               if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OBJECT_ID))
                 {
                   err = gpg_error (GPG_ERR_INV_CERT_OBJ);
+                  goto leave;
+                }
+              if (ti.length > derlen)
+                {
+                  err = gpg_error (GPG_ERR_BAD_BER);
                   goto leave;
                 }
               if (ti.nhdr+ti.length > seqseqlen)
@@ -1456,6 +1467,16 @@ ksba_cert_get_ext_key_usages (ksba_cert_t cert, char **result)
               if ( !(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OBJECT_ID))
                 {
                   err = gpg_error (GPG_ERR_INV_CERT_OBJ);
+                  goto leave;
+                }
+              if (ti.ndef)
+                {
+                  err = gpg_error (GPG_ERR_NOT_DER_ENCODED);
+                  goto leave;
+                }
+              if (ti.length > derlen)
+                {
+                  err = gpg_error (GPG_ERR_BAD_BER);
                   goto leave;
                 }
 

@@ -113,7 +113,7 @@ _ksba_name_new_from_der (ksba_name_t *r_name,
 
   *r_name = NULL;
 
-  /* count and check for encoding errors - we won;t do this again
+  /* Count and check for encoding errors - we won't do this again
      during the second pass */
   der = image;
   derlen = imagelen;

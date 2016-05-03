@@ -285,8 +285,14 @@ _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
           ti->buf[ti->nhdr++] = c;
           len |= c & 0xff;
         }
+      /* Sanity check for the length: This is done so that we can take
+       * the value for malloc plus some additional bytes without
+       * risking an overflow.  */
+      if (len > (1 << 30))
+        return gpg_error (GPG_ERR_BAD_BER);
       ti->length = len;
     }
+
 
   /* Without this kludge some example certs can't be parsed */
   if (ti->class == CLASS_UNIVERSAL && !ti->tag)
