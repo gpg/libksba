@@ -332,11 +332,8 @@ append_utf8_value (const unsigned char *value, size_t length,
         }
       else
         {
-          if (n+nmore > length)
-            nmore = length - n; /* Oops, encoding to short */
-
           tmp[0] = *s++; n++;
-          for (i=1; i <= nmore; i++)
+          for (i=1; n < length && i <= nmore; i++)
             {
               if ( (*s & 0xc0) != 0x80)
                 break; /* Invalid encoding - let the next cycle detect this. */
