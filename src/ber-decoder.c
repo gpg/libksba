@@ -857,12 +857,17 @@ decoder_next (BerDecoder d)
       if (!d->image.buf)
         {
           /* We need some extra bytes to store the stuff we read ahead
-             at the end of the module which is later pushed back. */
+           * at the end of the module which is later pushed back.  We
+           * also clear the buffer because there is no guarantee that
+           * we will copy data to all bytes of the buffer: A broken
+           * ASN.1 encoding may thus lead to access of uninitialized
+           * data even if we make sure that that access is not our of
+           * bounds. */
           d->image.used = 0;
           d->image.length = ti.length + 100;
           if (d->image.length < ti.length)
             return gpg_error (GPG_ERR_BAD_BER);
-          d->image.buf = xtrymalloc (d->image.length);
+          d->image.buf = xtrycalloc (1, d->image.length);
           if (!d->image.buf)
             return gpg_error (GPG_ERR_ENOMEM);
         }
@@ -1133,7 +1138,7 @@ _ksba_ber_decoder_dump (BerDecoder d, FILE *fp)
               p = ksba_oid_to_str (buf, n);
               break;
             default:
-              for (i=0; i < n && i < 20; i++)
+              for (i=0; i < n && (d->debug || i < 20); i++)
                 fprintf (fp,"%02x", buf[i]);
               if (i < n)
                 fputs ("..more..", fp);
