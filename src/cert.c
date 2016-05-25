@@ -1586,6 +1586,8 @@ parse_distribution_point (const unsigned char *der, size_t derlen,
       unsigned int bits, mask;
       int i, unused, full;
 
+      if (!ti.length || ti.length > derlen)
+        return gpg_error (GPG_ERR_ENCODING_PROBLEM);
       unused = *der++; derlen--;
       ti.length--;
       if ((!ti.length && unused) || unused/8 > ti.length)
