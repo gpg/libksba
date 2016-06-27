@@ -1014,6 +1014,9 @@ parse_rdn (const unsigned char *string, const char **endp,
       oid = oid_name_tbl[i].oid;
       oidlen = oid_name_tbl[i].oidlen;
     }
+  else
+    return gpg_error (GPG_ERR_INV_NAME);
+
   s++;
   while (*s == ' ')
     s++;
