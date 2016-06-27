@@ -143,6 +143,7 @@ test_oid_to_str (void)
           fprintf (stderr, " want=%s\n", tests[tidx].str);
           exit (1);
         }
+      ksba_free (str);
     }
 }
 
