@@ -33,7 +33,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <errno.h>
 
 #include "util.h"
 
@@ -207,7 +206,7 @@ parse_object_id_into_str (unsigned char const **buf, size_t *len, char **oid)
   else if (ti.length > *len)
     err = gpg_error (GPG_ERR_BAD_BER);
   else if (!(*oid = ksba_oid_to_str (*buf, ti.length)))
-    err = gpg_error_from_errno (errno);
+    err = gpg_error_from_syserror ();
   else
     {
       *buf += ti.length;
@@ -269,7 +268,7 @@ ksba_ocsp_new (ksba_ocsp_t *r_ocsp)
 {
   *r_ocsp = xtrycalloc (1, sizeof **r_ocsp);
   if (!*r_ocsp)
-    return gpg_error_from_errno (errno);
+    return gpg_error_from_syserror ();
   return 0;
 }
 
@@ -340,7 +339,7 @@ ksba_ocsp_set_digest_algo (ksba_ocsp_t ocsp, const char *oid)
     xfree (ocsp->digest_oid);
   ocsp->digest_oid = xtrystrdup (oid);
   if (!ocsp->digest_oid)
-    return gpg_error_from_errno (errno);
+    return gpg_error_from_syserror ();
   return 0;
 }
 
@@ -369,7 +368,7 @@ ksba_ocsp_add_target (ksba_ocsp_t ocsp,
 
   ri = xtrycalloc (1, sizeof *ri);
   if (!ri)
-    return gpg_error_from_errno (errno);
+    return gpg_error_from_syserror ();
   ksba_cert_ref (cert);
   ri->cert = cert;
   ksba_cert_ref (issuer_cert);
@@ -629,9 +628,10 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
       xfree (ri->serialno);
       ri->serialno = xtrymalloc (derlen);
       if (!ri->serialno)
-        err = gpg_error_from_errno (errno);
-      if (err)
-        goto leave;
+        {
+          err = gpg_error_from_syserror ();
+          goto leave;
+        }
       memcpy (ri->serialno, der, derlen);
       ri->serialnolen = derlen;
 
@@ -919,7 +919,7 @@ parse_response_extensions (ksba_ocsp_t ocsp,
       ex = xtrymalloc (sizeof *ex + strlen (oid) + ti.length);
       if (!ex)
         {
-          err = gpg_error_from_errno (errno);
+          err = gpg_error_from_syserror ();
           goto leave;
         }
       ex->crit = is_crit;
@@ -986,7 +986,7 @@ parse_single_extensions (struct ocsp_reqitem_s *ri,
       ex = xtrymalloc (sizeof *ex + strlen (oid) + ti.length);
       if (!ex)
         {
-          err = gpg_error_from_errno (errno);
+          err = gpg_error_from_syserror ();
           goto leave;
         }
       ex->crit = is_crit;
@@ -1428,7 +1428,7 @@ parse_response_data (ksba_ocsp_t ocsp,
         return gpg_error (GPG_ERR_INV_OBJ); /* Zero length key id.  */
       ocsp->responder_id.keyid = xtrymalloc (ti.length);
       if (!ocsp->responder_id.keyid)
-        return gpg_error_from_errno (errno);
+        return gpg_error_from_syserror ();
       memcpy (ocsp->responder_id.keyid, *data, ti.length);
       ocsp->responder_id.keyidlen = ti.length;
       parse_skip (data, datalen, &ti);
@@ -1591,12 +1591,12 @@ parse_response (ksba_ocsp_t ocsp, const unsigned char *msg, size_t msglen)
         parse_skip (&msg, &msglen, &ti);
         cl = xtrycalloc (1, sizeof *cl);
         if (!cl)
-          err = gpg_error_from_errno (errno);
-        if (err)
           {
+            err = gpg_error_from_syserror ();
             ksba_cert_release (cert);
-            return gpg_error (GPG_ERR_ENOMEM);
+            return err;
           }
+
         cl->cert = cert;
 
         *cl_tail = cl;
@@ -1750,7 +1750,7 @@ ksba_ocsp_get_responder_id (ksba_ocsp_t ocsp,
     {
       *r_name = xtrystrdup (ocsp->responder_id.name);
       if (!*r_name)
-        return gpg_error_from_errno (errno);
+        return gpg_error_from_syserror ();
     }
   else if (ocsp->responder_id.keyid && r_keyid)
     {
@@ -1761,7 +1761,7 @@ ksba_ocsp_get_responder_id (ksba_ocsp_t ocsp,
       numbuflen = strlen (numbuf);
       *r_keyid = xtrymalloc (numbuflen + ocsp->responder_id.keyidlen + 2);
       if (!*r_keyid)
-        return gpg_error_from_errno (errno);
+        return gpg_error_from_syserror ();
       strcpy (*r_keyid, numbuf);
       memcpy (*r_keyid+numbuflen,
               ocsp->responder_id.keyid, ocsp->responder_id.keyidlen);
@@ -1769,7 +1769,7 @@ ksba_ocsp_get_responder_id (ksba_ocsp_t ocsp,
       (*r_keyid)[numbuflen + ocsp->responder_id.keyidlen + 1] = 0;
     }
   else
-    gpg_error (GPG_ERR_NO_DATA);
+    return gpg_error (GPG_ERR_NO_DATA);
 
   return 0;
 }
