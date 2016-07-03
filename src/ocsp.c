@@ -401,10 +401,6 @@ ksba_ocsp_set_nonce (ksba_ocsp_t ocsp, unsigned char *nonce, size_t noncelen)
   if (noncelen)
     {
       memcpy (ocsp->nonce, nonce, noncelen);
-      /* Reset the high bit.  We do this to make sure that we have a
-         positive integer and thus we don't need to prepend a leading
-         zero which would be needed then. */
-      ocsp->nonce[0] &= 0x7f;
     }
   ocsp->noncelen = noncelen;
   return noncelen;
@@ -492,7 +488,7 @@ write_request_extensions (ksba_ocsp_t ocsp, ksba_writer_t wout)
     err = _ksba_ber_write_tl (w1, TYPE_OCTET_STRING, CLASS_UNIVERSAL, 0,
                               2+ocsp->noncelen);
   if (!err)
-    err = _ksba_ber_write_tl (w1, TYPE_INTEGER, CLASS_UNIVERSAL, 0,
+    err = _ksba_ber_write_tl (w1, TYPE_OCTET_STRING, CLASS_UNIVERSAL, 0,
                               ocsp->noncelen);
   if (!err)
     err = ksba_writer_write (w1, ocsp->nonce, ocsp->noncelen);
@@ -907,7 +903,7 @@ parse_response_extensions (ksba_ocsp_t ocsp,
         goto leave;
       if (!strcmp (oid, oidstr_ocsp_nonce))
         {
-          err = parse_integer (&data, &datalen, &ti);
+          err = parse_octet_string (&data, &datalen, &ti);
           if (err)
             goto leave;
           if (ocsp->noncelen != ti.length
