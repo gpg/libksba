@@ -366,7 +366,7 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
     }
   else if (r->type == READER_TYPE_FILE)
     {
-      int n;
+      size_t n;
 
       if (r->eof)
         return gpg_error (GPG_ERR_EOF);
@@ -378,7 +378,7 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
         }
 
       n = fread (buffer, 1, length, r->u.file);
-      if (n > 0)
+      if (n)
         {
           r->nread += n;
           *nread = n;
@@ -388,9 +388,9 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
       if (n < length)
         {
           if (ferror(r->u.file))
-              r->error = errno;
+            r->error = errno;
           r->eof = 1;
-          if (n <= 0)
+          if (!n)
             return gpg_error (GPG_ERR_EOF);
         }
     }
