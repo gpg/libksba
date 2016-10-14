@@ -125,6 +125,8 @@ AC_PROG_MAKE_SET
 gl_EARLY
 #AC_ARG_PROGRAM
 AC_PROG_YACC
+AX_PROG_BISON([have_bison=yes],[have_bison=no])
+
 AC_C_INLINE
 
 # We need to compile and run a program on the build machine.
@@ -419,6 +421,13 @@ doc/Makefile
 ])
 AC_OUTPUT
 
+if test x"$have_bison" = xno; then
+    AC_MSG_NOTICE([[
+***
+*** Note: The installed yacc version is not GNU Bison.  You need
+*** to install Bison if you want to change any grammar (.y) file.
+***]])
+fi
 
 echo "
         Libksba v${VERSION} has been configured as follows:
