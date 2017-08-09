@@ -39,7 +39,7 @@ EXTRA_DIST = $(test_certs) samples/README mkoidtbl.awk
 BUILT_SOURCES = oidtranstbl.h
 CLEANFILES = oidtranstbl.h
 
-TESTS = cert-basic t-crl-parser t-dnparser t-oid
+TESTS = cert-basic t-crl-parser t-dnparser t-oid t-reader
 
 AM_CFLAGS = $(GPG_ERROR_CFLAGS)
 AM_LDFLAGS = -no-install

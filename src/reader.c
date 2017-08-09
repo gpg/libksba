@@ -407,6 +407,41 @@ ksba_reader_read (ksba_reader_t r, char *buffer, size_t length, size_t *nread)
         }
       r->nread += *nread;
     }
+  else if (r->type == READER_TYPE_FD)
+    {
+      ssize_t n;
+
+      if (r->eof)
+        return gpg_error (GPG_ERR_EOF);
+
+      if (!length)
+        {
+          *nread = 0;
+          return 0;
+        }
+
+      n = read (r->u.fd, buffer, length);
+      if (n > 0)
+        {
+          r->nread += n;
+          *nread = n;
+        }
+      else
+        {
+          *nread = 0;
+
+          if (n < 0)
+            {
+              r->error = errno;
+              return gpg_error_from_errno (errno);
+            }
+          else
+            {
+              r->eof = 1;
+              return gpg_error (GPG_ERR_EOF);
+            }
+        }
+    }
   else
     return gpg_error (GPG_ERR_BUG);
 
