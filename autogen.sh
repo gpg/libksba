@@ -171,6 +171,14 @@ case "$1" in
         fatal "**Error**: invalid build option $1"
         shift
         ;;
+    --coverage)
+        myhost="coverage"
+        shift
+        ;;
+    --report)
+        myhost="report"
+        shift
+        ;;
     *)
         ;;
 esac
@@ -239,6 +247,62 @@ if [ "$myhost" = "find-version" ]; then
 fi
 # **** end FIND VERSION ****
 
+# **** COVERAGE ****
+# This is a helper for the code coverage collection
+# Called
+#   ./autogen.sh --coverage lcov gcov [dirs...]
+if [ "$myhost" = "coverage" ]; then
+  LCOV="$1"
+  GCOV="$2"
+  BASE=`realpath "$3"`
+  COVINFO=""
+
+  shift 3
+
+  while [ x"$1" != "x" ]; do
+    P="$1"
+    $LCOV --gcov-tool $GCOV \
+          --base-directory "$BASE"/"$P" \
+          --directory "$P" \
+          --output-file coverage.info.`basename "$P"` \
+          --capture --no-checksum --compat-libtool \
+          --rc lcov_branch_coverage=1
+    COVINFO="$COVINFO -a coverage.info."`basename "$P"`
+    shift
+  done
+
+  $LCOV $COVINFO --base-directory "$BASE" --output-file coverage.info \
+          --no-checksum \
+          --rc lcov_branch_coverage=1
+
+  exit 0
+fi
+# **** end COVERAGE ****
+
+# **** COVERAGE_REPORT ****
+# This is a helper for the code coverage report
+# Called
+#   ./autogen.sh --report lcov genhtml [exclude...]
+if [ "$myhost" = "report" ]; then
+  LCOV="$1"
+  GENHTML="$2"
+
+  shift 2
+
+  while [ x"$1" != "x" ]; do
+    P="$1"
+    $LCOV --remove coverage.info "$P" -o coverage.info \
+          --rc lcov_branch_coverage=1
+    shift
+  done
+
+  LANG=C $GENHTML --output-directory coveragereport --title "Code Coverage" \
+                  --legend --show-details coverage.info \
+                  --rc lcov_branch_coverage=1
+
+  exit 0
+fi
+# **** end COVERAGE_REPORT ****
 
 if [ ! -f "$tsdir/build-aux/config.guess" ]; then
     fatal "$tsdir/build-aux/config.guess not found"

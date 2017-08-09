@@ -79,3 +79,25 @@ gen-ChangeLog:
 
 stowinstall:
 	$(MAKE) $(AM_MAKEFLAGS) install prefix=/usr/local/stow/libksba
+
+# Coverage targets
+if HAVE_GCOV
+
+.PHONY: clean-coverage
+clean-coverage:
+	@echo Removing old coverage results
+	-find -name '*.gcda' -print | xargs -r rm
+	-find -name '*.gcno' -print | xargs -r rm
+	-rm -rf coverage.info coveragereport
+
+.PHONY: coverage-html clean-coverage
+coverage-html: check
+	@echo Collecting coverage data with lcov
+	$(top_srcdir)/autogen.sh --coverage $(LCOV) $(GCOV) $(abs_builddir) \
+		tests src
+	$(top_srcdir)/autogen.sh --report $(LCOV) $(GENHTML) $(abs_builddir) \
+		'*/tests/*' '*/asn1-parse.c' '*/asn1-parse.y'
+
+clean-local: clean-coverage
+
+endif # HAVE_GCOV

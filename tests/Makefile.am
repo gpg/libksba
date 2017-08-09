@@ -41,8 +41,8 @@ CLEANFILES = oidtranstbl.h
 
 TESTS = cert-basic t-crl-parser t-dnparser t-oid t-reader
 
-AM_CFLAGS = $(GPG_ERROR_CFLAGS)
-AM_LDFLAGS = -no-install
+AM_CFLAGS = $(GPG_ERROR_CFLAGS) $(COVERAGE_CFLAGS)
+AM_LDFLAGS = -no-install $(COVERAGE_LDFLAGS)
 
 noinst_HEADERS = t-common.h
 noinst_PROGRAMS = $(TESTS) t-cms-parser t-crl-parser t-dnparser t-ocsp

@@ -36,7 +36,7 @@ CLEANFILES = asn1-gentables
 DISTCLEANFILES = asn1-tables.c
 
 AM_CPPFLAGS =  -I$(top_builddir)/gl -I$(top_srcdir)/gl
-AM_CFLAGS = $(GPG_ERROR_CFLAGS)
+AM_CFLAGS = $(GPG_ERROR_CFLAGS) $(COVERAGE_CFLAGS)
 
 
 if HAVE_LD_VERSION_SCRIPT
@@ -82,7 +82,8 @@ endif !HAVE_W32_SYSTEM
 
 libksba_la_LDFLAGS = $(no_undefined) $(export_symbols) $(extra_ltoptions) \
       $(libksba_version_script_cmd) -version-info \
-      @LIBKSBA_LT_CURRENT@:@LIBKSBA_LT_REVISION@:@LIBKSBA_LT_AGE@
+      @LIBKSBA_LT_CURRENT@:@LIBKSBA_LT_REVISION@:@LIBKSBA_LT_AGE@ \
+      $(COVERAGE_LDFLAGS)
 libksba_la_INCLUDES = -I$(top_srcdir)/lib
 libksba_la_DEPENDENCIES = $(srcdir)/libksba.vers $(ksba_deps)
 libksba_la_LIBADD = $(ksba_res) @LTLIBOBJS@ @GPG_ERROR_LIBS@

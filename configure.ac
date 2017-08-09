@@ -127,6 +127,14 @@ gl_EARLY
 AC_PROG_YACC
 AX_PROG_BISON([have_bison=yes],[have_bison=no])
 
+if test "$USE_MAINTAINER_MODE" = "yes"; then
+	# gcov coverage reporting
+	AC_CHECK_PROGS(GCOV, [gcov], gcov)
+	AC_TDD_GCOV
+	AC_SUBST(COVERAGE_CFLAGS)
+	AC_SUBST(COVERAGE_LDFLAGS)
+fi
+
 AC_C_INLINE
 
 # We need to compile and run a program on the build machine.
