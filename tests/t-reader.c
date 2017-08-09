@@ -195,7 +195,8 @@ main (int argc, char **argv)
     }
   else
     {
-      for (int i = 1; i < argc; ++i)
+      int i;
+      for (i = 1; i < argc; ++i)
         {
           test_fd (argv[i]);
           test_file (argv[i]);
