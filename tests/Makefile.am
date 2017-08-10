@@ -39,13 +39,13 @@ EXTRA_DIST = $(test_certs) samples/README mkoidtbl.awk
 BUILT_SOURCES = oidtranstbl.h
 CLEANFILES = oidtranstbl.h
 
-TESTS = cert-basic t-crl-parser t-dnparser t-oid t-reader
+TESTS = cert-basic t-crl-parser t-dnparser t-oid t-reader t-cms-parser
 
 AM_CFLAGS = $(GPG_ERROR_CFLAGS) $(COVERAGE_CFLAGS)
 AM_LDFLAGS = -no-install $(COVERAGE_LDFLAGS)
 
 noinst_HEADERS = t-common.h
-noinst_PROGRAMS = $(TESTS) t-cms-parser t-crl-parser t-dnparser t-ocsp
+noinst_PROGRAMS = $(TESTS) t-ocsp
 LDADD = ../src/libksba.la $(GPG_ERROR_LIBS)
 
 t_ocsp_SOURCES = t-ocsp.c sha1.c

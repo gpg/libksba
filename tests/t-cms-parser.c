@@ -233,7 +233,7 @@ main (int argc, char **argv)
   if (argc > 1)
     one_file (argv[1]);
   else
-    one_file ("x.ber");
+    one_file (prepend_srcdir ("extra/dsig-with-id-aa-encrypKeyPref-1.cms"));
   /*one_file ("pkcs7-1.ber");*/
   /*one_file ("root-cert-2.der");  should fail */
 
