@@ -220,6 +220,7 @@ one_file (const char *fname)
     }
 
   ksba_cms_release (cms);
+  ksba_writer_release (w);
   ksba_reader_release (r);
   fclose (fp);
 }
@@ -233,7 +234,12 @@ main (int argc, char **argv)
   if (argc > 1)
     one_file (argv[1]);
   else
-    one_file (prepend_srcdir ("extra/dsig-with-id-aa-encrypKeyPref-1.cms"));
+    {
+      char *fname = prepend_srcdir ("extra/dsig-with-id-aa-encrypKeyPref-1.cms");
+
+      one_file (fname);
+      free(fname);
+    }
   /*one_file ("pkcs7-1.ber");*/
   /*one_file ("root-cert-2.der");  should fail */
 

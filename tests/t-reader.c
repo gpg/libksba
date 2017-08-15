@@ -189,9 +189,12 @@ main (int argc, char **argv)
 {
   if (argc == 1)
     {
-      test_fd (prepend_srcdir ("cert_g10code_test1.der"));
-      test_file (prepend_srcdir ("cert_g10code_test1.der"));
-      test_mem (prepend_srcdir ("cert_g10code_test1.der"));
+      char *fname = prepend_srcdir ("cert_g10code_test1.der");
+
+      test_fd (fname);
+      test_file (fname);
+      test_mem (fname);
+      free(fname);
     }
   else
     {

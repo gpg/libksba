@@ -435,6 +435,7 @@ ksba_cms_identify (ksba_reader_t reader)
       if (!strcmp (content_handlers[i].oid, oid))
         break;
     }
+  ksba_free(oid);
   if (!content_handlers[i].oid)
     return KSBA_CT_NONE; /* unknown */
   if (maybe_p12 && (content_handlers[i].ct == KSBA_CT_DATA
