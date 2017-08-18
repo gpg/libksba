@@ -823,14 +823,14 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
   gpg_error_t err;
   int env_data_ndef;
   unsigned long env_data_len;
-  int encr_cont_ndef;
-  unsigned long encr_cont_len;
-  int has_content;
+  int encr_cont_ndef = 0;
+  unsigned long encr_cont_len = 0;
+  int has_content = 0;
   unsigned long off, len;
   char *cont_oid = NULL;
   char *algo_oid = NULL;
   char *algo_parm = NULL;
-  size_t algo_parmlen;
+  size_t algo_parmlen = 0;
   struct value_tree_s *vt, **vtend;
 
   /* get the version */

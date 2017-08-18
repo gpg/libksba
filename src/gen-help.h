@@ -90,6 +90,8 @@ const char *gpg_strerror (int err);
 
 /* Duplicated type definitions from ksba.h.  */
 typedef struct ksba_asn_tree_s *ksba_asn_tree_t;
-
+int ksba_asn_parse_file (const char *filename, ksba_asn_tree_t *result,
+			 int debug);
+void ksba_asn_tree_dump (ksba_asn_tree_t tree, const char *name, FILE *fp);
 
 #endif /*GEN_HELP_H*/

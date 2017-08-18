@@ -139,7 +139,7 @@ main (int argc, char **argv)
 
   if (argc == 2 && !strcmp (argv[1], "--to-str") )
     { /* Read the DER encoded DN from stdin write the string to stdout */
-      fread (inputbuf, 1, sizeof inputbuf, stdin);
+      len = fread (inputbuf, 1, sizeof inputbuf, stdin);
       if (!feof (stdin))
         fail ("read error or input too large");
 
@@ -148,7 +148,7 @@ main (int argc, char **argv)
     }
   else if (argc == 2 && !strcmp (argv[1], "--to-der") )
     { /* Read the String from stdin write the DER encoding to stdout */
-      fread (inputbuf, 1, sizeof inputbuf, stdin);
+      len = fread (inputbuf, 1, sizeof inputbuf, stdin);
       if (!feof (stdin))
         fail ("read error or input too large");
 

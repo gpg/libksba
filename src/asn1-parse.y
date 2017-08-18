@@ -92,7 +92,7 @@ struct parser_control_s {
 %param  {void *parm}
 %define api.pure full
 %define parse.error verbose
-%expect 1
+ //%expect 1
 
 %union {
   unsigned int constant;
@@ -170,7 +170,7 @@ static void yyerror (void *parm, const char *s);
 %type <node> boolean_def any_def size_def2 obj_constant obj_constant_list
 %type <node> constant_def type_constant type_constant_list definitions
 %type <node> definitions_id Time bit_element bit_element_list set_def
-%type <node> identifier_list imports_def tag_type tag type_assig_right_tag
+%type <node> /* identifier_list */ imports_def tag_type tag type_assig_right_tag
 %type <node> type_assig_right_tag_default enumerated_def string_def
 %type <node> utf8_string_def numeric_string_def printable_string_def
 %type <node> teletex_string_def ia5_string_def universal_string_def
@@ -229,6 +229,7 @@ constant_list:  constant   { $$=$1; }
                   }
 ;
 
+/*
 identifier_list  :  IDENTIFIER
                         {
                           $$ = NEW_NODE (TYPE_IDENTIFIER);
@@ -244,6 +245,7 @@ identifier_list  :  IDENTIFIER
                           append_right ($$, node);
                         }
 ;
+*/
 
 obj_constant:  num_identifier
                  {
@@ -704,7 +706,8 @@ definitions_id : IDENTIFIER  '{' obj_constant_list '}'
 
 imports_def :  /* empty */
                 { $$=NULL;}
-            | IMPORTS identifier_list FROM IDENTIFIER obj_constant_list
+/*
+            | IMPORTS identifier_list FROM IDENTIFIER
                 {
                   AsnNode node;
 
@@ -715,6 +718,7 @@ imports_def :  /* empty */
                   set_down ($$, node);
                   set_right ($$, $2);
                 }
+*/
 ;
 
 explicit_implicit :  EXPLICIT  { $$ = CONST_EXPLICIT; }

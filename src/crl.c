@@ -47,7 +47,9 @@
 
 static const char oidstr_crlNumber[] = "2.5.29.20";
 static const char oidstr_crlReason[] = "2.5.29.21";
+#if 0
 static const char oidstr_issuingDistributionPoint[] = "2.5.29.28";
+#endif
 static const char oidstr_certificateIssuer[] = "2.5.29.29";
 static const char oidstr_authorityKeyIdentifier[] = "2.5.29.35";
 
