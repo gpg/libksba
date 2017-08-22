@@ -235,7 +235,7 @@ main (int argc, char **argv)
     one_file (argv[1]);
   else
     {
-      char *fname = prepend_srcdir ("extra/dsig-with-id-aa-encrypKeyPref-1.cms");
+      char *fname = prepend_srcdir ("detached-sig.cms");
 
       one_file (fname);
       free(fname);
