@@ -63,7 +63,6 @@ distcheck-hook:
 
 
 gen_start_date = 2011-12-01T00:00:00
-.PHONY: gen-ChangeLog
 gen-ChangeLog:
 	if test -d $(top_srcdir)/.git; then				\
 	  (cd $(top_srcdir) &&                      			\
@@ -80,17 +79,17 @@ gen-ChangeLog:
 stowinstall:
 	$(MAKE) $(AM_MAKEFLAGS) install prefix=/usr/local/stow/libksba
 
+
+
 # Coverage targets
 if HAVE_GCOV
 
-.PHONY: clean-coverage
 clean-coverage:
 	@echo Removing old coverage results
 	-find -name '*.gcda' -print | xargs -r rm
 	-find -name '*.gcno' -print | xargs -r rm
 	-rm -rf coverage.info coveragereport
 
-.PHONY: coverage-html clean-coverage
 coverage-html: check
 	@echo Collecting coverage data with lcov
 	$(top_srcdir)/autogen.sh --coverage $(LCOV) $(GCOV) $(abs_builddir) \
@@ -101,3 +100,5 @@ coverage-html: check
 clean-local: clean-coverage
 
 endif # HAVE_GCOV
+
+.PHONY: gen-ChangeLog clean-coverage coverage-html
