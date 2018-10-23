@@ -2777,7 +2777,7 @@ build_signed_data_rest (ksba_cms_t cms)
       assert (si->root);
       assert (si->image);
       n2 = _ksba_asn_find_node (si->root, "SignerInfo.signedAttrs");
-      if (!n2 || !n->down)
+      if (!n2 || !n2->down)
         {
 	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
 	  goto leave;
