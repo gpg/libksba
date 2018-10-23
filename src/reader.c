@@ -102,12 +102,12 @@ ksba_reader_set_release_notify (ksba_reader_t r,
 
 
 /* Clear the error and eof indicators for READER, so that it can be
-   continued to use.  Also dicards any unread bytes. This is usually
-   required if the upper layer want to send to send an EOF to indicate
+   continued to use.  Also discards any unread bytes.  This is usually
+   required if the upper layer wants to send an EOF to indicate
    the logical end of one part of a file.  If BUFFER and BUFLEN are
    not NULL, possible unread data is copied to a newly allocated
    buffer and this buffer is assigned to BUFFER, BUFLEN will be set to
-   the length of the unread bytes. */
+   the length of the unread bytes.  */
 gpg_error_t
 ksba_reader_clear (ksba_reader_t r, unsigned char **buffer, size_t *buflen)
 {
