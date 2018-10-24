@@ -22,18 +22,19 @@ dnl with a changed API.
 dnl
 AC_DEFUN([AM_PATH_KSBA],
 [AC_REQUIRE([AC_CANONICAL_HOST])
+ AC_REQUIRE([AM_PATH_GPG_ERROR])
  AC_ARG_WITH(ksba-prefix,
             AC_HELP_STRING([--with-ksba-prefix=PFX],
                            [prefix where KSBA is installed (optional)]),
      ksba_config_prefix="$withval", ksba_config_prefix="")
   if test x$ksba_config_prefix != x ; then
-     ksba_config_args="$ksba_config_args --prefix=$ksba_config_prefix"
-     if test x${KSBA_CONFIG+set} != xset ; then
-        KSBA_CONFIG=$ksba_config_prefix/bin/ksba-config
-     fi
+    if test x${KSBA_CONFIG+set} != xset ; then
+      KSBA_CONFIG=$ksba_config_prefix/bin/ksba-config
+    fi
+  else
+    KSBA_CONFIG="$GPG_ERROR_CONFIG ksba"
   fi
 
-  AC_PATH_PROG(KSBA_CONFIG, ksba-config, no)
   tmp=ifelse([$1], ,1:1.0.0,$1)
   if echo "$tmp" | grep ':' >/dev/null 2>/dev/null ; then
      req_ksba_api=`echo "$tmp"     | sed 's/\(.*\):\(.*\)/\1/'`
@@ -52,7 +53,7 @@ AC_DEFUN([AM_PATH_KSBA],
                sed 's/\([[0-9]]*\)\.\([[0-9]]*\)\.\([[0-9]]*\)/\2/'`
     req_micro=`echo $min_ksba_version | \
                sed 's/\([[0-9]]*\)\.\([[0-9]]*\)\.\([[0-9]]*\)/\3/'`
-    ksba_config_version=`$KSBA_CONFIG $ksba_config_args --version`
+    ksba_config_version=`CC=$CC $KSBA_CONFIG --modversion`
     major=`echo $ksba_config_version | \
                sed 's/\([[0-9]]*\)\.\([[0-9]]*\)\.\([[0-9]]*\).*/\1/'`
     minor=`echo $ksba_config_version | \
@@ -84,7 +85,7 @@ AC_DEFUN([AM_PATH_KSBA],
      # Even if we have a recent libksba, we should check that the
      # API is compatible.
      if test "$req_ksba_api" -gt 0 ; then
-        tmp=`$KSBA_CONFIG --api-version 2>/dev/null || echo 0`
+        tmp=`CC=$CC $KSBA_CONFIG --variable=api_version 2>/dev/null || echo 0`
         if test "$tmp" -gt 0 ; then
            AC_MSG_CHECKING([KSBA API version])
            if test "$req_ksba_api" -eq "$tmp" ; then
@@ -97,15 +98,15 @@ AC_DEFUN([AM_PATH_KSBA],
      fi
   fi
   if test $ok = yes; then
-    KSBA_CFLAGS=`$KSBA_CONFIG $ksba_config_args --cflags`
-    KSBA_LIBS=`$KSBA_CONFIG $ksba_config_args --libs`
+    KSBA_CFLAGS=`CC=$CC $KSBA_CONFIG --cflags`
+    KSBA_LIBS=`CC=$CC $KSBA_CONFIG --libs`
     ifelse([$2], , :, [$2])
-    libksba_config_host=`$LIBKSBA_CONFIG $ksba_config_args --host 2>/dev/null || echo none`
+    libksba_config_host=`CC=$CC $KSBA_CONFIG --variable=host 2>/dev/null || echo none`
     if test x"$libksba_config_host" != xnone ; then
       if test x"$libksba_config_host" != x"$host" ; then
   AC_MSG_WARN([[
 ***
-*** The config script $LIBKSBA_CONFIG was
+*** The config script "$KSBA_CONFIG" was
 *** built for $libksba_config_host and thus may not match the
 *** used host $host.
 *** You may want to use the configure option --with-libksba-prefix
