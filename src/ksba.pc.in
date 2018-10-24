@@ -10,5 +10,5 @@ Description: X.509 and CMS support library
 Requires: gpg-error
 Version: @PACKAGE_VERSION@
 Cflags: @KSBA_CONFIG_CFLAGS@
-Libs: @KSBA_CONFIG_LIB@
+Libs: @KSBA_CONFIG_LIBS@
 URL: http://www.gnupg.org/related_software/libksba/
