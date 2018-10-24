@@ -18,11 +18,14 @@
 
 ## Process this file with automake to produce Makefile.in
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = ksba.pc
+
 asn1_modules = tmttv2.asn cms.asn
 
 buildtool_src = asn1-gentables.c gen-help.c gen-help.h
 EXTRA_DIST = ksba-config.in $(asn1_modules) ksba.m4 libksba.vers libksba.def \
-	     asn1-parse.c asn1-tables.c $(buildtool_src)
+	     asn1-parse.c asn1-tables.c $(buildtool_src) ksba.pc.in
 BUILT_SOURCES = asn1-parse.c asn1-tables.c
 bin_SCRIPTS = ksba-config
 include_HEADERS = ksba.h

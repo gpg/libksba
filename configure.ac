@@ -61,9 +61,6 @@ KSBA_CONFIG_API_VERSION=1
 NEED_GPG_ERROR_VERSION=1.8
 
 
-PACKAGE=$PACKAGE_NAME
-VERSION=$PACKAGE_VERSION
-
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([src/ksba.h])
 AM_INIT_AUTOMAKE([serial-tests dist-bzip2 no-dist-gzip])
@@ -84,10 +81,7 @@ AM_MAINTAINER_MODE
 AC_SUBST(LIBKSBA_LT_CURRENT)
 AC_SUBST(LIBKSBA_LT_AGE)
 AC_SUBST(LIBKSBA_LT_REVISION)
-AC_SUBST(PACKAGE)
-AC_SUBST(VERSION)
-AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE", [Name of this package])
-AC_DEFINE_UNQUOTED(VERSION, "$VERSION", [Version of this package])
+
 
 AH_TOP([
 #ifndef _KSBA_CONFIG_H_INCLUDED
@@ -435,6 +429,7 @@ m4/Makefile
 gl/Makefile
 src/Makefile
 src/ksba-config
+src/ksba.pc
 src/versioninfo.rc
 tests/Makefile
 doc/Makefile

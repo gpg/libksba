@@ -1,0 +1,14 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+includedir=@includedir@
+libdir=@libdir@
+host=@KSBA_CONFIG_HOST@
+api_version=@KSBA_CONFIG_API_VERSION@
+
+Name: ksba
+Description: X.509 and CMS support library
+Requires: gpg-error
+Version: @PACKAGE_VERSION@
+Cflags: @KSBA_CONFIG_CFLAGS@
+Libs: @KSBA_CONFIG_LIB@
+URL: http://www.gnupg.org/related_software/libksba/
