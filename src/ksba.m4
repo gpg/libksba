@@ -21,12 +21,22 @@ dnl this features allows to prevent build against newer versions of libksba
 dnl with a changed API.
 dnl
 AC_DEFUN([AM_PATH_KSBA],
-[AC_REQUIRE([AC_CANONICAL_HOST])
- AC_REQUIRE([AM_PATH_GPG_ERROR])
- AC_ARG_WITH(ksba-prefix,
-            AC_HELP_STRING([--with-ksba-prefix=PFX],
-                           [prefix where KSBA is installed (optional)]),
+[ AC_REQUIRE([AC_CANONICAL_HOST])
+  AC_REQUIRE([AM_PATH_GPG_ERROR])
+  dnl --with-libksba-prefix=PFX is the preferred name for this option,
+  dnl since that is consistent with how our three siblings use the directory/
+  dnl package name in --with-$dir_name-prefix=PFX.
+  AC_ARG_WITH(libksba-prefix,
+              AC_HELP_STRING([--with-libksba-prefix=PFX],
+                             [prefix where KSBA is installed (optional)]),
      ksba_config_prefix="$withval", ksba_config_prefix="")
+
+  dnl Accept --with-ksba-prefix and make it work the same as
+  dnl --with-libksba-prefix above, for backwards compatibility,
+  dnl but do not document this old, inconsistently-named option.
+  AC_ARG_WITH(ksba-prefix,,
+     ksba_config_prefix="$withval", ksba_config_prefix="")
+
   if test x$ksba_config_prefix != x ; then
     if test x${KSBA_CONFIG+set} != xset ; then
       KSBA_CONFIG=$ksba_config_prefix/bin/ksba-config
