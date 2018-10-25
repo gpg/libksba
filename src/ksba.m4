@@ -1,5 +1,5 @@
 # ksba.m4 - autoconf macro to detect ksba
-#       Copyright (C) 2002 g10 Code GmbH
+#       Copyright (C) 2002, 2018 g10 Code GmbH
 #
 # This file is free software; as a special exception the author gives
 # unlimited permission to copy and/or distribute it, with or without
@@ -22,7 +22,6 @@ dnl with a changed API.
 dnl
 AC_DEFUN([AM_PATH_KSBA],
 [ AC_REQUIRE([AC_CANONICAL_HOST])
-  AC_REQUIRE([AM_PATH_GPG_ERROR])
   dnl --with-libksba-prefix=PFX is the preferred name for this option,
   dnl since that is consistent with how our three siblings use the directory/
   dnl package name in --with-$dir_name-prefix=PFX.
@@ -41,8 +40,15 @@ AC_DEFUN([AM_PATH_KSBA],
     if test x${KSBA_CONFIG+set} != xset ; then
       KSBA_CONFIG=$ksba_config_prefix/bin/ksba-config
     fi
+  fi
+  if test x"$GPGRT_CONFIG" != x -a "$GPGRT_CONFIG" != "no"; then
+    if CC=$CC $GPGRT_CONFIG libksba >/dev/null 2>&1; then
+      LIBKSBA_CONFIG="$GPGRT_CONFIG libksba"
+    else
+      LIBKSBA_CONFIG=no
+    fi
   else
-    KSBA_CONFIG="$GPG_ERROR_CONFIG ksba"
+    AC_PATH_TOOL(LIBKSBA_CONFIG, ksba-config, no)
   fi
 
   tmp=ifelse([$1], ,1:1.0.0,$1)

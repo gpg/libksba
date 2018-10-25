@@ -1,6 +1,6 @@
 # configure.ac - for libksba
 # Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-#               2010, 2011, 2012  g10 Code GmbH
+#               2010, 2011, 2012, 2018  g10 Code GmbH
 #
 # This file is part of KSBA
 #
@@ -58,7 +58,7 @@ LIBKSBA_LT_REVISION=6
 KSBA_CONFIG_API_VERSION=1
 
 
-NEED_GPG_ERROR_VERSION=1.33
+NEED_GPG_ERROR_VERSION=1.8
 
 
 AC_CONFIG_AUX_DIR([build-aux])
