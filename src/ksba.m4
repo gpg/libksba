@@ -43,9 +43,9 @@ AC_DEFUN([AM_PATH_KSBA],
   fi
 
   use_gpgrt_config=""
-  if test x"$KSBA_CONFIG" != x -a x"$GPGRT_CONFIG" != x -a "$GPGRT_CONFIG" != "no"; then
-    if CC=$CC $GPGRT_CONFIG libksba >/dev/null 2>&1; then
-      KSBA_CONFIG="$GPGRT_CONFIG libksba"
+  if test x"$KSBA_CONFIG" = x -a x"$GPGRT_CONFIG" != x -a "$GPGRT_CONFIG" != "no"; then
+    if CC=$CC $GPGRT_CONFIG ksba >/dev/null 2>&1; then
+      KSBA_CONFIG="$GPGRT_CONFIG ksba"
       use_gpgrt_config=yes
     fi
   fi
