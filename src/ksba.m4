@@ -41,13 +41,15 @@ AC_DEFUN([AM_PATH_KSBA],
       KSBA_CONFIG=$ksba_config_prefix/bin/ksba-config
     fi
   fi
-  if test x"$GPGRT_CONFIG" != x -a "$GPGRT_CONFIG" != "no"; then
+
+  use_gpgrt_config=""
+  if test x"$KSBA_CONFIG" != x -a x"$GPGRT_CONFIG" != x -a "$GPGRT_CONFIG" != "no"; then
     if CC=$CC $GPGRT_CONFIG libksba >/dev/null 2>&1; then
       LIBKSBA_CONFIG="$GPGRT_CONFIG libksba"
-    else
-      LIBKSBA_CONFIG=no
+      use_gpgrt_config=yes
     fi
-  else
+  fi
+  if test -z "$use_gpgrt_config"; then
     AC_PATH_TOOL(LIBKSBA_CONFIG, ksba-config, no)
   fi
 
