@@ -50,7 +50,7 @@ AC_DEFUN([AM_PATH_KSBA],
     fi
   fi
   if test -z "$use_gpgrt_config"; then
-    AC_PATH_TOOL(LIBKSBA_CONFIG, ksba-config, no)
+    AC_PATH_PROG(LIBKSBA_CONFIG, ksba-config, no)
   fi
 
   tmp=ifelse([$1], ,1:1.0.0,$1)
