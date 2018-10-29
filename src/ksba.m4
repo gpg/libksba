@@ -44,7 +44,7 @@ AC_DEFUN([AM_PATH_KSBA],
 
   use_gpgrt_config=""
   if test x"$KSBA_CONFIG" = x -a x"$GPGRT_CONFIG" != x -a "$GPGRT_CONFIG" != "no"; then
-    if CC=$CC $GPGRT_CONFIG ksba >/dev/null 2>&1; then
+    if $GPGRT_CONFIG ksba --exists; then
       KSBA_CONFIG="$GPGRT_CONFIG ksba"
       use_gpgrt_config=yes
     fi
@@ -72,9 +72,9 @@ AC_DEFUN([AM_PATH_KSBA],
     req_micro=`echo $min_ksba_version | \
                sed 's/\([[0-9]]*\)\.\([[0-9]]*\)\.\([[0-9]]*\)/\3/'`
     if test -z "$use_gpgrt_config"; then
-      ksba_config_version=`CC=$CC $KSBA_CONFIG --version`
+      ksba_config_version=`$KSBA_CONFIG --version`
     else
-      ksba_config_version=`CC=$CC $KSBA_CONFIG --modversion`
+      ksba_config_version=`$KSBA_CONFIG --modversion`
     fi
     major=`echo $ksba_config_version | \
                sed 's/\([[0-9]]*\)\.\([[0-9]]*\)\.\([[0-9]]*\).*/\1/'`
@@ -108,9 +108,9 @@ AC_DEFUN([AM_PATH_KSBA],
      # API is compatible.
      if test "$req_ksba_api" -gt 0 ; then
         if test -z "$use_gpgrt_config"; then
-          tmp=`CC=$CC $KSBA_CONFIG --api-version 2>/dev/null || echo 0`
+          tmp=`$KSBA_CONFIG --api-version 2>/dev/null || echo 0`
 	else
-          tmp=`CC=$CC $KSBA_CONFIG --variable=api_version 2>/dev/null || echo 0`
+          tmp=`$KSBA_CONFIG --variable=api_version 2>/dev/null || echo 0`
 	fi
         if test "$tmp" -gt 0 ; then
            AC_MSG_CHECKING([KSBA API version])
@@ -124,13 +124,13 @@ AC_DEFUN([AM_PATH_KSBA],
      fi
   fi
   if test $ok = yes; then
-    KSBA_CFLAGS=`CC=$CC $KSBA_CONFIG --cflags`
-    KSBA_LIBS=`CC=$CC $KSBA_CONFIG --libs`
+    KSBA_CFLAGS=`$KSBA_CONFIG --cflags`
+    KSBA_LIBS=`$KSBA_CONFIG --libs`
     ifelse([$2], , :, [$2])
     if test -z "$use_gpgrt_config"; then
-      libksba_config_host=`CC=$CC $KSBA_CONFIG --host 2>/dev/null || echo none`
+      libksba_config_host=`$KSBA_CONFIG --host 2>/dev/null || echo none`
     else
-      libksba_config_host=`CC=$CC $KSBA_CONFIG --variable=host 2>/dev/null || echo none`
+      libksba_config_host=`$KSBA_CONFIG --variable=host 2>/dev/null || echo none`
     fi
     if test x"$libksba_config_host" != xnone ; then
       if test x"$libksba_config_host" != x"$host" ; then
