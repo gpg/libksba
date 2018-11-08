@@ -933,6 +933,7 @@ decoder_next (BerDecoder d)
               if (debug)
                   fprintf (stderr, "  ANY");
               ds->cur.in_any = 1;
+              /* FALLTHROUGH */
             case 3: /* match */
             case 5: /* end tag */
               if (debug)
