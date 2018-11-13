@@ -11,15 +11,11 @@ esac
 
 case "$myhost" in
   w32)
-    configure_opts="
-      --with-gpg-error-prefix=@SYSROOT@
-      "
+    configure_opts=""
     ;;
 
   amd64)
-    configure_opts="
-      --with-gpg-error-prefix=@SYSROOT@
-     "
+    configure_opts=""
     ;;
 esac
 
