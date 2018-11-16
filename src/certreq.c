@@ -42,6 +42,7 @@
 #include "keyinfo.h"
 #include "der-encoder.h"
 #include "ber-help.h"
+#include "sexp-parse.h"
 #include "certreq.h"
 
 static const char oidstr_subjectAltName[] = "2.5.29.17";
@@ -406,8 +407,10 @@ ksba_certreq_add_extension (ksba_certreq_t cr,
 gpg_error_t
 ksba_certreq_set_sig_val (ksba_certreq_t cr, ksba_const_sexp_t sigval)
 {
-  const char *s, *endp;
-  unsigned long n;
+  const unsigned char *s, *saved;
+  char *buf = NULL;
+  unsigned long n, len;
+  int pass, nparam;
 
   if (!cr)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -417,24 +420,17 @@ ksba_certreq_set_sig_val (ksba_certreq_t cr, ksba_const_sexp_t sigval)
     return gpg_error (GPG_ERR_INV_SEXP);
   s++;
 
-  n = strtoul (s, (char**)&endp, 10);
-  s = endp;
-  if (!n || *s!=':')
-    return gpg_error (GPG_ERR_INV_SEXP); /* we don't allow empty lengths */
-  s++;
-  if (n != 7 || memcmp (s, "sig-val", 7))
+  if (!(n = snext (&s)))
+    return gpg_error (GPG_ERR_INV_SEXP);
+  if (!smatch (&s, 7, "sig-val"))
     return gpg_error (GPG_ERR_UNKNOWN_SEXP);
-  s += 7;
   if (*s != '(')
     return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
   s++;
 
   /* break out the algorithm ID */
-  n = strtoul (s, (char**)&endp, 10);
-  s = endp;
-  if (!n || *s != ':')
-    return gpg_error (GPG_ERR_INV_SEXP); /* we don't allow empty lengths */
-  s++;
+  if (!(n = snext (&s)))
+    return gpg_error (GPG_ERR_INV_SEXP);
   xfree (cr->sig_val.algo);
   if (n==3 && s[0] == 'r' && s[1] == 's' && s[2] == 'a')
     { /* kludge to allow "rsa" to be passed as algorithm name */
@@ -452,42 +448,98 @@ ksba_certreq_set_sig_val (ksba_certreq_t cr, ksba_const_sexp_t sigval)
     }
   s += n;
 
-  /* And now the values - FIXME: For now we only support one */
-  /* fixme: start loop */
-  if (*s != '(')
-    return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
-  s++;
-  n = strtoul (s, (char**)&endp, 10);
-  s = endp;
-  if (!n || *s != ':')
-    return gpg_error (GPG_ERR_INV_SEXP);
-  s++;
-  s += n; /* ignore the name of the parameter */
+  /* And now the values.
+   *
+   * If there is only one value, the signature is simply
+   * that value. Otherwise, the signature is a DER-encoded
+   * SEQUENCE of INTEGERs representing the different values.
+   *
+   * We need three passes over the values:
+   * - first pass is to get the number of values (nparam);
+   * - second pass is to compute the total length (len);
+   * - third pass is to build the final signature. */
+  for (pass = 1, nparam = len = 0, saved = s; pass < 4; pass++)
+    {
+      s = saved;
 
-  if (!digitp(s))
-    return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
-  n = strtoul (s, (char**)&endp, 10);
-  s = endp;
-  if (!n || *s != ':')
-    return gpg_error (GPG_ERR_INV_SEXP);
-  s++;
-  if (n > 1 && !*s)
-    { /* We might have a leading zero due to the way we encode
-         MPIs - this zero should not go into the BIT STRING.  */
-      s++;
-      n--;
+      if (pass == 3)
+        {
+          size_t needed = len;
+          if (nparam > 1)
+            needed += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, len);
+
+          xfree (cr->sig_val.value);
+          cr->sig_val.value = xtrymalloc (needed);
+          if (!cr->sig_val.value)
+            return gpg_error (GPG_ERR_ENOMEM);
+          cr->sig_val.valuelen = needed;
+          buf = cr->sig_val.value;
+
+          if (nparam > 1)
+            buf += _ksba_ber_encode_tl (buf, TYPE_SEQUENCE,
+                                        CLASS_UNIVERSAL, 1, len);
+        }
+
+      while (*s != ')')
+        {
+          if (*s != '(')
+            return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
+          s++;
+          if (!(n = snext (&s)))
+            return gpg_error (GPG_ERR_INV_SEXP);
+          s += n; /* Ignore the name of the parameter. */
+
+          if (!digitp (s))
+            return gpg_error (GPG_ERR_UNKNOWN_SEXP);
+          if (!(n = snext (&s)))
+            return gpg_error (GPG_ERR_INV_SEXP);
+
+          if (pass == 1)
+            nparam++;
+          else if (pass == 2)
+            {
+              if (nparam > 1)
+                len += _ksba_ber_count_tl (TYPE_INTEGER, CLASS_UNIVERSAL, 0,
+                                           *s >= 0x80? n + 1 : n)
+                       + (*s >= 0x80? n + 1 : n);
+              else
+                len += (n > 1 && !*s)? n - 1 : n;
+            }
+          else if (pass == 3)
+            {
+              if (nparam > 1)
+                {
+                  if (*s >= 0x80)
+                    { /* Add leading zero byte. */
+                      buf += _ksba_ber_encode_tl (buf, TYPE_INTEGER,
+                                                  CLASS_UNIVERSAL, 0, n + 1);
+                      *buf++ = 0;
+                    }
+                  else
+                    buf += _ksba_ber_encode_tl (buf, TYPE_INTEGER,
+                                                CLASS_UNIVERSAL, 0, n);
+                  memcpy (buf, s, n);
+                  buf += n;
+                }
+              else
+                {
+                  if (n > 1 && !*s)
+                    { /* Remove leading zero byte, which must not be
+                         included in the bitstring. */
+                      s++;
+                      n--;
+                    }
+                  memcpy (buf, s, n);
+                  buf += n;
+                }
+            }
+
+          s += n;
+          if (*s != ')')
+            return gpg_error (GPG_ERR_UNKNOWN_SEXP);
+          s++;
+        }
     }
-  xfree (cr->sig_val.value);
-  cr->sig_val.value = xtrymalloc (n);
-  if (!cr->sig_val.value)
-    return gpg_error (GPG_ERR_ENOMEM);
-  memcpy (cr->sig_val.value, s, n);
-  cr->sig_val.valuelen = n;
-  s += n;
-  if ( *s != ')')
-    return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
-  s++;
-  /* fixme: end loop over parameters */
 
   /* we need 2 closing parenthesis */
   if ( *s != ')' || s[1] != ')')
