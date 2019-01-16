@@ -46,7 +46,7 @@ AM_LDFLAGS = -no-install $(COVERAGE_LDFLAGS)
 
 noinst_HEADERS = t-common.h
 noinst_PROGRAMS = $(TESTS) t-ocsp
-LDADD = ../src/libksba.la $(GPG_ERROR_LIBS)
+LDADD = ../src/libksba.la $(GPG_ERROR_LIBS) @LDADD_FOR_TESTS_KLUDGE@
 
 t_ocsp_SOURCES = t-ocsp.c sha1.c
 
