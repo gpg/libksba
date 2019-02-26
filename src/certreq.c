@@ -411,6 +411,7 @@ ksba_certreq_set_sig_val (ksba_certreq_t cr, ksba_const_sexp_t sigval)
   char *buf = NULL;
   unsigned long n, len;
   int pass, nparam;
+  int is_EdDSA = 0;
 
   if (!cr)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -445,6 +446,8 @@ ksba_certreq_set_sig_val (ksba_certreq_t cr, ksba_const_sexp_t sigval)
         return gpg_error (GPG_ERR_ENOMEM);
       memcpy (cr->sig_val.algo, s, n);
       cr->sig_val.algo[n] = 0;
+      if (!memcmp (s, "eddsa", 5))
+        is_EdDSA = 1;
     }
   s += n;
 
@@ -465,7 +468,7 @@ ksba_certreq_set_sig_val (ksba_certreq_t cr, ksba_const_sexp_t sigval)
       if (pass == 3)
         {
           size_t needed = len;
-          if (nparam > 1)
+          if (!is_EdDSA && nparam > 1)
             needed += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, len);
 
           xfree (cr->sig_val.value);
@@ -475,7 +478,7 @@ ksba_certreq_set_sig_val (ksba_certreq_t cr, ksba_const_sexp_t sigval)
           cr->sig_val.valuelen = needed;
           buf = cr->sig_val.value;
 
-          if (nparam > 1)
+          if (!is_EdDSA && nparam > 1)
             buf += _ksba_ber_encode_tl (buf, TYPE_SEQUENCE,
                                         CLASS_UNIVERSAL, 1, len);
         }
@@ -498,26 +501,25 @@ ksba_certreq_set_sig_val (ksba_certreq_t cr, ksba_const_sexp_t sigval)
             nparam++;
           else if (pass == 2)
             {
-              if (nparam > 1)
-                len += _ksba_ber_count_tl (TYPE_INTEGER, CLASS_UNIVERSAL, 0,
-                                           *s >= 0x80? n + 1 : n)
-                       + (*s >= 0x80? n + 1 : n);
+              if (is_EdDSA)
+                len += n;
+              else if (nparam > 1)
+                len += _ksba_ber_count_tl (TYPE_INTEGER, CLASS_UNIVERSAL, 0, n)
+                       + n;
               else
                 len += (n > 1 && !*s)? n - 1 : n;
             }
           else if (pass == 3)
             {
-              if (nparam > 1)
+              if (is_EdDSA)
                 {
-                  if (*s >= 0x80)
-                    { /* Add leading zero byte. */
-                      buf += _ksba_ber_encode_tl (buf, TYPE_INTEGER,
-                                                  CLASS_UNIVERSAL, 0, n + 1);
-                      *buf++ = 0;
-                    }
-                  else
-                    buf += _ksba_ber_encode_tl (buf, TYPE_INTEGER,
-                                                CLASS_UNIVERSAL, 0, n);
+                  memcpy (buf, s, n);
+                  buf += n;
+                }
+              else if (nparam > 1)
+                {
+                  buf += _ksba_ber_encode_tl (buf, TYPE_INTEGER,
+                                              CLASS_UNIVERSAL, 0, n);
                   memcpy (buf, s, n);
                   buf += n;
                 }
