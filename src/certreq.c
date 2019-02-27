@@ -504,8 +504,9 @@ ksba_certreq_set_sig_val (ksba_certreq_t cr, ksba_const_sexp_t sigval)
               if (is_EdDSA || nparam == 1)
                 len += n;
               else
-                len += _ksba_ber_count_tl (TYPE_INTEGER, CLASS_UNIVERSAL, 0, n)
-                       + n;
+                len += _ksba_ber_count_tl (TYPE_INTEGER, CLASS_UNIVERSAL, 0,
+                                           *s >= 0x80? n + 1 : n)
+                       + (*s >= 0x80? n + 1 : n);
             }
           else if (pass == 3)
             {
@@ -516,8 +517,15 @@ ksba_certreq_set_sig_val (ksba_certreq_t cr, ksba_const_sexp_t sigval)
                 }
               else
                 {
-                  buf += _ksba_ber_encode_tl (buf, TYPE_INTEGER,
-                                              CLASS_UNIVERSAL, 0, n);
+                  if (*s >= 0x80)
+                   { /* Add leading zero byte.  */
+                     buf += _ksba_ber_encode_tl (buf, TYPE_INTEGER,
+                                                 CLASS_UNIVERSAL, 0, n + 1);
+                     *buf++ = 0;
+                   }
+                 else
+                   buf += _ksba_ber_encode_tl (buf, TYPE_INTEGER,
+                                               CLASS_UNIVERSAL, 0, n);
                   memcpy (buf, s, n);
                   buf += n;
                 }
