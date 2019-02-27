@@ -1675,12 +1675,6 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
       return gpg_error (GPG_ERR_INV_SEXP);
     }
 
-  if (n > 1 && !*s)
-    { /* We might have a leading zero due to the way we encode
-         MPIs - this zero should not go into the OCTECT STRING.  */
-      s++;
-      n--;
-    }
   sv->value = xtrymalloc (n);
   if (!sv->value)
     {
@@ -1832,12 +1826,6 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
   if (!n || *s != ':')
     return gpg_error (GPG_ERR_INV_SEXP);
   s++;
-  if (n > 1 && !*s)
-    { /* We might have a leading zero due to the way we encode
-         MPIs - this zero should not go into the OCTECT STRING.  */
-      s++;
-      n--;
-    }
   xfree (cl->enc_val.value);
   cl->enc_val.value = xtrymalloc (n);
   if (!cl->enc_val.value)

@@ -501,36 +501,23 @@ ksba_certreq_set_sig_val (ksba_certreq_t cr, ksba_const_sexp_t sigval)
             nparam++;
           else if (pass == 2)
             {
-              if (is_EdDSA)
+              if (is_EdDSA || nparam == 1)
                 len += n;
-              else if (nparam > 1)
+              else
                 len += _ksba_ber_count_tl (TYPE_INTEGER, CLASS_UNIVERSAL, 0, n)
                        + n;
-              else
-                len += (n > 1 && !*s)? n - 1 : n;
             }
           else if (pass == 3)
             {
-              if (is_EdDSA)
+              if (is_EdDSA || nparam == 1)
                 {
-                  memcpy (buf, s, n);
-                  buf += n;
-                }
-              else if (nparam > 1)
-                {
-                  buf += _ksba_ber_encode_tl (buf, TYPE_INTEGER,
-                                              CLASS_UNIVERSAL, 0, n);
                   memcpy (buf, s, n);
                   buf += n;
                 }
               else
                 {
-                  if (n > 1 && !*s)
-                    { /* Remove leading zero byte, which must not be
-                         included in the bitstring. */
-                      s++;
-                      n--;
-                    }
+                  buf += _ksba_ber_encode_tl (buf, TYPE_INTEGER,
+                                              CLASS_UNIVERSAL, 0, n);
                   memcpy (buf, s, n);
                   buf += n;
                 }
