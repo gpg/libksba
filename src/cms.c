@@ -73,6 +73,8 @@ static struct {
   {  "1.2.840.113549.1.7.6", KSBA_CT_ENCRYPTED_DATA,
      ct_parse_encrypted_data, ct_build_encrypted_data },
   {  "1.2.840.113549.1.9.16.1.2", KSBA_CT_AUTH_DATA   },
+  {  "1.3.6.1.4.1.311.2.1.4", KSBA_CT_SPC_IND_DATA_CTX,
+     ct_parse_data   , ct_build_data                  },
   { NULL }
 };
 
@@ -1289,7 +1291,7 @@ ksba_cms_hash_signed_attrs (ksba_cms_t cms, int idx)
  * ksba_cms_set_content_type:
  * @cms: A CMS object
  * @what: 0 for content type, 1 for inner content type
- * @type: Tyep constant
+ * @type: Type constant
  *
  * Set the content type used for build operations.  This should be the
  * first operation before starting to create a CMS message.

@@ -1,6 +1,6 @@
 # configure.ac - for libksba
 # Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-#               2010, 2011, 2012, 2018  g10 Code GmbH
+#               2010, 2011, 2012, 2018, 2019  g10 Code GmbH
 #
 # This file is part of KSBA
 #
@@ -29,8 +29,8 @@ min_automake_version="1.14"
 # for the LT versions.
 m4_define([mym4_package],[libksba])
 m4_define([mym4_major], [1])
-m4_define([mym4_minor], [3])
-m4_define([mym4_micro], [6])
+m4_define([mym4_minor], [4])
+m4_define([mym4_micro], [0])
 
 # Below is m4 magic to extract and compute the git revision number,
 # the decimalized short revision number, a beta version string and a

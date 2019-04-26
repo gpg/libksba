@@ -94,6 +94,7 @@ one_file (const char *fname)
     case KSBA_CT_DIGESTED_DATA:  s = "digested data"; break;
     case KSBA_CT_ENCRYPTED_DATA: s = "encrypted data"; break;
     case KSBA_CT_AUTH_DATA:      s = "auth data"; break;
+    case KSBA_CT_SPC_IND_DATA_CTX:s = "spc indirect data context"; break;
     default:                     s = "unknown"; break;
     }
   printf ("identified as: %s\n", s);
