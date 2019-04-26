@@ -223,7 +223,7 @@ static const struct algo_table_s enc_algo_table[] = {
 
 
 /* This tables maps names of ECC curves names to OIDs.  A similar
-   table is used by lib gcrypt.  */
+   table is used by Libgcrypt.  */
 static const struct
 {
   const char *oid;

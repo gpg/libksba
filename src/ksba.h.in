@@ -1,6 +1,6 @@
 /* ksba.h - X.509 library used by GnuPG
  * Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2010, 2011
- *               2012, 2013, 2104, 2015 g10 Code GmbH
+ *               2012, 2013, 2104, 2015, 2019 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -42,6 +42,16 @@ extern "C" {
 #endif
 #endif
 
+/* The version of this header should match the one of the library.  Do
+ * not use this symbol in your application; use assuan_check_version
+ * instead.  */
+#define KSBA_VERSION "@VERSION@"
+
+/* The version number of this header.  It may be used to handle minor
+ * API incompatibilities.  */
+#define KSBA_VERSION_NUMBER @VERSION_NUMBER@
+
+
 
 /* Check for compiler features.  */
 #ifdef __GNUC__
@@ -69,7 +79,8 @@ typedef enum
     KSBA_CT_DIGESTED_DATA = 4,
     KSBA_CT_ENCRYPTED_DATA = 5,
     KSBA_CT_AUTH_DATA = 6,
-    KSBA_CT_PKCS12 = 7
+    KSBA_CT_PKCS12 = 7,
+    KSBA_CT_SPC_IND_DATA_CTX = 8
   }
 ksba_content_type_t;
 typedef ksba_content_type_t KsbaContentType _KSBA_DEPRECATED;

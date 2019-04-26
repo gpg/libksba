@@ -62,7 +62,7 @@ NEED_GPG_ERROR_VERSION=1.8
 
 
 AC_CONFIG_AUX_DIR([build-aux])
-AC_CONFIG_SRCDIR([src/ksba.h])
+AC_CONFIG_SRCDIR([src/ksba.h.in])
 AM_INIT_AUTOMAKE([serial-tests dist-bzip2 no-dist-gzip])
 AM_CONFIG_HEADER(config.h)
 AC_CONFIG_MACRO_DIR([m4])
@@ -116,6 +116,10 @@ AM_MAINTAINER_MODE
 AC_SUBST(LIBKSBA_LT_CURRENT)
 AC_SUBST(LIBKSBA_LT_AGE)
 AC_SUBST(LIBKSBA_LT_REVISION)
+
+VERSION_NUMBER=m4_esyscmd(printf "0x%02x%02x%02x" mym4_major \
+                          mym4_minor mym4_micro)
+AC_SUBST(VERSION_NUMBER)
 
 
 AH_TOP([
@@ -463,6 +467,7 @@ Makefile
 m4/Makefile
 gl/Makefile
 src/Makefile
+src/ksba.h
 src/ksba-config
 src/ksba.pc
 src/versioninfo.rc
