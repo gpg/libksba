@@ -378,6 +378,30 @@ Signature ::= BIT STRING
 
 -------------------------------------------------------------------
 
+-- Directory Information Framework (X.501)
+--        Name
+--           FROM InformationFramework { joint-iso-itu-t ds(5) modules(1)
+--                informationFramework(1) 3 }
+
+Name ::= CHOICE {
+  rdnSequence RDNSequence
+}
+
+RDNSequence ::= SEQUENCE OF RelativeDistinguishedName
+
+RelativeDistinguishedName ::= SET OF AttributeTypeAndValue
+
+AttributeTypeAndValue ::= SEQUENCE {
+  type    AttributeType,
+  value   AttributeValue
+}
+
+AttributeType ::= OBJECT IDENTIFIER
+
+AttributeValue ::= ANY
+
+-------------------------------------------------------------------
+
 -- Directory Authentication Framework (X.509)
 --        AlgorithmIdentifier, Certificate,
 --        CertificateList, CertificateSerialNumber
