@@ -757,7 +757,7 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
         return gpg_error (GPG_ERR_ENOMEM);
 
       err = create_and_run_decoder (cms->reader,
-                                    "CryptographicMessageSyntax.SignerInfo",
+                                    "CryptographicMessageSyntax2004.SignerInfo",
                                     0,
                                     &si->root, &si->image, &si->imagelen);
       /* The signerInfo might be an empty set in the case of a certs-only
@@ -881,7 +881,7 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
 
           err = create_and_run_decoder
             (cms->reader,
-             "CryptographicMessageSyntax.KeyTransRecipientInfo",
+             "CryptographicMessageSyntax2004.KeyTransRecipientInfo",
              BER_DECODER_FLAG_FAST_STOP,
              &vt->root, &vt->image, &vt->imagelen);
           if (err)
@@ -907,7 +907,7 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
 
           err = create_and_run_decoder
             (cms->reader,
-             "CryptographicMessageSyntax.KeyTransRecipientInfo",
+             "CryptographicMessageSyntax2004.KeyTransRecipientInfo",
              0,
              &vt->root, &vt->image, &vt->imagelen);
           if (err)

@@ -2432,7 +2432,7 @@ build_signed_data_attributes (ksba_cms_t cms)
 
       /* Include the pretty important message digest. */
       attr = _ksba_asn_expand_tree (cms_tree->parse_tree,
-                                    "CryptographicMessageSyntax.Attribute");
+                                    "CryptographicMessageSyntax2004.Attribute");
       if (!attr)
         {
 	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
@@ -2466,7 +2466,7 @@ build_signed_data_attributes (ksba_cms_t cms)
 
       /* Include the content-type attribute. */
       attr = _ksba_asn_expand_tree (cms_tree->parse_tree,
-                                    "CryptographicMessageSyntax.Attribute");
+                                    "CryptographicMessageSyntax2004.Attribute");
       if (!attr)
         {
 	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
@@ -2503,7 +2503,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       if (*certlist->signing_time)
         {
           attr = _ksba_asn_expand_tree (cms_tree->parse_tree,
-                                     "CryptographicMessageSyntax.Attribute");
+                                     "CryptographicMessageSyntax2004.Attribute");
           if (!attr)
             {
 	      err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
@@ -2542,7 +2542,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       if (cms->capability_list && !signer)
         {
           attr = _ksba_asn_expand_tree (cms_tree->parse_tree,
-                                    "CryptographicMessageSyntax.Attribute");
+                                    "CryptographicMessageSyntax2004.Attribute");
           if (!attr)
             {
 	      err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
@@ -2584,7 +2584,7 @@ build_signed_data_attributes (ksba_cms_t cms)
       /* Now copy them to an SignerInfo tree.  This tree is not
          complete but suitable for ksba_cms_hash_signed_attributes() */
       root = _ksba_asn_expand_tree (cms_tree->parse_tree,
-                                    "CryptographicMessageSyntax.SignerInfo");
+                                    "CryptographicMessageSyntax2004.SignerInfo");
       n = _ksba_asn_find_node (root, "SignerInfo.signedAttrs");
       if (!n || !n->down)
         {
@@ -2712,7 +2712,7 @@ build_signed_data_rest (ksba_cms_t cms)
 	}
 
       root = _ksba_asn_expand_tree (cms_tree->parse_tree,
-                                    "CryptographicMessageSyntax.SignerInfo");
+                                    "CryptographicMessageSyntax2004.SignerInfo");
 
       /* We store a version of 1 because we use the issuerAndSerialNumber */
       n = _ksba_asn_find_node (root, "SignerInfo.version");
@@ -3047,7 +3047,7 @@ build_enveloped_data_header (ksba_cms_t cms)
         }
 
       root = _ksba_asn_expand_tree (cms_tree->parse_tree,
-                                "CryptographicMessageSyntax.RecipientInfo");
+                                "CryptographicMessageSyntax2004.RecipientInfo");
 
       /* We store a version of 0 because we are only allowed to use
          the issuerAndSerialNumber for SPHINX */
