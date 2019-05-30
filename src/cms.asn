@@ -369,6 +369,29 @@ ExtendedCertificateInfo ::= SEQUENCE {
 Signature ::= BIT STRING
 
 -------------------------------------------------------------------
+
+-- Directory Authentication Framework (X.509)
+--        AlgorithmIdentifier, AttributeCertificate, Certificate,
+--        CertificateList, CertificateSerialNumber
+--           FROM AuthenticationFramework { joint-iso-itu-t ds(5)
+--                module(1) authenticationFramework(7) 3 } ;
+
+AlgorithmIdentifier ::= SEQUENCE {
+  algorithm    OBJECT IDENTIFIER,
+  parameters   ANY DEFINED BY algorithm OPTIONAL
+}
+
+-- Note: AttributeCertificate is not needed
+
+-- We handle a certificate by utilizing our ksba_cert_ functions
+Certificate ::= ANY
+
+-- Likewise
+CertificateList ::= ANY
+
+CertificateSerialNumber ::= INTEGER
+
+-------------------------------------------------------------------
 -- AttributeCertificateVersion1
 --     { iso(1) member-body(2) us(840) rsadsi(113549)
 --       pkcs(1) pkcs-9(9) smime(16) modules(0) v1AttrCert(15) }
