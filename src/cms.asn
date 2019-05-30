@@ -1,12 +1,20 @@
 -- cms.asn - CryptographicMessageSyntax ASN.1 Module
 -----------------------------------------------------------------------
 --
--- This module is based on the one in section 12 of RFC 5652 written by:
+-- This module is based on:
+--
+-- * The module in section 12 of RFC 5652 written by:
 --
 --     Russell Housley  <housley@vigilsec.com>
 --
--- Copyright (c) 2009 IETF Trust and the persons identified as authors of
--- the code.  All rights reserved.
+-- * The module in appendix B of RFC 5755 written by:
+--
+--     Sean Turner  <turners@ieca.com>
+--     Russ Housley  <housley@vigilsec.com>
+--     Stephen Farrell  <stephen.farrell@cs.tcd.ie>
+--
+-- Copyright (c) 2009, 2010 IETF Trust and the persons identified as
+-- authors of the code.  All rights reserved.
 --
 -- Redistribution and use in source and binary forms, with or without
 -- modification, are permitted provided that the following conditions are
@@ -371,7 +379,7 @@ Signature ::= BIT STRING
 -------------------------------------------------------------------
 
 -- Directory Authentication Framework (X.509)
---        AlgorithmIdentifier, AttributeCertificate, Certificate,
+--        AlgorithmIdentifier, Certificate,
 --        CertificateList, CertificateSerialNumber
 --           FROM AuthenticationFramework { joint-iso-itu-t ds(5)
 --                module(1) authenticationFramework(7) 3 } ;
@@ -381,8 +389,6 @@ AlgorithmIdentifier ::= SEQUENCE {
   parameters   ANY DEFINED BY algorithm OPTIONAL
 }
 
--- Note: AttributeCertificate is not needed
-
 -- We handle a certificate by utilizing our ksba_cert_ functions
 Certificate ::= ANY
 
@@ -390,6 +396,83 @@ Certificate ::= ANY
 CertificateList ::= ANY
 
 CertificateSerialNumber ::= INTEGER
+
+-------------------------------------------------------------------
+-- RFC 3281 is obsoleted by RFC 5755
+--
+-- PKIXAttributeCertificate-2008 { iso(1) identified-organization(3)
+--   dod(6) internet(1) security(5) mechanisms(5) pkix(7) id-mod(0)
+--   id-mod-attribute-cert-v2(61) }
+--
+
+AttributeCertificate ::= SEQUENCE {
+  acinfo               AttributeCertificateInfo,
+  signatureAlgorithm   AlgorithmIdentifier,
+  signatureValue       BIT STRING
+}
+
+AttributeCertificateInfo ::= SEQUENCE {
+  version                 AttCertVersion, -- version is v2
+  holder                  Holder,
+  issuer                  AttCertIssuer,
+  signature               AlgorithmIdentifier,
+  serialNumber            CertificateSerialNumber,
+  attrCertValidityPeriod  AttCertValidityPeriod,
+  attributes              SEQUENCE OF Attribute,
+  issuerUniqueID          UniqueIdentifier OPTIONAL,
+  extensions              Extensions OPTIONAL
+}
+
+AttCertVersion ::= INTEGER { v2(1) }
+
+Holder ::= SEQUENCE {
+  baseCertificateID   [0] IssuerSerial OPTIONAL,
+      -- the issuer and serial number of
+      -- the holder's Public Key Certificate
+  entityName          [1] GeneralNames OPTIONAL,
+      -- the name of the claimant or role
+  objectDigestInfo    [2] ObjectDigestInfo OPTIONAL
+      -- used to directly authenticate the holder,
+      -- for example, an executable
+}
+
+ObjectDigestInfo ::= SEQUENCE {
+  digestedObjectType  ENUMERATED {
+    publicKey            (0),
+    publicKeyCert        (1),
+    otherObjectTypes     (2) },
+  -- otherObjectTypes MUST NOT
+  -- be used in this profile
+  otherObjectTypeID   OBJECT IDENTIFIER OPTIONAL,
+  digestAlgorithm     AlgorithmIdentifier,
+  objectDigest        BIT STRING
+}
+
+AttCertIssuer ::= CHOICE {
+  v1Form   GeneralNames,  -- MUST NOT be used in this
+                          -- profile
+  v2Form   [0] V2Form     -- v2 only
+}
+
+V2Form ::= SEQUENCE {
+  issuerName            GeneralNames  OPTIONAL,
+  baseCertificateID     [0] IssuerSerial  OPTIONAL,
+  objectDigestInfo      [1] ObjectDigestInfo  OPTIONAL
+    -- issuerName MUST be present in this profile
+    -- baseCertificateID and objectDigestInfo MUST NOT
+    -- be present in this profile
+}
+
+IssuerSerial  ::=  SEQUENCE {
+  issuer         GeneralNames,
+  serial         CertificateSerialNumber,
+  issuerUID      UniqueIdentifier OPTIONAL
+}
+
+AttCertValidityPeriod  ::= SEQUENCE {
+  notBeforeTime  GeneralizedTime,
+  notAfterTime   GeneralizedTime
+}
 
 -------------------------------------------------------------------
 -- AttributeCertificateVersion1

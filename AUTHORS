@@ -65,7 +65,7 @@ under the following terms (GPLv3):
  | GNU General Public License for more details.
 
 The ASN.1 definition for CMS (src/cms.asn) is based on a specification
-(RFC 5652) published under the following terms:
+(RFC 5652 and RFC 5755) published under the following terms:
 
  | Copyright (c) 2009 IETF Trust and the persons identified as the
  | document authors.  All rights reserved.
@@ -96,12 +96,20 @@ Since it src/cms.asn is extracted from the document, it includes the Simplified
 BSD License text as described in Section 4.e of the Trust Leagal Provisions
 (TLP 3.0).
 
- | This module is based on the one in section 12 of RFC 5652 written by:
+ | This module is based on:
+ |
+ | * The module in section 12 of RFC 5652 written by:
  |
  |     Russell Housley  <housley@vigilsec.com>
  |
- | Copyright (c) 2009 IETF Trust and the persons identified as authors of
- | the code.  All rights reserved.
+ | * The module in appendix B of RFC 5755 written by:
+ |
+ |     Sean Turner  <turners@ieca.com>
+ |     Russ Housley  <housley@vigilsec.com>
+ |     Stephen Farrell  <stephen.farrell@cs.tcd.ie>
+ |
+ | Copyright (c) 2009, 2010 IETF Trust and the persons identified as
+ | authors of the code.  All rights reserved.
  |
  | Redistribution and use in source and binary forms, with or without
  | modification, are permitted provided that the following conditions are
