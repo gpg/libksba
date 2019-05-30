@@ -63,3 +63,71 @@ under the following terms (GPLv3):
  | but WITHOUT ANY WARRANTY; without even the implied warranty of
  | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  | GNU General Public License for more details.
+
+The ASN.1 definition for CMS (src/cms.asn) is based on a specification
+(RFC 5652) published under the following terms:
+
+ | Copyright (c) 2009 IETF Trust and the persons identified as the
+ | document authors.  All rights reserved.
+ |
+ | This document is subject to BCP 78 and the IETF Trust's Legal
+ | Provisions Relating to IETF Documents
+ | (http://trustee.ietf.org/license-info) in effect on the date of
+ | publication of this document.  Please review these documents
+ | carefully, as they describe your rights and restrictions with respect
+ | to this document.  Code Components extracted from this document must
+ | include Simplified BSD License text as described in Section 4.e of
+ | the Trust Legal Provisions and are provided without warranty as
+ | described in the BSD License.
+ |
+ | This document may contain material from IETF Documents or IETF
+ | Contributions published or made publicly available before November
+ | 10, 2008.  The person(s) controlling the copyright in some of this
+ | material may not have granted the IETF Trust the right to allow
+ | modifications of such material outside the IETF Standards Process.
+ | Without obtaining an adequate license from the person(s) controlling
+ | the copyright in such materials, this document may not be modified
+ | outside the IETF Standards Process, and derivative works of it may
+ | not be created outside the IETF Standards Process, except to format
+ | it for publication as an RFC or to translate it into languages other
+ | than English.
+
+Since it src/cms.asn is extracted from the document, it includes the Simplified
+BSD License text as described in Section 4.e of the Trust Leagal Provisions
+(TLP 3.0).
+
+ | This module is based on the one in section 12 of RFC 5652 written by:
+ |
+ |     Russell Housley  <housley@vigilsec.com>
+ |
+ | Copyright (c) 2009 IETF Trust and the persons identified as authors of
+ | the code.  All rights reserved.
+ |
+ | Redistribution and use in source and binary forms, with or without
+ | modification, are permitted provided that the following conditions are
+ | met:
+ |
+ |     * Redistributions of source code must retain the above copyright
+ |       notice, this list of conditions and the following disclaimer.
+ |
+ |     * Redistributions in binary form must reproduce the above copyright
+ |       notice, this list of conditions and the following disclaimer in
+ |       the documentation and/or other materials provided with the
+ |       distribution.
+ |
+ |     * Neither the name of Internet Society, IETF or IETF Trust, nor the
+ |       names of specific contributors, may be used to endorse or promote
+ |       products derived from this software without specific prior written
+ |       permission.
+ |
+ | THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ | IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ | TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ | PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ | OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ | EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ | PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ | PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ | LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ | NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ | SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
