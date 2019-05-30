@@ -554,4 +554,10 @@ AttributeCertificateInfoV1 ::= SEQUENCE {
 
 AttCertVersionV1 ::= INTEGER { v1(0) }
 
+-------------------------------------------------------------------
+-- FIXME (from RFC 5250?)
+Extensions ::= ANY
+UniqueIdentifier ::= ANY
+GeneralNames ::= ANY
+
 END -- of CryptographicMessageSyntax2004
