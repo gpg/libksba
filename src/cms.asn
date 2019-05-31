@@ -13,6 +13,11 @@
 --     Russ Housley  <housley@vigilsec.com>
 --     Stephen Farrell  <stephen.farrell@cs.tcd.ie>
 --
+-- * The module in section 3 of RFC 5911 written by:
+--
+--     Paul Hoffman  <paul.hoffman@vpnc.org>
+--     Jim Schaad  <jimsch@exmsft.com>
+--
 -- Copyright (c) 2009, 2010 IETF Trust and the persons identified as
 -- authors of the code.  All rights reserved.
 --
@@ -422,7 +427,7 @@ CertificateList ::= ANY
 CertificateSerialNumber ::= INTEGER
 
 -------------------------------------------------------------------
--- RFC 3281 is obsoleted by RFC 5755
+-- From appendix B of RFC 5755 (RFC 3281 is obsoleted by RFC 5755)
 --
 -- PKIXAttributeCertificate-2008 { iso(1) identified-organization(3)
 --   dod(6) internet(1) security(5) mechanisms(5) pkix(7) id-mod(0)
@@ -553,6 +558,59 @@ AttributeCertificateInfoV1 ::= SEQUENCE {
   extensions Extensions OPTIONAL }
 
 AttCertVersionV1 ::= INTEGER { v1(0) }
+
+-------------------------------------------------------------------
+-- From section 3 of RFC 5911
+--
+-- CryptographicMessageSyntaxAlgorithms-2009
+--     { iso(1) member-body(2) us(840) rsadsi(113549) pkcs(1) pkcs-9(9)
+--     smime(16) modules(0) id-mod-cmsalg-2001-02(37) }
+--
+
+-- Algorithm Identifiers
+
+-- rsaEncryption OBJECT IDENTIFIER ::= { iso(1) member-body(2)
+--    us(840) rsadsi(113549) pkcs(1) pkcs-1(1) 1 }
+
+id-alg-ESDH OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840)
+   rsadsi(113549) pkcs(1) pkcs-9(9) smime(16) alg(3) 5 }
+
+id-alg-SSDH OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840)
+   rsadsi(113549) pkcs(1) pkcs-9(9) smime(16) alg(3) 10 }
+
+id-alg-CMS3DESwrap OBJECT IDENTIFIER ::= { iso(1) member-body(2)
+   us(840) rsadsi(113549) pkcs(1) pkcs-9(9) smime(16) alg(3) 6 }
+
+id-alg-CMSRC2wrap OBJECT IDENTIFIER ::= { iso(1) member-body(2)
+   us(840) rsadsi(113549) pkcs(1) pkcs-9(9) smime(16) alg(3) 7 }
+
+des-ede3-cbc OBJECT IDENTIFIER ::= { iso(1) member-body(2)
+   us(840) rsadsi(113549) encryptionAlgorithm(3) 7 }
+
+rc2-cbc OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840)
+   rsadsi(113549) encryptionAlgorithm(3) 2 }
+
+hMAC-SHA1 OBJECT IDENTIFIER ::= { iso(1) identified-organization(3)
+   dod(6) internet(1) security(5) mechanisms(5) 8 1 2 }
+
+id-PBKDF2 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840)
+   rsadsi(113549) pkcs(1) pkcs-5(5) 12 }
+
+-- Algorithm Identifier Parameter Types
+
+KeyWrapAlgorithm ::=
+    AlgorithmIdentifier {KEY-WRAP, {KeyWrapAlgs }}
+
+RC2wrapParameter ::= RC2ParameterVersion
+RC2ParameterVersion ::= INTEGER
+
+CBCParameter ::= IV
+
+IV ::= OCTET STRING  -- exactly 8 octets
+
+RC2CBCParameter ::= SEQUENCE {
+    rc2ParameterVersion INTEGER (1..256),
+    iv OCTET STRING  }  -- exactly 8 octets
 
 -------------------------------------------------------------------
 -- FIXME (from RFC 5250?)
