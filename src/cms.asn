@@ -629,7 +629,7 @@ dhpublicnumber OBJECT IDENTIFIER ::= {
     iso(1) member-body(2) us(840) ansi-x942(10046)
     number-type(2) 1 }
 
--- FIXME (from RFC 5250?)
+-- FIXME (from RFC 5280?)
 Extensions ::= ANY
 UniqueIdentifier ::= ANY
 GeneralNames ::= ANY
