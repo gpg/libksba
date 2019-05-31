@@ -616,7 +616,7 @@ RC2CBCParameter ::= SEQUENCE {
     rc2ParameterVersion INTEGER (1..256),
     iv OCTET STRING  }  -- exactly 8 octets
 
-dh-public-number OBJECT IDENTIFIER ::= dhpublicnumber
+dh-public-number ::= dhpublicnumber
 
 -------------------------------------------------------------------
 -- From section 6 of RFC 5912 (page 26)
