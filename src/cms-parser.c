@@ -491,7 +491,7 @@ parse_cms_version (ksba_reader_t reader, int *r_version,
      digestAlgorithms SET OF AlgorithmIdentifier,
      encapContentInfo EncapsulatedContentInfo,
      certificates [0] IMPLICIT CertificateSet OPTIONAL,
-     crls [1] IMPLICIT CertificateRevocationLists OPTIONAL,
+     crls [1] IMPLICIT RevocationInfoChoices OPTIONAL,
      signerInfos SignerInfos }
 
    AlgorithmIdentifier ::= SEQUENCE {
@@ -802,7 +802,7 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
 
    OriginatorInfo ::= SEQUENCE {
      certs [0] IMPLICIT CertificateSet OPTIONAL,
-     crls [1] IMPLICIT CertificateRevocationLists OPTIONAL }
+     crls [1] IMPLICIT RevocationInfoChoices OPTIONAL }
 
    RecipientInfos ::= SET OF RecipientInfo
 
