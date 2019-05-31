@@ -598,8 +598,7 @@ id-PBKDF2 OBJECT IDENTIFIER ::= { iso(1) member-body(2) us(840)
 
 -- Algorithm Identifier Parameter Types
 
-KeyWrapAlgorithm ::=
-    AlgorithmIdentifier {KEY-WRAP, {KeyWrapAlgs }}
+KeyWrapAlgorithm ::=  AlgorithmIdentifier
 
 RC2wrapParameter ::= RC2ParameterVersion
 RC2ParameterVersion ::= INTEGER
