@@ -123,7 +123,8 @@ ber_dump_CFLAGS = $(AM_CFLAGS)
 asn1-parse.c : asn1-func.h gen-help.h
 
 asn1-gentables: asn1-gentables.c asn1-parse.c asn1-func.c gen-help.c gen-help.h
-	$(CC_FOR_BUILD) -I$(srcdir) -DBUILD_GENTOOLS -o $@ \
+	$(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(LDFLAGS_FOR_BUILD) \
+	        $(CPPFLAGS_FOR_BUILD) -I$(srcdir) -DBUILD_GENTOOLS -o $@ \
 		$(srcdir)/asn1-gentables.c \
                 `test -f 'asn1-parse.c' || echo '$(srcdir)/'`asn1-parse.c  \
                 $(srcdir)/asn1-func.c      \
