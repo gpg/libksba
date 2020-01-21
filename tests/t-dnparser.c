@@ -136,6 +136,7 @@ main (int argc, char **argv)
   unsigned char *buf;
   size_t len;
   gpg_error_t err;
+  char *string;
 
   if (argc == 2 && !strcmp (argv[1], "--to-str") )
     { /* Read the DER encoded DN from stdin write the string to stdout */
@@ -143,8 +144,10 @@ main (int argc, char **argv)
       if (!feof (stdin))
         fail ("read error or input too large");
 
-      fail ("not yet implemented");
-
+      err = ksba_dn_der2str (inputbuf, len, &string);
+      fail_if_err (err);
+      fputs (string, stdout);
+      ksba_free (string);
     }
   else if (argc == 2 && !strcmp (argv[1], "--to-der") )
     { /* Read the String from stdin write the DER encoding to stdout */
