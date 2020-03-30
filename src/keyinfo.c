@@ -44,6 +44,7 @@
 #include "shared.h"
 #include "convert.h"
 #include "ber-help.h"
+#include "sexp-parse.h"
 
 
 /* Constants used for the public key algorithms.  */
@@ -1025,6 +1026,14 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
       s++;
     }
   s++;
+  /* Allow for optional elements.  */
+  if (*s == '(')
+    {
+      int depth = 1;
+      err = sskip (&s, &depth);
+      if (err)
+        return err;
+    }
   /* We need another closing parenthesis. */
   if ( *s != ')' )
     return gpg_error (GPG_ERR_INV_SEXP);
@@ -1400,6 +1409,14 @@ _ksba_algoinfo_from_sexp (ksba_const_sexp_t sexp,
       s++;
     }
   s++;
+  /* Allow for optional elements.  */
+  if (*s == '(')
+    {
+      int depth = 1;
+      err = sskip (&s, &depth);
+      if (err)
+        return err;
+    }
   /* We need another closing parenthesis. */
   if ( *s != ')' )
     return gpg_error (GPG_ERR_INV_SEXP);
