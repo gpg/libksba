@@ -52,7 +52,11 @@ typedef enum
   {
     PKALGO_RSA,
     PKALGO_DSA,
-    PKALGO_ECC
+    PKALGO_ECC,
+    PKALGO_X25519,
+    PKALGO_X448,
+    PKALGO_ED25519,
+    PKALGO_ED448,
   }
 pkalgo_t;
 
@@ -99,6 +103,26 @@ static const struct algo_table_s pk_algo_table[] = {
     "1.2.840.10045.2.1", /*  ecPublicKey */
     "\x2a\x86\x48\xce\x3d\x02\x01", 7,
     1, PKALGO_ECC, "ecc", "q", "\x80" },
+
+  { /* iso.identified-organization.thawte.110 */
+    "1.3.101.110", /* X25519 */
+    "\x2b\x65\x6e", 3,
+    1, PKALGO_X25519, "ecc", "q", "\x80" },
+
+  { /* iso.identified-organization.thawte.111 */
+    "1.3.101.111", /* X448 */
+    "\x2b\x65\x6f", 3,
+    1, PKALGO_X448, "ecc", "q", "\x80" },
+
+  { /* iso.identified-organization.thawte.112 */
+    "1.3.101.112", /* Ed25519 */
+    "\x2b\x65\x70", 3,
+    1, PKALGO_ED25519, "ecc", "q", "\x80" },
+
+  { /* iso.identified-organization.thawte.113 */
+    "1.3.101.113", /* Ed448 */
+    "\x2b\x65\x71", 3,
+    1, PKALGO_ED448, "ecc", "q", "\x80" },
 
   {NULL}
 };
@@ -210,6 +234,16 @@ static const struct algo_table_s sig_algo_table[] = {
     "1.3.36.3.4.3.2.2",     /* sigS_ISO9796-2rndWithrsa_ripemd160 */
     "\x2B\x24\x03\x04\x03\x02\x02", 7,
     0, PKALGO_RSA, "rsa", "s", "\x82", NULL, NULL, "rmd160" },
+
+
+  { /* iso.identified-organization.thawte.112 */
+    "1.3.101.112", /* Ed25519 */
+    "\x2b\x65\x70", 3,
+    1, PKALGO_ED25519, "eddsa", "-rs", "\x80", NULL, NULL, NULL },
+  { /* iso.identified-organization.thawte.113 */
+    "1.3.101.113", /* Ed448 */
+    "\x2b\x65\x71", 3,
+    1, PKALGO_ED448, "eddsa", "-rs", "\x80", NULL, NULL, NULL },
 
   {NULL}
 };
@@ -1047,7 +1081,30 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
     {
     case PKALGO_RSA: parmdesc = "ne"; break;
     case PKALGO_DSA: parmdesc = "y" ; algoparmdesc = "pqg"; break;
-    case PKALGO_ECC: parmdesc = "Cq"; break;
+    case PKALGO_ECC:
+      parmdesc = "Cq";
+      for (i = 0; i < parmidx; i++)
+        if (parm[i].namelen == 5 && !memcmp (parm[i].name,"curve",5))
+          {
+            /* FIXME: Access to pk_algo_table with constant is ugly.  */
+            if (parm[i].valuelen == 7 && !memcmp (parm[i].value, "Ed25519", 7))
+              {
+                pkalgo = PKALGO_ED25519;
+                parmdesc = "q";
+                oid = pk_algo_table[7].oid;
+                oidlen = pk_algo_table[7].oidlen;
+                break;
+              }
+            else if (parm[i].valuelen == 5 && !memcmp (parm[i].value, "Ed448", 5))
+              {
+                pkalgo = PKALGO_ED448;
+                parmdesc = "q";
+                oid = pk_algo_table[8].oid;
+                oidlen = pk_algo_table[8].oidlen;
+                break;
+              }
+          }
+      break;
     default: return gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
     }
 
@@ -1117,7 +1174,20 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
                                  parm[idxtbl[1]].valuelen);
       if (err)
         goto leave;
-
+    }
+  else if (pkalgo == PKALGO_ED25519 || pkalgo == PKALGO_ED448)
+    {
+      /* Write the bit string header and the number of unused bits. */
+      err = _ksba_ber_write_tl (writer, TYPE_BIT_STRING, CLASS_UNIVERSAL,
+                                0, parm[idxtbl[0]].valuelen + 1);
+      if (!err)
+        err = ksba_writer_write (writer, "", 1);
+      /* And the actual raw value.  */
+      if (!err)
+        err = ksba_writer_write (writer, parm[idxtbl[0]].value,
+                                 parm[idxtbl[0]].valuelen);
+      if (err)
+        goto leave;
     }
   else /* RSA and DSA */
     {
