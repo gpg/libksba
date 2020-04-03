@@ -56,7 +56,7 @@ typedef enum
     PKALGO_X25519,
     PKALGO_X448,
     PKALGO_ED25519,
-    PKALGO_ED448,
+    PKALGO_ED448
   }
 pkalgo_t;
 
