@@ -415,7 +415,11 @@ function is in general not expected to yield errors anyway.
 Figure out the the digest algorithm used for the signature and return
 its @acronym{OID} in dotted decimal format.  This function is most
 likely used to setup the hash context before calling
-@code{ksba_cert_hash}.
+@code{ksba_cert_hash}.  Note that in the case of RSASSA-PSS the
+returned value is the OID of rsaPSS (1.2.840.113549.1.1.10) and not
+the OID of the digest algorithm to be used.  In this case the digest
+algorithm needs to be extracted from the S-expression returned by
+@code{ksba_cert_get_sig_val}.
 
 The function returns @code{NULL} for an error; on success a constant
 string with the @acronym{OID} is returned.  This string is valid as long

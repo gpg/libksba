@@ -189,10 +189,13 @@ _ksba_ber_read_tl (ksba_reader_t reader, struct tag_info *ti)
   return 0;
 }
 
-/*
-   Parse the buffer at the address BUFFER which of SIZE and return
-   the tag and the length part from the TLV triplet.  Update BUFFER
-   and SIZE on success. */
+
+/* Parse the buffer at the address BUFFER which of SIZE and return the
+ * tag and the length part from the TLV triplet.  Update BUFFER and
+ * SIZE on success.  Note that this function will never return
+ * GPG_ERR_INV_OBJ so that this error code can be used by the parse_foo
+ * functions below to return an error for unexpected tags and the
+ * caller is able to backoff in that case.  */
 gpg_error_t
 _ksba_ber_parse_tl (unsigned char const **buffer, size_t *size,
                     struct tag_info *ti)
@@ -496,6 +499,9 @@ _ksba_parse_sequence (unsigned char const **buf, size_t *len,
 }
 
 
+/* Note that this function returns GPG_ERR_FALSE if the TLV is valid
+ * but the tag does not match.  The caller may thus check for this
+ * error code and compare against other tag values.  */
 gpg_error_t
 _ksba_parse_context_tag (unsigned char const **buf, size_t *len,
                          struct tag_info *ti, int tag)
@@ -505,11 +511,12 @@ _ksba_parse_context_tag (unsigned char const **buf, size_t *len,
   err = _ksba_ber_parse_tl (buf, len, ti);
   if (err)
     ;
-  else if (!(ti->class == CLASS_CONTEXT && ti->tag == tag
-	     && ti->is_constructed) )
+  else if (!(ti->class == CLASS_CONTEXT && ti->is_constructed))
     err = gpg_error (GPG_ERR_INV_OBJ);
   else if (ti->length > *len)
     err = gpg_error (GPG_ERR_BAD_BER);
+  else if (ti->tag != tag)
+    err = gpg_error (GPG_ERR_FALSE);
 
   return err;
 }

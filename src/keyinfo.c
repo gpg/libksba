@@ -65,7 +65,7 @@ struct algo_table_s {
   const char *oidstring;
   const unsigned char *oid;  /* NULL indicattes end of table */
   int                  oidlen;
-  int supported;
+  int supported;  /* Values > 1 are also used to indicate hacks.  */
   pkalgo_t pkalgo;
   const char *algo_string;
   const char *elem_string; /* parameter name or '-' */
@@ -75,6 +75,8 @@ struct algo_table_s {
   const char *digest_string; /* The digest algo if included in the OID. */
 };
 
+/* Special values for the supported field.  */
+#define SUPPORTED_RSAPSS 2
 
 
 static const struct algo_table_s pk_algo_table[] = {
@@ -87,7 +89,12 @@ static const struct algo_table_s pk_algo_table[] = {
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.7 */
     "1.2.840.113549.1.1.7", /* RSAES-OAEP */
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x07", 9,
-    0, PKALGO_RSA, "rsa", "-ne", "\x30\x02\x02"}, /* (patent problems) */
+    0, PKALGO_RSA, "rsa", "-ne", "\x30\x02\x02"},
+
+  { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.10 */
+    "1.2.840.113549.1.1.10", /* rsaPSS */
+    "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0a", 9,
+    SUPPORTED_RSAPSS, PKALGO_RSA, "rsa", "-ne", "\x30\x02\x02"},
 
   { /* */
     "2.5.8.1.1", /* rsa (ambiguous due to missing padding rules)*/
@@ -227,6 +234,11 @@ static const struct algo_table_s sig_algo_table[] = {
     "1.2.840.113549.1.1.13", /* sha512WithRSAEncryption */
     "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0d", 9,
     1, PKALGO_RSA, "rsa", "s", "\x82", NULL, NULL, "sha512" },
+
+  { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.10 */
+    "1.2.840.113549.1.1.10", /* rsaPSS */
+    "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0a", 9,
+    SUPPORTED_RSAPSS, PKALGO_RSA, "rsa", "s", "\x82", NULL, NULL, NULL},
 
   { /* TeleTrust signature scheme with RSA signature and DSI according
        to ISO/IEC 9796-2 with random number and RIPEMD-160.  I am not
@@ -436,11 +448,6 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
   /* der does now point to an oid of length LEN */
   *r_pos = der - start;
   *r_len = len;
-/*    { */
-/*      char *p = ksba_oid_to_str (der, len); */
-/*      printf ("algorithm: %s\n", p); */
-/*      xfree (p); */
-/*    } */
   der += len;
   derlen -= len;
   seqlen -= der - startseq;;
@@ -455,7 +462,7 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
       c = *der++; derlen--;
       if ( c == 0x05 )
         {
-          /*printf ("parameter: NULL \n"); the usual case */
+          /* gpgrt_log_debug ("%s: parameter: NULL \n", __func__); */
           if (!derlen)
             return gpg_error (GPG_ERR_INV_KEYINFO);
           c = *der++; derlen--;
@@ -674,6 +681,14 @@ static void
 put_stringbuf_sexp (struct stringbuf *sb, const char *text)
 {
   put_stringbuf_mem_sexp (sb, text, strlen (text));
+}
+
+static void
+put_stringbuf_uint (struct stringbuf *sb, unsigned int value)
+{
+  char buf[35];
+  snprintf (buf, sizeof buf, "%u", (unsigned int)value);
+  put_stringbuf_sexp (sb, buf);
 }
 
 
@@ -1192,7 +1207,7 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
   else /* RSA and DSA */
     {
       /* Calculate the size of the sequence value and the size of the
-         bit string value.  NOt ethat in case there is only one
+         bit string value.  Note that in case there is only one
          integer to write, no sequence is used.  */
       for (n=0, i=0; i < idxtbllen; i++ )
         {
@@ -1693,6 +1708,11 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
   const unsigned char *ctrl;
   const char *elem;
   struct stringbuf sb;
+  size_t parm_off, parm_len;
+  int parm_type;
+  char *pss_hash = NULL;
+  unsigned int salt_length = 0;
+  struct tag_info ti;
 
   /* FIXME: The entire function is very similar to keyinfo_to_sexp */
   *r_string = NULL;
@@ -1702,9 +1722,8 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
   else
     algo_table = enc_algo_table;
 
-
   err = get_algorithm (1, der, derlen, &nread, &off, &len, &is_bitstr,
-                       NULL, NULL, NULL);
+                       &parm_off, &parm_len, &parm_type);
   if (err)
     return err;
 
@@ -1715,10 +1734,99 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
            && !memcmp (der+off, algo_table[algoidx].oid, len))
         break;
     }
+
   if (!algo_table[algoidx].oid)
     return gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
   if (!algo_table[algoidx].supported)
     return gpg_error (GPG_ERR_UNSUPPORTED_ALGORITHM);
+
+  if (parm_type == TYPE_SEQUENCE
+      && algo_table[algoidx].supported == SUPPORTED_RSAPSS)
+    {
+      /* This is rsaPSS and we collect the parmeters.  We simplify
+       * this by assuming that pkcs1-MGF is used with an identical
+       * hash algorithm.  All other kinds of parameters are ignored.  */
+      const unsigned char *parmder = der + parm_off;
+      size_t parmderlen = parm_len;
+      const unsigned char *parmder_end;
+      char *tmpoid = NULL;
+
+      err = parse_sequence (&parmder, &parmderlen, &ti);
+      if (err)
+        return err;
+      parmder_end = parmder + ti.length;
+
+      /* Get the hash algo.  */
+      err = parse_context_tag (&parmder, &parmderlen, &ti, 0);
+      if (err)
+        goto unknown_parms;
+      err = parse_sequence (&parmder, &parmderlen, &ti);
+      if (err)
+        goto unknown_parms;
+      err = parse_object_id_into_str (&parmder, &parmderlen, &pss_hash);
+      if (err)
+        goto unknown_parms;
+
+      /* Check the MGF OID and that its hash algo matches. */
+      err = parse_context_tag (&parmder, &parmderlen, &ti, 1);
+      if (err)
+        goto unknown_parms;
+      err = parse_sequence (&parmder, &parmderlen, &ti);
+      if (err)
+        return err;
+      err = parse_object_id_into_str (&parmder, &parmderlen, &tmpoid);
+      if (err)
+        goto unknown_parms;
+      if (strcmp (tmpoid, "1.2.840.113549.1.1.8"))
+        goto unknown_parms;
+      err = parse_sequence (&parmder, &parmderlen, &ti);
+      if (err)
+        return err;
+      xfree (tmpoid);
+      err = parse_object_id_into_str (&parmder, &parmderlen, &tmpoid);
+      if (err)
+        goto unknown_parms;
+      if (strcmp (tmpoid, pss_hash))
+        goto unknown_parms;
+
+      /* Get the optional saltLength.  */
+      err = parse_context_tag (&parmder, &parmderlen, &ti, 2);
+      if (gpg_err_code (err) == GPG_ERR_INV_OBJ
+          || gpg_err_code (err) == GPG_ERR_FALSE)
+        {
+          parmder -= ti.nhdr;  /* backoff */
+          parmderlen += ti.nhdr;
+          salt_length = 10; /* Optional element - use default value */
+        }
+      else if (err)
+        goto unknown_parms;
+      else
+        {
+          err = parse_integer (&parmder, &parmderlen, &ti);
+          if (err)
+            return err;
+          for (salt_length=0; ti.length; ti.length--)
+            {
+              salt_length <<= 8;
+              salt_length |= (*parmder++) & 0xff;
+              parmderlen--;
+            }
+        }
+
+      if (parmder_end > parmder)
+        goto unknown_parms;  /* The sequence is larger than announced.  */
+
+      goto parms_ready;
+
+    unknown_parms:
+      xfree (pss_hash);
+      pss_hash = NULL;
+      err = 0;
+
+    parms_ready:
+      xfree (tmpoid);
+    }
+
 
   der += nread;
   derlen -= nread;
@@ -1784,12 +1892,22 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
       put_stringbuf_sexp (&sb, algo_table[algoidx].digest_string);
       put_stringbuf (&sb, ")");
     }
+  if (!mode && pss_hash)
+    {
+      put_stringbuf (&sb, "(9:hash-algo");
+      put_stringbuf_sexp (&sb, pss_hash);
+      put_stringbuf (&sb, ")");
+      put_stringbuf (&sb, "(11:salt-length");
+      put_stringbuf_uint (&sb, salt_length);
+      put_stringbuf (&sb, ")");
+    }
   put_stringbuf (&sb, ")");
 
   *r_string = get_stringbuf (&sb);
   if (!*r_string)
     return gpg_error (GPG_ERR_ENOMEM);
 
+  xfree (pss_hash);
   return 0;
 }
 

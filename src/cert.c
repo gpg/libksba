@@ -426,8 +426,11 @@ ksba_cert_hash (ksba_cert_t cert, int what,
  * ksba_cert_get_digest_algo:
  * @cert: Initialized certificate object
  *
- * Figure out the the digest algorithm used for the signature and
- * return its OID
+ * Figure out the digest algorithm used for the signature and return
+ * its OID.  Note that in the case of rsaPSS the returned value is the
+ * OID of rsaPSS (1.2.840.113549.1.1.10) and not the hash algorithm to
+ * use.  The hash algorithm needs to be extracted from the S-expression
+ * returned by ksba_cert_get_sig_val.
  *
  * This function is intended as a helper for the ksba_cert_hash().
  *
