@@ -64,4 +64,59 @@ size_t _ksba_ber_count_tl (unsigned long tag,
                            unsigned long length);
 
 
+static inline void
+parse_skip (unsigned char const **buf, size_t *len, struct tag_info *ti)
+{
+  if (ti->length)
+    {
+      assert (ti->length <= *len);
+      *len -= ti->length;
+      *buf += ti->length;
+    }
+}
+
+gpg_error_t _ksba_parse_sequence (unsigned char const **buf, size_t *len,
+                                  struct tag_info *ti);
+#define parse_sequence(buf,len,ti) \
+  _ksba_parse_sequence ((buf),(len),(ti))
+
+gpg_error_t _ksba_parse_context_tag (unsigned char const **buf, size_t *len,
+                                     struct tag_info *ti, int tag);
+#define parse_context_tag(buf,len,ti,tag) \
+  _ksba_parse_context_tag ((buf),(len),(ti),(tag))
+
+gpg_error_t _ksba_parse_enumerated (unsigned char const **buf, size_t *len,
+                                    struct tag_info *ti, size_t maxlen);
+#define parse_enumerated(buf,len,ti,maxlen) \
+  _ksba_parse_enumerated ((buf),(len),(ti),(maxlen))
+
+gpg_error_t _ksba_parse_integer (unsigned char const **buf, size_t *len,
+                                 struct tag_info *ti);
+#define parse_integer(buf,len,ti) \
+  _ksba_parse_integer ((buf),(len),(ti))
+
+gpg_error_t _ksba_parse_octet_string (unsigned char const **buf, size_t *len,
+                                      struct tag_info *ti);
+#define parse_octet_string(buf,len,ti) \
+  _ksba_parse_octet_string ((buf),(len),(ti))
+
+gpg_error_t _ksba_parse_optional_boolean (unsigned char const **buf,
+                                          size_t *len, int *r_bool);
+#define parse_optional_boolean(buf,len,r_bool) \
+  _ksba_parse_optional_boolean ((buf),(len),(r_bool))
+
+gpg_error_t _ksba_parse_object_id_into_str (unsigned char const **buf,
+                                            size_t *len, char **oid);
+#define parse_object_id_into_str(buf,len,r_oid) \
+  _ksba_parse_object_id_into_str ((buf),(len),(r_oid))
+
+
+gpg_error_t _ksba_parse_asntime_into_isotime (unsigned char const **buf,
+                                              size_t *len,
+                                              ksba_isotime_t isotime);
+#define parse_asntime_into_isotime(buf,len,isotime) \
+  _ksba_parse_asntime_into_isotime ((buf),(len),(isotime))
+
+
+
 #endif /*BER_HELP_H*/

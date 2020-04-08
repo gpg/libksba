@@ -116,7 +116,7 @@ libksba_la_SOURCES = \
 
 ber_dump_SOURCES = ber-dump.c \
                    ber-decoder.c ber-help.c reader.c writer.c asn1-parse.c \
-                   asn1-func.c oid.c util.c
+                   asn1-func.c oid.c time.c util.c
 ber_dump_LDADD = $(GPG_ERROR_LIBS) ../gl/libgnu.la
 ber_dump_CFLAGS = $(AM_CFLAGS)
 

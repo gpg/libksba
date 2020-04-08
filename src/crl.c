@@ -80,101 +80,6 @@ do_hash (ksba_crl_t crl, const void *buffer, size_t length)
 #define HASH(a,b) do_hash (crl, (a), (b))
 
 
-
-static  void
-parse_skip (unsigned char const **buf, size_t *len, struct tag_info *ti)
-{
-  if (ti->length)
-    {
-      assert (ti->length <= *len);
-      *len -= ti->length;
-      *buf += ti->length;
-    }
-}
-
-static gpg_error_t
-parse_sequence (unsigned char const **buf, size_t *len, struct tag_info *ti)
-{
-  gpg_error_t err;
-
-  err = _ksba_ber_parse_tl (buf, len, ti);
-  if (err)
-    ;
-  else if (!(ti->class == CLASS_UNIVERSAL && ti->tag == TYPE_SEQUENCE
-             && ti->is_constructed) )
-    err = gpg_error (GPG_ERR_INV_OBJ);
-  else if (ti->length > *len)
-    err = gpg_error (GPG_ERR_BAD_BER);
-  return err;
-}
-
-static gpg_error_t
-parse_integer (unsigned char const **buf, size_t *len, struct tag_info *ti)
-{
-  gpg_error_t err;
-
-  err = _ksba_ber_parse_tl (buf, len, ti);
-  if (err)
-     ;
-  else if (!(ti->class == CLASS_UNIVERSAL && ti->tag == TYPE_INTEGER
-             && !ti->is_constructed) )
-    err = gpg_error (GPG_ERR_INV_OBJ);
-  else if (!ti->length)
-    err = gpg_error (GPG_ERR_TOO_SHORT);
-  else if (ti->length > *len)
-    err = gpg_error (GPG_ERR_BAD_BER);
-
-  return err;
-}
-
-static gpg_error_t
-parse_octet_string (unsigned char const **buf, size_t *len, struct tag_info *ti)
-{
-  gpg_error_t err;
-
-  err= _ksba_ber_parse_tl (buf, len, ti);
-  if (err)
-    ;
-  else if (!(ti->class == CLASS_UNIVERSAL && ti->tag == TYPE_OCTET_STRING
-             && !ti->is_constructed) )
-    err = gpg_error (GPG_ERR_INV_OBJ);
-  else if (!ti->length)
-    err = gpg_error (GPG_ERR_TOO_SHORT);
-  else if (ti->length > *len)
-    err = gpg_error (GPG_ERR_BAD_BER);
-
-  return err;
-}
-
-static gpg_error_t
-parse_object_id_into_str (unsigned char const **buf, size_t *len, char **oid)
-{
-  struct tag_info ti;
-  gpg_error_t err;
-
-  *oid = NULL;
-  err = _ksba_ber_parse_tl (buf, len, &ti);
-  if (err)
-    ;
-  else if (!(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OBJECT_ID
-                && !ti.is_constructed) )
-    err = gpg_error (GPG_ERR_INV_OBJ);
-  else if (!ti.length)
-    err = gpg_error (GPG_ERR_TOO_SHORT);
-  else if (ti.length > *len)
-    err = gpg_error (GPG_ERR_BAD_BER);
-  else if (!(*oid = ksba_oid_to_str (*buf, ti.length)))
-    err = gpg_error_from_errno (errno);
-  else
-    {
-      *buf += ti.length;
-      *len -= ti.length;
-    }
-  return err;
-}
-
-
-
 
 /**
  * ksba_crl_new:
@@ -1078,33 +983,8 @@ parse_to_next_update (ksba_crl_t crl)
   return 0;
 }
 
+
 
-/* Parse an enumerated value.  Note that this code is duplication of
-   the one at ocsp.c.  */
-static gpg_error_t
-parse_enumerated (unsigned char const **buf, size_t *len, struct tag_info *ti,
-                  size_t maxlen)
-{
-  gpg_error_t err;
-
-  err = _ksba_ber_parse_tl (buf, len, ti);
-  if (err)
-     ;
-  else if (!(ti->class == CLASS_UNIVERSAL && ti->tag == TYPE_ENUMERATED
-             && !ti->is_constructed) )
-    err = gpg_error (GPG_ERR_INV_OBJ);
-  else if (!ti->length)
-    err = gpg_error (GPG_ERR_TOO_SHORT);
-  else if (maxlen && ti->length > maxlen)
-    err = gpg_error (GPG_ERR_TOO_LARGE);
-  else if (ti->length > *len)
-    err = gpg_error (GPG_ERR_BAD_BER);
-
-  return err;
-}
-
-
-
 /* Store an entry extension into the current item. */
 static gpg_error_t
 store_one_entry_extension (ksba_crl_t crl,
