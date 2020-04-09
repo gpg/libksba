@@ -45,7 +45,7 @@
 #include "convert.h"
 #include "ber-help.h"
 #include "sexp-parse.h"
-
+#include "stringbuf.h"
 
 /* Constants used for the public key algorithms.  */
 typedef enum
@@ -322,16 +322,6 @@ static const struct
     { NULL, NULL}
   };
 
-
-
-
-
-struct stringbuf {
-  size_t len;
-  size_t size;
-  char *buf;
-  int out_of_core;
-};
 
 
 #define TLV_LENGTH(prefix) do {         \
@@ -627,92 +617,8 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
 
 
 
-static void
-init_stringbuf (struct stringbuf *sb, int initiallen)
-{
-  sb->len = 0;
-  sb->size = initiallen;
-  sb->out_of_core = 0;
-  /* allocate one more, so that get_stringbuf can append a nul */
-  sb->buf = xtrymalloc (initiallen+1);
-  if (!sb->buf)
-      sb->out_of_core = 1;
-}
-
-static void
-put_stringbuf_mem (struct stringbuf *sb, const char *text, size_t n)
-{
-  if (sb->out_of_core)
-    return;
-
-  if (sb->len + n >= sb->size)
-    {
-      char *p;
-
-      sb->size += n + 100;
-      p = xtryrealloc (sb->buf, sb->size);
-      if ( !p)
-        {
-          sb->out_of_core = 1;
-          return;
-        }
-      sb->buf = p;
-    }
-  memcpy (sb->buf+sb->len, text, n);
-  sb->len += n;
-}
-
-static void
-put_stringbuf (struct stringbuf *sb, const char *text)
-{
-  put_stringbuf_mem (sb, text,strlen (text));
-}
-
-static void
-put_stringbuf_mem_sexp (struct stringbuf *sb, const char *text, size_t length)
-{
-  char buf[20];
-  sprintf (buf,"%u:", (unsigned int)length);
-  put_stringbuf (sb, buf);
-  put_stringbuf_mem (sb, text, length);
-}
-
-static void
-put_stringbuf_sexp (struct stringbuf *sb, const char *text)
-{
-  put_stringbuf_mem_sexp (sb, text, strlen (text));
-}
-
-static void
-put_stringbuf_uint (struct stringbuf *sb, unsigned int value)
-{
-  char buf[35];
-  snprintf (buf, sizeof buf, "%u", (unsigned int)value);
-  put_stringbuf_sexp (sb, buf);
-}
-
-
-static char *
-get_stringbuf (struct stringbuf *sb)
-{
-  char *p;
-
-  if (sb->out_of_core)
-    {
-      xfree (sb->buf); sb->buf = NULL;
-      return NULL;
-    }
-
-  sb->buf[sb->len] = 0;
-  p = sb->buf;
-  sb->buf = NULL;
-  sb->out_of_core = 1; /* make sure the caller does an init before reuse */
-  return p;
-}
-
-
 /* Assume that der is a buffer of length DERLEN with a DER encoded
- Asn.1 structure like this:
+   ASN.1 structure like this:
 
   keyInfo ::= SEQUENCE {
                  SEQUENCE {

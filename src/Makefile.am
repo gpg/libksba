@@ -109,7 +109,7 @@ libksba_la_SOURCES = \
 	certreq.c certreq.h \
 	ocsp.c ocsp.h \
 	keyinfo.c keyinfo.h \
-	oid.c name.c dn.c time.c convert.h \
+	oid.c name.c dn.c time.c convert.h stringbuf.h \
 	version.c util.c util.h shared.h \
 	sexp-parse.h \
 	asn1-tables.c

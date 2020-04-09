@@ -40,6 +40,8 @@
 #include "asn1-func.h"
 #include "ber-help.h"
 #include "ber-decoder.h"
+#include "stringbuf.h"
+
 
 static const struct {
   const char *name;
@@ -94,139 +96,6 @@ static unsigned char charclasses[128] = {
 };
 #undef N
 #undef P
-
-struct stringbuf {
-  size_t len;
-  size_t size;
-  char *buf;
-  int out_of_core;
-};
-
-
-
-static void
-init_stringbuf (struct stringbuf *sb, int initiallen)
-{
-  sb->len = 0;
-  sb->size = initiallen;
-  sb->out_of_core = 0;
-  /* allocate one more, so that get_stringbuf can append a nul */
-  sb->buf = xtrymalloc (initiallen+1);
-  if (!sb->buf)
-      sb->out_of_core = 1;
-}
-
-static void
-deinit_stringbuf (struct stringbuf *sb)
-{
-  xfree (sb->buf);
-  sb->buf = NULL;
-  sb->out_of_core = 1; /* make sure the caller does an init before reuse */
-}
-
-
-static void
-put_stringbuf (struct stringbuf *sb, const char *text)
-{
-  size_t n = strlen (text);
-
-  if (sb->out_of_core)
-    return;
-
-  if (sb->len + n >= sb->size)
-    {
-      char *p;
-
-      sb->size += n + 100;
-      p = xtryrealloc (sb->buf, sb->size);
-      if ( !p)
-        {
-          sb->out_of_core = 1;
-          return;
-        }
-      sb->buf = p;
-    }
-  memcpy (sb->buf+sb->len, text, n);
-  sb->len += n;
-}
-
-static void
-put_stringbuf_mem (struct stringbuf *sb, const char *text, size_t n)
-{
-  if (sb->out_of_core)
-    return;
-
-  if (sb->len + n >= sb->size)
-    {
-      char *p;
-
-      sb->size += n + 100;
-      p = xtryrealloc (sb->buf, sb->size);
-      if ( !p)
-        {
-          sb->out_of_core = 1;
-          return;
-        }
-      sb->buf = p;
-    }
-  memcpy (sb->buf+sb->len, text, n);
-  sb->len += n;
-}
-
-static void
-put_stringbuf_mem_skip (struct stringbuf *sb, const char *text, size_t n,
-                        int skip)
-{
-  char *p;
-
-  if (!skip)
-    {
-      put_stringbuf_mem (sb, text, n);
-      return;
-    }
-  if (sb->out_of_core)
-    return;
-
-  if (sb->len + n >= sb->size)
-    {
-      /* Note: we allocate too much here, but we don't care. */
-      sb->size += n + 100;
-      p = xtryrealloc (sb->buf, sb->size);
-      if ( !p)
-        {
-          sb->out_of_core = 1;
-          return;
-        }
-      sb->buf = p;
-    }
-  p = sb->buf+sb->len;
-  while (n > skip)
-    {
-      text += skip;
-      n -= skip;
-      *p++ = *text++;
-      n--;
-      sb->len++;
-    }
-}
-
-static char *
-get_stringbuf (struct stringbuf *sb)
-{
-  char *p;
-
-  if (sb->out_of_core)
-    {
-      xfree (sb->buf); sb->buf = NULL;
-      return NULL;
-    }
-
-  sb->buf[sb->len] = 0;
-  p = sb->buf;
-  sb->buf = NULL;
-  sb->out_of_core = 1; /* make sure the caller does an init before reuse */
-  return p;
-}
 
 
 /* This function is used for 1 byte encodings to insert any required
