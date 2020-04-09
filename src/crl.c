@@ -43,6 +43,7 @@
 #include "ber-help.h"
 #include "ber-decoder.h"
 #include "crl.h"
+#include "stringbuf.h"
 
 
 static const char oidstr_crlNumber[] = "2.5.29.20";
@@ -538,7 +539,17 @@ ksba_crl_get_item (ksba_crl_t crl, ksba_sexp_t *r_serial,
  *
  * Return the actual signature in a format suitable to be used as
  * input to Libgcrypt's verification function.  The caller must free
- * the returned string.
+ * the returned string.  For a rsaPSS signed CRLs this function may
+ * also be called right after rsaPSS has been detected using
+ * ksba_crl_get_digest_algo and before the the signature value can be
+ * retrieved.  In this case an S-expression of the form
+ *
+ *   (sig-val (hash-algo OID)(salt-length N))
+ *
+ * is returned.  The caller should extract the actual to be used hash
+ * algorithm from that S-expression.  Note that after the actual
+ * signature as been seen, a similar S-expression is returned but in
+ * this case also with the (rsa(s XXX)) list.
  *
  * Return value: NULL or a string with an S-Exp.
  **/
@@ -549,6 +560,28 @@ ksba_crl_get_sig_val (ksba_crl_t crl)
 
   if (!crl)
     return NULL;
+
+  if (!crl->sigval
+      && crl->algo.oid && !strcmp (crl->algo.oid, "1.2.840.113549.1.1.10")
+      && crl->algo.parm && crl->algo.parmlen)
+    {
+      char *pss_hash;
+      unsigned int salt_length;
+      struct stringbuf sb;
+
+      if (_ksba_keyinfo_get_pss_info (crl->algo.parm, crl->algo.parmlen,
+                                      &pss_hash, &salt_length))
+        return NULL;
+
+      init_stringbuf (&sb, 100);
+      put_stringbuf (&sb,"(7:sig-val(9:hash-algo");
+      put_stringbuf_sexp (&sb, pss_hash);
+      put_stringbuf (&sb, ")(11:salt-length");
+      put_stringbuf_uint (&sb, salt_length);
+      put_stringbuf (&sb, "))");
+
+      return get_stringbuf (&sb);
+    }
 
   if (!crl->sigval)
     return NULL;

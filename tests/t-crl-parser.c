@@ -151,6 +151,16 @@ one_file (const char *fname)
 
             algoid = ksba_crl_get_digest_algo (crl);
             printf ("digest algo: %s\n", algoid? algoid : "[none]");
+            if (algoid && !strcmp (algoid, "1.2.840.113549.1.1.10"))
+              {
+                ksba_sexp_t pssparam;
+
+                printf ("   pss para: ");
+                pssparam = ksba_crl_get_sig_val (crl);
+                print_sexp (pssparam);
+                putchar ('\n');
+                xfree (pssparam);
+              }
 
             err = ksba_crl_get_issuer (crl, &issuer);
             fail_if_err2 (fname, err);
