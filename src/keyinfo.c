@@ -1599,6 +1599,122 @@ _ksba_algoinfo_from_sexp (ksba_const_sexp_t sexp,
 
 
 
+/* Helper function to parse the parameters used for rsaPSS.
+ * Given this sample DER object in (DER,DERLEN):
+ *
+ *  SEQUENCE {
+ *    [0] {
+ *      SEQUENCE {
+ *        OBJECT IDENTIFIER sha-512 (2 16 840 1 101 3 4 2 3)
+ *        }
+ *      }
+ *    [1] {
+ *      SEQUENCE {
+ *        OBJECT IDENTIFIER pkcs1-MGF (1 2 840 113549 1 1 8)
+ *        SEQUENCE {
+ *          OBJECT IDENTIFIER sha-512 (2 16 840 1 101 3 4 2 3)
+ *          }
+ *        }
+ *      }
+ *    [2] {
+ *      INTEGER 64
+ *       }
+ *     }
+ *
+ * The function returns the first OID at R_PSSHASH and the salt length
+ * at R_SALTLEN.  If the salt length is missing its default value is
+ * returned.  In case object does not resemble a the expected rsaPSS
+ * parameters GPG_ERR_INV_OBJ is returned; other errors are returned
+ * for an syntatically invalid object.  On error NULL is stored at
+ * R_PSSHASH.
+ */
+gpg_error_t
+_ksba_keyinfo_get_pss_info (const unsigned char *der, size_t derlen,
+                            char **r_psshash, unsigned int *r_saltlen)
+{
+  gpg_error_t err;
+  struct tag_info ti;
+  char *psshash = NULL;
+  char *tmpoid = NULL;
+  unsigned int saltlen;
+
+  *r_psshash = NULL;
+  *r_saltlen = 0;
+
+  err = parse_sequence (&der, &derlen, &ti);
+  if (err)
+    goto leave;
+
+  /* Get the hash algo.  */
+  err = parse_context_tag (&der, &derlen, &ti, 0);
+  if (err)
+    goto unknown_parms;
+  err = parse_sequence (&der, &derlen, &ti);
+  if (err)
+    goto unknown_parms;
+  err = parse_object_id_into_str (&der, &derlen, &psshash);
+  if (err)
+    goto unknown_parms;
+
+  /* Check the MGF OID and that its hash algo matches. */
+  err = parse_context_tag (&der, &derlen, &ti, 1);
+  if (err)
+    goto unknown_parms;
+  err = parse_sequence (&der, &derlen, &ti);
+  if (err)
+    goto leave;
+  err = parse_object_id_into_str (&der, &derlen, &tmpoid);
+  if (err)
+    goto unknown_parms;
+  if (strcmp (tmpoid, "1.2.840.113549.1.1.8"))  /* MGF1 */
+    goto unknown_parms;
+  err = parse_sequence (&der, &derlen, &ti);
+  if (err)
+    goto leave;
+  xfree (tmpoid);
+  err = parse_object_id_into_str (&der, &derlen, &tmpoid);
+  if (err)
+    goto unknown_parms;
+  if (strcmp (tmpoid, psshash))
+    goto unknown_parms;
+
+  /* Get the optional saltLength.  */
+  err = parse_context_tag (&der, &derlen, &ti, 2);
+  if (gpg_err_code (err) == GPG_ERR_INV_OBJ
+      || gpg_err_code (err) == GPG_ERR_FALSE)
+    saltlen = 20; /* Optional element - use default value */
+  else if (err)
+    goto unknown_parms;
+  else
+    {
+      err = parse_integer (&der, &derlen, &ti);
+      if (err)
+        goto leave;
+      for (saltlen=0; ti.length; ti.length--)
+        {
+          saltlen <<= 8;
+          saltlen |= (*der++) & 0xff;
+          derlen--;
+        }
+    }
+
+  /* All fine.  */
+  *r_psshash = psshash;
+  psshash = NULL;
+  *r_saltlen = saltlen;
+  err = 0;
+  goto leave;
+
+ unknown_parms:
+  err = gpg_error (GPG_ERR_INV_OBJ);
+
+ leave:
+  xfree (psshash);
+  xfree (tmpoid);
+  return err;
+}
+
+
 /* Mode 0: work as described under _ksba_sigval_to_sexp
    mode 1: work as described under _ksba_encval_to_sexp */
 static gpg_error_t
@@ -1618,7 +1734,6 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
   int parm_type;
   char *pss_hash = NULL;
   unsigned int salt_length = 0;
-  struct tag_info ti;
 
   /* FIXME: The entire function is very similar to keyinfo_to_sexp */
   *r_string = NULL;
@@ -1649,88 +1764,15 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
   if (parm_type == TYPE_SEQUENCE
       && algo_table[algoidx].supported == SUPPORTED_RSAPSS)
     {
-      /* This is rsaPSS and we collect the parmeters.  We simplify
+      /* This is rsaPSS and we collect the parameters.  We simplify
        * this by assuming that pkcs1-MGF is used with an identical
        * hash algorithm.  All other kinds of parameters are ignored.  */
-      const unsigned char *parmder = der + parm_off;
-      size_t parmderlen = parm_len;
-      const unsigned char *parmder_end;
-      char *tmpoid = NULL;
-
-      err = parse_sequence (&parmder, &parmderlen, &ti);
+      err = _ksba_keyinfo_get_pss_info (der + parm_off, parm_len,
+                                        &pss_hash, &salt_length);
+      if (gpg_err_code (err) == GPG_ERR_INV_OBJ)
+        err = 0;
       if (err)
         return err;
-      parmder_end = parmder + ti.length;
-
-      /* Get the hash algo.  */
-      err = parse_context_tag (&parmder, &parmderlen, &ti, 0);
-      if (err)
-        goto unknown_parms;
-      err = parse_sequence (&parmder, &parmderlen, &ti);
-      if (err)
-        goto unknown_parms;
-      err = parse_object_id_into_str (&parmder, &parmderlen, &pss_hash);
-      if (err)
-        goto unknown_parms;
-
-      /* Check the MGF OID and that its hash algo matches. */
-      err = parse_context_tag (&parmder, &parmderlen, &ti, 1);
-      if (err)
-        goto unknown_parms;
-      err = parse_sequence (&parmder, &parmderlen, &ti);
-      if (err)
-        return err;
-      err = parse_object_id_into_str (&parmder, &parmderlen, &tmpoid);
-      if (err)
-        goto unknown_parms;
-      if (strcmp (tmpoid, "1.2.840.113549.1.1.8"))
-        goto unknown_parms;
-      err = parse_sequence (&parmder, &parmderlen, &ti);
-      if (err)
-        return err;
-      xfree (tmpoid);
-      err = parse_object_id_into_str (&parmder, &parmderlen, &tmpoid);
-      if (err)
-        goto unknown_parms;
-      if (strcmp (tmpoid, pss_hash))
-        goto unknown_parms;
-
-      /* Get the optional saltLength.  */
-      err = parse_context_tag (&parmder, &parmderlen, &ti, 2);
-      if (gpg_err_code (err) == GPG_ERR_INV_OBJ
-          || gpg_err_code (err) == GPG_ERR_FALSE)
-        {
-          parmder -= ti.nhdr;  /* backoff */
-          parmderlen += ti.nhdr;
-          salt_length = 10; /* Optional element - use default value */
-        }
-      else if (err)
-        goto unknown_parms;
-      else
-        {
-          err = parse_integer (&parmder, &parmderlen, &ti);
-          if (err)
-            return err;
-          for (salt_length=0; ti.length; ti.length--)
-            {
-              salt_length <<= 8;
-              salt_length |= (*parmder++) & 0xff;
-              parmderlen--;
-            }
-        }
-
-      if (parmder_end > parmder)
-        goto unknown_parms;  /* The sequence is larger than announced.  */
-
-      goto parms_ready;
-
-    unknown_parms:
-      xfree (pss_hash);
-      pss_hash = NULL;
-      err = 0;
-
-    parms_ready:
-      xfree (tmpoid);
     }
 
 

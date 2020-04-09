@@ -56,6 +56,11 @@ gpg_error_t _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
 gpg_error_t _ksba_algoinfo_from_sexp (ksba_const_sexp_t sexp,
                                       unsigned char **r_der, size_t *r_derlen);
 
+gpg_error_t _ksba_keyinfo_get_pss_info (const unsigned char *der,
+                                        size_t derlen,
+                                        char **r_psshash,
+                                        unsigned int *r_saltlen);
+
 gpg_error_t _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
                                 ksba_sexp_t *r_string);
 gpg_error_t _ksba_encval_to_sexp (const unsigned char *der, size_t derlen,
