@@ -574,7 +574,7 @@ ksba_crl_get_sig_val (ksba_crl_t crl)
         return NULL;
 
       init_stringbuf (&sb, 100);
-      put_stringbuf (&sb,"(7:sig-val(9:hash-algo");
+      put_stringbuf (&sb,"(7:sig-val(5:flags3:pss)(9:hash-algo");
       put_stringbuf_sexp (&sb, pss_hash);
       put_stringbuf (&sb, ")(11:salt-length");
       put_stringbuf_uint (&sb, salt_length);

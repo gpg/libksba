@@ -623,6 +623,42 @@ _ksba_parse_optional_boolean (unsigned char const **buf, size_t *len,
 }
 
 
+/* Parse an optional Null tag.  Ir R_SEEN is not NULL it is set to
+ * true if a NULL tag was encountered.  */
+gpg_error_t
+_ksba_parse_optional_null (unsigned char const **buf, size_t *len,
+                           int *r_seen)
+{
+  gpg_error_t err;
+  struct tag_info ti;
+
+  if (r_seen)
+    *r_seen = 0;
+  err = _ksba_ber_parse_tl (buf, len, &ti);
+  if (err)
+    ;
+  else if (ti.length > *len)
+    err = gpg_error (GPG_ERR_BAD_BER);
+  else if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_NULL
+           && !ti.is_constructed)
+    {
+      if (ti.length)
+        err = gpg_error (GPG_ERR_BAD_BER);
+      if (r_seen)
+        *r_seen = 1;
+      parse_skip (buf, len, &ti);
+    }
+  else
+    { /* Undo the read. */
+      *buf -= ti.nhdr;
+      *len += ti.nhdr;
+    }
+
+  return err;
+}
+
+
+
 gpg_error_t
 _ksba_parse_object_id_into_str (unsigned char const **buf, size_t *len,
                                 char **oid)

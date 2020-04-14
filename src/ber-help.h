@@ -105,6 +105,11 @@ gpg_error_t _ksba_parse_optional_boolean (unsigned char const **buf,
 #define parse_optional_boolean(buf,len,r_bool) \
   _ksba_parse_optional_boolean ((buf),(len),(r_bool))
 
+gpg_error_t _ksba_parse_optional_null (unsigned char const **buf, size_t *len,
+                                       int *r_seen);
+#define parse_optional_null(buf,len,r_seen) \
+  _ksba_parse_optional_null ((buf),(len),(r_seen))
+
 gpg_error_t _ksba_parse_object_id_into_str (unsigned char const **buf,
                                             size_t *len, char **oid);
 #define parse_object_id_into_str(buf,len,r_oid) \

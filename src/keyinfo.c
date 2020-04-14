@@ -1655,6 +1655,9 @@ _ksba_keyinfo_get_pss_info (const unsigned char *der, size_t derlen,
   err = parse_object_id_into_str (&der, &derlen, &psshash);
   if (err)
     goto unknown_parms;
+  err = parse_optional_null (&der, &derlen, NULL);
+  if (err)
+    goto unknown_parms;
 
   /* Check the MGF OID and that its hash algo matches. */
   err = parse_context_tag (&der, &derlen, &ti, 1);
@@ -1676,6 +1679,9 @@ _ksba_keyinfo_get_pss_info (const unsigned char *der, size_t derlen,
   if (err)
     goto unknown_parms;
   if (strcmp (tmpoid, psshash))
+    goto unknown_parms;
+  err = parse_optional_null (&der, &derlen, NULL);
+  if (err)
     goto unknown_parms;
 
   /* Get the optional saltLength.  */
@@ -1842,6 +1848,7 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
     }
   if (!mode && pss_hash)
     {
+      put_stringbuf (&sb, "(5:flags3:pss)");
       put_stringbuf (&sb, "(9:hash-algo");
       put_stringbuf_sexp (&sb, pss_hash);
       put_stringbuf (&sb, ")");
