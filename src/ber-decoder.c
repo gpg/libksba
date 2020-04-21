@@ -483,12 +483,26 @@ static AsnNode
 find_anchor_node (AsnNode root, const struct tag_info *ti)
 {
   AsnNode node = root;
+  AsnNode n;
 
   while (node)
     {
-      if (cmp_tag (node, ti))
+      if (node->type == TYPE_CHOICE)
         {
-          return node; /* found */
+          for (n = node->down; n; n = n->right)
+            {
+              if (cmp_tag (n, ti))
+                {
+                  return n; /* found */
+                }
+            }
+        }
+      else
+        {
+          if (cmp_tag (node, ti))
+            {
+              return node; /* found */
+            }
         }
 
       if (node->down)
@@ -853,6 +867,9 @@ decoder_next (BerDecoder d)
     {
       d->first_tag_seen = 1;
       if (ti.tag == TYPE_SEQUENCE && ti.length && !ti.ndef)
+        d->outer_sequence_length = ti.length;
+      else if (ti.class == CLASS_CONTEXT && ti.is_constructed
+               && ti.length && !ti.ndef)
         d->outer_sequence_length = ti.length;
     }
 

@@ -47,6 +47,10 @@
 
 #include "asn1-func.h"
 
+#ifdef BUILD_GENTOOLS
+#define gpgrt_log_debug(...)  /**/
+#endif
+
 
 static AsnNode resolve_identifier (AsnNode root, AsnNode node, int nestlevel);
 
@@ -289,7 +293,8 @@ _ksba_asn_remove_node (AsnNode  node)
 
 
 /* find the node with the given name.  A name part of "?LAST" matches
-   the last element of a set of */
+   the last element of a SET_OF.  A "+" matches the CHOICE with values
+   set. */
 static AsnNode
 find_node (AsnNode root, const char *name, int resolve)
 {
@@ -301,6 +306,7 @@ find_node (AsnNode root, const char *name, int resolve)
   if (!name || !name[0])
     return NULL;
 
+  /* gpgrt_log_debug ("%s: looking for '%s'\n", __func__, name); */
   /* find the first part */
   s = name;
   for (i=0; *s && *s != '.' && i < DIM(buf)-1; s++)
@@ -331,6 +337,7 @@ find_node (AsnNode root, const char *name, int resolve)
          /* a double dot can be used to get over an unnamed sequence
             in a set - Actually a hack to workaround a bug.  We should
             rethink the entire node naming issue */
+          /* gpgrt_log_debug ("%s: .. to '%s'\n", __func__, p?p->name:""); */
         }
       else if (!strcmp (buf, "?LAST"))
 	{
@@ -339,10 +346,19 @@ find_node (AsnNode root, const char *name, int resolve)
 	  while (p->right)
 	    p = p->right;
 	}
+      else if (*buf == '+' && !buf[1])
+        {
+          for (; p ; p = p->right)
+            if (p->off != -1)
+              break;
+          /* gpgrt_log_debug ("%s: + to '%s'\n", __func__, p?p->name:""); */
+        }
       else
 	{
           for (; p ; p = p->right)
             {
+              /* gpgrt_log_debug ("%s: '%s' to '%s'\n", */
+              /*                  __func__, buf, p?p->name:""); */
               if (p->name && !strcmp (p->name, buf))
                 break;
               if (resolve && p->name && p->type == TYPE_IDENTIFIER)

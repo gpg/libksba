@@ -2144,7 +2144,7 @@ get_info_access (ksba_cert_t cert, int idx, int mode,
    R_METHOD and R_LOCATION must be released by the caller unless the
    function returned an error; the function will however make sure
    that R_METHOD and R_LOCATION will point to NULL if the function
-   returns an error.  See RFC 2459, section 4.2.2.1 */
+   returns an error.  See RFC 5280, section 4.2.2.1 */
 gpg_error_t
 ksba_cert_get_authority_info_access (ksba_cert_t cert, int idx,
                                      char **r_method, ksba_name_t *r_location)
@@ -2154,6 +2154,7 @@ ksba_cert_get_authority_info_access (ksba_cert_t cert, int idx,
   return get_info_access (cert, idx, 0, r_method, r_location);
 }
 
+
 /* Return the subjectInfoAccess attributes. IDX should be iterated
    starting from 0 until the function returns GPG_ERR_EOF.  R_METHOD
    returns an allocated string with the OID of one item and R_LOCATION
@@ -2161,7 +2162,7 @@ ksba_cert_get_authority_info_access (ksba_cert_t cert, int idx,
    R_METHOD and R_LOCATION must be released by the caller unless the
    function returned an error; the function will however make sure
    that R_METHOD and R_LOCATION will point to NULL if the function
-   returns an error.  See RFC 2459, section 4.2.2.2 */
+   returns an error.  See RFC 5280, section 4.2.2.2 */
 gpg_error_t
 ksba_cert_get_subject_info_access (ksba_cert_t cert, int idx,
                                    char **r_method, ksba_name_t *r_location)
