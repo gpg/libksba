@@ -157,7 +157,9 @@ one_file (const char *fname)
           putchar ('\n');
 
           dn = ksba_cms_get_enc_val (cms, idx);
-          printf ("recipient %d - enc_val %s\n", idx, dn? "found": "missing");
+          printf ("recipient %d - enc_val: ", idx);
+          print_sexp (dn);
+          putchar ('\n');
           ksba_free (dn);
         }
     }

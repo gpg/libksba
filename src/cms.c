@@ -768,8 +768,6 @@ ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
       if (!si)
         return -1;
 
-      issuer_path = "SignerInfo.sid.issuerAndSerialNumber.issuer";
-      serial_path = "SignerInfo.sid.issuerAndSerialNumber.serialNumber";
       root = si->root;
       image = si->image;
     }
@@ -777,8 +775,6 @@ ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
     {
       struct value_tree_s *tmp;
 
-      issuer_path = "KeyTransRecipientInfo.rid.issuerAndSerialNumber.issuer";
-      serial_path = "KeyTransRecipientInfo.rid.issuerAndSerialNumber.serialNumber";
       for (tmp=cms->recp_info; tmp && idx; tmp=tmp->next, idx-- )
         ;
       if (!tmp)
@@ -788,6 +784,38 @@ ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
     }
   else
     return gpg_error (GPG_ERR_NO_DATA);
+
+
+  if (cms->signer_info)
+    {
+      issuer_path = "SignerInfo.sid.issuerAndSerialNumber.issuer";
+      serial_path = "SignerInfo.sid.issuerAndSerialNumber.serialNumber";
+    }
+  else if (cms->recp_info)
+    {
+      /* Find the choice to use.  */
+      n = _ksba_asn_find_node (root, "RecipientInfo.+");
+      if (!n || !n->name)
+        return gpg_error (GPG_ERR_NO_VALUE);
+
+      if (!strcmp (n->name, "ktri"))
+        {
+          issuer_path = "ktri.rid.issuerAndSerialNumber.issuer";
+          serial_path = "ktri.rid.issuerAndSerialNumber.serialNumber";
+        }
+      else if (!strcmp (n->name, "kari"))
+        {
+          issuer_path = ("kari..recipientEncryptedKeys"
+                         "..rid.issuerAndSerialNumber.issuer");
+          serial_path = ("kari..recipientEncryptedKeys"
+                         "..rid.issuerAndSerialNumber.serialNumber");
+        }
+      else if (!strcmp (n->name, "kekri"))
+        return gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
+      else
+        return gpg_error (GPG_ERR_INV_CMS_OBJ);
+      root = n;
+    }
 
   if (r_issuer)
     {
@@ -1178,6 +1206,81 @@ ksba_cms_get_sig_val (ksba_cms_t cms, int idx)
 }
 
 
+/* Helper to dump a S-expression. */
+#if 0
+static void
+dbg_print_sexp (ksba_const_sexp_t p)
+{
+  int level = 0;
+
+  if (!p)
+    fputs ("[none]", stdout);
+  else
+    {
+      for (;;)
+        {
+          if (*p == '(')
+            {
+              putchar (*p);
+              p++;
+              level++;
+            }
+          else if (*p == ')')
+            {
+              putchar (*p);
+              p++;
+              if (--level <= 0 )
+                {
+                  putchar ('\n');
+                  return;
+                }
+            }
+          else if (!digitp (p))
+            {
+              fputs ("[invalid s-exp]\n", stdout);
+              return;
+            }
+          else
+            {
+              const unsigned char *s;
+              char *endp;
+              unsigned long len, n;
+
+              len = strtoul (p, &endp, 10);
+              p = endp;
+              if (*p != ':')
+                {
+                  fputs ("[invalid s-exp]\n", stdout);
+                  return;
+                }
+              p++;
+              for (s=p,n=0; n < len; n++, s++)
+                if ( !((*s >= 'a' && *s <= 'z')
+                       || (*s >= 'A' && *s <= 'Z')
+                       || (*s >= '0' && *s <= '9')
+                       || *s == '-' || *s == '.'))
+                  break;
+              if (n < len)
+                {
+                  putchar('#');
+                  for (n=0; n < len; n++, p++)
+                    printf ("%02X", *p);
+                  putchar('#');
+                }
+              else
+                {
+                  for (n=0; n < len; n++, p++)
+                    putchar (*p);
+                }
+            }
+        }
+    }
+  putchar ('\n');
+}
+#endif /* 0 */
+
+
+
 /**
  * ksba_cms_get_enc_val:
  * @cms: CMS object
@@ -1192,10 +1295,17 @@ ksba_cms_get_sig_val (ksba_cms_t cms, int idx)
 ksba_sexp_t
 ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
 {
-  AsnNode n, n2;
+  AsnNode root, n, n2;
   gpg_error_t err;
   ksba_sexp_t string;
   struct value_tree_s *vt;
+  char *keyencralgo = NULL; /* Key encryption algo.  */
+  char *parm = NULL;        /* Helper to get the parms of kencralgo.  */
+  size_t parmlen;
+  char *keywrapalgo = NULL; /* Key wrap algo.  */
+  struct tag_info ti;
+  const unsigned char *der;
+  size_t derlen;
 
   if (!cms)
     return NULL;
@@ -1209,25 +1319,97 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
   if (!vt)
     return NULL; /* No value at this IDX */
 
+  /* Find the choice to use.  */
+  root = _ksba_asn_find_node (vt->root, "RecipientInfo.+");
+  if (!root || !root->name)
+    return NULL;
 
-  n = _ksba_asn_find_node (vt->root,
-                           "KeyTransRecipientInfo.keyEncryptionAlgorithm");
-  if (!n)
-      return NULL;
-  if (n->off == -1)
+  if (!strcmp (root->name, "ktri"))
     {
-/*        fputs ("ksba_cms_get_enc_val problem at node:\n", stderr); */
-/*        _ksba_asn_node_dump_all (n, stderr); */
+      n = _ksba_asn_find_node (root, "ktri.keyEncryptionAlgorithm");
+      if (!n || n->off == -1)
+        return NULL;
+      n2 = n->right; /* point to the actual value */
+      err = _ksba_encval_to_sexp
+        (vt->image + n->off,
+         n->nhdr + n->len + ((!n2||n2->off == -1)? 0:(n2->nhdr+n2->len)),
+         &string);
+    }
+  else if (!strcmp (root->name, "kari"))
+    {
+      /* _ksba_asn_node_dump_all (root, stderr); */
+
+      /* Get the encrypted key.  Result is in (DER,DERLEN)  */
+      n = _ksba_asn_find_node (root, ("kari..recipientEncryptedKeys"
+                                      "..encryptedKey"));
+      if (!n || n->off == -1)
+        {
+          err = gpg_error (GPG_ERR_INV_KEYINFO);
+          goto leave;
+        }
+
+      der = vt->image + n->off;
+      derlen = n->nhdr + n->len;
+      err = parse_octet_string (&der, &derlen, &ti);
+      if (err)
+        goto leave;
+      derlen = ti.length;
+      /* gpgrt_log_printhex (der, derlen, "%s: encryptedKey", __func__); */
+
+      /* Get the KEK algos.  */
+      n = _ksba_asn_find_node (root, "kari..keyEncryptionAlgorithm");
+      if (!n || n->off == -1)
+        {
+          err = gpg_error (GPG_ERR_INV_KEYINFO);
+          goto leave;
+        }
+      err = _ksba_parse_algorithm_identifier2 (vt->image + n->off,
+                                               n->nhdr + n->len, NULL,
+                                               &keyencralgo, &parm, &parmlen);
+      if (err)
+        goto leave;
+      if (!parm)
+        {
+          err = gpg_error (GPG_ERR_INV_KEYINFO);
+          goto leave;
+        }
+      err = _ksba_parse_algorithm_identifier (parm, parmlen,NULL, &keywrapalgo);
+      if (err)
+        goto leave;
+
+      /* gpgrt_log_debug ("%s: keyencralgo='%s'\n", __func__, keyencralgo); */
+      /* gpgrt_log_debug ("%s: keywrapalgo='%s'\n", __func__, keywrapalgo); */
+
+      /* Get the ephemeral public key.  */
+      n = _ksba_asn_find_node (root, "kari..originator..originatorKey");
+      if (!n || n->off == -1)
+        {
+          err = gpg_error (GPG_ERR_INV_KEYINFO);
+          goto leave;
+        }
+      err = _ksba_encval_kari_to_sexp (vt->image + n->off, n->nhdr + n->len,
+                                       keyencralgo, keywrapalgo, der, derlen,
+                                       &string);
+      if (err)
+        goto leave;
+
+      /* gpgrt_log_debug ("%s: encryptedKey:\n", __func__); */
+      /* dbg_print_sexp (string); */
+    }
+  else if (!strcmp (n->name, "kekri"))
+    return NULL; /*GPG_ERR_UNSUPPORTED_CMS_OBJ*/
+  else
+    return NULL; /*GPG_ERR_INV_CMS_OBJ*/
+
+ leave:
+  xfree (keyencralgo);
+  xfree (keywrapalgo);
+  xfree (parm);
+  if (err)
+    {
+      /* gpgrt_log_debug ("%s: error: %s\n", __func__, gpg_strerror (err)); */
       return NULL;
     }
-
-  n2 = n->right; /* point to the actual value */
-  err = _ksba_encval_to_sexp (vt->image + n->off,
-                              n->nhdr + n->len
-                              + ((!n2||n2->off == -1)? 0:(n2->nhdr+n2->len)),
-                              &string);
-  if (err)
-      return NULL;
 
   return string;
 }

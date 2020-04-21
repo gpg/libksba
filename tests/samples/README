@@ -10,7 +10,7 @@ certificates/samples/sample_certificates.html on 2003-11-20:
    Note, that these certs use MD2.
 
 
-Certificates downloaded from 
+Certificates downloaded from
 http://www.openvalidation.org/download/downloadrootcertsCA1.htm and
 on 2003-11-20 and prefixed with "ov-":
 
@@ -43,7 +43,7 @@ http://dev.experimentalstuff.com:8082/CIC_sample-certs_2006-06-22.zip
 and converted to binary format.  These are signed with
 ECDSA-P256-SHA384, ECDSA-P256-SHA512, and ECDSA-P384-SHA512.
 
- secp256r1-sha384_cert.crt 
+ secp256r1-sha384_cert.crt
  secp256r1-sha512_cert.crt
  secp384r1-sha512_cert.crt
 
@@ -51,3 +51,8 @@ From http://dev.experimentalstuff.com:8082/certs/secp256r1ca.cert.pem
 
  openssl-secp256r1ca.cert.crt
 
+
+ECDH samples from the Mozilla bug tracker:
+
+ ecdh-sample1.p7m
+ ecdh-sample1.p7m.asn  - Commented dump.

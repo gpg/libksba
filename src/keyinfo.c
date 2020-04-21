@@ -261,10 +261,14 @@ static const struct algo_table_s sig_algo_table[] = {
 };
 
 static const struct algo_table_s enc_algo_table[] = {
-  { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
-    "1.2.840.113549.1.1.1", /* rsaEncryption (RSAES-PKCA1-v1.5) */
-    "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01", 9,
-    1, PKALGO_RSA, "rsa", "a", "\x82" },
+  {/* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
+   "1.2.840.113549.1.1.1", /* rsaEncryption (RSAES-PKCA1-v1.5) */
+   "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01", 9,
+   1, PKALGO_RSA, "rsa", "a", "\x82" },
+  {/* iso.member-body.us.ansi-x9-62.2.1 */
+   "1.2.840.10045.2.1", /* ecPublicKey */
+   "\x2a\x86\x48\xce\x3d\x02\x01", 7,
+   1, PKALGO_ECC, "ecdh", "e", "\x80" },
   {NULL}
 };
 
@@ -544,6 +548,8 @@ _ksba_parse_algorithm_identifier (const unsigned char *der, size_t derlen,
                                             r_nread, r_oid, NULL, NULL);
 }
 
+
+/* Note that R_NREAD, R_PARM, and R_PARMLEN are optional.  */
 gpg_error_t
 _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
                                    size_t *r_nread, char **r_oid,
@@ -557,13 +563,15 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
   /* fixme: get_algorithm might return the error invalid keyinfo -
      this should be invalid algorithm identifier */
   *r_oid = NULL;
-  *r_nread = 0;
+  if (r_nread)
+    *r_nread = 0;
   off2 = len2 = 0;
   err = get_algorithm (0, der, derlen, &nread, &off, &len, &is_bitstr,
                        &off2, &len2, &parm_type);
   if (err)
     return err;
-  *r_nread = nread;
+  if (r_nread)
+    *r_nread = nread;
   *r_oid = ksba_oid_to_str (der+off, len);
   if (!*r_oid)
     return gpg_error (GPG_ERR_ENOMEM);
@@ -579,13 +587,15 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
                            NULL, NULL, NULL);
       if (err)
         {
-          *r_nread = 0;
+          if (r_nread)
+            *r_nread = 0;
           return err;
         }
       *r_oid = ksba_oid_to_str (der+off2+off, len);
       if (!*r_oid)
         {
-          *r_nread = 0;
+          if (r_nread)
+            *r_nread = 0;
           return gpg_error (GPG_ERR_ENOMEM);
         }
 
@@ -1722,9 +1732,15 @@ _ksba_keyinfo_get_pss_info (const unsigned char *der, size_t derlen,
 
 
 /* Mode 0: work as described under _ksba_sigval_to_sexp
-   mode 1: work as described under _ksba_encval_to_sexp */
+ * mode 1: work as described under _ksba_encval_to_sexp
+ * mode 2: same as mode 1 but for ECDH; in this mode
+ *         KEYENCRYALO, KEYWRAPALGO, ENCRKEY, ENCRYKLEYLEN
+ *         are also required.
+ */
 static gpg_error_t
 cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
+                  const char *keyencralgo, const char *keywrapalgo,
+                  const void *encrkey, size_t encrkeylen,
                   ksba_sexp_t *r_string)
 {
   gpg_error_t err;
@@ -1838,6 +1854,12 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
           put_stringbuf (&sb, ")");
         }
     }
+  if (mode == 2)  /* ECDH */
+    {
+      put_stringbuf (&sb, "(1:s");
+      put_stringbuf_mem_sexp (&sb, encrkey, encrkeylen);
+      put_stringbuf (&sb, ")");
+    }
   put_stringbuf (&sb, ")");
   if (!mode && algo_table[algoidx].digest_string)
     {
@@ -1854,6 +1876,14 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
       put_stringbuf (&sb, ")");
       put_stringbuf (&sb, "(11:salt-length");
       put_stringbuf_uint (&sb, salt_length);
+      put_stringbuf (&sb, ")");
+    }
+  if (mode == 2)  /* ECDH */
+    {
+      put_stringbuf (&sb, "(9:encr-algo");
+      put_stringbuf_sexp (&sb, keyencralgo);
+      put_stringbuf (&sb, ")(9:wrap-algo");
+      put_stringbuf_sexp (&sb, keywrapalgo);
       put_stringbuf (&sb, ")");
     }
   put_stringbuf (&sb, ")");
@@ -1892,35 +1922,85 @@ gpg_error_t
 _ksba_sigval_to_sexp (const unsigned char *der, size_t derlen,
                       ksba_sexp_t *r_string)
 {
-  return cryptval_to_sexp (0, der, derlen, r_string);
+  return cryptval_to_sexp (0, der, derlen, NULL, NULL, NULL, 0, r_string);
 }
 
 
 /* Assume that der is a buffer of length DERLEN with a DER encoded
- Asn.1 structure like this:
-
-     SEQUENCE {
-        algorithm    OBJECT IDENTIFIER,
-        parameters   ANY DEFINED BY algorithm OPTIONAL }
-     encryptedKey  OCTET STRING
-
-  We only allow parameters == NULL.
-
-  The function parses this structure and creates a S-Exp suitable to be
-  used as encrypted value in Libgcrypt's public key functions:
-
-  (enc-val
-    (<algo>
-      (<param_name1> <mpi>)
-      ...
-      (<param_namen> <mpi>)
-    ))
-
- The S-Exp will be returned in a string which the caller must free.
- We don't pass an ASN.1 node here but a plain memory block.  */
+ * ASN.1 structure like this:
+ *
+ *    SEQUENCE {
+ *       algorithm    OBJECT IDENTIFIER,
+ *       parameters   ANY DEFINED BY algorithm OPTIONAL
+ *    }
+ *    encryptedKey  OCTET STRING
+ *
+ * The function parses this structure and creates a S-expression
+ * suitable to be used as encrypted value in Libgcrypt's public key
+ * functions:
+ *
+ * (enc-val
+ *   (<algo>
+ *     (<param_name1> <mpi>)
+ *     ...
+ *     (<param_namen> <mpi>)
+ *   ))
+ *
+ * The S-expression will be returned in a string which the caller must
+ * free.  Note that the input buffer may not a proper ASN.1 object but
+ * a plain memory block; this is becuase the SEQUENCE is followed by
+ * an OCTET STRING or BIT STRING.
+ */
 gpg_error_t
 _ksba_encval_to_sexp (const unsigned char *der, size_t derlen,
                       ksba_sexp_t *r_string)
 {
-  return cryptval_to_sexp (1, der, derlen, r_string);
+  return cryptval_to_sexp (1, der, derlen, NULL, NULL, NULL, 0, r_string);
+}
+
+
+/* Assume that der is a buffer of length DERLEN with a DER encoded
+ * ASN.1 structure like this:
+ *
+ *  [1] {
+ *    SEQUENCE {
+ *       algorithm    OBJECT IDENTIFIER,
+ *       parameters   ANY DEFINED BY algorithm OPTIONAL
+ *    }
+ *    encryptedKey  BIT STRING
+ *  }
+ *
+ * The function parses this structure and creates an S-expression
+ * conveying all parameters required for ECDH:
+ *
+ * (enc-val
+ *   (ecdh
+ *     (e <octetstring>)
+ *     (s <octetstring>)
+ *   (encr-algo <oid>)
+ *   (wrap-algo <oid>)))
+ *
+ * E is the ephemeral public key and S is the encrypted key.  The
+ * S-expression will be returned in a string which the caller must
+ * free.
+ */
+gpg_error_t
+_ksba_encval_kari_to_sexp (const unsigned char *der, size_t derlen,
+                           const char *keyencralgo, const char *keywrapalgo,
+                           const void *enckey, size_t enckeylen,
+                           ksba_sexp_t *r_string)
+{
+  gpg_error_t err;
+  struct tag_info ti;
+  size_t save_derlen = derlen;
+
+  err = parse_context_tag (&der, &derlen, &ti, 1);
+  if (err)
+    return err;
+  if (save_derlen < ti.nhdr)
+    return gpg_error (GPG_ERR_INV_BER);
+  derlen = save_derlen - ti.nhdr;
+  return cryptval_to_sexp (2, der, derlen,
+                           keyencralgo, keywrapalgo, enckey, enckeylen,
+                           r_string);
 }
