@@ -420,8 +420,6 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
       /* Write the serialNumber of the certificate to be checked. */
       err = _ksba_cert_get_serial_ptr (ri->cert, &der, &derlen);
       if (!err)
-        err = _ksba_ber_write_tl (w1, TYPE_INTEGER, CLASS_UNIVERSAL, 0, derlen);
-      if (!err)
         err = ksba_writer_write (w1, der, derlen);
       if (err)
         goto leave;
