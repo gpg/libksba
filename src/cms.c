@@ -1,5 +1,5 @@
 /* cms.c - cryptographic message syntax main functions
- * Copyright (C) 2001, 2003, 2004, 2008, 2012 g10 Code GmbH
+ * Copyright (C) 2001, 2003, 2004, 2008, 2012, 2020 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -28,6 +28,13 @@
  * if not, see <http://www.gnu.org/licenses/>.
  */
 
+/* References:
+ * RFC-5652 := Cryptographic Message Syntax (CMS) (aka STD0070)
+ * SPHINX   := CMS profile developed by the German BSI.
+ *             (see also https://lwn.net/2001/1011/a/german-smime.php3)
+ * PKCS#7   := Original specification of CMS
+ */
+
 #include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,7 +50,9 @@
 #include "der-encoder.h"
 #include "ber-help.h"
 #include "sexp-parse.h"
-#include "cert.h" /* need to access cert->root and cert->image */
+#include "cert.h"
+#include "der-builder.h"
+
 
 static gpg_error_t ct_parse_data (ksba_cms_t cms);
 static gpg_error_t ct_parse_signed_data (ksba_cms_t cms);
@@ -89,7 +98,78 @@ static const char oid_signingTime[9] = "\x2A\x86\x48\x86\xF7\x0D\x01\x09\x05";
 
 static const char oidstr_smimeCapabilities[] = "1.2.840.113549.1.9.15";
 
+
 
+#if 0 /* Set to 1 to use this debug helper.  */
+static void
+log_sexp (const char *text, ksba_const_sexp_t p)
+{
+  int level = 0;
+
+  gpgrt_log_debug ("%s: ", text);
+  if (!p)
+    gpgrt_log_printf ("[none]");
+  else
+    {
+      for (;;)
+        {
+          if (*p == '(')
+            {
+              gpgrt_log_printf ("%c", *p);
+              p++;
+              level++;
+            }
+          else if (*p == ')')
+            {
+              gpgrt_log_printf ("%c", *p);
+              p++;
+              if (--level <= 0 )
+                return;
+            }
+          else if (!digitp (p))
+            {
+              gpgrt_log_printf ("[invalid s-exp]");
+              return;
+            }
+          else
+            {
+              char *endp;
+              const unsigned char *s;
+              unsigned long len, n;
+
+              len = strtoul (p, &endp, 10);
+              p = endp;
+              if (*p != ':')
+                {
+                  gpgrt_log_printf ("[invalid s-exp]");
+                  return;
+                }
+              p++;
+              for (s=p,n=0; n < len; n++, s++)
+                if ( !((*s >= 'a' && *s <= 'z')
+                       || (*s >= 'A' && *s <= 'Z')
+                       || (*s >= '0' && *s <= '9')
+                       || *s == '-' || *s == '.'))
+                  break;
+              if (n < len)
+                {
+                  gpgrt_log_printf ("#");
+                  for (n=0; n < len; n++, p++)
+                    gpgrt_log_printf ("%02X", *p);
+                  gpgrt_log_printf ("#");
+                }
+              else
+                {
+                  for (n=0; n < len; n++, p++)
+                    gpgrt_log_printf ("%c", *p);
+                }
+            }
+        }
+    }
+  gpgrt_log_printf ("\n");
+}
+#endif /* debug helper */
+
 
 /* Helper for read_and_hash_cont().  */
 static gpg_error_t
@@ -503,6 +583,9 @@ ksba_cms_release (ksba_cms_t cms)
       ksba_cert_release (cms->cert_list->cert);
       xfree (cms->cert_list->enc_val.algo);
       xfree (cms->cert_list->enc_val.value);
+      xfree (cms->cert_list->enc_val.ecdh.e);
+      xfree (cms->cert_list->enc_val.ecdh.wrap_algo);
+      xfree (cms->cert_list->enc_val.ecdh.encr_algo);
       xfree (cms->cert_list);
       cms->cert_list = cl;
     }
@@ -1930,17 +2013,24 @@ ksba_cms_set_content_enc_algo (ksba_cms_t cms,
  *	   (<param_name1> <mpi>)
  *	    ...
  *         (<param_namen> <mpi>)
+ *         (encr-algo <oid>)
+ *         (wrap-algo <oid>)
  *	))
  *
  * Note the <algo> must be given as a stringified OID or the special
- * string "rsa" */
+ * string "rsa".  For RSA there is just one parameter named "a";
+ * encr-algo and wrap-algo are also not used.  For ECC <algo> must be
+ * "ecdh", the parameter "s" gives the encrypted key, "e" specified
+ * the ephemeral public key, and wrap-algo algo and encr-algo are the
+ * stringified OIDs for the ECDH algorithm parameters.  */
 gpg_error_t
 ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
 {
   /*FIXME: This shares most code with ...set_sig_val */
   struct certlist_s *cl;
-  const char *s, *endp;
-  unsigned long n;
+  const char *s, *endp, *name;
+  unsigned long n, namelen;
+  int ecdh = 0;   /* We expect ECC parameters.  */
 
   if (!cms)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -1949,8 +2039,9 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
   for (cl=cms->cert_list; cl && idx; cl = cl->next, idx--)
     ;
   if (!cl)
-    return gpg_error (GPG_ERR_INV_INDEX); /* no certificate to store the value */
+    return gpg_error (GPG_ERR_INV_INDEX); /* No cert to store the value.  */
 
+  /* log_sexp ("encval", encval); */
   s = encval;
   if (*s != '(')
     return gpg_error (GPG_ERR_INV_SEXP);
@@ -1975,9 +2066,15 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
     return gpg_error (GPG_ERR_INV_SEXP); /* we don't allow empty lengths */
   s++;
   xfree (cl->enc_val.algo);
-  if (n==3 && s[0] == 'r' && s[1] == 's' && s[2] == 'a')
+  if (n==3 && !memcmp (s, "rsa", 3))
     { /* kludge to allow "rsa" to be passed as algorithm name */
       cl->enc_val.algo = xtrystrdup ("1.2.840.113549.1.1.1");
+      if (!cl->enc_val.algo)
+        return gpg_error (GPG_ERR_ENOMEM);
+    }
+  else if (n==4 && !memcmp (s, "ecdh", 4))
+    {
+      cl->enc_val.algo = xtrystrdup ("1.2.840.10045.2.1"); /* ecPublicKey */
       if (!cl->enc_val.algo)
         return gpg_error (GPG_ERR_ENOMEM);
     }
@@ -1991,40 +2088,95 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
     }
   s += n;
 
-  /* And now the values - FIXME: For now we only support one */
-  /* fixme: start loop */
-  if (*s != '(')
+  ecdh = !strcmp (cl->enc_val.algo, "1.2.840.10045.2.1");
+
+  xfree (cl->enc_val.value);  cl->enc_val.value = NULL;
+  xfree (cl->enc_val.ecdh.e); cl->enc_val.ecdh.e = NULL;
+  xfree (cl->enc_val.ecdh.encr_algo); cl->enc_val.ecdh.encr_algo = NULL;
+  xfree (cl->enc_val.ecdh.wrap_algo); cl->enc_val.ecdh.wrap_algo = NULL;
+
+  while (*s == '(')
+    {
+      s++;
+      n = strtoul (s, (char**)&endp, 10);
+      s = endp;
+      if (!n || *s != ':')
+        return gpg_error (GPG_ERR_INV_SEXP);
+      s++;
+      name = s;
+      namelen = n;
+      s += n;
+
+      if (!digitp(s))
+        return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* or invalid sexp */
+      n = strtoul (s, (char**)&endp, 10);
+      s = endp;
+      if (!n || *s != ':')
+        return gpg_error (GPG_ERR_INV_SEXP);
+      s++;
+
+      if (namelen == 1 && ((!ecdh && *name == 'a') || (ecdh && *name == 's')))
+        {
+          /* Store the "main" parameter into value. */
+          xfree (cl->enc_val.value);
+          cl->enc_val.value = xtrymalloc (n);
+          if (!cl->enc_val.value)
+            return gpg_error (GPG_ERR_ENOMEM);
+          memcpy (cl->enc_val.value, s, n);
+          cl->enc_val.valuelen = n;
+        }
+      else if (!ecdh)
+        ; /* Ignore all other parameters for RSA.  */
+      else if (namelen == 1 && *name == 'e')
+        {
+          xfree (cl->enc_val.ecdh.e);
+          cl->enc_val.ecdh.e = xtrymalloc (n);
+          if (!cl->enc_val.ecdh.e)
+            return gpg_error (GPG_ERR_ENOMEM);
+          memcpy (cl->enc_val.ecdh.e, s, n);
+          cl->enc_val.ecdh.elen = n;
+        }
+      else if (namelen == 9 && !memcmp (name, "encr-algo", 9))
+        {
+          xfree (cl->enc_val.ecdh.encr_algo);
+          cl->enc_val.ecdh.encr_algo = xtrymalloc (n+1);
+          if (!cl->enc_val.ecdh.encr_algo)
+            return gpg_error (GPG_ERR_ENOMEM);
+          memcpy (cl->enc_val.ecdh.encr_algo, s, n);
+          cl->enc_val.ecdh.encr_algo[n] = 0;
+        }
+      else if (namelen == 9 && !memcmp (name, "wrap-algo", 9))
+        {
+          xfree (cl->enc_val.ecdh.wrap_algo);
+          cl->enc_val.ecdh.wrap_algo = xtrymalloc (n+1);
+          if (!cl->enc_val.ecdh.wrap_algo)
+            return gpg_error (GPG_ERR_ENOMEM);
+          memcpy (cl->enc_val.ecdh.wrap_algo, s, n);
+          cl->enc_val.ecdh.wrap_algo[n] = 0;
+        }
+      /* (We ignore all other parameter of the (key value) form.)  */
+
+      s += n;
+      if ( *s != ')')
+        return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* or invalid sexp */
+      s++;
+    }
+  /* Expect two closing parenthesis.  */
+  if (*s != ')')
     return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
   s++;
-  n = strtoul (s, (char**)&endp, 10);
-  s = endp;
-  if (!n || *s != ':')
-    return gpg_error (GPG_ERR_INV_SEXP);
-  s++;
-  s += n; /* ignore the name of the parameter */
-
-  if (!digitp(s))
-    return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
-  n = strtoul (s, (char**)&endp, 10);
-  s = endp;
-  if (!n || *s != ':')
-    return gpg_error (GPG_ERR_INV_SEXP);
-  s++;
-  xfree (cl->enc_val.value);
-  cl->enc_val.value = xtrymalloc (n);
-  if (!cl->enc_val.value)
-    return gpg_error (GPG_ERR_ENOMEM);
-  memcpy (cl->enc_val.value, s, n);
-  cl->enc_val.valuelen = n;
-  s += n;
   if ( *s != ')')
-    return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
-  s++;
-  /* fixme: end loop over parameters */
-
-  /* we need 2 closing parenthesis */
-  if ( *s != ')' || s[1] != ')')
     return gpg_error (GPG_ERR_INV_SEXP);
+
+  /* Check that we have all required data.  */
+  if (!cl->enc_val.value)
+    return gpg_error (GPG_ERR_INV_SEXP);
+  if (ecdh && (!cl->enc_val.ecdh.e
+               || !cl->enc_val.ecdh.elen
+               || !cl->enc_val.ecdh.encr_algo
+               || !cl->enc_val.ecdh.wrap_algo))
+    return gpg_error (GPG_ERR_INV_SEXP);
+
 
   return 0;
 }
@@ -3142,12 +3294,11 @@ build_enveloped_data_header (ksba_cms_t cms)
 {
   gpg_error_t err;
   int recpno;
-  ksba_asn_tree_t cms_tree = NULL;
   struct certlist_s *certlist;
   unsigned char *buf;
   const char *s;
   size_t len;
-  ksba_writer_t tmpwrt = NULL;
+  ksba_der_t dbld = NULL;
 
   /* Write the outer contentInfo */
   /* fixme: code is shared with signed_data_header */
@@ -3196,11 +3347,6 @@ build_enveloped_data_header (ksba_cms_t cms)
   /* Note: originatorInfo is not yet implemented and must not be used
      for SPHINX */
 
-  /* Now we write the recipientInfo */
-  err = ksba_asn_create_tree ("cms", &cms_tree);
-  if (err)
-    return err;
-
   certlist = cms->cert_list;
   if (!certlist)
     {
@@ -3208,19 +3354,19 @@ build_enveloped_data_header (ksba_cms_t cms)
       goto leave;
     }
 
-  /* To construct the set we use a temporary writer object */
-  err = ksba_writer_new (&tmpwrt);
-  if (err)
-    goto leave;
-  err = ksba_writer_set_mem (tmpwrt, 2048);
-  if (err)
-    goto leave;
 
+  dbld = _ksba_der_builder_new (0);
+  if (!dbld)
+    {
+      err = gpg_error_from_syserror ();
+      goto leave;
+    }
+
+  _ksba_der_add_tag (dbld, 0, TYPE_SET);
   for (recpno=0; certlist; recpno++, certlist = certlist->next)
     {
-      AsnNode root, n;
-      unsigned char *image;
-      size_t imagelen;
+      const unsigned char *der;
+      size_t derlen;
 
       if (!certlist->cert)
         {
@@ -3228,140 +3374,96 @@ build_enveloped_data_header (ksba_cms_t cms)
           goto leave;
         }
 
-      root = _ksba_asn_expand_tree (cms_tree->parse_tree,
-                                "CryptographicMessageSyntax.RecipientInfo");
+      _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
 
-      /* We store a version of 0 because we are only allowed to use
-         the issuerAndSerialNumber for SPHINX */
-      n = _ksba_asn_find_node (root, "RecipientInfo.ktri.version");
-      if (!n)
+      if (!certlist->enc_val.ecdh.e)  /* RSA (ktri) */
         {
-          err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+          /* We store a version of 0 because we are only allowed to
+           * use the issuerAndSerialNumber for SPHINX */
+          _ksba_der_add_ptr (dbld, 0, TYPE_INTEGER, "", 1);
+          /* rid.issuerAndSerialNumber */
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
+          /* rid.issuerAndSerialNumber.issuer */
+          err = _ksba_cert_get_issuer_dn_ptr (certlist->cert, &der, &derlen);
+          if (err)
+            goto leave;
+          _ksba_der_add_der (dbld, der, derlen);
+          /* rid.issuerAndSerialNumber.serialNumber */
+          err = _ksba_cert_get_serial_ptr (certlist->cert, &der, &derlen);
+          if (err)
+            goto leave;
+          _ksba_der_add_der (dbld, der, derlen);
+          _ksba_der_add_end (dbld);
+
+          /* Store the keyEncryptionAlgorithm */
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
+          if (!certlist->enc_val.algo || !certlist->enc_val.value)
+            {
+              err = gpg_error (GPG_ERR_MISSING_VALUE);
+              goto leave;
+            }
+          _ksba_der_add_oid (dbld, certlist->enc_val.algo);
+          /* Now store NULL for the optional parameters.  From Peter
+           * Gutmann's X.509 style guide:
+           *
+           *   Another pitfall to be aware of is that algorithms which
+           *   have no parameters have this specified as a NULL value
+           *   rather than omitting the parameters field entirely.  The
+           *   reason for this is that when the 1988 syntax for
+           *   AlgorithmIdentifier was translated into the 1997 syntax,
+           *   the OPTIONAL associated with the AlgorithmIdentifier
+           *   parameters got lost.  Later it was recovered via a defect
+           *   report, but by then everyone thought that algorithm
+           *   parameters were mandatory.  Because of this the algorithm
+           *   parameters should be specified as NULL, regardless of what
+           *   you read elsewhere.
+           *
+           *        The trouble is that things *never* get better, they just
+           *        stay the same, only more so
+           *            -- Terry Pratchett, "Eric"
+           *
+           * Although this is about signing, we always do it.  Versions of
+           * Libksba before 1.0.6 had a bug writing out the NULL tag here,
+           * thus in reality we used to be correct according to the
+           * standards despite we didn't intended so.
+           */
+          _ksba_der_add_ptr (dbld, 0, TYPE_NULL, NULL, 0);
+          _ksba_der_add_end (dbld);
+
+          /* Store the encryptedKey  */
+          if (!certlist->enc_val.value)
+            {
+              err = gpg_error (GPG_ERR_MISSING_VALUE);
+              goto leave;
+            }
+          _ksba_der_add_ptr (dbld, 0, TYPE_OCTET_STRING,
+                             certlist->enc_val.value,
+                             certlist->enc_val.valuelen);
+
+        }
+      else /* ECDH */
+        {
+          err = gpg_error (GPG_ERR_NOT_IMPLEMENTED);
           goto leave;
         }
-      err = _ksba_der_store_integer (n, "\x00\x00\x00\x01\x00");
-      if (err)
-        goto leave;
 
-      /* Store the rid */
-      n = _ksba_asn_find_node (root, "RecipientInfo.ktri.rid");
-      if (!n)
-        {
-          err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
-          goto leave;
-        }
-
-      err = set_issuer_serial (n, certlist->cert, 1);
-      if (err)
-        goto leave;
-
-      /* store the keyEncryptionAlgorithm */
-      if (!certlist->enc_val.algo || !certlist->enc_val.value)
-        return gpg_error (GPG_ERR_MISSING_VALUE);
-      n = _ksba_asn_find_node (root,
-                  "RecipientInfo.ktri.keyEncryptionAlgorithm.algorithm");
-      if (!n)
-        {
-          err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
-          goto leave;
-        }
-      err = _ksba_der_store_oid (n, certlist->enc_val.algo);
-      if (err)
-        goto leave;
-      n = _ksba_asn_find_node (root,
-                  "RecipientInfo.ktri.keyEncryptionAlgorithm.parameters");
-      if (!n)
-        {
-          err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
-          goto leave;
-        }
-
-      /* Now store NULL for the optional parameters.  From Peter
-       * Gutmann's X.509 style guide:
-       *
-       *   Another pitfall to be aware of is that algorithms which
-       *   have no parameters have this specified as a NULL value
-       *   rather than omitting the parameters field entirely.  The
-       *   reason for this is that when the 1988 syntax for
-       *   AlgorithmIdentifier was translated into the 1997 syntax,
-       *   the OPTIONAL associated with the AlgorithmIdentifier
-       *   parameters got lost.  Later it was recovered via a defect
-       *   report, but by then everyone thought that algorithm
-       *   parameters were mandatory.  Because of this the algorithm
-       *   parameters should be specified as NULL, regardless of what
-       *   you read elsewhere.
-       *
-       *        The trouble is that things *never* get better, they just
-       *        stay the same, only more so
-       *            -- Terry Pratchett, "Eric"
-       *
-       * Although this is about signing, we always do it.  Versions of
-       * Libksba before 1.0.6 had a bug writing out the NULL tag here,
-       * thus in reality we used to be correct according to the
-       * standards despite we didn't intended so.
-       */
-
-      err = _ksba_der_store_null (n);
-      if (err)
-        goto leave;
-
-      /* store the encryptedKey  */
-      if (!certlist->enc_val.value)
-        {
-          err = gpg_error (GPG_ERR_MISSING_VALUE);
-          goto leave;
-        }
-      n = _ksba_asn_find_node (root, "RecipientInfo.ktri.encryptedKey");
-      if (!n)
-        {
-          err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
-          goto leave;
-        }
-      err = _ksba_der_store_octet_string (n,
-                                          certlist->enc_val.value,
-                                          certlist->enc_val.valuelen);
-      if (err)
-        goto leave;
-
-
-      /* Make the DER encoding and write it out */
-      err = _ksba_der_encode_tree (root, &image, &imagelen);
-      if (err)
-          goto leave;
-
-      err = ksba_writer_write (tmpwrt, image, imagelen);
-      if (err)
-        goto leave;
-
-      xfree (image);
-      _ksba_asn_release_nodes (root);
+      _ksba_der_add_end (dbld); /* End SEQUENCE */
     }
-
-  ksba_asn_tree_release (cms_tree);
-  cms_tree = NULL;
+  _ksba_der_add_end (dbld);  /* End SET */
 
   /* Write out the SET filled with all recipient infos */
   {
-    unsigned char *value;
-    size_t valuelen;
+    unsigned char *image;
+    size_t imagelen;
 
-    value = ksba_writer_snatch_mem (tmpwrt, &valuelen);
-    if (!value)
-      {
-        err = gpg_error (GPG_ERR_ENOMEM);
-        goto leave;
-      }
-    ksba_writer_release (tmpwrt);
-    tmpwrt = NULL;
-    err = _ksba_ber_write_tl (cms->writer, TYPE_SET, CLASS_UNIVERSAL,
-                              1, valuelen);
-    if (!err)
-      err = ksba_writer_write (cms->writer, value, valuelen);
-    xfree (value);
+    err = _ksba_der_builder_get (dbld, &image, &imagelen);
+    if (err)
+      goto leave;
+    err = ksba_writer_write (cms->writer, image, imagelen);
+    xfree (image);
     if (err)
       goto leave;
   }
-
 
   /* Write the (inner) encryptedContentInfo */
   err = _ksba_ber_write_tl (cms->writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, 0);
@@ -3395,8 +3497,7 @@ build_enveloped_data_header (ksba_cms_t cms)
   /* Now the encrypted data should be written */
 
  leave:
-  ksba_writer_release (tmpwrt);
-  ksba_asn_tree_release (cms_tree);
+  _ksba_der_release (dbld);
   return err;
 }
 

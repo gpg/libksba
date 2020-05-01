@@ -50,8 +50,14 @@ struct value_tree_s {
 
 struct enc_val_s {
   char *algo;
-  unsigned char *value;
+  unsigned char *value; /* RSA's "a" or ECDH's "s". (malloced) */
   size_t valuelen;
+  struct {
+    unsigned char *e; /* Malloced buffer.      */
+    size_t elen;      /* Length of E.          */
+    char *encr_algo;  /* Malloced OID string.  */
+    char *wrap_algo;  /* Malloced OID string.  */
+  } ecdh;
 };
 
 
