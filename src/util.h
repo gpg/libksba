@@ -44,6 +44,7 @@ gpg_error_t _ksba_hash_buffer (const char *oid,
                                size_t resultsize,
                                unsigned char *result, size_t *resultlen);
 
+void *_ksba_reallocarray (void *a, size_t oldnmemb, size_t nmemb, size_t size);
 
 void *_ksba_xmalloc (size_t n );
 void *_ksba_xcalloc (size_t n, size_t m );

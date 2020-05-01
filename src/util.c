@@ -166,6 +166,55 @@ ksba_strdup (const char *str)
 }
 
 
+/* This is safe version of realloc useful for reallocing a calloced
+ * array.  There are two ways to call it:  The first example
+ * reallocates the array A to N elements each of SIZE but does not
+ * clear the newly allocated elements:
+ *
+ *  p = _ksba_reallocarray (a, n, n, nsize);
+ *
+ * Note that when NOLD is larger than N no cleaning is needed anyway.
+ * The second example reallocates an array of size NOLD to N elements
+ * each of SIZE but clear the newly allocated elements:
+ *
+ *  p = _ksba_reallocarray (a, nold, n, nsize);
+ *
+ * Note that gpgrt_reallocarray (NULL, 0, n, nsize) is equivalent to
+ * _ksba_calloc (n, nsize).
+ *
+ */
+void *
+_ksba_reallocarray (void *a, size_t oldnmemb, size_t nmemb, size_t size)
+{
+  size_t oldbytes, bytes;
+  char *p;
+
+  bytes = nmemb * size; /* size_t is unsigned so the behavior on overflow
+                         * is defined. */
+  if (size && bytes / size != nmemb)
+    {
+      gpg_err_set_errno (ENOMEM);
+      return NULL;
+    }
+
+  p = ksba_realloc (a, bytes);
+  if (p && oldnmemb < nmemb)
+    {
+      /* OLDNMEMBS is lower than NMEMB thus the user asked for a
+         calloc.  Clear all newly allocated members.  */
+      oldbytes = oldnmemb * size;
+      if (size && oldbytes / size != oldnmemb)
+        {
+          xfree (p);
+          gpg_err_set_errno (ENOMEM);
+          return NULL;
+        }
+      memset (p + oldbytes, 0, bytes - oldbytes);
+    }
+  return p;
+}
+
+
 void
 ksba_free ( void *a )
 {
