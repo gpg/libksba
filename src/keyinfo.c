@@ -1977,12 +1977,13 @@ _ksba_encval_to_sexp (const unsigned char *der, size_t derlen,
  *   (ecdh
  *     (e <octetstring>)
  *     (s <octetstring>)
+ *   (ukm <octetstring>)
  *   (encr-algo <oid>)
  *   (wrap-algo <oid>)))
  *
- * E is the ephemeral public key and S is the encrypted key.  The
- * S-expression will be returned in a string which the caller must
- * free.
+ * E is the ephemeral public key and S is the encrypted key.  The user
+ * keying material (ukm) is optional.  The S-expression will be
+ * returned in a string which the caller must free.
  */
 gpg_error_t
 _ksba_encval_kari_to_sexp (const unsigned char *der, size_t derlen,

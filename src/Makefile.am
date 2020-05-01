@@ -99,7 +99,7 @@ libksba_la_SOURCES = \
 	reader.c reader.h \
 	writer.c writer.h \
 	asn1-parse.y \
-	asn1-func.c asn1-func2.c asn1-func.h \
+	asn1-func.c asn1-func2.c asn1-func.h asn1-constants.h \
 	ber-help.c ber-help.h \
 	ber-decoder.c ber-decoder.h \
 	der-encoder.c der-encoder.h \

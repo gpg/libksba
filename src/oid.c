@@ -173,7 +173,7 @@ make_flagged_int (unsigned long value, char *buf, size_t buflen)
  * and returns it in allocated buffer rbuf and its length in rlength.
  * rbuf is set to NULL in case of an error is returned.
  * Scanning stops at the first white space.
-
+ *
  * The caller must free the returned buffer using ksba_free() or the
  * function he has registered as a replacement.
  *
