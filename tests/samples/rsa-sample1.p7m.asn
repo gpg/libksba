@@ -1,0 +1,96 @@
+   0 NDEF: SEQUENCE {
+   2    9:   OBJECT IDENTIFIER envelopedData (1 2 840 113549 1 7 3)
+  13 NDEF:   [0] {  -- content
+  15 NDEF:     SEQUENCE {
+  17    1:       INTEGER 0  -- version CMSVersion
+  20  538:       SET {      -- recipientInfos
+  24  534:         SEQUENCE {  -- ktri
+  28    1:           INTEGER 0   -- version
+  31  126:           SEQUENCE {  -- rid.issuerAndSerialNumber
+  33  120:             SEQUENCE {
+  35   11:               SET {
+  37    9:                 SEQUENCE {
+  39    3:                   OBJECT IDENTIFIER countryName (2 5 4 6)
+  44    2:                   PrintableString 'DE'
+         :                   }
+         :                 }
+  48   22:               SET {
+  50   20:                 SEQUENCE {
+  52    3:                   OBJECT IDENTIFIER organizationName (2 5 4 10)
+  57   13:                   PrintableString 'g10 Code GmbH'
+         :                   }
+         :                 }
+  72   16:               SET {
+  74   14:                 SEQUENCE {
+  76    3:                   OBJECT IDENTIFIER organizationalUnitName (2 5 4 11)
+  81    7:                   PrintableString 'Testlab'
+         :                   }
+         :                 }
+  90   30:               SET {
+  92   28:                 SEQUENCE {
+  94    3:                   OBJECT IDENTIFIER commonName (2 5 4 3)
+  99   21:                   PrintableString 'g10 Code TEST CA 2019'
+         :                   }
+         :                 }
+ 122   31:               SET {
+ 124   29:                 SEQUENCE {
+ 126    9:                   OBJECT IDENTIFIER
+         :                     emailAddress (1 2 840 113549 1 9 1)
+ 137   16:                   IA5String 'info@g10code.com'
+         :                   }
+         :                 }
+         :               }
+ 155    2:             INTEGER 6660
+         :             }  -- end rid.issuerAndSerialNumber
+ 159   13:           SEQUENCE {  -- keyEncryptionAlgorithm
+ 161    9:             OBJECT IDENTIFIER rsaEncryption (1 2 840 113549 1 1 1)
+ 172    0:             NULL
+         :             }
+ 174  384:           OCTET STRING  -- encryptedKey
+         :             4F E8 F7 AF BD 6D 0A C0 96 69 A6 51 27 9A E9 D8
+         :             D4 95 FA E2 88 7B FF 72 09 89 56 E5 57 17 EA 31
+         :             65 8D 14 14 06 3A 30 05 C5 46 3F 47 F3 D0 14 8B
+         :             D9 9B 4B EA 09 26 F8 3E 6B 8B A5 EC 97 FE 77 9A
+         :             43 BC 6D 16 0C 5F 6E AA 1D 12 A8 C9 5F 41 A0 D6
+         :             65 19 CF EA 4C BE 9C 15 D4 B6 90 93 96 31 99 03
+         :             85 EF 43 0E 6E 4E 07 C7 F9 46 B4 22 81 B2 52 73
+         :             C8 0B 90 E7 F4 6D 15 61 79 0B D2 AA A2 F4 29 45
+         :             67 10 0E 39 E3 6B 5F BF 3A F3 E8 39 66 87 1A 49
+         :             12 1E 03 24 BF F6 26 7F 81 04 DC 52 DE 44 E5 5F
+         :             73 FA 7C 22 9E 55 D4 E3 EA 74 71 7F E0 07 EE 10
+         :             CF 35 7F 7D DE 64 6B A6 43 33 2A 74 96 23 D0 46
+         :             D3 F6 05 61 55 84 8C 98 EC FA 53 21 83 6E FE 6A
+         :             2A 2C 91 81 FD 4C 9A C5 C5 AB 55 89 98 64 54 33
+         :             CF A2 9B 1D FB 5A DE D6 B5 2A 11 5D 47 9C B5 37
+         :             AE 22 49 97 3B F4 9F E7 F7 5C 57 27 42 39 35 0B
+         :             3B 23 59 01 90 58 70 C0 06 FB DB 11 AE 57 9E AE
+         :             5F 1B 9B 2C 8C 9A EE 31 EB 69 F0 AE A4 68 54 18
+         :             68 4B 69 6A 7A 86 9E 60 86 80 20 51 A0 EC 8C 7D
+         :             18 7B FA 44 64 E9 4E D7 6A FA C0 AB 90 7A B3 E3
+         :             02 B9 FF 45 6F 6F B5 0C E3 D1 F2 F9 6E 05 BD E0
+         :             D7 A9 BB 10 DF A9 A4 13 65 3D DB 42 F3 04 7F 9E
+         :             62 6B 75 BE 89 6E 85 04 EF 38 DB 64 44 09 5C 64
+         :             79 73 99 F3 DD EB 16 BA 06 C2 92 84 A8 6B 7B 86
+         :           }  -- end ktri
+         :         }  -- end recipientInfos
+ 562 NDEF:       SEQUENCE {  --encryptedContentInfo
+ 564    9:         OBJECT IDENTIFIER data (1 2 840 113549 1 7 1)
+ 575   29:         SEQUENCE { -- contentEncryptionAlgorithm
+ 577    9:           OBJECT IDENTIFIER aes128-CBC (2 16 840 1 101 3 4 1 2)
+ 588   16:           OCTET STRING A1 53 A3 8D A7 3A 23 5F 1D 46 10 8D 56 00 BC 3C
+         :           }
+ 606 NDEF:         [0] { -- encryptedContent
+ 608  112:           OCTET STRING
+         :             DA 9F 04 37 3F C5 7F 47 45 88 D6 04 AE 28 8E 98
+         :             99 14 DD C1 DC 0A A9 18 38 BC 96 6D 05 AA 6F 82
+         :             BB 10 06 55 CF 43 0D 97 AB 6C 30 9A 70 1F BE D2
+         :             35 A5 2E 96 F2 BC 4F 57 12 2F 2A FD 72 7A 79 CA
+         :             9E 76 A5 05 62 47 0B 36 25 59 EE 1C 9F 7F 82 39
+         :             F6 58 91 3C 3B 97 A1 3E 5B A4 FA 6D 54 75 AF D8
+         :             68 3F 24 52 56 C1 3D 88 39 53 0E 68 DD F8 5A 38
+ 722   16:           OCTET STRING F4 3A D1 CC 9A 64 31 C8 B7 3E ED F7 B9 FF 8F DC
+         :           }
+         :         }
+         :       }
+         :     }
+         :   }

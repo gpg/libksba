@@ -1,6 +1,6 @@
   0 443: SEQUENCE {
   4   9:   OBJECT IDENTIFIER envelopedData (1 2 840 113549 1 7 3)
- 15 428:   [0] {
+ 15 428:   [0] {  -- content
  19 424:     SEQUENCE {
  23   1:       INTEGER 2
  26 323:       SET {
@@ -8,10 +8,10 @@
  34   1:           INTEGER 3
  37 113:           [0] { -- originator
  39 111:             [1] { -- choice originatorKey
- 41   9:               SEQUENCE { -- Must be this
+ 41   9:               SEQUENCE { -- algorithm
  43   7:                 OBJECT IDENTIFIER ecPublicKey (1 2 840 10045 2 1)
        :                 }
- 52  98:               BIT STRING -- ephemeral public key
+ 52  98:               BIT STRING -- publicKey (ephemeral public key)
        :                 04 A8 21 3B BD A2 18 85 63 B2 FA D1 46 94 05 3F
        :                 EF 1F B0 47 29 69 69 B5 F4 50 B2 34 E1 3C AB EE
        :                 EA E2 30 EB 46 E3 DD 4A 2B 15 B7 9D EF 3C 39 E1
@@ -35,7 +35,7 @@
        :             }
 175 175:           SEQUENCE { -- recipientEncryptedKeys
 178 172:             SEQUENCE { -- recipientEncryptedKey
-181 143:               SEQUENCE { -- rid
+181 143:               SEQUENCE { -- rid.issuerAndSerialNumber
 184 119:                 SEQUENCE {
 186  11:                   SET {
 188   9:                     SEQUENCE {
@@ -71,7 +71,7 @@
 305  20:                 INTEGER
        :                   74 5D C1 8C 19 D4 40 13 83 BE FC 5F 6E D2 BA D1
        :                   BE AE F5 09
-       :                 } -- end rid
+       :                 } -- end rid.issuerAndSerialNumber
 327  24:               OCTET STRING -- encryptedKey
        :                 80 0F 02 BC 0A 4A 52 EB 8A FF 51 B7 4E 88 DA 52
        :                 F7 EF AA 29 B0 26 13 E0

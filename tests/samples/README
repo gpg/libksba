@@ -55,4 +55,9 @@ From http://dev.experimentalstuff.com:8082/certs/secp256r1ca.cert.pem
 ECDH samples from the Mozilla bug tracker:
 
  ecdh-sample1.p7m
- ecdh-sample1.p7m.asn  - Commented dump.
+ ecdh-sample1.p7m.asn   Commented dump.
+
+RSA sample created with gpgsm
+
+ rsa-sample1.p7m
+ rsa-sample1.p7m.asn    Commented dump
