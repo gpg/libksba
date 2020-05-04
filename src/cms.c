@@ -3299,6 +3299,15 @@ build_enveloped_data_header (ksba_cms_t cms)
   const char *s;
   size_t len;
   ksba_der_t dbld = NULL;
+  int any_ecdh = 0;
+
+  /* See whether we have any ECDH recipients.  */
+  for (certlist = cms->cert_list; certlist; certlist = certlist->next)
+    if (certlist->enc_val.ecdh.e)
+      {
+        any_ecdh = 1;
+        break;
+      }
 
   /* Write the outer contentInfo */
   /* fixme: code is shared with signed_data_header */
@@ -3336,7 +3345,9 @@ build_enveloped_data_header (ksba_cms_t cms)
 
      For SPHINX the version number must be 0.
   */
-  s = "\x00";
+
+
+  s = any_ecdh? "\x02" :"\x00";
   err = _ksba_ber_write_tl (cms->writer, TYPE_INTEGER, CLASS_UNIVERSAL, 0, 1);
   if (err)
     return err;
@@ -3374,10 +3385,9 @@ build_enveloped_data_header (ksba_cms_t cms)
           goto leave;
         }
 
-      _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
-
       if (!certlist->enc_val.ecdh.e)  /* RSA (ktri) */
         {
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
           /* We store a version of 0 because we are only allowed to
            * use the issuerAndSerialNumber for SPHINX */
           _ksba_der_add_ptr (dbld, 0, TYPE_INTEGER, "", 1);
@@ -3443,11 +3453,55 @@ build_enveloped_data_header (ksba_cms_t cms)
         }
       else /* ECDH */
         {
-          err = gpg_error (GPG_ERR_NOT_IMPLEMENTED);
-          goto leave;
-        }
+          _ksba_der_add_tag (dbld, CLASS_CONTEXT, 1); /* kari */
+          _ksba_der_add_ptr (dbld, 0, TYPE_INTEGER, "\x03", 1);
 
-      _ksba_der_add_end (dbld); /* End SEQUENCE */
+          _ksba_der_add_tag (dbld, CLASS_CONTEXT, 0); /* originator */
+          _ksba_der_add_tag (dbld, CLASS_CONTEXT, 1); /* originatorKey */
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE); /* algorithm */
+          _ksba_der_add_oid (dbld, certlist->enc_val.algo);
+          _ksba_der_add_end (dbld);
+          _ksba_der_add_bts (dbld, certlist->enc_val.ecdh.e,
+                             certlist->enc_val.ecdh.elen, 0);
+          _ksba_der_add_end (dbld); /* end originatorKey */
+          _ksba_der_add_end (dbld); /* end originator */
+
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE); /* keyEncrAlgo */
+          _ksba_der_add_oid (dbld, certlist->enc_val.ecdh.encr_algo);
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
+          _ksba_der_add_oid (dbld, certlist->enc_val.ecdh.wrap_algo);
+          _ksba_der_add_end (dbld);
+          _ksba_der_add_end (dbld); /* end keyEncrAlgo */
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE); /* recpEncrKeys */
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE); /* recpEncrKey */
+
+          /* rid.issuerAndSerialNumber */
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
+          err = _ksba_cert_get_issuer_dn_ptr (certlist->cert, &der, &derlen);
+          if (err)
+            goto leave;
+          _ksba_der_add_der (dbld, der, derlen);
+          err = _ksba_cert_get_serial_ptr (certlist->cert, &der, &derlen);
+          if (err)
+            goto leave;
+          _ksba_der_add_der (dbld, der, derlen);
+          _ksba_der_add_end (dbld);
+
+          /* encryptedKey  */
+          if (!certlist->enc_val.value)
+            {
+              err = gpg_error (GPG_ERR_MISSING_VALUE);
+              goto leave;
+            }
+          _ksba_der_add_ptr (dbld, 0, TYPE_OCTET_STRING,
+                             certlist->enc_val.value,
+                             certlist->enc_val.valuelen);
+
+          _ksba_der_add_end (dbld); /* end recpEncrKey */
+          _ksba_der_add_end (dbld); /* end recpEncrKeys */
+       }
+
+      _ksba_der_add_end (dbld); /* End SEQUENCE (ktri or kari) */
     }
   _ksba_der_add_end (dbld);  /* End SET */
 
