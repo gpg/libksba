@@ -39,6 +39,8 @@ void _ksba_der_add_ptr (ksba_der_t d, int class, int tag,
 void _ksba_der_add_val (ksba_der_t d, int class, int tag,
                         const void *value, size_t valuelen);
 void _ksba_der_add_oid (ksba_der_t d, const char *oidstr);
+void _ksba_der_add_bts (ksba_der_t d, const void *value, size_t valuelen,
+                        unsigned int unusedbits);
 void _ksba_der_add_der (ksba_der_t d, const void *der, size_t derlen);
 void _ksba_der_add_tag (ksba_der_t d, int class, int tag);
 void _ksba_der_add_end (ksba_der_t d);

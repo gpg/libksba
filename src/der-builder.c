@@ -247,6 +247,33 @@ _ksba_der_add_oid (ksba_der_t d, const char *oidstr)
 }
 
 
+/* Add a BIT STRING to D.  Using a separate function allows to easily
+ * pass the number of unused bits.  */
+void
+_ksba_der_add_bts (ksba_der_t d, const void *value, size_t valuelen,
+                   unsigned int unusedbits)
+{
+  unsigned char *p;
+
+  if (ensure_space (d))
+    return;
+  if (!value || !valuelen || unusedbits > 7)
+    {
+      d->error = gpg_error (GPG_ERR_INV_VALUE);
+      return;
+    }
+  p = xtrymalloc (1+valuelen);
+  if (!p)
+    {
+      d->error = gpg_error_from_syserror ();
+      return;
+    }
+  p[0] = unusedbits;
+  memcpy (p+1, value, valuelen);
+  add_val_core (d, 0, TYPE_BIT_STRING, p, 1+valuelen, 0);
+}
+
+
 /* This function allows to add a pre-constructed DER object to the
  * builder.  It should be a valid DER object but its values is not
  * further checked and copied verbatim to the final DER object
