@@ -52,12 +52,22 @@ From http://dev.experimentalstuff.com:8082/certs/secp256r1ca.cert.pem
  openssl-secp256r1ca.cert.crt
 
 
-ECDH samples from the Mozilla bug tracker:
+ECDH sample enveloped data from the Mozilla bug tracker:
 
  ecdh-sample1.p7m
  ecdh-sample1.p7m.asn   Commented dump.
 
-RSA sample created with gpgsm
+RSA sample enveloped data created with gpgsm
 
  rsa-sample1.p7m
  rsa-sample1.p7m.asn    Commented dump
+
+RSA sample signature created with gpgsm
+
+ rsa-sample1.p7s
+ rsa-sample1.p7s.asn    Commented dump
+
+ECDSA sample signature created with Governikus Signer
+
+ ecdsa-sample1.p7s      signed data is hitchhiker.txt
+ ecdsa-sample1.p7s.asn  Commented dump

@@ -617,6 +617,7 @@ ksba_cms_release (ksba_cms_t cms)
       struct sig_val_s *tmp = cms->sig_val->next;
       xfree (cms->sig_val->algo);
       xfree (cms->sig_val->value);
+      xfree (cms->sig_val->ecc.r);
       xfree (cms->sig_val);
       cms->sig_val = tmp;
     }
@@ -1836,25 +1837,29 @@ ksba_cms_set_signing_time (ksba_cms_t cms, int idx, const ksba_isotime_t sigtime
 }
 
 
-/*
-  r_sig  = (sig-val
- 	      (<algo>
- 		(<param_name1> <mpi>)
- 		...
- 		(<param_namen> <mpi>)
- 	      ))
-  The sexp must be in canonical form.
-  Note the <algo> must be given as a stringified OID or the special
-  string "rsa".
-
-  Note that IDX is only used for consistency checks.
+/* Set the signature value as a canonical encoded s-expression.
+ *
+ * r_sig  = (sig-val
+ *	      (<algo>
+ *		(<param_name1> <mpi>)
+ *		...
+ *		(<param_namen> <mpi>)
+ *	      ))
+ *
+ * <algo> must be given as a stringified OID or the special string
+ * "rsa".  For ECC <algo> must either be "ecdsa" or the OID matching the used
+ * hash algorithm; the expected parameters are "r" and "s".
+ *
+ * Note that IDX is only used for consistency checks.
  */
 gpg_error_t
 ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
 {
-  const unsigned char *s;
-  unsigned long n;
+  gpg_error_t err;
+  unsigned long n, namelen;
   struct sig_val_s *sv, **sv_tail;
+  const unsigned char *s, *endp, *name;
+  int ecc;  /* True for ECC algos.  */
   int i;
 
   if (!cms)
@@ -1862,6 +1867,7 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
   if (idx < 0)
     return gpg_error (GPG_ERR_INV_INDEX); /* only one signer for now */
 
+  /* log_sexp ("sigval:", sigval); */
   s = sigval;
   if (*s != '(')
     return gpg_error (GPG_ERR_INV_SEXP);
@@ -1887,9 +1893,20 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
   sv = xtrycalloc (1, sizeof *sv);
   if (!sv)
     return gpg_error (GPG_ERR_ENOMEM);
+
   if (n==3 && s[0] == 'r' && s[1] == 's' && s[2] == 'a')
-    { /* kludge to allow "rsa" to be passed as algorithm name */
-      sv->algo = xtrystrdup ("1.2.840.113549.1.1.1");
+    {
+      sv->algo = xtrystrdup ("1.2.840.113549.1.1.1"); /* rsa */
+      if (!sv->algo)
+        {
+          xfree (sv);
+          return gpg_error (GPG_ERR_ENOMEM);
+        }
+    }
+  else if (n==5 && !memcmp (s, "ecdsa", 5))
+    {
+      /* Use a placeholder for later fixup.  */
+      sv->algo = xtrystrdup ("ecdsa");
       if (!sv->algo)
         {
           xfree (sv);
@@ -1909,70 +1926,114 @@ ksba_cms_set_sig_val (ksba_cms_t cms, int idx, ksba_const_sexp_t sigval)
     }
   s += n;
 
-  /* And now the values - FIXME: For now we only support one */
-  /* fixme: start loop */
-  if (*s != '(')
+  ecc = (!strcmp (sv->algo, "ecdsa")                  /* placeholder */
+         || !strcmp (sv->algo, "1.2.840.10045.4.3.2") /* ecdsa-with-SHA256 */
+         || !strcmp (sv->algo, "1.2.840.10045.4.3.3") /* ecdsa-with-SHA384 */
+         || !strcmp (sv->algo, "1.2.840.10045.4.3.4") /* ecdsa-with-SHA512 */
+         );
+
+  xfree (sv->value); sv->value = NULL;
+  xfree (sv->ecc.r); sv->ecc.r = NULL;
+
+  while (*s == '(')
     {
-      xfree (sv->algo);
-      xfree (sv);
-      return gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
+      s++;
+      n = strtoul (s, (char**)&endp, 10);
+      s = endp;
+      if (!n || *s != ':')
+        {
+          err = gpg_error (GPG_ERR_INV_SEXP);
+          goto leave;
+        }
+      s++;
+      name = s;
+      namelen = n;
+      s += n;
+
+      if (!digitp(s))
+        {
+          err = gpg_error (GPG_ERR_UNKNOWN_SEXP); /* or invalid sexp */
+          goto leave;
+        }
+      n = strtoul (s, (char**)&endp, 10);
+      s = endp;
+      if (!n || *s != ':')
+        {
+          err = gpg_error (GPG_ERR_INV_SEXP);
+          goto leave;
+        }
+      s++;
+
+      if (namelen == 1 && *name == 's')
+        {
+          /* Store the "main" parameter into value. */
+          xfree (sv->value);
+          sv->value = xtrymalloc (n);
+          if (!sv->value)
+            {
+              err = gpg_error_from_syserror ();
+              goto leave;
+            }
+          memcpy (sv->value, s, n);
+          sv->valuelen = n;
+        }
+      else if (ecc && namelen == 1 && *name == 'r')
+        {
+          xfree (sv->ecc.r);
+          sv->ecc.r = xtrymalloc (n);
+          if (!sv->ecc.r)
+            {
+              err = gpg_error_from_syserror ();
+              goto leave;
+            }
+          memcpy (sv->ecc.r, s, n);
+          sv->ecc.rlen = n;
+        }
+      /* (We ignore all other parameter of the (key value) form.)  */
+
+      s += n;
+      if ( *s != ')')
+        {
+          err = gpg_error (GPG_ERR_UNKNOWN_SEXP); /* or invalid sexp */
+          goto leave;
+        }
+      s++;
+    }
+
+  /* Expect two closing parenthesis.  */
+  if (*s != ')')
+    {
+      err = gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
+      goto leave;
     }
   s++;
-
-  if (!(n = snext (&s)))
-    {
-      xfree (sv->algo);
-      xfree (sv);
-      return gpg_error (GPG_ERR_INV_SEXP);
-    }
-  s += n; /* ignore the name of the parameter */
-
-  if (!digitp(s))
-    {
-      xfree (sv->algo);
-      xfree (sv);
-      /* May also be an invalid S-EXP.  */
-      return gpg_error (GPG_ERR_UNKNOWN_SEXP);
-    }
-
-  if (!(n = snext (&s)))
-    {
-      xfree (sv->algo);
-      xfree (sv);
-      return gpg_error (GPG_ERR_INV_SEXP);
-    }
-
-  sv->value = xtrymalloc (n);
-  if (!sv->value)
-    {
-      xfree (sv->algo);
-      xfree (sv);
-      return gpg_error (GPG_ERR_ENOMEM);
-    }
-  memcpy (sv->value, s, n);
-  sv->valuelen = n;
-  s += n;
   if ( *s != ')')
     {
-      xfree (sv->value);
-      xfree (sv->algo);
-      xfree (sv);
-      return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* but may also be an invalid one */
+      err = gpg_error (GPG_ERR_INV_SEXP);
+      goto leave;
     }
-  s++;
-  /* fixme: end loop over parameters */
 
-  /* we need 2 closing parenthesis */
-  if ( *s != ')' || s[1] != ')')
+  /* Check that we have all required data.  */
+  if (!sv->value)
     {
-      xfree (sv->value);
-      xfree (sv->algo);
-      xfree (sv);
-      return gpg_error (GPG_ERR_INV_SEXP);
+      err = gpg_error (GPG_ERR_INV_SEXP);
+      goto leave;
+    }
+  if (ecc && (!sv->ecc.r || !sv->ecc.rlen))
+    {
+      err = gpg_error (GPG_ERR_INV_SEXP);
+      goto leave;
     }
 
   *sv_tail = sv;
-  return 0;
+  return 0; /* Success.  */
+
+ leave:  /* Note: This is an error-only label.  */
+  xfree (sv->value);
+  xfree (sv->algo);
+  xfree (sv->ecc.r);
+  xfree (sv);
+  return err;
 }
 
 
@@ -2998,6 +3059,7 @@ build_signed_data_rest (ksba_cms_t cms)
   struct sig_val_s *sv;
   ksba_writer_t tmpwrt = NULL;
   AsnNode root = NULL;
+  ksba_der_t dbld = NULL;
 
   /* Now we can really write the signer info */
   err = ksba_asn_create_tree ("cms", &cms_tree);
@@ -3033,6 +3095,7 @@ build_signed_data_rest (ksba_cms_t cms)
       AsnNode n, n2;
       unsigned char *image;
       size_t imagelen;
+      const char *oid;
 
       if (!digestlist || !si || !sv)
         {
@@ -3124,7 +3187,26 @@ build_signed_data_rest (ksba_cms_t cms)
 	  err = gpg_error (GPG_ERR_MISSING_VALUE);
 	  goto leave;
 	}
-      err = _ksba_der_store_oid (n, sv->algo);
+
+      if (!strcmp (sv->algo, "ecdsa"))
+        {
+          /* Look at the digest algorithm and replace accordingly.  */
+          if (!strcmp (digestlist->oid, "2.16.840.1.101.3.4.2.1"))
+            oid = "1.2.840.10045.4.3.2";  /* ecdsa-with-SHA256 */
+          else if (!strcmp (digestlist->oid, "2.16.840.1.101.3.4.2.2"))
+            oid = "1.2.840.10045.4.3.3";  /* ecdsa-with-SHA384 */
+          else if (!strcmp (digestlist->oid, "2.16.840.1.101.3.4.2.3"))
+            oid = "1.2.840.10045.4.3.4";  /* ecdsa-with-SHA512 */
+          else
+            {
+              err = gpg_error (GPG_ERR_DIGEST_ALGO);
+              goto leave;
+            }
+        }
+      else
+        oid = sv->algo;
+
+      err = _ksba_der_store_oid (n, oid);
       if (err)
 	goto leave;
       n = _ksba_asn_find_node (root,
@@ -3150,9 +3232,38 @@ build_signed_data_rest (ksba_cms_t cms)
 	  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
 	  goto leave;
 	}
-      err = _ksba_der_store_octet_string (n, sv->value, sv->valuelen);
-      if (err)
-	goto leave;
+
+      if (sv->ecc.r)  /* ECDSA */
+        {
+          unsigned char *tmpder;
+          size_t tmpderlen;
+
+          _ksba_der_release (dbld);
+          dbld = _ksba_der_builder_new (0);
+          if (!dbld)
+            {
+              err = gpg_error_from_syserror ();
+              goto leave;
+            }
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
+          _ksba_der_add_int (dbld, sv->ecc.r, sv->ecc.rlen, 1);
+          _ksba_der_add_int (dbld, sv->value, sv->valuelen, 1);
+          _ksba_der_add_end (dbld);
+
+          err = _ksba_der_builder_get (dbld, &tmpder, &tmpderlen);
+          if (err)
+            goto leave;
+          err = _ksba_der_store_octet_string (n, tmpder, tmpderlen);
+          xfree (tmpder);
+          if (err)
+            goto leave;
+        }
+      else  /* RSA */
+        {
+          err = _ksba_der_store_octet_string (n, sv->value, sv->valuelen);
+          if (err)
+            goto leave;
+        }
 
       /* Make the DER encoding and write it out. */
       err = _ksba_der_encode_tree (root, &image, &imagelen);
@@ -3196,7 +3307,7 @@ build_signed_data_rest (ksba_cms_t cms)
   ksba_asn_tree_release (cms_tree);
   _ksba_asn_release_nodes (root);
   ksba_writer_release (tmpwrt);
-
+  _ksba_der_release (dbld);
   return err;
 }
 

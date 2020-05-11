@@ -1,0 +1,284 @@
+   0 NDEF: SEQUENCE { -- ContentInfo
+   2    9:   OBJECT IDENTIFIER signedData (1 2 840 113549 1 7 2)
+  13 NDEF:   [0] {  -- content
+  15 NDEF:     SEQUENCE {
+  17    1:       INTEGER 1    -- version
+  20   15:       SET {        -- digestAlgorithms
+  22   13:         SEQUENCE { -- digestalgorithmIdentifier
+  24    9:           OBJECT IDENTIFIER sha-256 (2 16 840 1 101 3 4 2 1)
+  35    0:           NULL
+         :           }
+         :         }
+  37 NDEF:       SEQUENCE {  -- encapContentInfo
+  39    9:         OBJECT IDENTIFIER data (1 2 840 113549 1 7 1)
+         :         }   -- (no data thus this is a detached signature)
+  52 NDEF:       [0] {  -- certificates
+  54  711:         SEQUENCE {
+  58  431:           SEQUENCE {
+  62    3:             [0] {
+  64    1:               INTEGER 2
+         :               }
+  67    4:             INTEGER 649228179
+  73   13:             SEQUENCE {
+  75    9:               OBJECT IDENTIFIER
+         :                 sha256WithRSAEncryption (1 2 840 113549 1 1 11)
+  86    0:               NULL
+         :               }
+  88  119:             SEQUENCE {
+  90   11:               SET {
+  92    9:                 SEQUENCE {
+  94    3:                   OBJECT IDENTIFIER countryName (2 5 4 6)
+  99    2:                   PrintableString 'DE'
+         :                   }
+         :                 }
+ 103   28:               SET {
+ 105   26:                 SEQUENCE {
+ 107    3:                   OBJECT IDENTIFIER organizationName (2 5 4 10)
+ 112   19:                   UTF8String 'Deutsche Telekom AG'
+         :                   }
+         :                 }
+ 133   18:               SET {
+ 135   16:                 SEQUENCE {
+ 137    3:                   OBJECT IDENTIFIER organizationalUnitName (2 5 4 11)
+ 142    9:                   UTF8String 'T-TeleSec'
+         :                   }
+         :                 }
+ 153   20:               SET {
+ 155   18:                 SEQUENCE {
+ 157    3:                   OBJECT IDENTIFIER commonName (2 5 4 3)
+ 162   11:                   UTF8String 'TKS CA 1:PN'
+         :                   }
+         :                 }
+ 175   10:               SET {
+ 177    8:                 SEQUENCE {
+ 179    3:                   OBJECT IDENTIFIER serialNumber (2 5 4 5)
+ 184    1:                   PrintableString '1'
+         :                   }
+         :                 }
+ 187   20:               SET {
+ 189   18:                 SEQUENCE {
+ 191    3:                   OBJECT IDENTIFIER pseudonym (2 5 4 65)
+ 196   11:                   UTF8String 'TKS CA 1:PN'
+         :                   }
+         :                 }
+         :               }
+ 209   30:             SEQUENCE {
+ 211   13:               UTCTime 05/02/2013 12:35:12 GMT
+ 226   13:               UTCTime 05/02/2023 12:35:12 GMT
+         :               }
+ 241   75:             SEQUENCE {
+ 243   11:               SET {
+ 245    9:                 SEQUENCE {
+ 247    3:                   OBJECT IDENTIFIER countryName (2 5 4 6)
+ 252    2:                   PrintableString 'DE'
+         :                   }
+         :                 }
+ 256   23:               SET {
+ 258   21:                 SEQUENCE {
+ 260    3:                   OBJECT IDENTIFIER commonName (2 5 4 3)
+ 265   14:                   UTF8String 'TKS 13 A 04562'
+         :                   }
+         :                 }
+ 281   10:               SET {
+ 283    8:                 SEQUENCE {
+ 285    3:                   OBJECT IDENTIFIER serialNumber (2 5 4 5)
+ 290    1:                   PrintableString '1'
+         :                   }
+         :                 }
+ 293   23:               SET {
+ 295   21:                 SEQUENCE {
+ 297    3:                   OBJECT IDENTIFIER pseudonym (2 5 4 65)
+ 302   14:                   UTF8String 'TKS 13 A 04562'
+         :                   }
+         :                 }
+         :               }
+ 318   89:             SEQUENCE {
+ 320   19:               SEQUENCE {
+ 322    7:                 OBJECT IDENTIFIER ecPublicKey (1 2 840 10045 2 1)
+ 331    8:                 OBJECT IDENTIFIER prime256v1 (1 2 840 10045 3 1 7)
+         :                 }
+ 341   66:               BIT STRING
+         :                 04 A4 1C 91 05 47 42 1F FB F9 08 BF 2E 4A 53 B6
+         :                 FB 9E D7 25 09 04 D7 71 9A 89 E0 5A 32 E6 DD 93
+         :                 19 9F E2 99 34 4F 7C 43 EB DC 71 23 47 7B BA 34
+         :                 BE 39 A7 CF 0F F5 82 E5 D1 FC 3F 10 4B 8E 6D 4F
+         :                 4F
+         :               }
+ 409   82:             [3] {
+ 411   80:               SEQUENCE {
+ 413   31:                 SEQUENCE {
+ 415    3:                   OBJECT IDENTIFIER
+         :                     authorityKeyIdentifier (2 5 29 35)
+ 420   24:                   OCTET STRING, encapsulates {
+ 422   22:                     SEQUENCE {
+ 424   20:                       [0]
+         :                     CB 03 DF 18 AD 26 0E C8 99 56 83 C6 CD 1D EA 61
+         :                     02 19 60 39
+         :                       }
+         :                     }
+         :                   }
+ 446   29:                 SEQUENCE {
+ 448    3:                   OBJECT IDENTIFIER subjectKeyIdentifier (2 5 29 14)
+ 453   22:                   OCTET STRING, encapsulates {
+ 455   20:                     OCTET STRING
+         :                     D2 A5 17 30 59 88 96 56 72 8A 1E B1 D6 02 18 69
+         :                     06 00 5A BA
+         :                     }
+         :                   }
+ 477   14:                 SEQUENCE {
+ 479    3:                   OBJECT IDENTIFIER keyUsage (2 5 29 15)
+ 484    1:                   BOOLEAN TRUE
+ 487    4:                   OCTET STRING, encapsulates {
+ 489    2:                     BIT STRING 7 unused bits
+         :                       '1'B (bit 0)
+         :                     }
+         :                   }
+         :                 }
+         :               }
+         :             }
+ 493   13:           SEQUENCE {
+ 495    9:             OBJECT IDENTIFIER
+         :               sha256WithRSAEncryption (1 2 840 113549 1 1 11)
+ 506    0:             NULL
+         :             }
+ 508  257:           BIT STRING
+         :             04 3C 56 07 7F B9 EB 93 4E FE CB 23 56 EC 73 B3
+         :             10 9A A4 80 91 45 56 77 48 B0 AC BA 25 E4 52 96
+         :             62 55 41 30 70 4C 0C 81 77 F3 E9 52 4E C9 DE FB
+         :             11 70 82 37 1E A1 CF F3 48 8C 26 F3 59 41 25 F5
+         :             39 55 56 80 42 D1 9E 63 90 41 BC C4 B2 4D 1C 66
+         :             1B CF 88 95 96 CB A0 83 B8 D3 D4 C9 0E E2 E1 89
+         :             A6 BE E3 2B FB 75 6F 36 43 BF 4E 8D FE 9C B2 79
+         :             ED 61 8F 63 74 6F C9 B4 AC C2 16 F6 A9 CD 00 0E
+         :             A7 21 7E 84 21 6A 69 FD 88 79 51 9E A4 63 8A 5B
+         :             00 CE 9F 8E B1 F5 E1 97 1F 53 7B A0 2A 5E 6C D7
+         :             62 9F 4B 11 45 43 44 1D 4B FF 8F 87 7D BB B6 38
+         :             E0 EE 0A 2B 55 72 43 58 66 61 9A 70 8A 34 18 E7
+         :             C1 68 05 7F C1 03 A3 11 1D ED A3 AD 6C F8 34 B6
+         :             63 6A EB 53 C8 21 13 9C 6E C4 68 B4 2D F5 AA 59
+         :             6D 42 C7 0D 24 0B 7F 28 8F 76 80 02 BE 8B 52 5F
+         :             2E B4 79 17 8B D9 9E E2 28 58 72 E5 F1 23 7E CF
+         :           }
+         :         }  -- end certificates
+ 771  447:       SET {  -- signerInfos
+ 775  443:         SEQUENCE {  -- SignerInfo
+ 779    1:           INTEGER 1  -- version
+ 782  127:           SEQUENCE {  --sid.signerIdentifier
+ 784  119:             SEQUENCE {
+ 786   11:               SET {
+ 788    9:                 SEQUENCE {
+ 790    3:                   OBJECT IDENTIFIER countryName (2 5 4 6)
+ 795    2:                   PrintableString 'DE'
+         :                   }
+         :                 }
+ 799   28:               SET {
+ 801   26:                 SEQUENCE {
+ 803    3:                   OBJECT IDENTIFIER organizationName (2 5 4 10)
+ 808   19:                   UTF8String 'Deutsche Telekom AG'
+         :                   }
+         :                 }
+ 829   18:               SET {
+ 831   16:                 SEQUENCE {
+ 833    3:                   OBJECT IDENTIFIER organizationalUnitName (2 5 4 11)
+ 838    9:                   UTF8String 'T-TeleSec'
+         :                   }
+         :                 }
+ 849   20:               SET {
+ 851   18:                 SEQUENCE {
+ 853    3:                   OBJECT IDENTIFIER commonName (2 5 4 3)
+ 858   11:                   UTF8String 'TKS CA 1:PN'
+         :                   }
+         :                 }
+ 871   10:               SET {
+ 873    8:                 SEQUENCE {
+ 875    3:                   OBJECT IDENTIFIER serialNumber (2 5 4 5)
+ 880    1:                   PrintableString '1'
+         :                   }
+         :                 }
+ 883   20:               SET {
+ 885   18:                 SEQUENCE {
+ 887    3:                   OBJECT IDENTIFIER pseudonym (2 5 4 65)
+ 892   11:                   UTF8String 'TKS CA 1:PN'
+         :                   }
+         :                 }
+         :               }
+ 905    4:             INTEGER 649228179
+         :             } -- end signerIdentifier
+ 911   13:           SEQUENCE {  -- digestAlgorithm
+ 913    9:             OBJECT IDENTIFIER sha-256 (2 16 840 1 101 3 4 2 1)
+ 924    0:             NULL
+         :             }
+ 926  206:           [0] {  -- signedAttrs
+ 929   24:             SEQUENCE {
+ 931    9:               OBJECT IDENTIFIER contentType (1 2 840 113549 1 9 3)
+ 942   11:               SET {
+ 944    9:                 OBJECT IDENTIFIER data (1 2 840 113549 1 7 1)
+         :                 }
+         :               }
+ 955   28:             SEQUENCE {
+ 957    9:               OBJECT IDENTIFIER signingTime (1 2 840 113549 1 9 5)
+ 968   15:               SET {
+ 970   13:                 UTCTime 08/05/2020 08:30:09 GMT
+         :                 }
+         :               }
+ 985   42:             SEQUENCE {
+ 987    9:               OBJECT IDENTIFIER '1 2 840 113549 1 9 52'
+ 998   29:               SET {
+1000   27:                 SEQUENCE {
+1002   13:                   SEQUENCE {
+1004    9:                     OBJECT IDENTIFIER
+         :                       sha-256 (2 16 840 1 101 3 4 2 1)
+1015    0:                     NULL
+         :                     }
+1017   10:                   [1] {
+1019    8:                     OBJECT IDENTIFIER
+         :                       ecdsaWithSHA256 (1 2 840 10045 4 3 2)
+         :                     }
+         :                   }
+         :                 }
+         :               }
+1029   47:             SEQUENCE {
+1031    9:               OBJECT IDENTIFIER messageDigest (1 2 840 113549 1 9 4)
+1042   34:               SET {
+1044   32:                 OCTET STRING
+         :                   A5 F1 A3 86 07 5E 07 9F 44 D3 9F 89 FF C6 4A E6
+         :                   A0 A3 7F DC F3 38 95 CC 7C A0 E8 17 DA E3 55 D6
+         :                 }
+         :               }
+1078   55:             SEQUENCE {
+1080   11:               OBJECT IDENTIFIER
+         :                 signingCertificateV2 (1 2 840 113549 1 9 16 2 47)
+1093   40:               SET {
+1095   38:                 SEQUENCE {
+1097   36:                   SEQUENCE {
+1099   34:                     SEQUENCE {
+1101   32:                       OCTET STRING
+         :                     DA AF A8 84 FE 82 0A BA 58 4C 4D 56 F8 31 46 4A
+         :                     E1 6B 56 66 40 9B F1 5D F1 2B 6C 90 8F 76 AD 23
+         :                       }
+         :                     }
+         :                   }
+         :                 }
+         :               }
+         :             }  -- end signedAttrs
+1135   10:           SEQUENCE {  -- signatureAlgorithm
+1137    8:             OBJECT IDENTIFIER ecdsaWithSHA256 (1 2 840 10045 4 3 2)
+         :             }
+1147   71:           OCTET STRING, encapsulates {  -- signature
+1149   69:             SEQUENCE {
+1151   33:               INTEGER
+         :                 00 A0 DE 18 D7 2A 72 FF E7 E4 47 27 80 67 F3 85
+         :                 0C 90 72 44 18 C3 30 18 7C 5A A1 E8 7F 1B C9 48
+         :                 3D
+1186   32:               INTEGER
+         :                 36 B1 15 F6 DA BA 02 16 48 64 91 17 32 D5 43 84
+         :                 35 80 0D E3 EF 00 10 FD BF 4D 26 8A 54 CD 72 BD
+         :               }
+         :             }
+1220    0:           [1]  -- unsignedAttrs
+         :             Error: Object has zero length.
+         :           }
+         :         }
+         :       }
+         :     }
+         :   }

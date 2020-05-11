@@ -274,6 +274,37 @@ _ksba_der_add_bts (ksba_der_t d, const void *value, size_t valuelen,
 }
 
 
+/* Add (VALUE, VALUELEN) as an INTEGER to D.  If FORCE_POSITIVE iset
+ * set a 0 or positive number is stored regardless of what is in
+ * (VALUE, VALUELEN).  */
+void
+_ksba_der_add_int (ksba_der_t d, const void *value, size_t valuelen,
+                   int force_positive)
+{
+  unsigned char *p;
+  int need_extra;
+
+  if (ensure_space (d))
+    return;
+  if (!value || !valuelen)
+    need_extra = 1;  /* Assume the integer value 0 was meant.  */
+  else
+    need_extra = (force_positive && (*(const unsigned char*)value & 0x80));
+
+  p = xtrymalloc (need_extra+valuelen);
+  if (!p)
+    {
+      d->error = gpg_error_from_syserror ();
+      return;
+    }
+  if (need_extra)
+    p[0] = 0;
+  if (valuelen)
+    memcpy (p+need_extra, value, valuelen);
+  add_val_core (d, 0, TYPE_INTEGER, p, need_extra+valuelen, 0);
+}
+
+
 /* This function allows to add a pre-constructed DER object to the
  * builder.  It should be a valid DER object but its values is not
  * further checked and copied verbatim to the final DER object
