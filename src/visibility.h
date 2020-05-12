@@ -192,6 +192,19 @@
 #define ksba_writer_write                  _ksba_writer_write
 #define ksba_writer_write_octet_string     _ksba_writer_write_octet_string
 
+#define ksba_der_release                   _ksba_der_release
+#define ksba_der_builder_new               _ksba_der_builder_new
+#define ksba_der_builder_reset             _ksba_der_builder_reset
+#define ksba_der_add_ptr                   _ksba_der_add_ptr
+#define ksba_der_add_val                   _ksba_der_add_val
+#define ksba_der_add_int                   _ksba_der_add_int
+#define ksba_der_add_oid                   _ksba_der_add_oid
+#define ksba_der_add_bts                   _ksba_der_add_bts
+#define ksba_der_add_der                   _ksba_der_add_der
+#define ksba_der_add_tag                   _ksba_der_add_tag
+#define ksba_der_add_end                   _ksba_der_add_end
+#define ksba_der_builder_get               _ksba_der_builder_get
+
 
 /* Include the main header file to map the public symbols to the
    internal underscore prefixed symbols.  */
@@ -386,6 +399,19 @@ int ksba_asn_delete_structure (void *dummy);
 #undef ksba_writer_write
 #undef ksba_writer_write_octet_string
 
+#undef ksba_der_release
+#undef ksba_der_builder_new
+#undef ksba_der_builder_reset
+#undef ksba_der_add_ptr
+#undef ksba_der_add_val
+#undef ksba_der_add_int
+#undef ksba_der_add_oid
+#undef ksba_der_add_bts
+#undef ksba_der_add_der
+#undef ksba_der_add_tag
+#undef ksba_der_add_end
+#undef ksba_der_builder_get
+
 
 
 /* Mark all symbols.  */
@@ -548,6 +574,19 @@ MARK_VISIBLE (ksba_writer_snatch_mem)
 MARK_VISIBLE (ksba_writer_tell)
 MARK_VISIBLE (ksba_writer_write)
 MARK_VISIBLE (ksba_writer_write_octet_string)
+
+MARK_VISIBLE (ksba_der_release)
+MARK_VISIBLE (ksba_der_builder_new)
+MARK_VISIBLE (ksba_der_builder_reset)
+MARK_VISIBLE (ksba_der_add_ptr)
+MARK_VISIBLE (ksba_der_add_val)
+MARK_VISIBLE (ksba_der_add_int)
+MARK_VISIBLE (ksba_der_add_oid)
+MARK_VISIBLE (ksba_der_add_bts)
+MARK_VISIBLE (ksba_der_add_der)
+MARK_VISIBLE (ksba_der_add_tag)
+MARK_VISIBLE (ksba_der_add_end)
+MARK_VISIBLE (ksba_der_builder_get)
 
 
 #  undef MARK_VISIBLE

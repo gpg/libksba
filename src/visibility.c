@@ -34,6 +34,7 @@
 #define _KSBA_INCLUDED_BY_VISIBILITY_C
 #include "util.h"
 
+
 /*--version.c --*/
 const char *
 ksba_check_version (const char *req_version)
@@ -1236,4 +1237,83 @@ char *
 ksba_name_get_uri (ksba_name_t name, int idx)
 {
   return _ksba_name_get_uri (name, idx);
+}
+
+
+/*-- der-encoder.c --*/
+void
+ksba_der_release (ksba_der_t d)
+{
+  if (d)
+    _ksba_der_release (d);
+}
+
+ksba_der_t
+ksba_der_builder_new (unsigned int nitems)
+{
+  return _ksba_der_builder_new (nitems);
+}
+
+void
+ksba_der_builder_reset (ksba_der_t d)
+{
+  _ksba_der_builder_reset (d);
+}
+
+void
+ksba_der_add_ptr (ksba_der_t d, int cls, int tag,
+                  void *value, size_t valuelen)
+{
+  _ksba_der_add_ptr (d, cls, tag, value, valuelen);
+}
+
+void
+ksba_der_add_val (ksba_der_t d, int cls, int tag,
+                  const void *value, size_t valuelen)
+{
+  _ksba_der_add_val (d, cls, tag, value, valuelen);
+}
+
+void
+ksba_der_add_int (ksba_der_t d, const void *value, size_t valuelen,
+                  int force_positive)
+{
+  _ksba_der_add_int (d, value, valuelen, force_positive);
+}
+
+void
+ksba_der_add_oid (ksba_der_t d, const char *oidstr)
+{
+  _ksba_der_add_oid (d, oidstr);
+}
+
+void
+ksba_der_add_bts (ksba_der_t d, const void *value, size_t valuelen,
+                  unsigned int unusedbits)
+{
+  _ksba_der_add_bts (d, value, valuelen, unusedbits);
+}
+
+void
+ksba_der_add_der (ksba_der_t d, const void *der, size_t derlen)
+{
+  _ksba_der_add_der (d, der, derlen);
+}
+
+void
+ksba_der_add_tag (ksba_der_t d, int cls, int tag)
+{
+  _ksba_der_add_tag (d, cls, tag);
+}
+
+void
+ksba_der_add_end (ksba_der_t d)
+{
+  _ksba_der_add_end (d);
+}
+
+gpg_error_t
+ksba_der_builder_get (ksba_der_t d, unsigned char **r_obj, size_t *r_objlen)
+{
+  return _ksba_der_builder_get (d, r_obj, r_objlen);
 }

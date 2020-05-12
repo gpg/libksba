@@ -21,9 +21,6 @@
 #ifndef DER_BUILDER_H
 #define DER_BUILDER_H 1
 
-struct ksba_der_s;
-typedef struct ksba_der_s *ksba_der_t;
-
 /* A generic release function.  If we add a DER parser we will use the
  * same object and then it does not make sense to have several release
  * functions.  */

@@ -229,6 +229,11 @@ typedef const unsigned char *ksba_const_sexp_t;
 typedef const unsigned char *KsbaConstSexp _KSBA_DEPRECATED;
 
 
+/* This is a generic object used by various functions.  */
+struct ksba_der_s;
+typedef struct ksba_der_s *ksba_der_t;
+
+
 /*-- cert.c --*/
 gpg_error_t ksba_cert_new (ksba_cert_t *acert);
 void        ksba_cert_ref (ksba_cert_t cert);
@@ -536,6 +541,30 @@ void        ksba_name_ref (ksba_name_t name);
 void        ksba_name_release (ksba_name_t name);
 const char *ksba_name_enum (ksba_name_t name, int idx);
 char       *ksba_name_get_uri (ksba_name_t name, int idx);
+
+
+/*-- der-builder.c --*/
+void ksba_der_release (ksba_der_t d);
+
+ksba_der_t ksba_der_builder_new (unsigned int nitems);
+void ksba_der_builder_reset (ksba_der_t d);
+
+void ksba_der_add_ptr (ksba_der_t d, int cls, int tag,
+                       void *value, size_t valuelen);
+void ksba_der_add_val (ksba_der_t d, int cls, int tag,
+                       const void *value, size_t valuelen);
+void ksba_der_add_int (ksba_der_t d, const void *value, size_t valuelen,
+                       int force_positive);
+void ksba_der_add_oid (ksba_der_t d, const char *oidstr);
+void ksba_der_add_bts (ksba_der_t d, const void *value, size_t valuelen,
+                       unsigned int unusedbits);
+void ksba_der_add_der (ksba_der_t d, const void *der, size_t derlen);
+void ksba_der_add_tag (ksba_der_t d, int cls, int tag);
+void ksba_der_add_end (ksba_der_t d);
+
+gpg_error_t ksba_der_builder_get (ksba_der_t d,
+                                  unsigned char **r_obj, size_t *r_objlen);
+
 
 
 /*-- util.c --*/

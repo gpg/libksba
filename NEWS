@@ -6,6 +6,19 @@ Noteworthy changes in version 1.4.0 (unreleased) [C19/A11/R-]
  KSBA_VERSION                     NEW.
  KSBA_VERSION_NUMBER              NEW.
  KSBA_CT_SPC_IND_DATA_CTX         NEW.
+ ksba_der_t                       NEW.
+ ksba_der_release                 NEW.
+ ksba_der_builder_new             NEW.
+ ksba_der_builder_reset           NEW.
+ ksba_der_add_ptr                 NEW.
+ ksba_der_add_val                 NEW.
+ ksba_der_add_int                 NEW.
+ ksba_der_add_oid                 NEW.
+ ksba_der_add_bts                 NEW.
+ ksba_der_add_der                 NEW.
+ ksba_der_add_tag                 NEW.
+ ksba_der_add_end                 NEW.
+ ksba_der_builder_get             NEW.
 
 
 Noteworthy changes in version 1.3.5 (2016-08-22) [C19/A11/R6]

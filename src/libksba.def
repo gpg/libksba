@@ -194,3 +194,16 @@ EXPORTS
       ksba_certreq_set_issuer         @149
       ksba_certreq_set_validity       @150
       ksba_certreq_set_siginfo        @151
+
+      ksba_der_release                @152
+      ksba_der_builder_new            @153
+      ksba_der_builder_reset          @154
+      ksba_der_add_ptr                @155
+      ksba_der_add_val                @156
+      ksba_der_add_int                @157
+      ksba_der_add_oid                @158
+      ksba_der_add_bts                @159
+      ksba_der_add_der                @160
+      ksba_der_add_tag                @161
+      ksba_der_add_end                @162
+      ksba_der_builder_get            @163
