@@ -428,7 +428,7 @@ to be extracted from the S-expression returned by
 This is the Ed25519 algorithm which does not use a separate digest
 algorithm.  See RFC-8410.
 
-@item 1.3.101.112
+@item 1.3.101.113
 This is the Ed448 algorithm which does not use a separate digest
 algorithm.  See RFC-8410.
 
