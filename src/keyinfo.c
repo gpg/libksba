@@ -251,11 +251,11 @@ static const struct algo_table_s sig_algo_table[] = {
   { /* iso.identified-organization.thawte.112 */
     "1.3.101.112", /* Ed25519 */
     "\x2b\x65\x70", 3,
-    1, PKALGO_ED25519, "eddsa", "-rs", "\x80", NULL, NULL, NULL },
+    1, PKALGO_ED25519, "eddsa", "", "", NULL, NULL, NULL },
   { /* iso.identified-organization.thawte.113 */
     "1.3.101.113", /* Ed448 */
     "\x2b\x65\x71", 3,
-    1, PKALGO_ED448, "eddsa", "-rs", "\x80", NULL, NULL, NULL },
+    1, PKALGO_ED448, "eddsa", "", "", NULL, NULL, NULL },
 
   {NULL}
 };
@@ -727,6 +727,16 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
       put_stringbuf (&sb, "(");
       put_stringbuf_sexp (&sb, "curve");
       put_stringbuf_sexp (&sb, parm_oid);
+      put_stringbuf (&sb, ")");
+    }
+  else if (pk_algo_table[algoidx].pkalgo == PKALGO_ED25519
+           || pk_algo_table[algoidx].pkalgo == PKALGO_ED448
+           || pk_algo_table[algoidx].pkalgo == PKALGO_X25519
+           || pk_algo_table[algoidx].pkalgo == PKALGO_X448)
+    {
+      put_stringbuf (&sb, "(");
+      put_stringbuf_sexp (&sb, "curve");
+      put_stringbuf_sexp (&sb, pk_algo_table[algoidx].oidstring);
       put_stringbuf (&sb, ")");
     }
 
@@ -1820,38 +1830,54 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
 
   /* FIXME: We don't release the stringbuf in case of error
      better let the macro jump to a label */
-  elem = algo_table[algoidx].elem_string;
-  ctrl = algo_table[algoidx].ctrl_string;
-  for (; *elem; ctrl++, elem++)
+  if (!mode && (algo_table[algoidx].pkalgo == PKALGO_ED25519
+                ||algo_table[algoidx].pkalgo == PKALGO_ED448))
     {
-      int is_int;
-
-      if ( (*ctrl & 0x80) && !elem[1] )
-        {  /* Hack to allow a raw value */
-          is_int = 1;
-          len = derlen;
-        }
-      else
+      /* EdDSA is special: R and S are simply concatenated; see rfc8410.  */
+      put_stringbuf (&sb, "(1:r");
+      put_stringbuf_mem_sexp (&sb, der, derlen/2);
+      put_stringbuf (&sb, ")");
+      der += derlen/2;
+      derlen /= 2;
+      put_stringbuf (&sb, "(1:s");
+      put_stringbuf_mem_sexp (&sb, der, derlen);
+      put_stringbuf (&sb, ")");
+    }
+  else
+    {
+      elem = algo_table[algoidx].elem_string;
+      ctrl = algo_table[algoidx].ctrl_string;
+      for (; *elem; ctrl++, elem++)
         {
-          if (!derlen)
-            return gpg_error (GPG_ERR_INV_KEYINFO);
-          c = *der++; derlen--;
-          if ( c != *ctrl )
-            return gpg_error (GPG_ERR_UNEXPECTED_TAG);
-          is_int = c == 0x02;
-          TLV_LENGTH (der);
-        }
-      if (is_int && *elem != '-')
-        { /* take this integer */
-          char tmp[2];
+          int is_int;
 
-          put_stringbuf (&sb, "(");
-          tmp[0] = *elem; tmp[1] = 0;
-          put_stringbuf_sexp (&sb, tmp);
-          put_stringbuf_mem_sexp (&sb, der, len);
-          der += len;
-          derlen -= len;
-          put_stringbuf (&sb, ")");
+          if ( (*ctrl & 0x80) && !elem[1] )
+            {  /* Hack to allow a raw value */
+              is_int = 1;
+              len = derlen;
+            }
+          else
+            {
+              if (!derlen)
+                return gpg_error (GPG_ERR_INV_KEYINFO);
+              c = *der++; derlen--;
+              if ( c != *ctrl )
+                return gpg_error (GPG_ERR_UNEXPECTED_TAG);
+              is_int = c == 0x02;
+              TLV_LENGTH (der);
+            }
+          if (is_int && *elem != '-')
+            { /* take this integer */
+              char tmp[2];
+
+              put_stringbuf (&sb, "(");
+              tmp[0] = *elem; tmp[1] = 0;
+              put_stringbuf_sexp (&sb, tmp);
+              put_stringbuf_mem_sexp (&sb, der, len);
+              der += len;
+              derlen -= len;
+              put_stringbuf (&sb, ")");
+            }
         }
     }
   if (mode == 2)  /* ECDH */
