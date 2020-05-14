@@ -109,10 +109,17 @@ insert_string (const char *name)
 static int
 cmp_string (const void *aptr, const void *bptr)
 {
-  const struct name_list_s **a = (const struct name_list_s **)aptr;
-  const struct name_list_s **b = (const struct name_list_s **)bptr;
+  const char *a = (*(const struct name_list_s **)aptr)->name;
+  const char *b = (*(const struct name_list_s **)bptr)->name;
 
-  return strlen ((*a)->name) < strlen ((*b)->name);
+  const size_t len_a = strlen(a);
+  const size_t len_b = strlen(b);
+
+  if (len_a < len_b)
+    return -1;
+  if (len_a > len_b)
+    return +1;
+  return strcmp(a, b);
 }
 
 static void
