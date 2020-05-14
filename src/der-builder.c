@@ -545,7 +545,9 @@ _ksba_der_builder_get (ksba_der_t d, unsigned char **r_obj, size_t *r_objlen)
 
   if (!d->finished)
     {
-      if (!d->nitems || !d->items[d->nitems-1].is_stop)
+      if (d->nitems == 1)
+        ;  /* Single item does not need an end tag.  */
+      else if (!d->nitems || !d->items[d->nitems-1].is_stop)
         {
           err = gpg_error (GPG_ERR_NO_OBJ);
           goto leave;
