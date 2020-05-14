@@ -42,7 +42,8 @@ test_crls = samples/ov-test-crl.crl
 test_keys = samples/ov-server.p12  samples/ov-userrev.p12 \
              samples/ov-serverrev.p12  samples/ov-user.p12
 
-EXTRA_DIST = $(test_certs) samples/README mkoidtbl.awk detached-sig.cms \
+EXTRA_DIST = $(test_certs) samples/README mkoidtbl.awk \
+             samples/detached-sig.cms \
 	     samples/rsa-sample1.p7m samples/rsa-sample1.p7m.asn \
 	     samples/ecdh-sample1.p7m samples/ecdh-sample1.p7m.asn
 

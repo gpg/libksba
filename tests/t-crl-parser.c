@@ -34,6 +34,11 @@
 #include "t-common.h"
 #include "oidtranstbl.h"
 
+
+static int quiet;
+static int verbose;
+
+
 static void
 my_hasher (void *arg, const void *buffer, size_t length)
 {
@@ -74,14 +79,16 @@ print_names (int indent, ksba_name_t name)
 
   if (!name)
     {
-      fputs ("none\n", stdout);
+      if (!quiet)
+        fputs ("none\n", stdout);
       return;
     }
 
   for (idx=0; (s = ksba_name_enum (name, idx)); idx++)
     {
       char *p = ksba_name_get_uri (name, idx);
-      printf ("%*s%s\n", idx||indent_all?indent:0, "", p?p:s);
+      if (!quiet)
+        printf ("%*s%s\n", idx||indent_all?indent:0, "", p?p:s);
       xfree (p);
     }
 }
@@ -100,6 +107,7 @@ one_file (const char *fname)
   FILE *hashlog = NULL;
 
 #ifdef ENABLE_HASH_LOGGING
+  if (1)
     {
       char *buf;
 
@@ -112,7 +120,8 @@ one_file (const char *fname)
     }
 #endif
 
-  printf ("*** checking `%s' ***\n", fname);
+  if (!quiet)
+    printf ("*** checking `%s' ***\n", fname);
   fp = fopen (fname, "rb");
   if (!fp)
     {
@@ -150,33 +159,45 @@ one_file (const char *fname)
             ksba_isotime_t this, next;
 
             algoid = ksba_crl_get_digest_algo (crl);
-            printf ("digest algo: %s\n", algoid? algoid : "[none]");
+            if (!quiet)
+              printf ("digest algo: %s\n", algoid? algoid : "[none]");
             if (algoid && !strcmp (algoid, "1.2.840.113549.1.1.10"))
               {
                 ksba_sexp_t pssparam;
 
-                printf ("   pss para: ");
+                if (!quiet)
+                  printf ("   pss para: ");
                 pssparam = ksba_crl_get_sig_val (crl);
-                print_sexp (pssparam);
-                putchar ('\n');
+                if (!quiet)
+                  {
+                    print_sexp (pssparam);
+                    putchar ('\n');
+                  }
                 xfree (pssparam);
               }
 
             err = ksba_crl_get_issuer (crl, &issuer);
             fail_if_err2 (fname, err);
-            printf ("issuer: ");
-            print_dn (issuer);
+            if (!quiet)
+              {
+                printf ("issuer: ");
+                print_dn (issuer);
+                putchar ('\n');
+              }
             xfree (issuer);
-            putchar ('\n');
+
             err = ksba_crl_get_update_times (crl, this, next);
             if (gpg_err_code (err) != GPG_ERR_INV_TIME)
               fail_if_err2 (fname, err);
-            printf ("thisUpdate: ");
-            print_time (this);
-            putchar ('\n');
-            printf ("nextUpdate: ");
-            print_time (next);
-            putchar ('\n');
+            if (!quiet)
+              {
+                printf ("thisUpdate: ");
+                print_time (this);
+                putchar ('\n');
+                printf ("nextUpdate: ");
+                print_time (next);
+                putchar ('\n');
+              }
           }
           break;
 
@@ -188,11 +209,14 @@ one_file (const char *fname)
 
             err = ksba_crl_get_item (crl, &serial, rdate, &reason);
             fail_if_err2 (fname, err);
-            printf ("CRL entry %d: s=", ++count);
-            print_sexp_hex (serial);
-            printf (", t=");
-            print_time (rdate);
-            printf (", r=%x\n", reason);
+            if (!quiet)
+              {
+                printf ("CRL entry %d: s=", ++count);
+                print_sexp_hex (serial);
+                printf (", t=");
+                print_time (rdate);
+                printf (", r=%x\n", reason);
+              }
             xfree (serial);
           }
           break;
@@ -221,26 +245,37 @@ one_file (const char *fname)
     err = ksba_crl_get_auth_key_id (crl, &keyid, &name1, &serial);
     if (!err || gpg_err_code (err) == GPG_ERR_NO_DATA)
       {
-        fputs ("AuthorityKeyIdentifier: ", stdout);
+        if (!quiet)
+          fputs ("AuthorityKeyIdentifier: ", stdout);
         if (gpg_err_code (err) == GPG_ERR_NO_DATA)
-          fputs ("none\n", stdout);
+          {
+            if (!quiet)
+              fputs ("none\n", stdout);
+          }
         else
           {
             if (name1)
               {
                 print_names (24, name1);
                 ksba_name_release (name1);
-                fputs ("                serial: ", stdout);
-                print_sexp_hex (serial);
+                if (!quiet)
+                  {
+                    fputs ("                serial: ", stdout);
+                    print_sexp_hex (serial);
+                  }
                 ksba_free (serial);
               }
-            putchar ('\n');
+            if (!quiet)
+              putchar ('\n');
             if (keyid)
               {
-                fputs ("         keyIdentifier: ", stdout);
-                print_sexp (keyid);
+                if (!quiet)
+                  {
+                    fputs ("         keyIdentifier: ", stdout);
+                    print_sexp (keyid);
+                    putchar ('\n');
+                  }
                 ksba_free (keyid);
-                putchar ('\n');
               }
           }
       }
@@ -254,15 +289,21 @@ one_file (const char *fname)
     err = ksba_crl_get_crl_number (crl, &serial);
     if (!err || gpg_err_code (err) == GPG_ERR_NO_DATA)
       {
-        fputs ("crlNumber: ", stdout);
+        if (!quiet)
+          fputs ("crlNumber: ", stdout);
         if (gpg_err_code (err) == GPG_ERR_NO_DATA)
-          fputs ("none", stdout);
+          {
+            if (!quiet)
+              fputs ("none", stdout);
+          }
         else
           {
-            print_sexp (serial);
+            if (!quiet)
+              print_sexp (serial);
             ksba_free (serial);
           }
-        putchar ('\n');
+        if (!quiet)
+          putchar ('\n');
       }
     else
       fail_if_err (err);
@@ -279,10 +320,11 @@ one_file (const char *fname)
                                               NULL, &derlen)); idx++)
       {
         const char *s = get_oid_desc (oid);
-        printf ("%sExtn: %s%s%s%s   (%lu octets)\n",
-                crit? "Crit":"",
-                s?" (":"", s?s:"", s?")":"",
-                oid, (unsigned long)derlen);
+        if (!quiet)
+          printf ("%sExtn: %s%s%s%s   (%lu octets)\n",
+                  crit? "Crit":"",
+                  s?" (":"", s?s:"", s?")":"",
+                  oid, (unsigned long)derlen);
       }
     if (err && gpg_err_code (err) != GPG_ERR_EOF
         && gpg_err_code (err) != GPG_ERR_NO_DATA )
@@ -296,8 +338,11 @@ one_file (const char *fname)
     sigval = ksba_crl_get_sig_val (crl);
     if (!sigval)
       fail ("signature value missing");
-    print_sexp (sigval);
-    putchar ('\n');
+    if (!quiet)
+      {
+        print_sexp (sigval);
+        putchar ('\n');
+      }
     xfree (sigval);
   }
 
@@ -320,9 +365,19 @@ main (int argc, char **argv)
   if (!srcdir)
     srcdir = ".";
 
-  if (argc > 1)
+  if (argc)
     {
-      for (argc--, argv++; argc; argc--, argv++)
+      argc--; argv++;
+    }
+  if (argc && !strcmp (*argv, "--verbose"))
+    {
+      verbose = 1;
+      argc--; argv++;
+    }
+
+  if (argc)
+    {
+      for (; argc; argc--, argv++)
         one_file (*argv);
     }
   else
@@ -332,6 +387,9 @@ main (int argc, char **argv)
         NULL
       };
       int idx;
+
+      if (!verbose)
+        quiet = 1;
 
       for (idx=0; files[idx]; idx++)
         {
