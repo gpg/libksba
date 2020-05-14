@@ -337,9 +337,9 @@ main (int argc, char **argv)
         {
           char *fname;
 
-          fname = xmalloc (strlen (srcdir) + 1 + strlen (files[idx]) + 1);
+          fname = xmalloc (strlen (srcdir) + 10 + strlen (files[idx]) + 1);
           strcpy (fname, srcdir);
-          strcat (fname, "/");
+          strcat (fname, "/samples/");
           strcat (fname, files[idx]);
           one_file (fname);
           xfree (fname);

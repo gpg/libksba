@@ -20,14 +20,22 @@
 
 TESTS_ENVIRONMENT =
 
-test_certs = cert_dfn_pca01.der cert_dfn_pca15.der \
-	     cert_g10code_test1.der crl_testpki_testpca.der \
+test_certs = samples/cert_dfn_pca01.der samples/cert_dfn_pca15.der \
+	     samples/cert_g10code_test1.der samples/crl_testpki_testpca.der \
 	     samples/authority.crt samples/betsy.crt samples/bull.crt \
              samples/ov-ocsp-server.crt samples/ov-userrev.crt \
              samples/ov-root-ca-cert.crt samples/ov-serverrev.crt \
 	     samples/ov-user.crt samples/ov-server.crt  \
              samples/ov2-root-ca-cert.crt samples/ov2-ocsp-server.crt \
-             samples/ov2-user.crt samples/ov2-userrev.crt
+             samples/ov2-user.crt samples/ov2-userrev.crt \
+             samples/secp256r1-sha384_cert.crt \
+             samples/secp256r1-sha512_cert.crt \
+             samples/secp384r1-sha512_cert.crt \
+             samples/openssl-secp256r1ca.cert.crt \
+             samples/ed25519-rfc8410.crt \
+             samples/ed25519-ossl-1.crt \
+             samples/ed448-ossl-1.crt
+
 
 test_crls = samples/ov-test-crl.crl
 

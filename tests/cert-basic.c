@@ -51,8 +51,9 @@
 
 #define xfree(a)  ksba_free (a)
 
+static int quiet;
 static int verbose;
-static int errorcount = 0;
+static int errorcount;
 
 
 static void
@@ -67,14 +68,16 @@ print_names (int indent, ksba_name_t name)
 
   if (!name)
     {
-      fputs ("none\n", stdout);
+      if (!quiet)
+        fputs ("none\n", stdout);
       return;
     }
 
   for (idx=0; (s = ksba_name_enum (name, idx)); idx++)
     {
       char *p = ksba_name_get_uri (name, idx);
-      printf ("%*s%s\n", idx||indent_all?indent:0, "", p?p:s);
+      if (!quiet)
+        printf ("%*s%s\n", idx||indent_all?indent:0, "", p?p:s);
       xfree (p);
     }
 }
@@ -158,9 +161,10 @@ list_extensions (ksba_cert_t cert)
                                              &oid, &crit, &off, &len));idx++)
     {
       const char *s = get_oid_desc (oid);
-      printf ("Extn: %s%s%s%s at %d with length %d %s\n",
-              oid, s?" (":"", s?s:"", s?")":"",
-              (int)off, (int)len, crit? "(critical)":"");
+      if (!quiet)
+        printf ("Extn: %s%s%s%s at %d with length %d %s\n",
+                oid, s?" (":"", s?s:"", s?")":"",
+                (int)off, (int)len, crit? "(critical)":"");
     }
   if (err && gpg_err_code (err) != GPG_ERR_EOF )
     {
@@ -174,15 +178,22 @@ list_extensions (ksba_cert_t cert)
   err = ksba_cert_get_subj_key_id (cert, NULL, &keyid);
   if (!err || gpg_err_code (err) == GPG_ERR_NO_DATA)
     {
-      fputs ("SubjectKeyIdentifier: ", stdout);
+      if (!quiet)
+        fputs ("SubjectKeyIdentifier: ", stdout);
       if (gpg_err_code (err) == GPG_ERR_NO_DATA)
-        fputs ("none", stdout);
+        {
+          if (!quiet)
+            fputs ("none\n", stdout);
+        }
       else
         {
-          print_sexp (keyid);
-          ksba_free (keyid);
+          if (!quiet)
+            {
+              print_sexp (keyid);
+              putchar ('\n');
+            }
         }
-      putchar ('\n');
+      ksba_free (keyid);
     }
 
 
@@ -190,26 +201,37 @@ list_extensions (ksba_cert_t cert)
   err = ksba_cert_get_auth_key_id (cert, &keyid, &name1, &serial);
   if (!err || gpg_err_code (err) == GPG_ERR_NO_DATA)
     {
-      fputs ("AuthorityKeyIdentifier: ", stdout);
+      if (!quiet)
+        fputs ("AuthorityKeyIdentifier: ", stdout);
       if (gpg_err_code (err) == GPG_ERR_NO_DATA)
-        fputs ("none\n", stdout);
+        {
+          if (!quiet)
+            fputs ("none\n", stdout);
+        }
       else
         {
           if (name1)
             {
               print_names (24, name1);
               ksba_name_release (name1);
-              fputs ("                serial: ", stdout);
-              print_sexp (serial);
+              if (!quiet)
+                {
+                  fputs ("                serial: ", stdout);
+                  print_sexp (serial);
+                }
               ksba_free (serial);
             }
-          putchar ('\n');
+          if (!quiet)
+            putchar ('\n');
           if (keyid)
             {
-              fputs ("         keyIdentifier: ", stdout);
-              print_sexp (keyid);
+              if (!quiet)
+                {
+                  fputs ("         keyIdentifier: ", stdout);
+                  print_sexp (keyid);
+                  putchar ('\n');
+                }
               ksba_free (keyid);
-              putchar ('\n');
             }
         }
     }
@@ -228,18 +250,24 @@ list_extensions (ksba_cert_t cert)
       errorcount++;
     }
   else if (is_ca)
-    printf ("This is a CA certificate with a path length of %d\n", pathlen);
+    {
+      if (!quiet)
+        printf ("This is a CA certificate with a path length of %d\n", pathlen);
+    }
 
   err = ksba_cert_get_key_usage (cert, &usage);
   if (gpg_err_code (err) == GPG_ERR_NO_DATA)
-    printf ("KeyUsage: Not specified\n");
+    {
+      if (!quiet)
+        printf ("KeyUsage: Not specified\n");
+    }
   else if (err)
     {
       fprintf (stderr, "%s:%d: ksba_cert_get_key_usage failed: %s\n",
                __FILE__, __LINE__, gpg_strerror (err));
       errorcount++;
     }
-  else
+  else if (!quiet)
     {
       fputs ("KeyUsage:", stdout);
       if ( (usage & KSBA_KEYUSAGE_DIGITAL_SIGNATURE))
@@ -264,7 +292,10 @@ list_extensions (ksba_cert_t cert)
     }
   err = ksba_cert_get_ext_key_usages (cert, &string);
   if (gpg_err_code (err) == GPG_ERR_NO_DATA)
-    printf ("ExtKeyUsages: none\n");
+    {
+      if (!quiet)
+        printf ("ExtKeyUsages: none\n");
+    }
   else if (err)
     {
       fprintf (stderr, "%s:%d: ksba_cert_ext_key_usages failed: %s\n",
@@ -273,15 +304,21 @@ list_extensions (ksba_cert_t cert)
     }
   else
     {
-      fputs ("ExtKeyUsages: ", stdout);
-      print_oid_list (14, string);
+      if (!quiet)
+        {
+          fputs ("ExtKeyUsages: ", stdout);
+          print_oid_list (14, string);
+        }
       xfree (string);
     }
 
 
   err = ksba_cert_get_cert_policies (cert, &string);
   if (gpg_err_code (err) == GPG_ERR_NO_DATA)
-    printf ("CertificatePolicies: none\n");
+    {
+      if (!quiet)
+        printf ("CertificatePolicies: none\n");
+    }
   else if (err)
     {
       fprintf (stderr, "%s:%d: ksba_cert_get_cert_policies failed: %s\n",
@@ -290,14 +327,17 @@ list_extensions (ksba_cert_t cert)
     }
   else
     {
-      /* for display purposes we replace the linefeeds by commas */
-      for (p=string; *p; p++)
+      if (!quiet)
         {
-          if (*p == '\n')
-            *p = ',';
+          /* for display purposes we replace the linefeeds by commas */
+          for (p=string; *p; p++)
+            {
+              if (*p == '\n')
+                *p = ',';
+            }
+          fputs ("CertificatePolicies: ", stdout);
+          print_oid_list (21, string);
         }
-      fputs ("CertificatePolicies: ", stdout);
-      print_oid_list (21, string);
       xfree (string);
     }
 
@@ -306,27 +346,31 @@ list_extensions (ksba_cert_t cert)
                                                   &name1, &name2,
                                                   &reason));idx++)
     {
-      fputs ("CRLDistPoint: ", stdout);
+      if (!quiet)
+        fputs ("CRLDistPoint: ", stdout);
       print_names (14, name1);
-      fputs ("     reasons:", stdout);
-      if ( !reason )
-        fputs (" none", stdout);
-      if ( (reason & KSBA_CRLREASON_UNSPECIFIED))
-        fputs (" unused", stdout);
-      if ( (reason & KSBA_CRLREASON_KEY_COMPROMISE))
-        fputs (" keyCompromise", stdout);
-      if ( (reason & KSBA_CRLREASON_CA_COMPROMISE))
-        fputs (" caCompromise", stdout);
-      if ( (reason & KSBA_CRLREASON_AFFILIATION_CHANGED))
-        fputs (" affiliationChanged", stdout);
-      if ( (reason & KSBA_CRLREASON_SUPERSEDED))
-        fputs (" superseded", stdout);
-      if ( (reason & KSBA_CRLREASON_CESSATION_OF_OPERATION))
-        fputs (" cessationOfOperation", stdout);
-      if ( (reason & KSBA_CRLREASON_CERTIFICATE_HOLD))
-        fputs (" certificateHold", stdout);
-      putchar ('\n');
-      fputs ("      issuer: ", stdout);
+      if (!quiet)
+        {
+          fputs ("     reasons:", stdout);
+          if ( !reason )
+            fputs (" none", stdout);
+          if ( (reason & KSBA_CRLREASON_UNSPECIFIED))
+            fputs (" unused", stdout);
+          if ( (reason & KSBA_CRLREASON_KEY_COMPROMISE))
+            fputs (" keyCompromise", stdout);
+          if ( (reason & KSBA_CRLREASON_CA_COMPROMISE))
+            fputs (" caCompromise", stdout);
+          if ( (reason & KSBA_CRLREASON_AFFILIATION_CHANGED))
+            fputs (" affiliationChanged", stdout);
+          if ( (reason & KSBA_CRLREASON_SUPERSEDED))
+            fputs (" superseded", stdout);
+          if ( (reason & KSBA_CRLREASON_CESSATION_OF_OPERATION))
+            fputs (" cessationOfOperation", stdout);
+          if ( (reason & KSBA_CRLREASON_CERTIFICATE_HOLD))
+            fputs (" certificateHold", stdout);
+          putchar ('\n');
+          fputs ("      issuer: ", stdout);
+        }
       print_names (14, name2);
       ksba_name_release (name1);
       ksba_name_release (name2);
@@ -343,8 +387,11 @@ list_extensions (ksba_cert_t cert)
                                                          &string, &name1))
        ; idx++)
     {
-      fputs ("authorityInfoAccess: ", stdout);
-      print_oid_and_desc (string, 1);
+      if (!quiet)
+        {
+          fputs ("authorityInfoAccess: ", stdout);
+          print_oid_and_desc (string, 1);
+        }
       print_names (-21, name1);
       ksba_name_release (name1);
       ksba_free (string);
@@ -362,8 +409,11 @@ list_extensions (ksba_cert_t cert)
                                                        &string, &name1))
        ; idx++)
     {
-      fputs ("subjectInfoAccess: ", stdout);
-      print_oid_and_desc (string, 1);
+      if (!quiet)
+        {
+          fputs ("subjectInfoAccess: ", stdout);
+          print_oid_and_desc (string, 1);
+        }
       print_names (-19, name1);
       ksba_name_release (name1);
       ksba_free (string);
@@ -413,43 +463,59 @@ one_file (const char *fname)
   err = ksba_cert_read_der (cert, r);
   fail_if_err2 (fname, err);
 
-  printf ("Certificate in `%s':\n", fname);
+  if (!quiet)
+    printf ("Certificate in `%s':\n", fname);
 
   sexp = ksba_cert_get_serial (cert);
-  fputs ("  serial....: ", stdout);
-  print_sexp (sexp);
+  if (!quiet)
+    {
+      fputs ("  serial....: ", stdout);
+      print_sexp (sexp);
+      putchar ('\n');
+    }
   ksba_free (sexp);
-  putchar ('\n');
 
   for (idx=0;(dn = ksba_cert_get_issuer (cert, idx));idx++)
     {
-      fputs (idx?"         aka: ":"  issuer....: ", stdout);
-      print_dn (dn);
+      if (!quiet)
+        {
+          fputs (idx?"         aka: ":"  issuer....: ", stdout);
+          print_dn (dn);
+          putchar ('\n');
+        }
       ksba_free (dn);
-      putchar ('\n');
     }
 
   for (idx=0;(dn = ksba_cert_get_subject (cert, idx));idx++)
     {
-      fputs (idx?"         aka: ":"  subject...: ", stdout);
-      print_dn (dn);
+      if (!quiet)
+        {
+          fputs (idx?"         aka: ":"  subject...: ", stdout);
+          print_dn (dn);
+          putchar ('\n');
+        }
       ksba_free (dn);
-      putchar ('\n');
     }
 
   ksba_cert_get_validity (cert, 0, t);
-  fputs ("  notBefore.: ", stdout);
-  print_time (t);
-  putchar ('\n');
+  if (!quiet)
+    {
+      fputs ("  notBefore.: ", stdout);
+      print_time (t);
+      putchar ('\n');
+    }
   ksba_cert_get_validity (cert, 1, t);
-  fputs ("  notAfter..: ", stdout);
-  print_time (t);
-  putchar ('\n');
-
+  if (!quiet)
+    {
+      fputs ("  notAfter..: ", stdout);
+      print_time (t);
+      putchar ('\n');
+    }
   oid = ksba_cert_get_digest_algo (cert);
   s = get_oid_desc (oid);
-  printf ("  hash algo.: %s%s%s%s\n",
-          oid?oid:"(null)", s?" (":"",s?s:"",s?")":"");
+  if (!quiet)
+    printf ("  hash algo.: %s%s%s%s\n",
+            oid?oid:"(null)", s?" (":"",s?s:"",s?")":"");
 
   /* Under Windows the _ksba_keyinfo_from_sexp are not exported.  */
 #ifndef __WIN32
@@ -521,7 +587,9 @@ one_file (const char *fname)
                              __FILE__, __LINE__);
                     errorcount++;
                     xfree (der2);
-                  } else {
+                  }
+                else
+                  {
                     /* Don't leak memory if everything is ok. */
                     xfree (der2);
                   }
@@ -539,8 +607,8 @@ one_file (const char *fname)
       sexp = ksba_cert_get_sig_val (cert);
       fputs ("  sigval....: ", stdout);
       print_sexp (sexp);
-      ksba_free (sexp);
       putchar ('\n');
+      ksba_free (sexp);
     }
 
   list_extensions (cert);
@@ -558,7 +626,8 @@ one_file (const char *fname)
       errorcount++;
     }
 
-  putchar ('\n');
+  if (!quiet)
+    putchar ('\n');
   ksba_cert_release (cert);
   ksba_reader_release (r);
   fclose (fp);
@@ -598,17 +667,40 @@ main (int argc, char **argv)
         "cert_dfn_pca01.der",
         "cert_dfn_pca15.der",
         "cert_g10code_test1.der",
+        "authority.crt",
+        "betsy.crt",
+        "bull.crt",
+        "ov-ocsp-server.crt",
+        "ov-userrev.crt",
+        "ov-root-ca-cert.crt",
+        "ov-serverrev.crt",
+        "ov-user.crt",
+        "ov-server.crt",
+        "ov2-root-ca-cert.crt",
+        "ov2-ocsp-server.crt",
+        "ov2-user.crt",
+        "ov2-userrev.crt",
+        "secp256r1-sha384_cert.crt",
+        "secp256r1-sha512_cert.crt",
+        "secp384r1-sha512_cert.crt",
+        "openssl-secp256r1ca.cert.crt",
+        "ed25519-rfc8410.crt",
+        "ed25519-ossl-1.crt",
+        "ed448-ossl-1.crt",
         NULL
       };
       int idx;
+
+      if (!verbose)
+        quiet = 1;
 
       for (idx=0; files[idx]; idx++)
         {
           char *fname;
 
-          fname = xmalloc (strlen (srcdir) + 1 + strlen (files[idx]) + 1);
+          fname = xmalloc (strlen (srcdir) + 10 + strlen (files[idx]) + 1);
           strcpy (fname, srcdir);
-          strcat (fname, "/");
+          strcat (fname, "/samples/");
           strcat (fname, files[idx]);
           one_file (fname);
           ksba_free (fname);

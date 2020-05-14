@@ -1,4 +1,9 @@
+Certificates and a CRL used for the initial development:
 
+ cert_dfn_pca01.der
+ cert_dfn_pca15.der
+ cert_g10code_test1.der
+ crl_testpki_testpca.der
 
 Certificates downloaded from http://www.magmacom.com/~mbartel/iso/\
 certificates/samples/sample_certificates.html on 2003-11-20:

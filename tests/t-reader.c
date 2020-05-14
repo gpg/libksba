@@ -189,7 +189,7 @@ main (int argc, char **argv)
 {
   if (argc == 1)
     {
-      char *fname = prepend_srcdir ("cert_g10code_test1.der");
+      char *fname = prepend_srcdir ("samples/cert_g10code_test1.der");
 
       test_fd (fname);
       test_file (fname);
