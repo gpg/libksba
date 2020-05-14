@@ -68,6 +68,49 @@ extern "C" {
 #endif
 
 
+#define KSBA_CLASS_UNIVERSAL   0
+#define KSBA_CLASS_APPLICATION 1
+#define KSBA_CLASS_CONTEXT     2
+#define KSBA_CLASS_PRIVATE     3
+
+#define KSBA_TYPE_BOOLEAN           1
+#define KSBA_TYPE_INTEGER           2
+#define KSBA_TYPE_BIT_STRING        3
+#define KSBA_TYPE_OCTET_STRING      4
+#define KSBA_TYPE_NULL              5
+#define KSBA_TYPE_OBJECT_ID         6
+#define KSBA_TYPE_OBJECT_DESCRIPTOR 7
+#define KSBA_TYPE_EXTERNAL          8
+#define KSBA_TYPE_REAL              9
+#define KSBA_TYPE_ENUMERATED       10
+#define KSBA_TYPE_EMBEDDED_PDV     11
+#define KSBA_TYPE_UTF8_STRING      12
+#define KSBA_TYPE_RELATIVE_OID     13
+#define KSBA_TYPE_TIME             14
+#define KSBA_TYPE_SEQUENCE         16
+#define KSBA_TYPE_SET              17
+#define KSBA_TYPE_NUMERIC_STRING   18
+#define KSBA_TYPE_PRINTABLE_STRING 19
+#define KSBA_TYPE_TELETEX_STRING   20
+#define KSBA_TYPE_VIDEOTEX_STRING  21
+#define KSBA_TYPE_IA5_STRING       22
+#define KSBA_TYPE_UTC_TIME         23
+#define KSBA_TYPE_GENERALIZED_TIME 24
+#define KSBA_TYPE_GRAPHIC_STRING   25
+#define KSBA_TYPE_VISIBLE_STRING   26
+#define KSBA_TYPE_GENERAL_STRING   27
+#define KSBA_TYPE_UNIVERSAL_STRING 28
+#define KSBA_TYPE_CHARACTER_STRING 29
+#define KSBA_TYPE_BMP_STRING       30
+#define KSBA_TYPE_DATE             31
+#define KSBA_TYPE_TIME_OF_DAY      32
+#define KSBA_TYPE_DATE_TIME        33
+#define KSBA_TYPE_DURATION         34
+#define KSBA_TYPE_OID_IRI          35
+#define KSBA_TYPE_RELATIVE_OID_IRI 36
+
+
+
 typedef gpg_error_t KsbaError _KSBA_DEPRECATED;
 
 typedef enum

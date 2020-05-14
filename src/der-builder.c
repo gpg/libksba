@@ -42,9 +42,9 @@
 
 struct item_s
 {
+  unsigned int tag;
   short int class;
-  short int tag;
-  unsigned int hdrlen:4;         /* Computed size of tag+length field.  */
+  unsigned int hdrlen:12;        /* Computed size of tag+length field.  */
   unsigned int is_constructed:1; /* This is a constructed element.      */
   unsigned int verbatim:1;       /* Copy the value verbatim.            */
   unsigned int is_stop:1;        /* This is a STOP item.                */
@@ -364,21 +364,25 @@ _ksba_der_add_end (ksba_der_t d)
 
 /* Return the length of the TL header of a to be constructed TLV.
  * LENGTH gives the length of the value, if it is 0 indefinite length
- * is assumed.  LENGTH is ignored for the NULL tag.  TAG must be less
- * than 0x1f.  On error 0 is returned.  Note that this function is
- * similar to _ksba_ber_count_tl but we want our own copy here.  Note
- * that the returned length is always less than 16 and can thus be
- * storred in a few bits.  */
+ * is assumed.  LENGTH is ignored for the NULL tag.  On error 0 is
+ * returned.  Note that this function is similar to _ksba_ber_count_tl
+ * but we want our own copy here.  */
 static unsigned int
 count_tl (int class, int tag, size_t length)
 {
   unsigned int hdrlen = 0;
-  int i;
+  int i, t;
 
   if (tag < 0x1f)
     hdrlen++;
   else
-    return 0;
+    {
+      hdrlen++;
+
+      for (i = 0, t = tag; t > 0; i++)
+        t >>= 7;
+      hdrlen += i;
+    }
 
   if (!tag && !class)
     hdrlen++; /* end tag */
@@ -418,7 +422,7 @@ static void
 write_tl (unsigned char *buffer, int class, int tag,
           int constructed, size_t length)
 {
-  int i;
+  int i, savei, t;
 
   if (tag < 0x1f)
     {
@@ -429,7 +433,23 @@ write_tl (unsigned char *buffer, int class, int tag,
     }
   else
     {
-      assert (!"oops");
+      *buffer = (class << 6) | 0x1f;
+      if (constructed)
+        *buffer |= 0x20;
+      buffer++;
+
+      for (i = 0, t = tag; t > 0; i++)
+        t >>= 7;
+      savei = i;
+      t = tag;
+      while (i-- > 0)
+        {
+          buffer[i] = t & 0x7f;
+          if (i != savei - 1)
+            buffer[i] |= 0x80;
+          t >>= 7;
+        }
+      buffer += savei;
     }
 
   if (!tag && !class)

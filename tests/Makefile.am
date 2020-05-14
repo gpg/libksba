@@ -50,7 +50,8 @@ EXTRA_DIST = $(test_certs) samples/README mkoidtbl.awk \
 BUILT_SOURCES = oidtranstbl.h
 CLEANFILES = oidtranstbl.h
 
-TESTS = cert-basic t-crl-parser t-dnparser t-oid t-reader t-cms-parser
+TESTS = cert-basic t-crl-parser t-dnparser t-oid t-reader t-cms-parser \
+	t-der-builder
 
 AM_CFLAGS = $(GPG_ERROR_CFLAGS) $(COVERAGE_CFLAGS)
 AM_LDFLAGS = -no-install $(COVERAGE_LDFLAGS)
