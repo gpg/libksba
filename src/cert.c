@@ -2026,7 +2026,7 @@ get_simple_octet_string_ext (ksba_cert_t cert, const char *oid,
 /* Return the subjectKeyIdentifier extension as a simple allocated
    S-expression at the address of R_KEYID. 0 is returned on success,
    GPG_ERR_NO_DATA if no such extension is available or any other
-   error code.  If R_CRIT is not passed as NULL, the criticla flag of
+   error code.  If R_CRIT is not passed as NULL, the critical flag of
    this is extension is stored there. */
 gpg_error_t
 ksba_cert_get_subj_key_id (ksba_cert_t cert, int *r_crit, ksba_sexp_t *r_keyid)

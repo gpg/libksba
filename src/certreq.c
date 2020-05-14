@@ -216,8 +216,8 @@ ksba_certreq_set_siginfo (ksba_certreq_t cr, ksba_const_sexp_t siginfo)
   xfree (cr->x509.siginfo.der);
   cr->x509.siginfo.der = NULL;
 
-  return _ksba_algoinfo_from_sexp (siginfo, &cr->x509.siginfo.der,
-                                   &cr->x509.siginfo.derlen);
+  return _ksba_keyinfo_from_sexp (siginfo, 1, &cr->x509.siginfo.der,
+                                  &cr->x509.siginfo.derlen);
 }
 
 
@@ -353,7 +353,7 @@ ksba_certreq_set_public_key (ksba_certreq_t cr, ksba_const_sexp_t key)
     return gpg_error (GPG_ERR_INV_VALUE);
   xfree (cr->key.der);
   cr->key.der = NULL;
-  return _ksba_keyinfo_from_sexp (key, &cr->key.der, &cr->key.derlen);
+  return _ksba_keyinfo_from_sexp (key, 0, &cr->key.der, &cr->key.derlen);
 }
 
 

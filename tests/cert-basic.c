@@ -476,7 +476,7 @@ one_file (const char *fname)
             putchar ('\n');
           }
 
-        err = _ksba_keyinfo_from_sexp (public, &der, &derlen);
+        err = _ksba_keyinfo_from_sexp (public, 0, &der, &derlen);
         if (err)
           {
             fprintf (stderr, "%s:%d: converting public key failed: %s\n",
@@ -506,7 +506,7 @@ one_file (const char *fname)
                 unsigned char *der2;
                 size_t derlen2;
 
-                err = _ksba_keyinfo_from_sexp (tmp, &der2, &derlen2);
+                err = _ksba_keyinfo_from_sexp (tmp, 0, &der2, &derlen2);
                 if (err)
                   {
                     fprintf (stderr, "%s:%d: re-re-converting "

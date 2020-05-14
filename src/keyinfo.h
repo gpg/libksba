@@ -49,7 +49,7 @@ gpg_error_t _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
                                    ksba_sexp_t *r_string)
      _KSBA_VISIBILITY_DEFAULT;
 
-gpg_error_t _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp,
+gpg_error_t _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
                                      unsigned char **r_der, size_t *r_derlen)
      _KSBA_VISIBILITY_DEFAULT;
 
