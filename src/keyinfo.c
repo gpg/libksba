@@ -281,8 +281,15 @@ static const struct
   const char *name;
 } curve_names[] =
   {
-    { "1.3.6.1.4.1.3029.1.5.1", "Curve25519" },
+   /* For backward compatibility we keep the two original OIDs from
+    * OpenPGP and do not replace them by those from RFC-8410.  It is
+    * anyway better to use the dotted decimal form.  */
     { "1.3.6.1.4.1.11591.15.1", "Ed25519"    },
+    { "1.3.6.1.4.1.3029.1.5.1", "Curve25519" },
+    { "1.3.101.110",            "X25519"     },
+
+    { "1.3.101.113",         "Ed448" },
+    { "1.3.101.111",         "X448" },
 
     { "1.2.840.10045.3.1.1", "NIST P-192" },
     { "1.2.840.10045.3.1.1", "nistp192"   },
