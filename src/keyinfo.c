@@ -1,5 +1,5 @@
 /* keyinfo.c - Parse and build a keyInfo structure
- * Copyright (C) 2001, 2002, 2007, 2008, 2012 g10 Code GmbH
+ * Copyright (C) 2001, 2002, 2007, 2008, 2012, 2020 g10 Code GmbH
  *
  * This file is part of KSBA.
  *
@@ -46,6 +46,7 @@
 #include "ber-help.h"
 #include "sexp-parse.h"
 #include "stringbuf.h"
+#include "der-builder.h"
 
 /* Constants used for the public key algorithms.  */
 typedef enum
@@ -364,13 +365,13 @@ static const struct
 } while (0)
 
 
-/* Given a string BUF of length BUFLEN with either the name of an ECC
-   curve or its OID in dotted form return the DER encoding of the OID.
-   The caller must free the result.  On error NULL is returned.  */
-static unsigned char *
-get_ecc_curve_oid (const unsigned char *buf, size_t buflen, size_t *r_oidlen)
+/* Given a string BUF of length BUFLEN with either a curve name or its
+ * OID in dotted form return a string in dotted form of the name.  The
+ * caller must free the result.  On error NULL is returned.  */
+static char *
+get_ecc_curve_oid (const unsigned char *buf, size_t buflen)
 {
-  unsigned char *der_oid;
+  unsigned char *result;
 
   /* Skip an optional "oid." prefix. */
   if (buflen > 4 && buf[3] == '.' && digitp (buf+4)
@@ -396,9 +397,12 @@ get_ecc_curve_oid (const unsigned char *buf, size_t buflen, size_t *r_oidlen)
       buflen = strlen (curve_names[i].oid);
     }
 
-  if (_ksba_oid_from_buf (buf, buflen, &der_oid, r_oidlen))
-    return NULL;
-  return der_oid;
+  result = xtrymalloc (buflen + 1);
+  if (!result)
+    return NULL; /* Ooops */
+  memcpy (result, buf, buflen);
+  result[buflen] = 0;
+  return result;
 }
 
 
@@ -852,11 +856,11 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
 
 
 /* Match the algorithm string given in BUF which is of length BUFLEN
-   with the known algorithms from our table and returns the table
-   entries for the DER encoded OID.  If WITH_SIG is true, the table of
-   signature algorithms is consulted first.  */
-static const unsigned char *
-oid_from_buffer (const unsigned char *buf, int buflen, int *oidlen,
+ * with the known algorithms from our table and return the table
+ * entriy with the OID string.  If WITH_SIG is true, the table of
+ * signature algorithms is consulted first.  */
+static const char *
+oid_from_buffer (const unsigned char *buf, unsigned int buflen,
                  pkalgo_t *r_pkalgo, int with_sig)
 {
   int i;
@@ -887,8 +891,7 @@ oid_from_buffer (const unsigned char *buf, int buflen, int *oidlen,
       if (sig_algo_table[i].oid)
         {
           *r_pkalgo = sig_algo_table[i].pkalgo;
-          *oidlen = sig_algo_table[i].oidlen;
-          return sig_algo_table[i].oid;
+          return sig_algo_table[i].oidstring;
         }
     }
 
@@ -908,8 +911,7 @@ oid_from_buffer (const unsigned char *buf, int buflen, int *oidlen,
     return NULL;
 
   *r_pkalgo = pk_algo_table[i].pkalgo;
-  *oidlen = pk_algo_table[i].oidlen;
-  return pk_algo_table[i].oid;
+  return pk_algo_table[i].oidstring;
 }
 
 
@@ -925,11 +927,9 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
   gpg_error_t err;
   const unsigned char *s;
   char *endp;
-  unsigned long n, n1;
-  const unsigned char *oid;
-  int oidlen;
-  unsigned char *curve_oid = NULL;
-  size_t curve_oidlen;
+  unsigned long n;
+  const char *algo_oid;
+  char *curve_oid = NULL;
   pkalgo_t pkalgo;
   int i;
   struct {
@@ -939,14 +939,11 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
     int valuelen;
   } parm[10];
   int parmidx;
-  int idxtbl[10];
-  int idxtbllen;
   const char *parmdesc, *algoparmdesc;
-  ksba_writer_t writer = NULL;
-  void *algoparmseq_value = NULL;
-  size_t algoparmseq_len;
-  void *bitstr_value = NULL;
-  size_t bitstr_len;
+  ksba_der_t dbld = NULL;
+  ksba_der_t dbld2 = NULL;
+  unsigned char *tmpder;
+  size_t tmpderlen;
 
   if (!sexp)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -980,29 +977,42 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
     return gpg_error (GPG_ERR_INV_SEXP); /* We don't allow empty lengths.  */
   s++;
 
-  oid = oid_from_buffer (s, n, &oidlen, &pkalgo, algoinfomode);
-  if (!oid)
+  algo_oid = oid_from_buffer (s, n, &pkalgo, algoinfomode);
+  if (!algo_oid)
     return gpg_error (GPG_ERR_UNSUPPORTED_ALGORITHM);
+
   s += n;
 
-  /* Collect all the values */
+  /* Collect all the values.  */
   for (parmidx = 0; *s != ')' ; parmidx++)
     {
       if (parmidx >= DIM(parm))
-        return gpg_error (GPG_ERR_GENERAL);
+        {
+          err = gpg_error (GPG_ERR_GENERAL);
+          goto leave;
+        }
       if (*s != '(')
-        return gpg_error (digitp(s)? GPG_ERR_UNKNOWN_SEXP:GPG_ERR_INV_SEXP);
+        {
+          err = gpg_error (digitp(s)? GPG_ERR_UNKNOWN_SEXP:GPG_ERR_INV_SEXP);
+          goto leave;
+        }
       s++;
       n = strtoul (s, &endp, 10);
       s = endp;
       if (!n || *s != ':')
-        return gpg_error (GPG_ERR_INV_SEXP);
+        {
+          err = gpg_error (GPG_ERR_INV_SEXP);
+          goto leave;
+        }
       s++;
       parm[parmidx].name = s;
       parm[parmidx].namelen = n;
       s += n;
       if (!digitp(s))
-        return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* ... or invalid S-Exp. */
+        {
+          err = gpg_error (GPG_ERR_UNKNOWN_SEXP); /* ... or invalid S-Exp. */
+          goto leave;
+        }
 
       n = strtoul (s, &endp, 10);
       s = endp;
@@ -1013,8 +1023,20 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
       parm[parmidx].valuelen = n;
       s += n;
       if ( *s != ')')
-        return gpg_error (GPG_ERR_UNKNOWN_SEXP); /* ... or invalid S-Exp. */
+        {
+          err = gpg_error (GPG_ERR_UNKNOWN_SEXP); /* ... or invalid S-Exp. */
+          goto leave;
+        }
       s++;
+
+      if (parm[parmidx].namelen == 5
+          && !memcmp (parm[parmidx].name, "curve", 5)
+          && !curve_oid)
+        {
+          curve_oid = get_ecc_curve_oid (parm[parmidx].value,
+                                         parm[parmidx].valuelen);
+          parmidx--; /* No need to store this parameter.  */
+        }
     }
   s++;
   /* Allow for optional elements.  */
@@ -1023,16 +1045,18 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
       int depth = 1;
       err = sskip (&s, &depth);
       if (err)
-        return err;
+        goto leave;
     }
   /* We need another closing parenthesis. */
   if ( *s != ')' )
-    return gpg_error (GPG_ERR_INV_SEXP);
+    {
+      err = gpg_error (GPG_ERR_INV_SEXP);
+      goto leave;
+    }
 
-  /* Describe the parameters in the order we want them and construct
-     IDXTBL to access them.  For DSA wie also set algoparmdesc so
-     that we can later build the parameters for the
-     algorithmIdentifier.  */
+  /* Describe the parameters in the order we want them.  For DSA wie
+   * also set algoparmdesc so that we can later build the parameters
+   * for the algorithmIdentifier.  */
   algoparmdesc = NULL;
   switch (pkalgo)
     {
@@ -1044,314 +1068,115 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
       algoparmdesc = "pqg";
       break;
     case PKALGO_ECC:
-      parmdesc = algoinfomode? "C" : "Cq";
-      for (i = 0; !algoinfomode && i < parmidx; i++)
-        if (parm[i].namelen == 5 && !memcmp (parm[i].name,"curve",5))
-          {
-            /* FIXME: Access to pk_algo_table with constant is ugly.  */
-            if (parm[i].valuelen == 7 && !memcmp (parm[i].value, "Ed25519", 7))
-              {
-                pkalgo = PKALGO_ED25519;
-                parmdesc = "q";
-                oid = pk_algo_table[7].oid;
-                oidlen = pk_algo_table[7].oidlen;
-                break;
-              }
-            else if (parm[i].valuelen == 5 && !memcmp (parm[i].value, "Ed448", 5))
-              {
-                pkalgo = PKALGO_ED448;
-                parmdesc = "q";
-                oid = pk_algo_table[8].oid;
-                oidlen = pk_algo_table[8].oidlen;
-                break;
-              }
-          }
+    case PKALGO_ED25519:
+    case PKALGO_ED448:
+      parmdesc = algoinfomode? "" : "q";
       break;
-    default: return gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
+    default:
+      err = gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
+      goto leave;
     }
 
-  idxtbllen = 0;
-  for (s = parmdesc; *s; s++)
+  /* Create a builder. */
+  dbld = _ksba_der_builder_new (0);
+  if (!dbld)
     {
-      for (i=0; i < parmidx; i++)
-        {
-          assert (idxtbllen < DIM (idxtbl));
-          switch (*s)
-            {
-            case 'C': /* Magic value for "curve".  */
-              if (parm[i].namelen == 5 && !memcmp (parm[i].name, "curve", 5))
-                {
-                  idxtbl[idxtbllen++] = i;
-                  i = parmidx; /* Break inner loop.  */
-                }
-              break;
-            default:
-              if (parm[i].namelen == 1 && parm[i].name[0] == *s)
-                {
-                  idxtbl[idxtbllen++] = i;
-                  i = parmidx; /* Break inner loop.  */
-                }
-              break;
-            }
-        }
-    }
-  if (idxtbllen != strlen (parmdesc))
-    return gpg_error (GPG_ERR_UNKNOWN_SEXP);
-
-  if (pkalgo == PKALGO_ECC)
-    {
-      curve_oid = get_ecc_curve_oid (parm[idxtbl[0]].value,
-                                     parm[idxtbl[0]].valuelen,
-                                     &curve_oidlen);
-      if (!curve_oid)
-        return gpg_error (GPG_ERR_UNKNOWN_SEXP);
+      err = gpg_error_from_syserror ();
+      goto leave;
     }
 
-
-  /* Create write object. */
-  err = ksba_writer_new (&writer);
-  if (err)
-    goto leave;
-  err = ksba_writer_set_mem (writer, 1024);
-  if (err)
-    goto leave;
-
-  /* We create the keyinfo in 2 steps:
-
-     1. We build the inner one and encapsulate it in a bit string.
-
-     2. We create the outer sequence include the algorithm identifier
-        and the bit string from step 1.
-   */
-  if (algoinfomode)
-    ;
-  else if (pkalgo == PKALGO_ECC)
-    {
-      /* Write the bit string header and the number of unused bits. */
-      err = _ksba_ber_write_tl (writer, TYPE_BIT_STRING, CLASS_UNIVERSAL,
-                                0, parm[idxtbl[1]].valuelen + 1);
-      if (!err)
-        err = ksba_writer_write (writer, "", 1);
-      /* And the actual raw value.  */
-      if (!err)
-        err = ksba_writer_write (writer, parm[idxtbl[1]].value,
-                                 parm[idxtbl[1]].valuelen);
-      if (err)
-        goto leave;
-    }
-  else if (pkalgo == PKALGO_ED25519 || pkalgo == PKALGO_ED448)
-    {
-      /* Write the bit string header and the number of unused bits. */
-      err = _ksba_ber_write_tl (writer, TYPE_BIT_STRING, CLASS_UNIVERSAL,
-                                0, parm[idxtbl[0]].valuelen + 1);
-      if (!err)
-        err = ksba_writer_write (writer, "", 1);
-      /* And the actual raw value.  */
-      if (!err)
-        err = ksba_writer_write (writer, parm[idxtbl[0]].value,
-                                 parm[idxtbl[0]].valuelen);
-      if (err)
-        goto leave;
-    }
-  else /* RSA and DSA */
-    {
-      /* Calculate the size of the sequence value and the size of the
-         bit string value.  Note that in case there is only one
-         integer to write, no sequence is used.  */
-      for (n=0, i=0; i < idxtbllen; i++ )
-        {
-          n += _ksba_ber_count_tl (TYPE_INTEGER, CLASS_UNIVERSAL, 0,
-                                   parm[idxtbl[i]].valuelen);
-          n += parm[idxtbl[i]].valuelen;
-        }
-
-      n1 = 1; /* # of unused bits.  */
-      if (idxtbllen > 1)
-        n1 += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
-      n1 += n;
-
-      /* Write the bit string header and the number of unused bits. */
-      err = _ksba_ber_write_tl (writer, TYPE_BIT_STRING, CLASS_UNIVERSAL,
-                                0, n1);
-      if (!err)
-        err = ksba_writer_write (writer, "", 1);
-      if (err)
-        goto leave;
-
-      /* Write the sequence tag and the integers. */
-      if (idxtbllen > 1)
-        err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1,n);
-      if (err)
-        goto leave;
-      for (i=0; i < idxtbllen; i++)
-        {
-          /* fixme: we should make sure that the integer conforms to the
-             ASN.1 encoding rules. */
-          err  = _ksba_ber_write_tl (writer, TYPE_INTEGER, CLASS_UNIVERSAL, 0,
-                                     parm[idxtbl[i]].valuelen);
-          if (!err)
-            err = ksba_writer_write (writer, parm[idxtbl[i]].value,
-                                     parm[idxtbl[i]].valuelen);
-          if (err)
-            goto leave;
-        }
-    }
-
+  /* The outer sequence.  */
   if (!algoinfomode)
-    {
-      /* Get the encoded bit string. */
-      bitstr_value = ksba_writer_snatch_mem (writer, &bitstr_len);
-      if (!bitstr_value)
-        {
-          err = gpg_error (GPG_ERR_ENOMEM);
-          goto leave;
-        }
-    }
-
-  /* Create the sequence of the algorithm identifier.  */
-
-  /* If the algorithmIdentifier requires a sequence with parameters,
-     build them now.  We can reuse the IDXTBL for that.  */
-  if (algoparmdesc)
-    {
-      idxtbllen = 0;
-      for (s = algoparmdesc; *s; s++)
-        {
-          for (i=0; i < parmidx; i++)
-            {
-              assert (idxtbllen < DIM (idxtbl));
-              if (parm[i].namelen == 1 && parm[i].name[0] == *s)
-                {
-                  idxtbl[idxtbllen++] = i;
-                  break;
-                }
-            }
-        }
-      if (idxtbllen != strlen (algoparmdesc))
-        return gpg_error (GPG_ERR_UNKNOWN_SEXP);
-
-      err = ksba_writer_set_mem (writer, 1024);
-      if (err)
-        goto leave;
-
-      /* Calculate the size of the sequence.  */
-      for (n=0, i=0; i < idxtbllen; i++ )
-        {
-          n += _ksba_ber_count_tl (TYPE_INTEGER, CLASS_UNIVERSAL, 0,
-                                   parm[idxtbl[i]].valuelen);
-          n += parm[idxtbl[i]].valuelen;
-        }
-      /*  n += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n); */
-
-      /* Write the sequence tag followed by the integers. */
-      err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
-      if (err)
-        goto leave;
-      for (i=0; i < idxtbllen; i++)
-        {
-          err = _ksba_ber_write_tl (writer, TYPE_INTEGER, CLASS_UNIVERSAL, 0,
-                                    parm[idxtbl[i]].valuelen);
-          if (!err)
-            err = ksba_writer_write (writer, parm[idxtbl[i]].value,
-                                     parm[idxtbl[i]].valuelen);
-          if (err)
-            goto leave;
-        }
-
-      /* Get the encoded sequence.  */
-      algoparmseq_value = ksba_writer_snatch_mem (writer, &algoparmseq_len);
-      if (!algoparmseq_value)
-        {
-          err = gpg_error (GPG_ERR_ENOMEM);
-          goto leave;
-        }
-    }
-  else
-    algoparmseq_len = 0;
-
-  /* Reinitialize the buffer to create the (outer) sequence. */
-  err = ksba_writer_set_mem (writer, 1024);
-  if (err)
-    goto leave;
-
-  /* Calculate lengths. */
-  n  = _ksba_ber_count_tl (TYPE_OBJECT_ID, CLASS_UNIVERSAL, 0, oidlen);
-  n += oidlen;
-  if (algoparmseq_len)
-    {
-      n += algoparmseq_len;
-    }
-  else if (pkalgo == PKALGO_ECC)
-    {
-      n += _ksba_ber_count_tl (TYPE_OBJECT_ID, CLASS_UNIVERSAL,
-                               0, curve_oidlen);
-      n += curve_oidlen;
-    }
-  else if (pkalgo == PKALGO_RSA)
-    {
-      n += _ksba_ber_count_tl (TYPE_NULL, CLASS_UNIVERSAL, 0, 0);
-    }
-
-  if (!algoinfomode)
-    {
-      n1 = n;
-      n1 += _ksba_ber_count_tl (TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
-      n1 += bitstr_len;
-
-      /* The outer sequence.  */
-      err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n1);
-      if (err)
-        goto leave;
-    }
-
+    _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
   /* The sequence.  */
-  err = _ksba_ber_write_tl (writer, TYPE_SEQUENCE, CLASS_UNIVERSAL, 1, n);
-  if (err)
-    goto leave;
-
+  _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
   /* The object id.  */
-  err = _ksba_ber_write_tl (writer, TYPE_OBJECT_ID,CLASS_UNIVERSAL, 0, oidlen);
-  if (!err)
-    err = ksba_writer_write (writer, oid, oidlen);
-  if (err)
-    goto leave;
+  _ksba_der_add_oid (dbld, algo_oid);
 
   /* The parameter. */
-  if (algoparmseq_len)
+  if (algoparmdesc)
     {
-      err = ksba_writer_write (writer, algoparmseq_value, algoparmseq_len);
+      /* Write the sequence tag followed by the integers. */
+      _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
+      for (s = algoparmdesc; *s; s++)
+        for (i=0; i < parmidx; i++)
+          if (parm[i].namelen == 1 && parm[i].name[0] == *s)
+            {
+              _ksba_der_add_int (dbld, parm[i].value, parm[i].valuelen, 1);
+              break; /* inner loop */
+            }
+      _ksba_der_add_end (dbld);
     }
   else if (pkalgo == PKALGO_ECC)
     {
-     /* We only support the namedCuve choice for ECC parameters.  */
-      err = _ksba_ber_write_tl (writer, TYPE_OBJECT_ID, CLASS_UNIVERSAL,
-                                0, curve_oidlen);
-      if (!err)
-        err = ksba_writer_write (writer, curve_oid, curve_oidlen);
+     /* We only support the namedCurve choice for ECC parameters.  */
+      if (!curve_oid)
+        {
+          err = gpg_error (GPG_ERR_UNKNOWN_CURVE);
+          goto leave;
+        }
+      _ksba_der_add_oid (dbld, curve_oid);
     }
   else if (pkalgo == PKALGO_RSA)
     {
-      err = _ksba_ber_write_tl (writer, TYPE_NULL, CLASS_UNIVERSAL, 0, 0);
+      _ksba_der_add_ptr (dbld, 0, TYPE_NULL, NULL, 0);
     }
-  if (err)
-    goto leave;
 
+  _ksba_der_add_end (dbld); /* sequence.  */
+
+  /* Add the bit string if we are not in algoinfomode.  */
   if (!algoinfomode)
     {
-      /* Append the pre-constructed bit string.  */
-      err = ksba_writer_write (writer, bitstr_value, bitstr_len);
-      if (err)
-        goto leave;
+      if (*parmdesc == 'q' && !parmdesc[1])
+        {
+          /* This is ECC - Q is directly written as a bit string.  */
+          for (i=0; i < parmidx; i++)
+            if (parm[i].namelen == 1 && parm[i].name[0] == 'q')
+              {
+                _ksba_der_add_bts (dbld, parm[i].value, parm[i].valuelen, 0);
+                break;
+              }
+        }
+      else  /* Non-ECC - embed the values.  */
+        {
+          dbld2 = _ksba_der_builder_new (10);
+          if (!dbld2)
+            {
+              err = gpg_error_from_syserror ();
+              goto leave;
+            }
+
+          /* Note that no sequence is used if only one integer is written.  */
+          if (parmdesc[0] && parmdesc[1])
+            _ksba_der_add_tag (dbld2, 0, TYPE_SEQUENCE);
+
+          for (s = parmdesc; *s; s++)
+            for (i=0; i < parmidx; i++)
+              if (parm[i].namelen == 1 && parm[i].name[0] == *s)
+                {
+                  _ksba_der_add_int (dbld2, parm[i].value, parm[i].valuelen, 1);
+                  break; /* inner loop */
+                }
+
+          if (parmdesc[0] && parmdesc[1])
+            _ksba_der_add_end (dbld2);
+
+          err = _ksba_der_builder_get (dbld2, &tmpder, &tmpderlen);
+          if (err)
+            goto leave;
+          _ksba_der_add_bts (dbld, tmpder, tmpderlen, 0);
+          xfree (tmpder);
+        }
+
+      _ksba_der_add_end (dbld);  /* Outer sequence.  */
     }
 
   /* Get the result. */
-  *r_der = ksba_writer_snatch_mem (writer, r_derlen);
-  if (!*r_der)
-    err = gpg_error (GPG_ERR_ENOMEM);
+  err = _ksba_der_builder_get (dbld, r_der, r_derlen);
 
  leave:
-  ksba_writer_release (writer);
-  xfree (bitstr_value);
+  _ksba_der_release (dbld2);
+  _ksba_der_release (dbld);
   xfree (curve_oid);
   return err;
 }
