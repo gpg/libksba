@@ -51,6 +51,7 @@
 /* Constants used for the public key algorithms.  */
 typedef enum
   {
+    PKALGO_NONE,
     PKALGO_RSA,
     PKALGO_DSA,
     PKALGO_ECC,
@@ -280,17 +281,15 @@ static const struct
 {
   const char *oid;
   const char *name;
+  unsigned char pkalgo;  /* If not 0 force the use of ALGO.  */
 } curve_names[] =
   {
-   /* For backward compatibility we keep the two original OIDs from
-    * OpenPGP and do not replace them by those from RFC-8410.  It is
-    * anyway better to use the dotted decimal form.  */
-    { "1.3.6.1.4.1.11591.15.1", "Ed25519"    },
-    { "1.3.6.1.4.1.3029.1.5.1", "Curve25519" },
-    { "1.3.101.110",            "X25519"     },
+    { "1.3.101.112",         "Ed25519",    PKALGO_ED25519},
+    { "1.3.101.110",         "Curve25519", PKALGO_X25519},
+    { "1.3.101.110",         "X25519",     PKALGO_X25519},
 
-    { "1.3.101.113",         "Ed448" },
-    { "1.3.101.111",         "X448" },
+    { "1.3.101.113",         "Ed448",      PKALGO_ED448 },
+    { "1.3.101.111",         "X448",       PKALGO_X448  },
 
     { "1.2.840.10045.3.1.1", "NIST P-192" },
     { "1.2.840.10045.3.1.1", "nistp192"   },
@@ -367,11 +366,14 @@ static const struct
 
 /* Given a string BUF of length BUFLEN with either a curve name or its
  * OID in dotted form return a string in dotted form of the name.  The
- * caller must free the result.  On error NULL is returned.  */
+ * caller must free the result.  On error NULL is returned.  If a
+ * curve requires the use of a certain algorithm, that algorithm is
+ * stored at R_PKALGO.  */
 static char *
-get_ecc_curve_oid (const unsigned char *buf, size_t buflen)
+get_ecc_curve_oid (const unsigned char *buf, size_t buflen, pkalgo_t *r_pkalgo)
 {
   unsigned char *result;
+  int i, find_pkalgo;
 
   /* Skip an optional "oid." prefix. */
   if (buflen > 4 && buf[3] == '.' && digitp (buf+4)
@@ -385,8 +387,6 @@ get_ecc_curve_oid (const unsigned char *buf, size_t buflen)
   /* If it does not look like an OID - map it through the table.  */
   if (buflen && !digitp (buf))
     {
-      int i;
-
       for (i=0; curve_names[i].oid; i++)
         if (buflen == strlen (curve_names[i].name)
             && !memcmp (buf, curve_names[i].name, buflen))
@@ -395,13 +395,29 @@ get_ecc_curve_oid (const unsigned char *buf, size_t buflen)
         return NULL; /* Not found.  */
       buf = curve_names[i].oid;
       buflen = strlen (curve_names[i].oid);
+      *r_pkalgo = curve_names[i].pkalgo;
+      find_pkalgo = 0;
     }
+  else
+    find_pkalgo = 1;
 
   result = xtrymalloc (buflen + 1);
   if (!result)
     return NULL; /* Ooops */
   memcpy (result, buf, buflen);
   result[buflen] = 0;
+
+  if (find_pkalgo)
+    {
+      /* We still need to check whether the OID requires a certain ALGO.  */
+      for (i=0; curve_names[i].oid; i++)
+        if (!strcmp (curve_names[i].oid, result))
+          {
+            *r_pkalgo = curve_names[i].pkalgo;
+            break;
+          }
+    }
+
   return result;
 }
 
@@ -930,7 +946,7 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
   unsigned long n;
   const char *algo_oid;
   char *curve_oid = NULL;
-  pkalgo_t pkalgo;
+  pkalgo_t pkalgo, force_pkalgo;
   int i;
   struct {
     const char *name;
@@ -980,10 +996,10 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
   algo_oid = oid_from_buffer (s, n, &pkalgo, algoinfomode);
   if (!algo_oid)
     return gpg_error (GPG_ERR_UNSUPPORTED_ALGORITHM);
-
   s += n;
 
   /* Collect all the values.  */
+  force_pkalgo = 0;
   for (parmidx = 0; *s != ')' ; parmidx++)
     {
       if (parmidx >= DIM(parm))
@@ -1034,7 +1050,7 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
           && !curve_oid)
         {
           curve_oid = get_ecc_curve_oid (parm[parmidx].value,
-                                         parm[parmidx].valuelen);
+                                         parm[parmidx].valuelen, &force_pkalgo);
           parmidx--; /* No need to store this parameter.  */
         }
     }
@@ -1054,6 +1070,9 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
       goto leave;
     }
 
+  if (force_pkalgo)
+    pkalgo = force_pkalgo;
+
   /* Describe the parameters in the order we want them.  For DSA wie
    * also set algoparmdesc so that we can later build the parameters
    * for the algorithmIdentifier.  */
@@ -1068,9 +1087,15 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
       algoparmdesc = "pqg";
       break;
     case PKALGO_ECC:
-    case PKALGO_ED25519:
-    case PKALGO_ED448:
       parmdesc = algoinfomode? "" : "q";
+      break;
+    case PKALGO_ED25519:
+    case PKALGO_X25519:
+    case PKALGO_ED448:
+    case PKALGO_X448:
+      parmdesc = algoinfomode? "" : "q";
+      if (curve_oid)
+        algo_oid = curve_oid;
       break;
     default:
       err = gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
@@ -1107,7 +1132,7 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
             }
       _ksba_der_add_end (dbld);
     }
-  else if (pkalgo == PKALGO_ECC)
+  else if (pkalgo == PKALGO_ECC && !algoinfomode)
     {
      /* We only support the namedCurve choice for ECC parameters.  */
       if (!curve_oid)
@@ -1133,7 +1158,19 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
           for (i=0; i < parmidx; i++)
             if (parm[i].namelen == 1 && parm[i].name[0] == 'q')
               {
-                _ksba_der_add_bts (dbld, parm[i].value, parm[i].valuelen, 0);
+                if ((parm[i].valuelen & 1) && parm[i].valuelen > 32
+                    && (parm[i].value[0] == 0x40
+                        || parm[i].value[0] == 0x41
+                        || parm[i].value[0] == 0x42))
+                  {
+                    /* Odd length and prefixed with 0x40 - this is the
+                     * rfc4880bis indicator octet for extended point
+                     * formats - we may not emit that octet here.  */
+                    _ksba_der_add_bts (dbld, parm[i].value+1,
+                                       parm[i].valuelen-1, 0);
+                  }
+                else
+                  _ksba_der_add_bts (dbld, parm[i].value, parm[i].valuelen, 0);
                 break;
               }
         }

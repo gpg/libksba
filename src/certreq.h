@@ -111,6 +111,7 @@ struct ksba_certreq_s
 
   struct {
     char *algo;
+    int is_ecc;  /* 1 = plain ecc, 2 = EdDSA */
     unsigned char *value;
     size_t valuelen;
   } sig_val;
