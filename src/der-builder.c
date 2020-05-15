@@ -43,9 +43,10 @@
 struct item_s
 {
   unsigned int tag;
-  short int class;
-  unsigned int hdrlen:12;        /* Computed size of tag+length field.  */
+  unsigned int class:2;
+  unsigned int hdrlen:10;        /* Computed size of tag+length field.  */
   unsigned int is_constructed:1; /* This is a constructed element.      */
+  unsigned int encapsulate:1;    /* This encapsulates other objects.    */
   unsigned int verbatim:1;       /* Copy the value verbatim.            */
   unsigned int is_stop:1;        /* This is a STOP item.                */
   const void *value;
@@ -126,6 +127,7 @@ _ksba_der_builder_reset (ksba_der_t d)
         }
       d->items[idx].hdrlen = 0;
       d->items[idx].is_constructed = 0;
+      d->items[idx].encapsulate = 0;
       d->items[idx].verbatim = 0;
       d->items[idx].is_stop = 0;
       d->items[idx].value = NULL;
@@ -174,7 +176,7 @@ _ksba_der_add_ptr (ksba_der_t d, int class, int tag,
 {
   if (ensure_space (d))
     return;
-  d->items[d->nitems].class    = class;
+  d->items[d->nitems].class    = class & 0x03;
   d->items[d->nitems].tag      = tag;
   d->items[d->nitems].value    = value;
   d->items[d->nitems].valuelen = valuelen;
@@ -191,7 +193,7 @@ add_val_core (ksba_der_t d, int class, int tag, void *value, size_t valuelen,
               int verbatim)
 {
   d->items[d->nitems].buffer   = value;
-  d->items[d->nitems].class    = class;
+  d->items[d->nitems].class    = class & 0x03;
   d->items[d->nitems].tag      = tag;
   d->items[d->nitems].value    = value;
   d->items[d->nitems].valuelen = valuelen;
@@ -343,9 +345,10 @@ _ksba_der_add_tag (ksba_der_t d, int class, int tag)
 {
   if (ensure_space (d))
     return;
-  d->items[d->nitems].class    = class;
+  d->items[d->nitems].class    = class & 0x03;
   d->items[d->nitems].tag      = tag;
   d->items[d->nitems].is_constructed = 1;
+  d->items[d->nitems].encapsulate    = !!(class & 0x80);
   d->nitems++;
 }
 
@@ -522,7 +525,11 @@ compute_lengths (ksba_der_t d, int idx)
 
       total += d->items[idx].hdrlen + d->items[idx].valuelen;
       if (d->items[idx].is_constructed)
-        idx = d->laststop;
+        {
+          if (d->items[idx].encapsulate && d->items[idx].tag == TYPE_BIT_STRING)
+            total++;  /* Account for the unused bits octet.  */
+          idx = d->laststop;
+        }
     }
   return total;
 }
@@ -547,6 +554,7 @@ _ksba_der_builder_get (ksba_der_t d, unsigned char **r_obj, size_t *r_objlen)
   unsigned char *buffer = NULL;
   unsigned char *p;
   size_t bufsize, buflen;
+  int encap_bts;
 
   *r_obj = NULL;
   *r_objlen = 0;
@@ -613,15 +621,27 @@ _ksba_der_builder_get (ksba_der_t d, unsigned char **r_obj, size_t *r_objlen)
         continue;
       if (!d->items[idx].verbatim)
         {
-          if (buflen + d->items[idx].hdrlen > bufsize)
+          /* For data encapsulated in a bit string we need to adjust
+           * for the unused bits octet.  */
+          encap_bts = (d->items[idx].encapsulate && !d->items[idx].class
+                       && d->items[idx].tag == TYPE_BIT_STRING);
+
+          if (buflen + d->items[idx].hdrlen + encap_bts > bufsize)
             {
               err = gpg_error (GPG_ERR_BUG);
               goto leave;
             }
           write_tl (p, d->items[idx].class, d->items[idx].tag,
-                    d->items[idx].is_constructed, d->items[idx].valuelen);
+                    (d->items[idx].is_constructed
+                     && !d->items[idx].encapsulate),
+                    d->items[idx].valuelen + encap_bts);
           p += d->items[idx].hdrlen;
           buflen += d->items[idx].hdrlen;
+          if (encap_bts)
+            {
+              *p++ = 0;
+              buflen++;
+            }
         }
       if (d->items[idx].value)
         {

@@ -119,6 +119,55 @@ test_der_builder (void)
     fail ("bad encoding");
   xfree (der);
 
+
+  /* Now test our encapsulate feature.  */
+  ksba_der_builder_reset (d);
+
+  ksba_der_add_tag (d, KSBA_CLASS_UNIVERSAL, KSBA_TYPE_SEQUENCE);
+  ksba_der_add_oid (d, "1.2.3.4");
+  ksba_der_add_tag (d, KSBA_CLASS_ENCAPSULATE, KSBA_TYPE_OCTET_STRING);
+  ksba_der_add_tag (d, KSBA_CLASS_UNIVERSAL, KSBA_TYPE_SEQUENCE);
+  ksba_der_add_int (d, "\x01\xc3", 2, 0);      /* Integer 451      */
+  ksba_der_add_tag (d, KSBA_CLASS_CONTEXT, 0); /* [0]              */
+  ksba_der_add_int (d, "\x2a", 1, 0);          /* Integer 42       */
+  ksba_der_add_end (d);                        /* End [0]          */
+  ksba_der_add_end (d);                        /* End sequence     */
+  ksba_der_add_end (d);                        /* End octet string */
+  ksba_der_add_end (d);                        /* End sequence     */
+
+  err = ksba_der_builder_get (d, &der, &derlen);
+  fail_if_err (err);
+  if (derlen != 20
+      || memcmp (der, ("\x30\x12\x06\x03\x2a\x03\x04\x04\x0b\x30"
+                       "\x09\x02\x02\x01\xc3\xa0\x03\x02\x01\x2a"), 20))
+    fail ("bad encoding");
+  xfree (der);
+
+  /* Encapsulate in a bit string.  */
+  ksba_der_builder_reset (d);
+
+  ksba_der_add_tag (d, KSBA_CLASS_UNIVERSAL, KSBA_TYPE_SEQUENCE);
+  ksba_der_add_oid (d, "1.2.3.4");
+  ksba_der_add_tag (d, KSBA_CLASS_ENCAPSULATE, KSBA_TYPE_BIT_STRING);
+  ksba_der_add_tag (d, KSBA_CLASS_UNIVERSAL, KSBA_TYPE_SEQUENCE);
+  ksba_der_add_int (d, "\x01\xc3", 2, 0);      /* Integer 451      */
+  ksba_der_add_tag (d, KSBA_CLASS_CONTEXT, 0); /* [0]              */
+  ksba_der_add_int (d, "\x2a", 1, 0);          /* Integer 42       */
+  ksba_der_add_end (d);                        /* End [0]          */
+  ksba_der_add_end (d);                        /* End sequence     */
+  ksba_der_add_end (d);                        /* End octet string */
+  ksba_der_add_end (d);                        /* End sequence     */
+
+  err = ksba_der_builder_get (d, &der, &derlen);
+  fail_if_err (err);
+  /* gpgrt_log_printhex (der, derlen, "der:"); */
+  if (derlen != 21
+      || memcmp (der, ("\x30\x13\x06\x03\x2a\x03\x04\x03\x0c\x00\x30"
+                       "\x09\x02\x02\x01\xc3\xa0\x03\x02\x01\x2a"), 21))
+    fail ("bad encoding");
+  xfree (der);
+
+
   ksba_der_release (d);
 }
 

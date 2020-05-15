@@ -72,6 +72,7 @@ extern "C" {
 #define KSBA_CLASS_APPLICATION 1
 #define KSBA_CLASS_CONTEXT     2
 #define KSBA_CLASS_PRIVATE     3
+#define KSBA_CLASS_ENCAPSULATE 0x80  /* Pseudo class.  */
 
 #define KSBA_TYPE_BOOLEAN           1
 #define KSBA_TYPE_INTEGER           2
