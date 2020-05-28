@@ -101,6 +101,7 @@ one_file (const char *fname)
     case KSBA_CT_ENCRYPTED_DATA: s = "encrypted data"; break;
     case KSBA_CT_AUTH_DATA:      s = "auth data"; break;
     case KSBA_CT_SPC_IND_DATA_CTX:s = "spc indirect data context"; break;
+    case KSBA_CT_OPENPGP_KEYBLOCK:s = "openpgp keyblock"; break;
     default:                     s = "unknown"; break;
     }
   if (!quiet)

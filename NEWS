@@ -2,6 +2,11 @@ Noteworthy changes in version 1.4.1 (unreleased) [C20/A12/R_]
 ------------------------------------------------
 
 
+ * Interface changes relative to the 1.4.0 release:
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ KSBA_CT_OPENPGP_KEYBLOCK         NEW.
+
+
 Noteworthy changes in version 1.4.0 (2020-05-19) [C20/A12/R0]
 ------------------------------------------------
 
