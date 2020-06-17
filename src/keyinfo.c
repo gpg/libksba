@@ -70,7 +70,7 @@ struct algo_table_s {
   int supported;  /* Values > 1 are also used to indicate hacks.  */
   pkalgo_t pkalgo;
   const char *algo_string;
-  const char *elem_string; /* parameter name or '-' */
+  const char *elem_string; /* parameter names or '-', 'P' for plain ECDSA */
   const char *ctrl_string; /* expected tag values (value > 127 are raw data)*/
   const char *parmelem_string; /* parameter name or '-'. */
   const char *parmctrl_string; /* expected tag values.  */
@@ -202,6 +202,31 @@ static const struct algo_table_s sig_algo_table[] = {
     "1.2.840.10045.4.3.4",
     "\x2a\x86\x48\xce\x3d\x04\x03\x04", 8,
     1, PKALGO_ECC, "ecdsa", "-rs", "\x30\x02\x02", NULL, NULL, "sha512" },
+
+  { /* BSI TR-03111 bsiEcdsaWithSHA1 */
+    "0.4.0.127.0.7.1.1.4.1.1",
+    "\x04\x00\x7f\x00\x07\x01\x01\x04\x01\x01", 10,
+    1, PKALGO_ECC, "ecdsa", "P", "", NULL, NULL, "sha1" },
+
+  { /* BSI TR-03111 bsiEcdsaWithSHA224 */
+    "0.4.0.127.0.7.1.1.4.1.2",
+    "\x04\x00\x7f\x00\x07\x01\x01\x04\x01\x02", 10,
+    1, PKALGO_ECC, "ecdsa", "P", "", NULL, NULL, "sha224" },
+
+  { /* BSI TR-03111 bsiEcdsaWithSHA256 */
+    "0.4.0.127.0.7.1.1.4.1.3",
+    "\x04\x00\x7f\x00\x07\x01\x01\x04\x01\x03", 10,
+    1, PKALGO_ECC, "ecdsa", "P", "", NULL, NULL, "sha256" },
+
+  { /* BSI TR-03111 bsiEcdsaWithSHA384 */
+    "0.4.0.127.0.7.1.1.4.1.4",
+    "\x04\x00\x7f\x00\x07\x01\x01\x04\x01\x04", 10,
+    1, PKALGO_ECC, "ecdsa", "P", "", NULL, NULL, "sha384" },
+
+  { /* BSI TR-03111 bsiEcdsaWithSHA512 */
+    "0.4.0.127.0.7.1.1.4.1.5",
+    "\x04\x00\x7f\x00\x07\x01\x01\x04\x01\x05", 10,
+    1, PKALGO_ECC, "ecdsa", "P", "", NULL, NULL, "sha512" },
 
   { /* iso.member-body.us.rsadsi.pkcs.pkcs-1.1 */
     "1.2.840.113549.1.1.1", /* rsaEncryption used without hash algo*/
@@ -1431,9 +1456,14 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
   /* FIXME: We don't release the stringbuf in case of error
      better let the macro jump to a label */
   if (!mode && (algo_table[algoidx].pkalgo == PKALGO_ED25519
-                ||algo_table[algoidx].pkalgo == PKALGO_ED448))
+                ||algo_table[algoidx].pkalgo == PKALGO_ED448
+                || (algo_table[algoidx].pkalgo == PKALGO_ECC
+                    && *algo_table[algoidx].elem_string == 'P')))
     {
-      /* EdDSA is special: R and S are simply concatenated; see rfc8410.  */
+      /* EdDSA is special: R and S are simply concatenated; see
+       * rfc8410.  The same code is used for Plain ECDSA format as
+       * specified in BSI TR-03111; we indicate this with a 'P' in the
+       * elem string.  */
       put_stringbuf (&sb, "(1:r");
       put_stringbuf_mem_sexp (&sb, der, derlen/2);
       put_stringbuf (&sb, ")");
