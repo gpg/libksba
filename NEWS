@@ -1,10 +1,18 @@
-Noteworthy changes in version 1.4.1 (unreleased) [C20/A12/R_]
+Noteworthy changes in version 1.5.0 (2020-11-18) [C21/A13/R0]
 ------------------------------------------------
 
+ * ksba_cms_identify now identifies OpenPGP keyblock content.
+
+ * Supports TR-03111 plain format ECDSA signature verification.
+
+ * Fixes a CMS signed data parser bug exhibited by a somewhat strange
+   CMS message.  [b6438e768c]
 
  * Interface changes relative to the 1.4.0 release:
- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- KSBA_CT_OPENPGP_KEYBLOCK         NEW.
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   KSBA_CT_OPENPGP_KEYBLOCK         NEW.
+
+ Release-info: https://dev.gnupg.org/T5146
 
 
 Noteworthy changes in version 1.4.0 (2020-05-19) [C20/A12/R0]

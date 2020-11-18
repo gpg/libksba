@@ -29,8 +29,8 @@ min_automake_version="1.14"
 # for the LT versions.
 m4_define([mym4_package],[libksba])
 m4_define([mym4_major], [1])
-m4_define([mym4_minor], [4])
-m4_define([mym4_micro], [1])
+m4_define([mym4_minor], [5])
+m4_define([mym4_micro], [0])
 
 # Below is m4 magic to extract and compute the git revision number,
 # the decimalized short revision number, a beta version string and a
@@ -50,8 +50,8 @@ AC_INIT([mym4_package],[mym4_version],[https://bugs.gnupg.org])
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
 # Please remember to document interface changes in the NEWS file.
-LIBKSBA_LT_CURRENT=20
-LIBKSBA_LT_AGE=12
+LIBKSBA_LT_CURRENT=21
+LIBKSBA_LT_AGE=13
 LIBKSBA_LT_REVISION=0
 #-------------------
 # If the API is changed in an incompatible way: increment the next counter.
