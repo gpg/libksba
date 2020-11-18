@@ -100,6 +100,23 @@ compare_versions (const char *my_version, const char *req_version)
   return NULL;
 }
 
+/* This is actually a dummy function to make sure that is module is
+   not empty.  Some compilers barf on empty modules.  */
+static const char *
+cright_blurb (void)
+{
+  static const char blurb[] =
+    "\n\n"
+    "This is Libksba " PACKAGE_VERSION " - An X.509 and CMS Library\n"
+    "Copyright 2001-2006,2010-2015,2018-2020 g10 Code GmbH\n"
+    "\n"
+    "SPDX-License-Identifier: LGPL-3.0-or-later OR GPL-2.0-or-later\n"
+    "(" BUILD_REVISION " " BUILD_TIMESTAMP ")\n"
+    "\n\n";
+  return blurb;
+}
+
+
 /**
  * ksba_check_version:
  * @req_version: A string with a version
@@ -118,6 +135,8 @@ const char *
 ksba_check_version (const char *req_version)
 {
   /* fixme: if we need global initializations.
-     Note that these the malloc hook might not have been run yet */
+     Note that the malloc hook might not have been run yet */
+  if (req_version && req_version[0] == 1 && req_version[1] == 1)
+    return cright_blurb ();
   return compare_versions (VERSION, req_version);
 }
