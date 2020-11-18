@@ -18,7 +18,7 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 # Process this file with autoconf to produce a configure script.
-AC_PREREQ(2.61)
+AC_PREREQ([2.61])
 min_automake_version="1.14"
 
 
@@ -43,7 +43,7 @@ m4_define([mym4_version],      m4_argn(4, mym4_verslist))
 m4_define([mym4_revision],     m4_argn(7, mym4_verslist))
 m4_define([mym4_revision_dec], m4_argn(8, mym4_verslist))
 m4_esyscmd([echo ]mym4_version[>VERSION])
-AC_INIT([mym4_package],[mym4_version], [http://bugs.gnupg.org])
+AC_INIT([mym4_package],[mym4_version],[https://bugs.gnupg.org])
 
 # LT Version numbers: Remember to change them just *before* a release.
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
@@ -64,12 +64,12 @@ NEED_GPG_ERROR_VERSION=1.8
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_SRCDIR([src/ksba.h.in])
 AM_INIT_AUTOMAKE([serial-tests dist-bzip2 no-dist-gzip])
-AM_CONFIG_HEADER(config.h)
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_HOST
 AB_INIT
 
-AC_GNU_SOURCE
+AC_USE_SYSTEM_EXTENSIONS
 
 # Taken from mpfr-4.0.1, then modified for LDADD_FOR_TESTS_KLUDGE
 dnl Under Linux, make sure that the old dtags are used if LD_LIBRARY_PATH
@@ -188,8 +188,8 @@ AC_ARG_VAR(CC_FOR_BUILD,[build system C compiler])
 # This is handy for debugging so the compiler doesn't rearrange
 # things and eliminate variables.
 AC_ARG_ENABLE(optimization,
-       AC_HELP_STRING([--disable-optimization],
-		      [disable compiler optimization]),
+       AS_HELP_STRING([--disable-optimization],
+                      [disable compiler optimization]),
                       [if test $enableval = no ; then
                          CFLAGS=`echo $CFLAGS | sed 's/-O[[0-9]]//'`
                        fi])
@@ -285,7 +285,7 @@ case "${host}" in
         ;;
 esac
 AC_ARG_ENABLE([ld-version-script],
-              AC_HELP_STRING([--enable-ld-version-script],
+              AS_HELP_STRING([--enable-ld-version-script],
                              [enable/disable use of linker version script.
                               (default is system dependent)]),
               [have_ld_version_script=$enableval],
@@ -442,7 +442,7 @@ AC_DEFINE_UNQUOTED(BUILD_REVISION, "$BUILD_REVISION",
                    [GIT commit id revision used to build this package])
 
 AC_ARG_ENABLE([build-timestamp],
-  AC_HELP_STRING([--enable-build-timestamp],
+  AS_HELP_STRING([--enable-build-timestamp],
                  [set an explicit build timestamp for reproducibility.
                   (default is the current time in ISO-8601 format)]),
      [if test "$enableval" = "yes"; then
@@ -456,7 +456,7 @@ AC_DEFINE_UNQUOTED(BUILD_TIMESTAMP, "$BUILD_TIMESTAMP",
                    [The time this package was configured for a build])
 
 build_doc=yes
-AC_ARG_ENABLE([doc], AC_HELP_STRING([--disable-doc],
+AC_ARG_ENABLE([doc], AS_HELP_STRING([--disable-doc],
                                     [do not build the documentation]),
                      build_doc=$enableval, build_doc=yes)
 AM_CONDITIONAL([BUILD_DOC], [test "x$build_doc" != xno])
