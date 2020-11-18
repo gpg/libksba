@@ -40,12 +40,16 @@ test_certs = samples/cert_dfn_pca01.der samples/cert_dfn_pca15.der \
 test_crls = samples/ov-test-crl.crl
 
 test_keys = samples/ov-server.p12  samples/ov-userrev.p12 \
-             samples/ov-serverrev.p12  samples/ov-user.p12
+            samples/ov-serverrev.p12  samples/ov-user.p12
 
-EXTRA_DIST = $(test_certs) samples/README mkoidtbl.awk \
+EXTRA_DIST = $(test_certs)  mkoidtbl.awk \
+             samples/README \
              samples/detached-sig.cms \
-	     samples/rsa-sample1.p7m samples/rsa-sample1.p7m.asn \
-	     samples/ecdh-sample1.p7m samples/ecdh-sample1.p7m.asn
+	     samples/rsa-sample1.p7m  samples/rsa-sample1.p7m \
+	     samples/rsa-sample1.p7s  samples/rsa-sample1.p7s \
+	     samples/ecdh-sample1.p7m samples/ecdh-sample1.p7m.asn \
+	     samples/ecdsa-sample1.p7s samples/ecdsa-sample1.p7s.asn
+
 
 BUILT_SOURCES = oidtranstbl.h
 CLEANFILES = oidtranstbl.h

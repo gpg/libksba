@@ -648,7 +648,7 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
           err = _ksba_ber_read_tl (cms->reader, &ti);
           if (err)
             return err;
-          if (expect_endtag && !ti.class && ti.tag == TYPE_NULL )
+          if (expect_endtag && !ti.class && !ti.tag)
             {
               /* This is an end tag.  Read the next tag but don't fail
                  if this is just an EOF.  */
@@ -709,7 +709,7 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
           err = _ksba_ber_read_tl (cms->reader, &ti);
           if (err)
             return err;
-          if (expect_endtag && !ti.class && ti.tag == TYPE_NULL )
+          if (expect_endtag && !ti.class && !ti.tag)
             {
               /* This is an end tag.  Read the next tag but don't fail
                  if this is just an EOF.  */

@@ -291,18 +291,37 @@ main (int argc, char **argv)
     }
 
   if (argc)
-    one_file (argv[0]);
+    {
+      for (; argc; argc--, argv++)
+        one_file (*argv);
+    }
   else
     {
-      char *fname = prepend_srcdir ("samples/detached-sig.cms");
+      static char *testfiles[] =
+        {
+         "samples/detached-sig.cms",
+         "samples/ecdh-sample1.p7m",
+         "samples/ecdsa-sample1.p7s",
+         "samples/rsa-sample1.p7m",
+         "samples/rsa-sample1.p7s",
+         NULL
+        };
+      char *fname;
+      int idx;
 
       if (!verbose)
         quiet = 1;
-      one_file (fname);
-      free(fname);
+
+      for (idx=0; testfiles[idx]; idx++)
+        {
+          fname = prepend_srcdir (testfiles[idx]);
+          one_file (fname);
+          free(fname);
+        }
     }
-  /*one_file ("pkcs7-1.ber");*/
-  /*one_file ("root-cert-2.der");  should fail */
+
+  if (!quiet)
+    printf ("*** all checks done\n");
 
   return 0;
 }
