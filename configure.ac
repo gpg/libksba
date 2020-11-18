@@ -401,7 +401,7 @@ AC_C_BIGENDIAN
 
 AC_CHECK_SIZEOF(unsigned int)
 AC_CHECK_SIZEOF(unsigned long)
-GNUPG_CHECK_TYPEDEF(u32, HAVE_U32_TYPEDEF)
+AC_CHECK_TYPES([u32])
 
 
 # Checks for library functions.

@@ -30,7 +30,7 @@
 #include <string.h>
 #include <sys/types.h>
 
-#ifndef HAVE_U32_TYPEDEF
+#ifndef HAVE_TYPE_U32
 #undef u32	    /* maybe there is a macro with this name */
 #if SIZEOF_UNSIGNED_INT == 4
     typedef unsigned int u32;
@@ -39,7 +39,7 @@
 #else
 #error no typedef for u32
 #endif
-#define HAVE_U32_TYPEDEF
+#define HAVE_TYPE_U32
 #endif
 
 typedef struct
