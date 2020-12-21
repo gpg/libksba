@@ -1482,7 +1482,7 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
       /* gpgrt_log_debug ("%s: encryptedKey:\n", __func__); */
       /* dbg_print_sexp (string); */
     }
-  else if (!strcmp (n->name, "kekri"))
+  else if (!strcmp (root->name, "kekri"))
     return NULL; /*GPG_ERR_UNSUPPORTED_CMS_OBJ*/
   else
     return NULL; /*GPG_ERR_INV_CMS_OBJ*/
