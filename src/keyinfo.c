@@ -359,6 +359,47 @@ static const struct
   };
 
 
+/* Table to map well known curve parameters to their name.  */
+static const struct
+{
+  const char *name;
+  unsigned int derlen;
+  const unsigned char *der;
+} ecdomainparm_to_name[] =
+  {
+    { "brainpoolP512r1", 422,
+      "\x30\x82\x01\xa2\x02\x01\x01\x30\x4c\x06\x07\x2a\x86\x48\xce\x3d"
+      "\x01\x01\x02\x41\x00\xaa\xdd\x9d\xb8\xdb\xe9\xc4\x8b\x3f\xd4\xe6"
+      "\xae\x33\xc9\xfc\x07\xcb\x30\x8d\xb3\xb3\xc9\xd2\x0e\xd6\x63\x9c"
+      "\xca\x70\x33\x08\x71\x7d\x4d\x9b\x00\x9b\xc6\x68\x42\xae\xcd\xa1"
+      "\x2a\xe6\xa3\x80\xe6\x28\x81\xff\x2f\x2d\x82\xc6\x85\x28\xaa\x60"
+      "\x56\x58\x3a\x48\xf3\x30\x81\x84\x04\x40\x78\x30\xa3\x31\x8b\x60"
+      "\x3b\x89\xe2\x32\x71\x45\xac\x23\x4c\xc5\x94\xcb\xdd\x8d\x3d\xf9"
+      "\x16\x10\xa8\x34\x41\xca\xea\x98\x63\xbc\x2d\xed\x5d\x5a\xa8\x25"
+      "\x3a\xa1\x0a\x2e\xf1\xc9\x8b\x9a\xc8\xb5\x7f\x11\x17\xa7\x2b\xf2"
+      "\xc7\xb9\xe7\xc1\xac\x4d\x77\xfc\x94\xca\x04\x40\x3d\xf9\x16\x10"
+      "\xa8\x34\x41\xca\xea\x98\x63\xbc\x2d\xed\x5d\x5a\xa8\x25\x3a\xa1"
+      "\x0a\x2e\xf1\xc9\x8b\x9a\xc8\xb5\x7f\x11\x17\xa7\x2b\xf2\xc7\xb9"
+      "\xe7\xc1\xac\x4d\x77\xfc\x94\xca\xdc\x08\x3e\x67\x98\x40\x50\xb7"
+      "\x5e\xba\xe5\xdd\x28\x09\xbd\x63\x80\x16\xf7\x23\x04\x81\x81\x04"
+      "\x81\xae\xe4\xbd\xd8\x2e\xd9\x64\x5a\x21\x32\x2e\x9c\x4c\x6a\x93"
+      "\x85\xed\x9f\x70\xb5\xd9\x16\xc1\xb4\x3b\x62\xee\xf4\xd0\x09\x8e"
+      "\xff\x3b\x1f\x78\xe2\xd0\xd4\x8d\x50\xd1\x68\x7b\x93\xb9\x7d\x5f"
+      "\x7c\x6d\x50\x47\x40\x6a\x5e\x68\x8b\x35\x22\x09\xbc\xb9\xf8\x22"
+      "\x7d\xde\x38\x5d\x56\x63\x32\xec\xc0\xea\xbf\xa9\xcf\x78\x22\xfd"
+      "\xf2\x09\xf7\x00\x24\xa5\x7b\x1a\xa0\x00\xc5\x5b\x88\x1f\x81\x11"
+      "\xb2\xdc\xde\x49\x4a\x5f\x48\x5e\x5b\xca\x4b\xd8\x8a\x27\x63\xae"
+      "\xd1\xca\x2b\x2f\xa8\xf0\x54\x06\x78\xcd\x1e\x0f\x3a\xd8\x08\x92"
+      "\x02\x41\x00\xaa\xdd\x9d\xb8\xdb\xe9\xc4\x8b\x3f\xd4\xe6\xae\x33"
+      "\xc9\xfc\x07\xcb\x30\x8d\xb3\xb3\xc9\xd2\x0e\xd6\x63\x9c\xca\x70"
+      "\x33\x08\x70\x55\x3e\x5c\x41\x4c\xa9\x26\x19\x41\x86\x61\x19\x7f"
+      "\xac\x10\x47\x1d\xb1\xd3\x81\x08\x5d\xda\xdd\xb5\x87\x96\x82\x9c"
+      "\xa9\x00\x69\x02\x01\x01"
+    },
+
+    { NULL }
+  };
+
 
 #define TLV_LENGTH(prefix) do {         \
   if (!prefix ## len)                    \
@@ -679,7 +720,7 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
 
 
 
-/* Assume that der is a buffer of length DERLEN with a DER encoded
+/* Assume that DER is a buffer of length DERLEN with a DER encoded
    ASN.1 structure like this:
 
   keyInfo ::= SEQUENCE {
@@ -699,12 +740,13 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
                        ksba_sexp_t *r_string)
 {
   gpg_error_t err;
-  int c;
+  int c, i;
   size_t nread, off, len, parm_off, parm_len;
   int parm_type;
   char *parm_oid = NULL;
   int algoidx;
   int is_bitstr;
+  int got_curve = 0;
   const unsigned char *parmder = NULL;
   size_t parmderlen = 0;
   const unsigned char *ctrl;
@@ -780,6 +822,7 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
       put_stringbuf_sexp (&sb, "curve");
       put_stringbuf_sexp (&sb, parm_oid);
       put_stringbuf (&sb, ")");
+      got_curve = 1;
     }
   else if (pk_algo_table[algoidx].pkalgo == PKALGO_ED25519
            || pk_algo_table[algoidx].pkalgo == PKALGO_ED448
@@ -839,6 +882,26 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
               put_stringbuf (&sb, ")");
             }
         }
+    }
+  else if (!got_curve && parmder && parmderlen
+           && pk_algo_table[algoidx].pkalgo == PKALGO_ECC)
+    {
+      /* This is ecPublicKey but has no named curve.  This is not
+       * allowed for PKIX but we try to figure the curve name out for
+       * some well known curves by a simple parameter match.  */
+      for (i=0; ecdomainparm_to_name[i].name; i++)
+        if (ecdomainparm_to_name[i].derlen == parmderlen
+            && !memcmp (ecdomainparm_to_name[i].der, parmder, parmderlen))
+          {
+            put_stringbuf (&sb, "(");
+            put_stringbuf_sexp (&sb, "curve");
+            put_stringbuf_sexp (&sb, ecdomainparm_to_name[i].name);
+            put_stringbuf (&sb, ")");
+            got_curve = 1;
+            break;
+          }
+      /* if (!got_curve) */
+      /*   gpgrt_log_printhex (parmder, parmderlen, "ECDomainParm:"); */
     }
 
 
