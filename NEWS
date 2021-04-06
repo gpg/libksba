@@ -1,5 +1,9 @@
-Noteworthy changes in version 1.5.1 (unreleased) [C21/A13/R_]
+Noteworthy changes in version 1.5.1 (2021-04-06) [C21/A13/R1]
 ------------------------------------------------
+
+ * Support Brainpool curves specified by ECDomainParameters.
+
+ Release-info: https://dev.gnupg.org/T5379
 
 
 Noteworthy changes in version 1.5.0 (2020-11-18) [C21/A13/R0]
