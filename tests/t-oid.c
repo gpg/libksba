@@ -183,6 +183,7 @@ main (int argc, char **argv)
             printf (" %02X", buffer[n]);
           putchar ('\n');
           free (buffer);
+          buffer = NULL;
         }
     }
   else if (!strcmp (*argv, "--to-str"))

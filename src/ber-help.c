@@ -440,6 +440,7 @@ _ksba_ber_count_tl (unsigned long tag,
 
   (void)constructed;  /* Not used, but passed for uniformity of such calls.  */
 
+  /* coverity[identical_branches] */
   if (tag < 0x1f)
     {
       buflen++;

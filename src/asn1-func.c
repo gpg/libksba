@@ -882,7 +882,7 @@ int
 _ksba_asn_expand_object_id (AsnNode node)
 {
   AsnNode p, p2, p3, p4, p5;
-  char name_root[129], name2[129*2+1];
+  char name_root[129], name2[129*2+1] = "";
 
   /* Fixme: Make a cleaner implementation */
   if (!node)
