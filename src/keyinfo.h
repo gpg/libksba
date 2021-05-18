@@ -44,6 +44,13 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
                                    size_t *r_nread, char **r_oid,
                                    char **r_parm, size_t *r_parmlen);
 
+gpg_error_t
+_ksba_parse_algorithm_identifier3 (const unsigned char *der, size_t derlen,
+                                   int firsttag,
+                                   size_t *r_nread, char **r_oid,
+                                   char **r_parm, size_t *r_parmlen,
+                                   int *r_parmtype);
+
 
 gpg_error_t _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
                                    ksba_sexp_t *r_string)

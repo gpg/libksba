@@ -540,7 +540,7 @@ get_ecc_curve_oid (const unsigned char *buf, size_t buflen, pkalgo_t *r_pkalgo)
    mode 1: as described.
  */
 static gpg_error_t
-get_algorithm (int mode, const unsigned char *der, size_t derlen,
+get_algorithm (int mode, const unsigned char *der, size_t derlen, int firsttag,
                size_t *r_nread, size_t *r_pos, size_t *r_len, int *r_bitstr,
                size_t *r_parm_pos, size_t *r_parm_len, int *r_parm_type)
 {
@@ -560,8 +560,8 @@ get_algorithm (int mode, const unsigned char *der, size_t derlen,
   if (!derlen)
     return gpg_error (GPG_ERR_INV_KEYINFO);
   c = *der++; derlen--;
-  if ( c != 0x30 )
-    return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not a SEQUENCE */
+  if ( c != firsttag )
+    return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not a SEQUENCE  or whatever */
   TLV_LENGTH(der);
   seqlen = len;
   startseq = der;
@@ -679,16 +679,29 @@ gpg_error_t
 _ksba_parse_algorithm_identifier (const unsigned char *der, size_t derlen,
                                   size_t *r_nread, char **r_oid)
 {
-  return _ksba_parse_algorithm_identifier2 (der, derlen,
-                                            r_nread, r_oid, NULL, NULL);
+  return _ksba_parse_algorithm_identifier3 (der, derlen, 0x30,
+                                            r_nread, r_oid, NULL, NULL, NULL);
+}
+
+
+gpg_error_t
+_ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
+                                   size_t *r_nread, char **r_oid,
+                                   char **r_parm, size_t *r_parmlen)
+{
+  return _ksba_parse_algorithm_identifier3 (der, derlen, 0x30,
+                                            r_nread, r_oid,
+                                            r_parm, r_parmlen, NULL);
 }
 
 
 /* Note that R_NREAD, R_PARM, and R_PARMLEN are optional.  */
 gpg_error_t
-_ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
+_ksba_parse_algorithm_identifier3 (const unsigned char *der, size_t derlen,
+                                   int firsttag,
                                    size_t *r_nread, char **r_oid,
-                                   char **r_parm, size_t *r_parmlen)
+                                   char **r_parm, size_t *r_parmlen,
+                                   int *r_parmtype)
 {
   gpg_error_t err;
   int is_bitstr;
@@ -701,7 +714,8 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
   if (r_nread)
     *r_nread = 0;
   off2 = len2 = 0;
-  err = get_algorithm (0, der, derlen, &nread, &off, &len, &is_bitstr,
+  err = get_algorithm (0, der, derlen, firsttag,
+                       &nread, &off, &len, &is_bitstr,
                        &off2, &len2, &parm_type);
   if (err)
     return err;
@@ -713,12 +727,13 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
 
   /* Special hack for ecdsaWithSpecified.  We replace the returned OID
      by the one in the parameter. */
-  if (off2 && len2 && parm_type == TYPE_SEQUENCE
+  if (off2 && len2 && parm_type == TYPE_SEQUENCE && firsttag == 0x30
       && !strcmp (*r_oid, "1.2.840.10045.4.3"))
     {
       xfree (*r_oid);
       *r_oid = NULL;
-      err = get_algorithm (0, der+off2, len2, &nread, &off, &len, &is_bitstr,
+      err = get_algorithm (0, der+off2, len2, 0x30,
+                           &nread, &off, &len, &is_bitstr,
                            NULL, NULL, NULL);
       if (err)
         {
@@ -757,9 +772,11 @@ _ksba_parse_algorithm_identifier2 (const unsigned char *der, size_t derlen,
           *r_parmlen = 0;
         }
     }
+  if (r_parmtype)
+    *r_parmtype = parm_type;
+
   return 0;
 }
-
 
 
 /* Assume that DER is a buffer of length DERLEN with a DER encoded
@@ -805,7 +822,8 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
     return gpg_error (GPG_ERR_UNEXPECTED_TAG); /* not a SEQUENCE */
   TLV_LENGTH(der);
   /* and now the inner part */
-  err = get_algorithm (1, der, derlen, &nread, &off, &len, &is_bitstr,
+  err = get_algorithm (1, der, derlen, 0x30,
+                       &nread, &off, &len, &is_bitstr,
                        &parm_off, &parm_len, &parm_type);
   if (err)
     return err;
@@ -1505,7 +1523,8 @@ cryptval_to_sexp (int mode, const unsigned char *der, size_t derlen,
   else
     algo_table = enc_algo_table;
 
-  err = get_algorithm (1, der, derlen, &nread, &off, &len, &is_bitstr,
+  err = get_algorithm (1, der, derlen, 0x30,
+                       &nread, &off, &len, &is_bitstr,
                        &parm_off, &parm_len, &parm_type);
   if (err)
     return err;

@@ -855,7 +855,8 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
    * RecipientInfo ::= CHOICE {
    *     ktri KeyTransRecipientInfo,
    *     kari [1] KeyAgreeRecipientInfo,
-   *     kekri [2] KEKRecipientInfo
+   *     kekri [2] KEKRecipientInfo,
+   *     pwri [3] PasswordRecipientInfo
    * }  */
   if ( !(ti.class == CLASS_UNIVERSAL
          && ti.tag == TYPE_SET && ti.is_constructed))

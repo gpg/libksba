@@ -52,7 +52,7 @@
 #include "sexp-parse.h"
 #include "cert.h"
 #include "der-builder.h"
-
+#include "stringbuf.h"
 
 static gpg_error_t ct_parse_data (ksba_cms_t cms);
 static gpg_error_t ct_parse_signed_data (ksba_cms_t cms);
@@ -827,7 +827,7 @@ ksba_cms_get_digest_algo_list (ksba_cms_t cms, int idx)
  *
  * Return value: 0 on success or an error code.  An error code of -1
  * is returned to indicate that there is no issuer with that idx,
- * GPG_ERR_No_Data is returned to indicate that there is no issuer at
+ * GPG_ERR_NO_DATA is returned to indicate that there is no issuer at
  * all.
  **/
 gpg_error_t
@@ -897,6 +897,8 @@ ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
                          "..rid.issuerAndSerialNumber.serialNumber");
         }
       else if (!strcmp (n->name, "kekri"))
+        return gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
+      else if (!strcmp (n->name, "pwri"))
         return gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
       else
         return gpg_error (GPG_ERR_INV_CMS_OBJ);
@@ -1383,12 +1385,17 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
 {
   AsnNode root, n, n2;
   gpg_error_t err;
-  ksba_sexp_t string;
+  ksba_sexp_t string = NULL;
   struct value_tree_s *vt;
   char *keyencralgo = NULL; /* Key encryption algo.  */
   char *parm = NULL;        /* Helper to get the parms of kencralgo.  */
   size_t parmlen;
+  char *parm2 = NULL;
+  size_t parm2len;
+  char *parm3 = NULL;
+  size_t parm3len;
   char *keywrapalgo = NULL; /* Key wrap algo.  */
+  char *keyderivealgo = NULL; /* Key derive algo.  */
   struct tag_info ti;
   const unsigned char *der;
   size_t derlen;
@@ -1484,13 +1491,116 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
     }
   else if (!strcmp (root->name, "kekri"))
     return NULL; /*GPG_ERR_UNSUPPORTED_CMS_OBJ*/
+  else if (!strcmp (root->name, "pwri"))
+    {
+      /* _ksba_asn_node_dump_all (root, stderr); */
+
+      n = _ksba_asn_find_node (root, "pwri..keyEncryptionAlgorithm");
+      if (!n || n->off == -1)
+        {
+          err = gpg_error (GPG_ERR_INV_KEYINFO);
+          goto leave;
+        }
+      err = _ksba_parse_algorithm_identifier2 (vt->image + n->off,
+                                               n->nhdr + n->len, NULL,
+                                               &keyencralgo, &parm, &parmlen);
+      if (err)
+        goto leave;
+      if (strcmp (keyencralgo, "1.2.840.113549.1.9.16.3.9"))
+        {
+          /* pwri requires this and only this OID.  */
+          err = gpg_error (GPG_ERR_INV_CMS_OBJ);
+          goto leave;
+        }
+      if (!parm)
+        {
+          err = gpg_error (GPG_ERR_INV_KEYINFO);
+          goto leave;
+        }
+      /* gpgrt_log_printhex (parm, parmlen, "parms"); */
+      err = _ksba_parse_algorithm_identifier2 (parm, parmlen, NULL,
+                                               &keywrapalgo, &parm2, &parm2len);
+      if (err)
+        goto leave;
+
+      /* gpgrt_log_debug ("%s: keywrapalgo='%s'\n", __func__, keywrapalgo); */
+      /* gpgrt_log_printhex (parm2, parm2len, "parm:"); */
+
+      n = _ksba_asn_find_node (root, "pwri..keyDerivationAlgorithm");
+      if (!n || n->off == -1)
+        {
+          /* Not found but that is okay becuase it is optional.  */
+        }
+      else
+        {
+          err = _ksba_parse_algorithm_identifier3 (vt->image + n->off,
+                                                   n->nhdr + n->len, 0xa0, NULL,
+                                                   &keyderivealgo,
+                                                   &parm3, &parm3len, NULL);
+          if (err)
+            goto leave;
+        }
+
+      n = _ksba_asn_find_node (root, "pwri..encryptedKey");
+      if (!n || n->off == -1)
+        {
+          err = gpg_error (GPG_ERR_INV_KEYINFO);
+          goto leave;
+        }
+      der = vt->image + n->off;
+      derlen = n->nhdr + n->len;
+      err = parse_octet_string (&der, &derlen, &ti);
+      if (err)
+        goto leave;
+      derlen = ti.length;
+      /* gpgrt_log_printhex (der, derlen, "encryptedKey:"); */
+
+      /* Build the s-expression:
+       *  (enc-val
+       *    (pwri
+       *      (derive-algo <oid>) --| both are optional
+       *      (derive-parm <der>) --|
+       *      (encr-algo <oid>)
+       *      (encr-parm <iv>)
+       *      (encr-key <key>)))  -- this is the encrypted session key
+       */
+      {
+        struct stringbuf sb;
+
+        init_stringbuf (&sb, 200);
+        put_stringbuf (&sb, "(7:enc-val(4:pwri");
+        if (keyderivealgo && parm3)
+          {
+            put_stringbuf (&sb, "(11:derive-algo");
+            put_stringbuf_sexp (&sb, keyderivealgo);
+            put_stringbuf (&sb, ")(11:derive-parm");
+            put_stringbuf_mem_sexp (&sb, parm3, parm3len);
+            put_stringbuf (&sb, ")");
+          }
+        put_stringbuf (&sb, "(9:encr-algo");
+        put_stringbuf_sexp (&sb, keywrapalgo);
+        put_stringbuf (&sb, ")(9:encr-parm");
+        put_stringbuf_mem_sexp (&sb, parm2, parm2len);
+        put_stringbuf (&sb, ")(8:encr-key");
+        put_stringbuf_mem_sexp (&sb, der, derlen);
+        put_stringbuf (&sb, ")))");
+
+        string = get_stringbuf (&sb);
+        if (!string)
+          err = gpg_error_from_syserror ();
+      }
+
+    }
   else
     return NULL; /*GPG_ERR_INV_CMS_OBJ*/
 
  leave:
   xfree (keyencralgo);
   xfree (keywrapalgo);
+  xfree (keyderivealgo);
   xfree (parm);
+  xfree (parm2);
+  xfree (parm3);
   if (err)
     {
       /* gpgrt_log_debug ("%s: error: %s\n", __func__, gpg_strerror (err)); */

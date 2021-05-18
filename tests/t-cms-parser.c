@@ -164,21 +164,30 @@ one_file (const char *fname)
           if (err == -1)
             break; /* ready */
 
-          fail_if_err2 (fname, err);
-          if (!quiet)
+          if (gpg_err_code (err) == GPG_ERR_UNSUPPORTED_CMS_OBJ)
             {
-              printf ("recipient %d - issuer: ", idx);
-              print_dn (dn);
+              printf ("recipient %d"
+                      " - kekri or pwri detected\n", idx);
+              err = 0;
             }
-          ksba_free (dn);
-          if (!quiet)
+          else
             {
-              putchar ('\n');
-              printf ("recipient %d - serial: ", idx);
-              print_sexp_hex (p);
-              putchar ('\n');
+              fail_if_err2 (fname, err);
+              if (!quiet)
+                {
+                  printf ("recipient %d - issuer: ", idx);
+                  print_dn (dn);
+                }
+              ksba_free (dn);
+              if (!quiet)
+                {
+                  putchar ('\n');
+                  printf ("recipient %d - serial: ", idx);
+                  print_sexp_hex (p);
+                  putchar ('\n');
+                }
+              ksba_free (p);
             }
-          ksba_free (p);
 
           dn = ksba_cms_get_enc_val (cms, idx);
           if (!quiet)

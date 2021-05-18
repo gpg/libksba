@@ -163,7 +163,8 @@ UnprotectedAttributes ::= SET SIZE (1..MAX) OF Attribute
 RecipientInfo ::= CHOICE {
    ktri KeyTransRecipientInfo,
    kari [1] KeyAgreeRecipientInfo,
-   kekri [2] KEKRecipientInfo }
+   kekri [2] KEKRecipientInfo,
+   pwri [3] PasswordRecipientInfo }
 
 EncryptedKey ::= OCTET STRING
 
@@ -222,6 +223,13 @@ KEKIdentifier ::= SEQUENCE {
   date GeneralizedTime OPTIONAL,
   other OtherKeyAttribute OPTIONAL }
 
+PasswordRecipientInfo ::= SEQUENCE {
+  version CMSVersion,   -- Always set to 0
+  keyDerivationAlgorithm [0] KeyDerivationAlgorithmIdentifier OPTIONAL,
+  keyEncryptionAlgorithm     KeyEncryptionAlgorithmIdentifier,
+  encryptedKey EncryptedKey }
+
+
 DigestedData ::= SEQUENCE {
   version CMSVersion,
   digestAlgorithm DigestAlgorithmIdentifier,
@@ -258,6 +266,8 @@ DigestAlgorithmIdentifier ::= AlgorithmIdentifier
 SignatureAlgorithmIdentifier ::= AlgorithmIdentifier
 
 KeyEncryptionAlgorithmIdentifier ::= AlgorithmIdentifier
+
+KeyDerivationAlgorithmIdentifier ::= AlgorithmIdentifier
 
 ContentEncryptionAlgorithmIdentifier ::= AlgorithmIdentifier
 
