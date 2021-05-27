@@ -257,7 +257,7 @@ case "${host}" in
       have_w32_system=yes
       ;;
      *-apple-darwin*)
-      AC_DEFINE(_DARWIN_C_SOURCE, 900000L,
+      AC_DEFINE(_DARWIN_C_SOURCE, 1,
                 Expose all libc features (__DARWIN_C_FULL).)
       ;;
     *)
