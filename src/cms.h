@@ -130,10 +130,13 @@ struct ksba_cms_s {
     gpg_error_t (*handler)(ksba_cms_t);
   } content;
 
+  /* Data used with auth enveloped data. */
   struct {
-    unsigned char *digest;
-    int digest_len;
-  } data;
+    unsigned char *mac;    /* The MAC (authtag)  */
+    int mac_len;
+    unsigned char *attr;   /* DER encoded authAttr.  */
+    int attr_len;
+  } authdata;
 
   int cms_version;
 

@@ -144,6 +144,15 @@ EnvelopedData ::= SEQUENCE {
   encryptedContentInfo EncryptedContentInfo,
   unprotectedAttrs [1] IMPLICIT UnprotectedAttributes OPTIONAL }
 
+AuthEnvelopedData ::= SEQUENCE {
+  version CMSVersion,
+  originatorInfo [0] IMPLICIT OriginatorInfo OPTIONAL,
+  recipientInfos RecipientInfos,
+  authEncryptedContentInfo EncryptedContentInfo,
+  authAttrs [1] IMPLICIT AuthAttributes OPTIONAL,
+  mac MessageAuthenticationCode,
+  unauthAttrs [2] IMPLICIT UnauthAttributes OPTIONAL }
+
 OriginatorInfo ::= SEQUENCE {
   certs [0] IMPLICIT CertificateSet OPTIONAL,
   crls [1] IMPLICIT CertificateRevocationLists OPTIONAL }
@@ -385,8 +394,10 @@ id-encryptedData OBJECT IDENTIFIER ::= { iso(1) member-body(2)
     us(840) rsadsi(113549) pkcs(1) pkcs7(7) 6 }
 
 id-ct-authData OBJECT IDENTIFIER ::= { iso(1) member-body(2)
-    us(840) rsadsi(113549) pkcs(1) pkcs-9(9) smime(16)
-    ct(1) 2 }
+    us(840) rsadsi(113549) pkcs(1) pkcs-9(9) smime(16)  ct(1) 2 }
+
+id-authEnvelopedData OBJECT IDENTIFIER ::= { iso(1) member-body(2)
+    us(840) rsadsi(113549) pkcs(1) pkcs-9(9) smime(16) ct(1) 23 }
 
 
 -- Attribute Object Identifiers

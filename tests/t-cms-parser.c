@@ -60,6 +60,7 @@ one_file (const char *fname)
   ksba_reader_t r;
   ksba_writer_t w;
   ksba_cms_t cms;
+  ksba_content_type_t ct;
   int i;
   const char *algoid;
   ksba_stop_reason_t stopreason;
@@ -97,6 +98,7 @@ one_file (const char *fname)
     case KSBA_CT_DATA:           s = "data"; break;
     case KSBA_CT_SIGNED_DATA:    s = "signed data"; break;
     case KSBA_CT_ENVELOPED_DATA: s = "enveloped data"; break;
+    case KSBA_CT_AUTHENVELOPED_DATA: s = "auth enveloped data"; break;
     case KSBA_CT_DIGESTED_DATA:  s = "digested data"; break;
     case KSBA_CT_ENCRYPTED_DATA: s = "encrypted data"; break;
     case KSBA_CT_AUTH_DATA:      s = "auth data"; break;
@@ -156,7 +158,8 @@ one_file (const char *fname)
   while (stopreason != KSBA_SR_READY);
 
 
-  if (ksba_cms_get_content_type (cms, 0) == KSBA_CT_ENVELOPED_DATA)
+  ct = ksba_cms_get_content_type (cms, 0);
+  if (ct == KSBA_CT_ENVELOPED_DATA || ct == KSBA_CT_AUTHENVELOPED_DATA)
     {
       for (idx=0; ; idx++)
         {

@@ -126,7 +126,8 @@ typedef enum
     KSBA_CT_AUTH_DATA = 6,
     KSBA_CT_PKCS12 = 7,
     KSBA_CT_SPC_IND_DATA_CTX = 8,
-    KSBA_CT_OPENPGP_KEYBLOCK = 9
+    KSBA_CT_OPENPGP_KEYBLOCK = 9,
+    KSBA_CT_AUTHENVELOPED_DATA = 10
   }
 ksba_content_type_t;
 typedef ksba_content_type_t KsbaContentType _KSBA_DEPRECATED;

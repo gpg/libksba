@@ -250,6 +250,7 @@ parse_encrypted_content_info (ksba_reader_t reader,
                               unsigned long *r_len, int *r_ndef,
                               char **r_cont_oid, char **r_algo_oid,
                               char **r_algo_parm, size_t *r_algo_parmlen,
+                              int *r_algo_parmtype,
                               int *has_content)
 {
   struct tag_info ti;
@@ -262,6 +263,7 @@ parse_encrypted_content_info (ksba_reader_t reader,
   char *algo_parm = NULL;
   size_t algo_parmlen;
   size_t nread;
+  int algo_parmtype;
 
   /* Fixme: release oids in case of errors */
 
@@ -324,9 +326,11 @@ parse_encrypted_content_info (ksba_reader_t reader,
   err = read_buffer (reader, tmpbuf+ti.nhdr, ti.length);
   if (err)
     return err;
-  err = _ksba_parse_algorithm_identifier2 (tmpbuf, ti.nhdr+ti.length,
-                                           &nread,&algo_oid,
-                                           &algo_parm, &algo_parmlen);
+  err = _ksba_parse_algorithm_identifier3 (tmpbuf, ti.nhdr+ti.length,
+                                           0x30,
+                                           &nread, &algo_oid,
+                                           &algo_parm, &algo_parmlen,
+                                           &algo_parmtype);
   if (err)
     return err;
   assert (nread <= ti.nhdr + ti.length);
@@ -376,6 +380,7 @@ parse_encrypted_content_info (ksba_reader_t reader,
   *r_algo_oid = algo_oid;
   *r_algo_parm = algo_parm;
   *r_algo_parmlen = algo_parmlen;
+  *r_algo_parmtype = algo_parmtype;
   return 0;
 }
 
@@ -792,30 +797,46 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
 
 
 /* Parse the structure:
-
-   EnvelopedData ::= SEQUENCE {
-     version INTEGER  { v0(0), v1(1), v2(2), v3(3), v4(4) }),
-     originatorInfo [0] IMPLICIT OriginatorInfo OPTIONAL,
-     recipientInfos RecipientInfos,
-     encryptedContentInfo EncryptedContentInfo,
-     unprotectedAttrs [1] IMPLICIT UnprotectedAttributes OPTIONAL }
-
-   OriginatorInfo ::= SEQUENCE {
-     certs [0] IMPLICIT CertificateSet OPTIONAL,
-     crls [1] IMPLICIT CertificateRevocationLists OPTIONAL }
-
-   RecipientInfos ::= SET OF RecipientInfo
-
-   EncryptedContentInfo ::= SEQUENCE {
-     contentType ContentType,
-     contentEncryptionAlgorithm ContentEncryptionAlgorithmIdentifier,
-     encryptedContent [0] IMPLICIT EncryptedContent OPTIONAL }
-
-   EncryptedContent ::= OCTET STRING
-
- We stop parsing so that the next read will be the first byte of the
- encryptedContent or (if there is no content) the unprotectedAttrs.
-*/
+ *
+ *   EnvelopedData ::= SEQUENCE {
+ *     version INTEGER  { v0(0), v1(1), v2(2), v3(3), v4(4) }),
+ *     originatorInfo [0] IMPLICIT OriginatorInfo OPTIONAL,
+ *     recipientInfos RecipientInfos,
+ *     encryptedContentInfo EncryptedContentInfo,
+ *     unprotectedAttrs [1] IMPLICIT UnprotectedAttributes OPTIONAL }
+ *
+ * or this one:
+ *
+ *   AuthEnvelopedData ::= SEQUENCE {
+ *     version CMSVersion,
+ *     originatorInfo [0] IMPLICIT OriginatorInfo OPTIONAL,
+ *     recipientInfos RecipientInfos,
+ *     authEncryptedContentInfo EncryptedContentInfo,
+ *     authAttrs [1] IMPLICIT AuthAttributes OPTIONAL,  -- not in above
+ *     mac MessageAuthenticationCode,                   -- not in above
+ *     unauthAttrs [2] IMPLICIT UnauthAttributes OPTIONAL } -- different tag
+ *
+ * where
+ *
+ *   OriginatorInfo ::= SEQUENCE {
+ *     certs [0] IMPLICIT CertificateSet OPTIONAL,
+ *     crls [1] IMPLICIT CertificateRevocationLists OPTIONAL }
+ *
+ *   RecipientInfos ::= SET OF RecipientInfo
+ *
+ *   EncryptedContentInfo ::= SEQUENCE {
+ *     contentType ContentType,
+ *     contentEncryptionAlgorithm ContentEncryptionAlgorithmIdentifier,
+ *     encryptedContent [0] IMPLICIT EncryptedContent OPTIONAL }
+ *
+ *   EncryptedContent ::= OCTET STRING
+ *
+ *   MessageAuthenticationCode ::= OCTET STRING
+ *
+ * We stop parsing so that the next read will be the first byte of the
+ * encryptedContent or (if there is no content) the unprotectedAttrs
+ * respective the authAttrs.
+ */
 gpg_error_t
 _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
 {
@@ -831,6 +852,7 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
   char *algo_oid = NULL;
   char *algo_parm = NULL;
   size_t algo_parmlen = 0;
+  int algo_parmtype = 0;
   struct value_tree_s *vt, **vtend;
 
   /* get the version */
@@ -940,10 +962,36 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
                                       &encr_cont_len, &encr_cont_ndef,
                                       &cont_oid,
                                       &algo_oid,
-                                      &algo_parm, &algo_parmlen,
+                                      &algo_parm, &algo_parmlen, &algo_parmtype,
                                       &has_content);
   if (err)
     return err;
+
+  /* If this is AES with GCM the parameter should be
+   *
+   *   GCMParameters ::= SEQUENCE {
+   *     aes-nonce        OCTET STRING, -- recommended size is 12 octets
+   *     aes-ICVlen       AES-GCM-ICVlen DEFAULT 12 }
+   *
+   * Under the assumption that the IV is at max 16 bytes (i.e. the
+   * blocksize of AES) and the default ICVlen is used, we modify the
+   * parameter to have just the nonce without any encoding.  */
+  if (algo_parmlen > 4 && algo_parm[0] == 0x30 /* Sequence.  */
+      && algo_oid
+      && (!strcmp (algo_oid, "2.16.840.1.101.3.4.1.46")     /*AES256.GCM*/
+          || !strcmp (algo_oid, "2.16.840.1.101.3.4.1.26")  /*AES192.GCM*/
+          || !strcmp (algo_oid, "2.16.840.1.101.3.4.1.6"))) /*AES128.GCM*/
+    {
+      if (algo_parmlen == algo_parm[1] + 2
+          && algo_parm[1] == algo_parm[3] + 2
+          && algo_parm[2] == 0x04
+          && algo_parm[3] && algo_parm[3] <= 16)
+        {
+          algo_parmlen = algo_parm[3];
+          memmove (algo_parm, algo_parm+4, algo_parmlen);
+        }
+    }
+
   cms->inner_cont_len = encr_cont_len;
   cms->inner_cont_ndef = encr_cont_ndef;
   cms->inner_cont_oid = cont_oid;
@@ -965,11 +1013,72 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
 }
 
 
-/* handle the unprotected attributes */
+/* Handle the unprotected attributes and more important
+ *
+ *     authAttrs [1] IMPLICIT AuthAttributes OPTIONAL,
+ *     mac MessageAuthenticationCode,
+ *     unauthAttrs [2] IMPLICIT UnauthAttributes OPTIONAL
+ *
+ * if case of cms->content.ct == KSBA_CT_AUTHENVELOPED_DATA
+ */
 gpg_error_t
 _ksba_cms_parse_enveloped_data_part_2 (ksba_cms_t cms)
 {
-  (void)cms;
-  /* FIXME */
+  gpg_error_t err;
+  struct tag_info ti;
+
+  if (cms->content.ct != KSBA_CT_AUTHENVELOPED_DATA)
+    return 0; /* We don't yet support unprotectedAttrs.  */
+
+  /* Shall we use ksba_cms_get_message_digest to return the mac?  To
+   * return the authAttrs we need a new function: A generic get_attr
+   * function which can be used for all kind of attributes would be
+   * best.  */
+
+  /* Read authAttr if availabale.  */
+  err = _ksba_ber_read_tl (cms->reader, &ti);
+  if (err)
+    return err;
+  /* Skip an end tag.  */
+  if (!ti.class && !ti.tag && (err = _ksba_ber_read_tl (cms->reader, &ti)))
+    return err;
+
+  if ((ti.class == CLASS_CONTEXT && ti.tag == 1 && ti.is_constructed))
+    {
+      /* Okay, we got an authAttr.  We need to do something with it.
+       * However, without sample data it does not make sense to handle
+       * it.  Further it is currently useless because in gpgsm we need
+       * to get access to authAttrs before we decrypt the content.
+       * This will require the use of temp files in gpgsm and thus a
+       * larger rework.*/
+      return gpg_error (GPG_ERR_NOT_IMPLEMENTED);
+
+      /* err = _ksba_ber_read_tl (cms->reader, &ti); */
+      /* if (err) */
+      /*   return err; */
+      /* /\* Skip an end tag.  *\/ */
+      /* if (!ti.class && !ti.tag && (err = _ksba_ber_read_tl (cms->reader, &ti))) */
+      /*   return err; */
+    }
+
+
+  /* Next comes the mandatory mac.  We store it in the CMS. */
+  if (!(ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_OCTET_STRING
+        && !ti.is_constructed) || !ti.length)
+    {
+      return gpg_error (GPG_ERR_INV_CMS_OBJ);
+    }
+  xfree (cms->authdata.mac);
+  cms->authdata.mac_len = ti.length;
+  cms->authdata.mac = xtrymalloc (ti.length);
+  if (!cms->authdata.mac)
+    return gpg_error_from_syserror ();
+
+  err = read_buffer (cms->reader, cms->authdata.mac, ti.length);
+  if (err)
+    return err;
+
+  /* No support for unauthAttr.  */
+
   return 0;
 }

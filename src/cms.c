@@ -29,6 +29,8 @@
  */
 
 /* References:
+ * RFC-5083 := CMS - Authenticated-Enveloped-Data
+ * RFC-5084 := CMS - AES-GCM
  * RFC-5652 := Cryptographic Message Syntax (CMS) (aka STD0070)
  * SPHINX   := CMS profile developed by the German BSI.
  *             (see also https://lwn.net/2001/1011/a/german-smime.php3)
@@ -76,6 +78,8 @@ static struct {
   {  "1.2.840.113549.1.7.2", KSBA_CT_SIGNED_DATA,
      ct_parse_signed_data   , ct_build_signed_data    },
   {  "1.2.840.113549.1.7.3", KSBA_CT_ENVELOPED_DATA,
+     ct_parse_enveloped_data, ct_build_enveloped_data },
+  {  "1.2.840.113549.1.9.16.1.23", KSBA_CT_AUTHENVELOPED_DATA,
      ct_parse_enveloped_data, ct_build_enveloped_data },
   {  "1.2.840.113549.1.7.5", KSBA_CT_DIGESTED_DATA,
      ct_parse_digested_data , ct_build_digested_data  },
@@ -603,7 +607,8 @@ ksba_cms_release (ksba_cms_t cms)
   xfree (cms->inner_cont_oid);
   xfree (cms->encr_algo_oid);
   xfree (cms->encr_iv);
-  xfree (cms->data.digest);
+  xfree (cms->authdata.mac);
+  xfree (cms->authdata.attr);
   while (cms->signer_info)
     {
       struct signer_info_s *tmp = cms->signer_info->next;
@@ -770,7 +775,7 @@ ksba_cms_get_content_oid (ksba_cms_t cms, int what)
 
 
 /* Copy the initialization vector into iv and its len into ivlen.
-   The caller should provide a suitable large buffer */
+   The caller should proncrvide a suitable large buffer */
 gpg_error_t
 ksba_cms_get_content_enc_iv (ksba_cms_t cms, void *iv,
                              size_t maxivlen, size_t *ivlen)
@@ -789,7 +794,7 @@ ksba_cms_get_content_enc_iv (ksba_cms_t cms, void *iv,
 
 /**
  * ksba_cert_get_digest_algo_list:
- * @cert: Initialized certificate object
+ * @cms: CMS object
  * @idx: enumerator
  *
  * Figure out the the digest algorithm used for the signature and
@@ -1032,8 +1037,9 @@ ksba_cms_get_cert (ksba_cms_t cms, int idx)
 
 
 /*
-   Return the extension attribute messageDigest
-*/
+ * Return the extension attribute messageDigest
+ * or for authenvelopeddata the MAC.
+ */
 gpg_error_t
 ksba_cms_get_message_digest (ksba_cms_t cms, int idx,
                              char **r_digest, size_t *r_digest_len)
@@ -1043,6 +1049,39 @@ ksba_cms_get_message_digest (ksba_cms_t cms, int idx,
 
   if (!cms || !r_digest || !r_digest_len)
     return gpg_error (GPG_ERR_INV_VALUE);
+
+  /* Hack to return the MAC/authtag value or the authAttr.  */
+  if (cms->content.ct == KSBA_CT_AUTHENVELOPED_DATA)
+    {
+      if (!idx) /* Return authtag.  */
+        {
+          if (!cms->authdata.mac || !cms->authdata.mac_len)
+            return gpg_error (GPG_ERR_NO_DATA);
+
+          *r_digest = xtrymalloc (cms->authdata.mac_len);
+          if (!*r_digest)
+            return gpg_error_from_syserror ();
+          memcpy (*r_digest, cms->authdata.mac, cms->authdata.mac_len);
+          *r_digest_len = cms->authdata.mac_len;
+        }
+      else if (idx == 1) /* Return authAttr.  */
+        {
+          if (!cms->authdata.attr || !cms->authdata.attr_len)
+            return gpg_error (GPG_ERR_NO_DATA);
+
+          *r_digest = xtrymalloc (cms->authdata.attr_len);
+          if (!*r_digest)
+            return gpg_error_from_syserror ();
+          memcpy (*r_digest, cms->authdata.attr, cms->authdata.attr_len);
+          *r_digest_len = cms->authdata.attr_len;
+        }
+      else
+        return gpg_error (GPG_ERR_INV_INDEX);
+
+      return 0;
+    }
+
+
   if (!cms->signer_info)
     return gpg_error (GPG_ERR_NO_DATA);
   if (idx < 0)
@@ -2450,7 +2489,7 @@ ct_parse_signed_data (ksba_cms_t cms)
   /* Calculate new stop reason */
   if (state == sSTART)
     {
-      if (cms->detached_data && !cms->data.digest)
+      if (cms->detached_data)
         { /* We use this stop reason to inform the caller about a
              detached signatures.  Actually there is no need for him
              to hash the data now, he can do this also later. */
