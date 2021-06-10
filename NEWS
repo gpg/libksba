@@ -1,10 +1,20 @@
-Noteworthy changes in version 1.6.0 (unreleased) [C21/A13/R_]
+Noteworthy changes in version 1.6.0 (2021-06-10) [C22/A14/R0]
 ------------------------------------------------
 
+ * Limited support for the Authenticated-Enveloped-Data content type.
+   [81fdcd680c12]
+
+ * Support password based decryption.  [cb7f2484a09c]
+
+ * Fix build problem on macOS.  (#5440)
+
+ * Silence warnings from static analyzers.  (#5395)
 
  * Interface changes relative to the 1.5.0 release:
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    KSBA_CT_AUTHENVELOPED_DATA       NEW.
+
+ Release-info: https://dev.gnupg.org/T5479
 
 
 Noteworthy changes in version 1.5.1 (2021-04-06) [C21/A13/R1]
