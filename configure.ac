@@ -392,7 +392,6 @@ AC_DEFINE(GPG_ERR_SOURCE_DEFAULT, GPG_ERR_SOURCE_KSBA,
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([string.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -405,7 +404,7 @@ AC_CHECK_TYPES([u32])
 
 
 # Checks for library functions.
-AC_CHECK_FUNCS([memmove strchr strtol strtoul stpcpy gmtime_r getenv])
+AC_CHECK_FUNCS([stpcpy gmtime_r getenv])
 
 
 # GNUlib checks
