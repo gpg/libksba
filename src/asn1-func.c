@@ -121,8 +121,8 @@ _ksba_asn_is_primitive (node_type_t type)
 
 
 /* Change the value field of the node to the content of buffer value
-   of size LEN.  With VALUE of NULL or LEN of 0 the value field is
-   deleted */
+   of size LEN.  With VALUE of NULL or LEN of 0 and a VTYPE of
+   VALTYPE_NULL the value field is deleted */
 void
 _ksba_asn_set_value (AsnNode node,
                      enum asn_value_type vtype, const void *value, size_t len)
@@ -143,15 +143,16 @@ _ksba_asn_set_value (AsnNode node,
     case VALTYPE_NULL:
       break;
     case VALTYPE_BOOL:
-      return_if_fail (len);
-      node->value.v_bool = !!(const unsigned *)value;
+      return_if_fail (len && value);
+      node->value.v_bool = !!*(const unsigned *)value;
       break;
     case VALTYPE_CSTR:
+      return_if_fail (value);
       node->value.v_cstr = xstrdup (value);
       break;
     case VALTYPE_MEM:
       node->value.v_mem.len = len;
-      if (len)
+      if (len && value)
         {
           node->value.v_mem.buf = xmalloc (len);
           memcpy (node->value.v_mem.buf, value, len);
@@ -160,12 +161,12 @@ _ksba_asn_set_value (AsnNode node,
           node->value.v_mem.buf = NULL;
       break;
     case VALTYPE_LONG:
-      return_if_fail (sizeof (long) == len);
+      return_if_fail (sizeof (long) == len && value);
       node->value.v_long = *(long *)value;
       break;
 
     case VALTYPE_ULONG:
-      return_if_fail (sizeof (unsigned long) == len);
+      return_if_fail (sizeof (unsigned long) == len && value);
       node->value.v_ulong = *(unsigned long *)value;
       break;
 
