@@ -65,13 +65,12 @@ no_undefined = -no-undefined
 export_symbols = -export-symbols $(srcdir)/libksba.def
 extra_ltoptions = -XCClinker -static-libgcc
 
-install-def-file:
-	$(INSTALL) $(srcdir)/libksba.def $(DESTDIR)$(libdir)/libksba.def
-
 uninstall-def-file:
 	-rm $(DESTDIR)$(libdir)/libksba.def
 
 ksba_deps = $(ksba_res) libksba.def
+ksbadefdir = $(libdir)
+ksbadef_DATA = libksba.def
 
 else !HAVE_W32_SYSTEM
 ksba_res =
@@ -79,7 +78,6 @@ no_undefined =
 export_symbols =
 extra_ltoptions =
 ksba_deps =
-install-def-file:
 uninstall-def-file:
 endif !HAVE_W32_SYSTEM
 
@@ -136,7 +134,5 @@ asn1-tables.c : $(asn1_modules) asn1-gentables
 	  for file in $(asn1_modules); do list="$$list $(srcdir)/$$file";done;\
 	  ./asn1-gentables $$list > asn1-tables.c
 
-
-install-data-local: install-def-file
 
 uninstall-local: uninstall-def-file
