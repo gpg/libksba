@@ -66,9 +66,6 @@
 /* #define YYDEBUG 1 */
 #define MAX_STRING_LENGTH 129
 
-/* Dummy print so that yytoknum will be defined.  */
-#define YYPRINT(F, N, L)  do { } while (0);
-
 
 /* constants used in the grammar */
 enum {
@@ -114,8 +111,6 @@ static void set_down (AsnNode node, AsnNode down);
 static int yylex (YYSTYPE *lvalp, void *parm);
 static void yyerror (void *parm, const char *s);
 %}
-
-%token-table
 
 %token ASSIG           "::="
 %token <str> NUM
@@ -764,6 +759,56 @@ definitions: definitions_id
 %%
 
 
+struct token_table_s {
+  const char *word;
+  int token;
+};
+
+static struct token_table_s token_table[] = {
+  { "::=",             ASSIG           },
+  { "ANY",             ANY             },
+  { "APPLICATION",     APPLICATION     },
+  { "BEGIN",           ksba_BEGIN      },
+  { "BIT",             BIT             },
+  { "BMPString",       BMPSTRING       },
+  { "BOOLEAN",         ksba_BOOLEAN    },
+  { "BY",              BY              },
+  { "CHOICE",          CHOICE          },
+  { "DEFAULT",         DEFAULT         },
+  { "DEFINED",         DEFINED         },
+  { "DEFINITIONS",     DEFINITIONS     },
+  { "END",             ksba_END        },
+  { "ENUMERATED",      ENUMERATED      },
+  { "EXPLICIT",        EXPLICIT        },
+  { "FALSE",           ksba_FALSE      },
+  { "FROM",            FROM            },
+  { "GeneralizedTime", GeneralizedTime },
+  { "IA5String",       IA5STRING       },
+  { "IDENTIFIER",      STR_IDENTIFIER  },
+  { "IMPLICIT",        IMPLICIT        },
+  { "IMPORTS",         IMPORTS         },
+  { "INTEGER",         INTEGER         },
+  { "NULL",            TOKEN_NULL      },
+  { "NumericString",   NUMERICSTRING   },
+  { "OBJECT",          OBJECT          },
+  { "OCTET",           OCTET           },
+  { "OF",              OF              },
+  { "OPTIONAL",        OPTIONAL        },
+  { "PRIVATE",         PRIVATE         },
+  { "PrintableString", PRINTABLESTRING },
+  { "SEQUENCE",        SEQUENCE        },
+  { "SET",             SET             },
+  { "SIZE",            SIZE            },
+  { "STRING",          STRING          },
+  { "TAGS",            TAGS            },
+  { "TRUE",            ksba_TRUE       },
+  { "TeletexString",   TELETEXSTRING   },
+  { "UNIVERSAL",       UNIVERSAL       },
+  { "UTCTime",         UTCTime         },
+  { "UTF8String",      UTF8STRING      },
+  { "UniversalString", UNIVERSALSTRING },
+};
+
 /*************************************************************/
 /*  Function: yylex                                          */
 /*  Description: looks for tokens in file_asn1 pointer file. */
@@ -775,7 +820,6 @@ yylex (YYSTYPE *lvalp, void *parm)
 {
   int c,counter=0,k;
   char string[MAX_STRING_LENGTH];
-  size_t len;
   FILE *fp = PARSECTL->fp;
 
   if (!PARSECTL->lineno)
@@ -852,13 +896,10 @@ yylex (YYSTYPE *lvalp, void *parm)
         }
 
       /* Is STRING a keyword? */
-      len = strlen (string);
-      for (k = 0; k < YYNTOKENS; k++)
+      for (k = 0; k < DIM (token_table); k++)
         {
-          if (yytname[k] && yytname[k][0] == '\"'
-              && !strncmp (yytname[k] + 1, string, len)
-              && yytname[k][len + 1] == '\"' && !yytname[k][len + 2])
-            return yytoknum[k];
+          if (!strcmp (token_table[k].word, string))
+            return token_table[k].token;
         }
 
       /* STRING is an IDENTIFIER */
