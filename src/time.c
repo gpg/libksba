@@ -148,7 +148,7 @@ _ksba_cmp_time (const ksba_isotime_t a, const ksba_isotime_t b)
 }
 
 /* Fill the TIMEBUF with the current time (UTC of course). */
-void
+int
 _ksba_current_time (ksba_isotime_t timebuf)
 {
   time_t epoch = time (NULL);
@@ -160,7 +160,8 @@ _ksba_current_time (ksba_isotime_t timebuf)
 #else
   tp = gmtime ( &epoch );
 #endif
-  snprintf (timebuf, sizeof (ksba_isotime_t), "%04d%02d%02dT%02d%02d%02d",
-            1900 + tp->tm_year, tp->tm_mon+1, tp->tm_mday,
-            tp->tm_hour, tp->tm_min, tp->tm_sec);
+  return snprintf (timebuf, sizeof (ksba_isotime_t),
+                   "%04d%02d%02dT%02d%02d%02d",
+                   1900 + tp->tm_year, tp->tm_mon+1, tp->tm_mday,
+                   tp->tm_hour, tp->tm_min, tp->tm_sec);
 }

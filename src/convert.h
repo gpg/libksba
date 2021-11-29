@@ -39,7 +39,7 @@ gpg_error_t _ksba_asntime_to_iso (const char *buffer, size_t length,
 gpg_error_t _ksba_assert_time_format (const ksba_isotime_t atime);
 void _ksba_copy_time (ksba_isotime_t d, const ksba_isotime_t s);
 int _ksba_cmp_time (const ksba_isotime_t a, const ksba_isotime_t b);
-void _ksba_current_time (ksba_isotime_t timebuf);
+int _ksba_current_time (ksba_isotime_t timebuf);
 
 
 /*-- dn.c --*/
