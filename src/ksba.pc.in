@@ -11,4 +11,4 @@ Requires: gpg-error
 Version: @PACKAGE_VERSION@
 Cflags: -I${includedir} @KSBA_CONFIG_CFLAGS@
 Libs: -L${libdir} @KSBA_CONFIG_LIBS@
-URL: http://www.gnupg.org/related_software/libksba/
+URL: https://www.gnupg.org/related_software/libksba/
