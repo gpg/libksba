@@ -18,7 +18,7 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 # Process this file with autoconf to produce a configure script.
-AC_PREREQ([2.61])
+AC_PREREQ([2.69])
 min_automake_version="1.14"
 
 
@@ -391,7 +391,6 @@ AC_DEFINE(GPG_ERR_SOURCE_DEFAULT, GPG_ERR_SOURCE_KSBA,
 
 
 # Checks for header files.
-AC_HEADER_STDC
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
