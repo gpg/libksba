@@ -102,7 +102,6 @@ struct ksba_ocsp_s {
                                              the response. */
   struct ocsp_extension_s *response_extensions; /* List of extensions. */
   int bad_nonce;            /* The nonce does not match the request. */
-  int good_nonce;           /* The nonce does match the request. */
   struct {
     char *name;             /* Allocated DN. */
     char *keyid;            /* Allocated key ID. */

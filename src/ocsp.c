@@ -720,8 +720,6 @@ parse_response_extensions (ksba_ocsp_t ocsp,
           if (ocsp->noncelen != ti.length
               || memcmp (ocsp->nonce, data, ti.length))
             ocsp->bad_nonce = 1;
-          else
-            ocsp->good_nonce = 1;
         }
       ex = xtrymalloc (sizeof *ex + strlen (oid) + ti.length);
       if (!ex)
@@ -1113,7 +1111,7 @@ parse_single_response (ksba_ocsp_t ocsp,
   if (err)
     return err;
   if (request_item)
-      _ksba_copy_time (request_item->this_update, this_update);
+    _ksba_copy_time (request_item->this_update, this_update);
 
   /* nextUpdate is optional. */
   if (*data >= endptr)
@@ -1441,7 +1439,6 @@ ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
   ocsp->received_certs = NULL;
   ocsp->hash_length = 0;
   ocsp->bad_nonce = 0;
-  ocsp->good_nonce = 0;
   xfree (ocsp->responder_id.name);
   ocsp->responder_id.name = NULL;
   xfree (ocsp->responder_id.keyid);
@@ -1463,9 +1460,12 @@ ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
   /* FIXME: find duplicates in the request list and set them to the
      same status. */
 
-  if (*response_status == KSBA_OCSP_RSPSTATUS_SUCCESS)
-    if (ocsp->bad_nonce || (ocsp->noncelen && !ocsp->good_nonce))
-      *response_status = KSBA_OCSP_RSPSTATUS_REPLAYED;
+  /* We used to assume that the server needs to return a nonce, but
+   * that is not true (see for example RFC-8954).  Thus we do not
+   * check the former good_nonce flag anymore.  */
+  if (*response_status == KSBA_OCSP_RSPSTATUS_SUCCESS
+      && ocsp->bad_nonce)
+    *response_status = KSBA_OCSP_RSPSTATUS_REPLAYED;
 
   return err;
 }
