@@ -278,7 +278,7 @@ write_request_extensions (ksba_ocsp_t ocsp, ksba_writer_t wout)
   if (err)
     goto leave;
 
-  /* Write OID and and nonce.  */
+  /* Write OID and nonce.  */
   err = ksba_oid_from_str (oidstr_ocsp_nonce, &buf, &buflen);
   if (err)
     goto leave;
@@ -358,6 +358,7 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
   unsigned char *p;
   const unsigned char *der;
   size_t derlen;
+  struct tag_info ti;
   ksba_writer_t w1 = NULL;
   ksba_writer_t w2 = NULL;
   ksba_writer_t w3 = NULL;
@@ -423,16 +424,24 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
         err = ksba_writer_write (w1, der, derlen);
       if (err)
         goto leave;
-      xfree (ri->serialno);
-      ri->serialno = xtrymalloc (derlen);
-      if (!ri->serialno)
-        {
-          err = gpg_error_from_syserror ();
-          goto leave;
-        }
-      memcpy (ri->serialno, der, derlen);
-      ri->serialnolen = derlen;
+      /* Store the integer value.  */
+      {
+        const unsigned char *tmpder = der;
+        size_t tmpderlen = derlen;
 
+        err = parse_integer (&tmpder, &tmpderlen, &ti);
+        if (err)
+          goto leave;
+        xfree (ri->serialno);
+        ri->serialno = xtrymalloc (tmpderlen);
+        if (!ri->serialno)
+          {
+            err = gpg_error_from_syserror ();
+            goto leave;
+          }
+        memcpy (ri->serialno, tmpder, tmpderlen);
+        ri->serialnolen = tmpderlen;
+      }
 
       /* Now write it out as a sequence to the outer certID object. */
       p = ksba_writer_snatch_mem (w1, &derlen);
@@ -953,7 +962,7 @@ parse_single_response (ksba_ocsp_t ocsp,
   assert (n <= *datalen);
   *data += n;
   *datalen -= n;
-  /*   fprintf (stderr, "algorithmIdentifier is `%s'\n", oid); */
+  /* gpgrt_log_debug ("algorithmIdentifier is `%s'\n", oid); */
   look_for_request = !strcmp (oid, oidstr_sha1);
   xfree (oid);
 
@@ -994,10 +1003,10 @@ parse_single_response (ksba_ocsp_t ocsp,
       for (request_item = ocsp->requestlist;
            request_item; request_item = request_item->next)
         if (!memcmp (request_item->issuer_name_hash, name_hash, 20)
-             && !memcmp (request_item->issuer_key_hash, key_hash, 20)
-             && request_item->serialnolen == serialnolen
+            && !memcmp (request_item->issuer_key_hash, key_hash, 20)
+            && request_item->serialnolen == serialnolen
             && !memcmp (request_item->serialno, serialno, serialnolen))
-          break; /* Got it. */
+            break; /* Got it. */
     }
 
 
@@ -1103,7 +1112,6 @@ parse_single_response (ksba_ocsp_t ocsp,
   err = parse_asntime_into_isotime (data, datalen, this_update);
   if (err)
     return err;
-/*   fprintf (stderr, "thisUpdate=%s\n", this_update); */
   if (request_item)
       _ksba_copy_time (request_item->this_update, this_update);
 
@@ -1121,7 +1129,6 @@ parse_single_response (ksba_ocsp_t ocsp,
       err = parse_asntime_into_isotime (data, datalen, next_update);
       if (err)
         return err;
-/*       fprintf (stderr, "nextUpdate=%s\n", next_update); */
       if (request_item)
         _ksba_copy_time (request_item->next_update, next_update);
     }
