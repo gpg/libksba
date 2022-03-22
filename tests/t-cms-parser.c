@@ -72,7 +72,7 @@ one_file (const char *fname)
 
   if (!quiet)
     printf ("*** checking `%s' ***\n", fname);
-  fp = fopen (fname, "r");
+  fp = fopen (fname, "rb");
   if (!fp)
     {
       fprintf (stderr, "%s:%d: can't open `%s': %s\n",
