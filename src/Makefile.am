@@ -28,7 +28,11 @@ EXTRA_DIST = ksba.h.in ksba-config.in $(asn1_modules) ksba.m4 \
              libksba.vers libksba.def \
 	     asn1-parse.c asn1-tables.c $(buildtool_src) ksba.pc.in
 BUILT_SOURCES = asn1-parse.c asn1-tables.c
+if USE_GPGRT_CONFIG
+noinst_SCRIPTS = ksba-config
+else
 bin_SCRIPTS = ksba-config
+endif
 nodist_include_HEADERS = ksba.h
 lib_LTLIBRARIES = libksba.la
 noinst_PROGRAMS = ber-dump
