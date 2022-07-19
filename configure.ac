@@ -112,6 +112,8 @@ LT_LANG([Windows Resource])
 
 AM_MAINTAINER_MODE
 
+# We need to compile and run a program on the build machine.
+AX_CC_FOR_BUILD
 
 AC_SUBST(LIBKSBA_LT_CURRENT)
 AC_SUBST(LIBKSBA_LT_AGE)

@@ -125,7 +125,8 @@ ber_dump_CFLAGS = $(AM_CFLAGS)
 
 asn1-parse.c : asn1-func.h gen-help.h
 
-asn1-gentables: asn1-gentables.c asn1-parse.c asn1-func.c gen-help.c gen-help.h
+asn1-gentables$(EXEEXT_FOR_BUILD): asn1-gentables.c asn1-parse.c asn1-func.c \
+ gen-help.c gen-help.h
 	$(CC_FOR_BUILD) $(CFLAGS_FOR_BUILD) $(LDFLAGS_FOR_BUILD) \
 	        $(CPPFLAGS_FOR_BUILD) -I$(srcdir) -DBUILD_GENTOOLS -o $@ \
 		$(srcdir)/asn1-gentables.c \
@@ -133,10 +134,10 @@ asn1-gentables: asn1-gentables.c asn1-parse.c asn1-func.c gen-help.c gen-help.h
                 $(srcdir)/asn1-func.c      \
                 $(srcdir)/gen-help.c
 
-asn1-tables.c : $(asn1_modules) asn1-gentables
+asn1-tables.c : $(asn1_modules) asn1-gentables$(EXEEXT_FOR_BUILD)
 	@set -e; list=""; \
 	  for file in $(asn1_modules); do list="$$list $(srcdir)/$$file";done;\
-	  ./asn1-gentables $$list > asn1-tables.c
+	  ./asn1-gentables$(EXEEXT_FOR_BUILD) $$list > asn1-tables.c
 
 
 uninstall-local: uninstall-def-file
