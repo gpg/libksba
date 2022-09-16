@@ -52,7 +52,7 @@ AC_INIT([mym4_package],[mym4_version],[https://bugs.gnupg.org])
 # Please remember to document interface changes in the NEWS file.
 LIBKSBA_LT_CURRENT=22
 LIBKSBA_LT_AGE=14
-LIBKSBA_LT_REVISION=0
+LIBKSBA_LT_REVISION=1
 #-------------------
 # If the API is changed in an incompatible way: increment the next counter.
 KSBA_CONFIG_API_VERSION=1

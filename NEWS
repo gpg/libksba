@@ -1,6 +1,9 @@
-Noteworthy changes in version 1.6.1 (unreleased) [C22/A14/R_]
+Noteworthy changes in version 1.6.1 (2022-09-16) [C22/A14/R1]
 ------------------------------------------------
 
+ * Allow an OCSP server not to return the sent nonce.  [rK24992a4a7a]
+
+ Release-info: https://dev.gnupg.org/T6210
 
 
 Noteworthy changes in version 1.6.0 (2021-06-10) [C22/A14/R0]
