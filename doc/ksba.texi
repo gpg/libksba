@@ -259,18 +259,18 @@ which the header file is located to the compiler's include file search
 path (via the @option{-I} option).
 
 However, the path to the include file is determined at the time the
-source is configured.  To solve this problem, `KSBA' ships with a small
-helper program @command{ksba-config} that knows about the path to the
-include file and other configuration options.  The options that need to
-be added to the compiler invocation at compile time are output by the
-@option{--cflags} option of @command{ksba-config}.  The following
+source is configured.  To solve this problem, `KSBA' ships with
+@code{ksba.pc} file, that knows about the path to the include file and
+other configuration options.  The options that need to be added to the
+compiler invocation at compile time are output by the
+@option{--cflags} option of @command{pkg-config ksba}.  The following
 example shows how it can be used at the command line:
 
 @example
-gcc -c foo.c `ksba-config --cflags`
+gcc -c foo.c `pkg-config --cflags ksba`
 @end example
 
-Adding the output of @samp{ksba-config --cflags} to the compiler's
+Adding the output of @samp{pkg-config --cflags ksba} to the compiler's
 command line will ensure that the compiler can find the @file{ksba.h}
 header file.
 
@@ -278,21 +278,21 @@ A similar problem occurs when linking the program with the library.
 Again, the compiler has to find the library files.  For this to work,
 the path to the library files has to be added to the library search path
 (via the @option{-L} option).  For this, the option @option{--libs} of
-@command{ksba-config} can be used.  For convenience, this option also
+@command{pkg-config ksba} can be used.  For convenience, this option also
 outputs all other options that are required to link the program with the
 `KSBA' libraries (in particular, the @samp{-lksba} option).  The
 example shows how to link @file{foo.o} with the `KSBA' libraries to a
 program @command{foo}.
 
 @example
-gcc -o foo foo.o `ksba-config --libs`
+gcc -o foo foo.o `pkg-config --libs ksba`
 @end example
 
 Of course you can also combine both examples to a single command by
-specifying both options to @command{ksba-config}:
+specifying both options to @command{pkg-config ksba}:
 
 @example
-gcc -o foo foo.c `ksba-config --cflags --libs`
+gcc -o foo foo.c `pkg-config --cflags --libs ksba`
 @end example
 
 
