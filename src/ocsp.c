@@ -721,6 +721,12 @@ parse_response_extensions (ksba_ocsp_t ocsp,
               || memcmp (ocsp->nonce, data, ti.length))
             ocsp->bad_nonce = 1;
         }
+      if (ti.length > (1<<24))
+        {
+          /* Bail out on much too large objects.  */
+          err = gpg_error (GPG_ERR_BAD_BER);
+          goto leave;
+        }
       ex = xtrymalloc (sizeof *ex + strlen (oid) + ti.length);
       if (!ex)
         {
@@ -788,6 +794,12 @@ parse_single_extensions (struct ocsp_reqitem_s *ri,
       err = parse_octet_string (&data, &datalen, &ti);
       if (err)
         goto leave;
+      if (ti.length > (1<<24))
+        {
+          /* Bail out on much too large objects.  */
+          err = gpg_error (GPG_ERR_BAD_BER);
+          goto leave;
+        }
       ex = xtrymalloc (sizeof *ex + strlen (oid) + ti.length);
       if (!ex)
         {

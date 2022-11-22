@@ -1349,7 +1349,7 @@ parse_signature (ksba_crl_t crl)
          && !ti.is_constructed) )
     return gpg_error (GPG_ERR_INV_CRL_OBJ);
   n2 = ti.nhdr + ti.length;
-  if (n + n2 >= DIM(tmpbuf))
+  if (n + n2 >= DIM(tmpbuf) || (n + n2) < n)
     return gpg_error (GPG_ERR_TOO_LARGE);
   memcpy (tmpbuf+n, ti.buf, ti.nhdr);
   err = read_buffer (crl->reader, tmpbuf+n+ti.nhdr, ti.length);
