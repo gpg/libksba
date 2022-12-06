@@ -1,5 +1,9 @@
-Noteworthy changes in version 1.6.3 (unreleased) [C22/A14/R_]
+Noteworthy changes in version 1.6.3 (2022-12-06) [C22/A14/R3]
 ------------------------------------------------
+
+ * Fix another integer overflow in the CRL parser.  [T6284]
+
+ Release-info: https://dev.gnupg.org/T6304
 
 
 Noteworthy changes in version 1.6.2 (2022-10-07) [C22/A14/R2]
