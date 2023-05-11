@@ -58,7 +58,11 @@ TESTS = cert-basic t-crl-parser t-dnparser t-oid t-reader t-cms-parser \
 	t-der-builder
 
 AM_CFLAGS = $(GPG_ERROR_CFLAGS) $(COVERAGE_CFLAGS)
+if HAVE_W32_SYSTEM
+AM_LDFLAGS = -no-fast-install $(COVERAGE_LDFLAGS)
+else
 AM_LDFLAGS = -no-install $(COVERAGE_LDFLAGS)
+endif
 
 noinst_HEADERS = t-common.h
 noinst_PROGRAMS = $(TESTS) t-ocsp
