@@ -429,8 +429,8 @@ write_encrypted_cont (ksba_cms_t cms)
      Fixme: We should write the tag here, and write a definite length
      header if everything fits into our local buffer.  Actually pretty
      simple to do, but I am too lazy right now. */
-  while (!(err = ksba_reader_read (cms->reader, buffer,
-                                   sizeof buffer, &nread)) )
+  while (!err && !(err = ksba_reader_read (cms->reader, buffer,
+                                           sizeof buffer, &nread)) )
     {
       err = _ksba_ber_write_tl (cms->writer, TYPE_OCTET_STRING,
                                 CLASS_UNIVERSAL, 0, nread);

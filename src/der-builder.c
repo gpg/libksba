@@ -594,17 +594,20 @@ _ksba_der_builder_get (ksba_der_t d, unsigned char **r_obj, size_t *r_objlen)
    * ASN.1 object.  */
   bufsize = d->items[0].hdrlen + d->items[0].valuelen;
 
-  /* for (idx=0; idx < d->nitems; idx++) */
-  /*   gpgrt_log_debug ("DERB[%2d]: c=%d t=%2d %s p=%p h=%u l=%zu\n", */
-  /*                    idx, */
-  /*                    d->items[idx].class, */
-  /*                    d->items[idx].tag, */
-  /*                    d->items[idx].verbatim? "verbatim": */
-  /*                    d->items[idx].is_stop? "stop": */
-  /*                    d->items[idx].is_constructed? "cons":"prim", */
-  /*                    d->items[idx].value, */
-  /*                    d->items[idx].hdrlen, */
-  /*                    d->items[idx].valuelen); */
+  /* if (getenv ("KSBA_DEBUG_DER_BUILDER")) */
+  /*   { */
+  /*     for (idx=0; idx < d->nitems; idx++) */
+  /*       gpgrt_log_debug ("DERB[%2d]: c=%d t=%2d %s p=%p h=%u l=%zu\n", */
+  /*                        idx, */
+  /*                        d->items[idx].class, */
+  /*                        d->items[idx].tag, */
+  /*                        d->items[idx].verbatim? "verbatim": */
+  /*                        d->items[idx].is_stop? "stop": */
+  /*                        d->items[idx].is_constructed? "cons":"prim", */
+  /*                        d->items[idx].value, */
+  /*                        d->items[idx].hdrlen, */
+  /*                        d->items[idx].valuelen); */
+  /*   } */
 
   buffer = xtrymalloc (bufsize);
   if (!buffer)
