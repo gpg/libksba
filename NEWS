@@ -1,3 +1,11 @@
+Noteworthy changes in version 1.6.4 (2023-06-19) [C22/A14/R4]
+------------------------------------------------
+
+ * Correctly detect CMS write errors.  [rK9ced7706f2]
+
+ Release-info: https://dev.gnupg.org/T6543
+
+
 Noteworthy changes in version 1.6.3 (2022-12-06) [C22/A14/R3]
 ------------------------------------------------
 

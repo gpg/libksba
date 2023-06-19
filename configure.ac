@@ -30,7 +30,7 @@ min_automake_version="1.14"
 m4_define([mym4_package],[libksba])
 m4_define([mym4_major], [1])
 m4_define([mym4_minor], [6])
-m4_define([mym4_micro], [3])
+m4_define([mym4_micro], [4])
 
 # Below is m4 magic to extract and compute the git revision number,
 # the decimalized short revision number, a beta version string and a
@@ -52,7 +52,7 @@ AC_INIT([mym4_package],[mym4_version],[https://bugs.gnupg.org])
 # Please remember to document interface changes in the NEWS file.
 LIBKSBA_LT_CURRENT=22
 LIBKSBA_LT_AGE=14
-LIBKSBA_LT_REVISION=3
+LIBKSBA_LT_REVISION=4
 #-------------------
 # If the API is changed in an incompatible way: increment the next counter.
 KSBA_CONFIG_API_VERSION=1
