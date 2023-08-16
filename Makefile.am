@@ -30,10 +30,11 @@ DISTCHECK_CONFIGURE_FLAGS = --enable-doc
 GITLOG_TO_CHANGELOG=gitlog-to-changelog
 
 EXTRA_DIST = autogen.sh autogen.rc \
-             COPYING.GPLv2 COPYING.GPLv3 COPYING.LGPLv3                 \
-             ChangeLog-2011 doc/ChangeLog-2011 src/ChangeLog-2011 	\
-             tests/ChangeLog-2011 			     		\
-             build-aux/git-log-footer build-aux/git-log-fix
+	     COPYING.GPLv2 COPYING.GPLv3 COPYING.LGPLv3			\
+	     ChangeLog-2011 doc/ChangeLog-2011 src/ChangeLog-2011	\
+	     tests/ChangeLog-2011					\
+	     build-aux/libtool-patch.sed				\
+	     build-aux/git-log-footer build-aux/git-log-fix
 
 
 if CROSS_COMPILING
