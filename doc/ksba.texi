@@ -356,7 +356,7 @@ in which case nothing happens.
 Read the next certificate from the @var{reader} object and store it in
 the certificate object @var{cert} for future access.  The certificate is
 parsed and rejected if it has any syntactical or semantical error
-(i.e. does not match the @acronym{ASN.1} description).
+(i.e., does not match the @acronym{ASN.1} description).
 
 The function returns @code{0} if the operation was successfully
 performed.  An error code is returned on failure.
@@ -509,7 +509,7 @@ should use the @code{ksba_isotime_t} type, which can represent any time
 since the year 0.
 
 It is implemented as a buffer of 16 bytes and may be handled like a
-standard string.  It should be initialized to zero (i.e. the first
+standard string.  It should be initialized to zero (i.e., the first
 byte needs to be 0x00) if it does not hold a valid date.  Date values
 themselves are stored in ISO format and assumed to be referenced from
 UTC.  The string with the date value is always guaranteed to be of
@@ -545,7 +545,7 @@ cmp_time (const ksba_isotime_t a, const ksba_isotime_t b)
 @deftypefun gpg_error_t ksba_cert_get_validity (@w{ksba_cert_t @var{cert}, int @var{what}, ksba_isotime_t @var{timebuf}})
 
 Return the validity dates from the certificate.  If no value is
-available an empty date object (i.e. a @code{strlen} will be
+available an empty date object (i.e., a @code{strlen} will be
 stored at @var{timebuf}, otherwise it will receive the date. On failure
 an error code is returned.
 
@@ -727,7 +727,7 @@ the string @var{key}.  If data is already stored under this key it will
 be replaced by the new data. Using @code{NULL} for @var{data} will
 effectively delete the data.
 
-On error (i.e. out of memory) an already existing data object
+On error (i.e., out of memory) an already existing data object
 stored under @var{key} may get deleted.
 
 @strong{Caution:} This function is definitely not thread safe because we
@@ -821,7 +821,7 @@ zero on success or an error code when invalid objects are passed.
 data) and digital signing.  The parser is capable of handling arbitrary
 amounts of data without requiring much memory.  Well, certain objects
 are build in memory because it can be assumed that those objects are
-limited in size; e.g. it does not make sense to use a video clip as the
+limited in size; e.g., it does not make sense to use a video clip as the
 @acronym{DN} despite the fact that the standard does not forbid it.
 
 
@@ -1078,7 +1078,7 @@ error code but have to do it like this:
     okay = 1;
 @end example
 
-The only exception is that success (i.e. no error) is defined to be
+The only exception is that success (i.e., no error) is defined to be
 @code{0}; thus you may directly test for success like:
 
 @example
@@ -1119,7 +1119,7 @@ They are used internally for converting a DN into its string
 representation; components not listed in this table will be
 represented by their OID.
 
-For the other direction, i.e. creating a DN from the string
+For the other direction, i.e., creating a DN from the string
 representation, KSBA recognizes the following extra labels:
 
 @multitable {SERIALNUMBER} {organizationalUnit}  {xxx}
