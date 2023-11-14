@@ -883,7 +883,7 @@ decoder_next (BerDecoder d)
            * also clear the buffer because there is no guarantee that
            * we will copy data to all bytes of the buffer: A broken
            * ASN.1 encoding may thus lead to access of uninitialized
-           * data even if we make sure that that access is not our of
+           * data even if we make sure that that access is not out of
            * bounds. */
           d->image.used = 0;
           d->image.length = ti.length + 100;
