@@ -1,5 +1,12 @@
-Noteworthy changes in version 1.6.5 (unreleased) [C22/A14/R_]
+Noteworthy changes in version 1.6.5 (2023-11-16) [C22/A14/R5]
 ------------------------------------------------
+
+ * Add Brainpool curve detection using parameters with compressed base
+   point.  [rKeb23f853f178]
+
+ * New configure option --with-libtool-modification.  [T6619]
+
+ Release-info: https://dev.gnupg.org/T6822
 
 
 Noteworthy changes in version 1.6.4 (2023-06-19) [C22/A14/R4]
