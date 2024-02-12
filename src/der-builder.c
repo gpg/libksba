@@ -549,7 +549,7 @@ compute_lengths (ksba_der_t d, int idx)
 gpg_error_t
 _ksba_der_builder_get (ksba_der_t d, unsigned char **r_obj, size_t *r_objlen)
 {
-  gpg_error_t err;
+  gpg_error_t err = 0;
   int idx;
   unsigned char *buffer = NULL;
   unsigned char *p;
