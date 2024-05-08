@@ -38,31 +38,31 @@
 /* Important: this must match the code in asn1-gentables.c */
 struct node_flag_s {
   enum tag_class class;
-  int explicit:1;
-  int implicit:1;
-  int has_imports:1;
-  int assignment:1;  /* node is an assignment */
-  int one_param:1;
-  int has_tag:1;
-  int has_size:1;
-  int has_list:1;
-  int has_min_max:1;
-  int has_defined_by:1;
-  int is_false:1;
-  int is_true:1;
-  int has_default:1;  /* node has a default value (fixme:needed???)*/
-  int is_optional:1;
-  int is_implicit:1;
-  int in_set:1;
-  int in_choice:1;
-  int in_array:1;
-  int is_any:1;      /* The der-encoder must change any to a real type
-                        but still be aware that it actually is any */
-  int not_used:1;
-  int help_down:1;    /* helper for create_tree */
-  int help_right:1;   /* helper for create_tree */
-  int tag_seen:1;
-  int skip_this:1;   /* helper */
+  unsigned int explicit:1;
+  unsigned int implicit:1;
+  unsigned int has_imports:1;
+  unsigned int assignment:1;  /* node is an assignment */
+  unsigned int one_param:1;
+  unsigned int has_tag:1;
+  unsigned int has_size:1;
+  unsigned int has_list:1;
+  unsigned int has_min_max:1;
+  unsigned int has_defined_by:1;
+  unsigned int is_false:1;
+  unsigned int is_true:1;
+  unsigned int has_default:1;  /* node has a default value (fixme:needed???)*/
+  unsigned int is_optional:1;
+  unsigned int is_implicit:1;
+  unsigned int in_set:1;
+  unsigned int in_choice:1;
+  unsigned int in_array:1;
+  unsigned int is_any:1;      /* The der-encoder must change any to a real type
+                                 but still be aware that it actually is any */
+  unsigned int not_used:1;
+  unsigned int help_down:1;    /* helper for create_tree */
+  unsigned int help_right:1;   /* helper for create_tree */
+  unsigned int tag_seen:1;
+  unsigned int skip_this:1;   /* helper */
 };
 
 enum asn_value_type {
