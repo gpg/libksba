@@ -109,7 +109,7 @@ dnl with a changed API.
 dnl
 AC_DEFUN([AM_PATH_KSBA],
 [ AC_REQUIRE([AC_CANONICAL_HOST])dnl
-  AC_REQUIRE([_AM_PATH_GPGRT_CONFIG)dnl
+  AC_REQUIRE([_AM_PATH_GPGRT_CONFIG])dnl
   dnl --with-libksba-prefix=PFX is the preferred name for this option,
   dnl since that is consistent with how our three siblings use the directory/
   dnl package name in --with-$dir_name-prefix=PFX.
