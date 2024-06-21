@@ -87,26 +87,6 @@ stowinstall:
 
 
 
-# Coverage targets
-if HAVE_GCOV
-
-clean-coverage:
-	@echo Removing old coverage results
-	-find -name '*.gcda' -print | xargs -r rm
-	-find -name '*.gcno' -print | xargs -r rm
-	-rm -rf coverage.info coveragereport
-
-coverage-html: check
-	@echo Collecting coverage data with lcov
-	$(top_srcdir)/autogen.sh --coverage $(LCOV) $(GCOV) $(abs_builddir) \
-		tests src
-	$(top_srcdir)/autogen.sh --report $(LCOV) $(GENHTML) $(abs_builddir) \
-		'*/tests/*' '*/asn1-parse.c' '*/asn1-parse.y'
-
-clean-local: clean-coverage
-
-endif # HAVE_GCOV
-
 .PHONY: gen-ChangeLog clean-coverage coverage-html release sign-release
 
 # Macro to help the release target.

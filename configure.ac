@@ -70,6 +70,7 @@ AC_CANONICAL_HOST
 AB_INIT
 
 AC_USE_SYSTEM_EXTENSIONS
+AC_ARG_VAR(SYSROOT,[locate config scripts also below that directory])
 
 # Taken from mpfr-4.0.1, then modified for LDADD_FOR_TESTS_KLUDGE
 dnl Under Linux, make sure that the old dtags are used if LD_LIBRARY_PATH
@@ -161,16 +162,6 @@ gl_EARLY
 #AC_ARG_PROGRAM
 AC_PROG_YACC
 AX_PROG_BISON([have_bison=yes],[have_bison=no])
-
-if test "$USE_MAINTAINER_MODE" = "yes"; then
-	AC_CHECK_PROGS(GCOV, [gcov], gcov)
-	# gcov coverage reporting
-	AC_TDD_GCOV
-	AC_SUBST(COVERAGE_CFLAGS)
-	AC_SUBST(COVERAGE_LDFLAGS)
-else
-	AM_CONDITIONAL(HAVE_GCOV, false)
-fi
 
 AC_C_INLINE
 
