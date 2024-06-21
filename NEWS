@@ -1,6 +1,8 @@
 Noteworthy changes in version 1.6.7 (unreleased) [C22/A14/R_]
 ------------------------------------------------
 
+ * Allow for an empty Subject in certs.  [T7171]
+
 
 Noteworthy changes in version 1.6.6 (2024-02-23) [C22/A14/R6]
 ------------------------------------------------

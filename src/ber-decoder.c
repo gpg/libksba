@@ -748,6 +748,18 @@ match_der (AsnNode root, const struct tag_info *ti,
                   fprintf (stderr, "  choice match <"); dump_tlv (ti, stderr);
                   fprintf (stderr, ">\n");
                 }
+              if (ti->class == CLASS_UNIVERSAL && ti->tag == TYPE_SEQUENCE
+                  && !ti->ndef && ti->length == 0
+                  && ds->cur.node->name
+                  && !strcmp (ds->cur.node->name, "subject"))
+                {
+                  /* 'Subject' is empty.  */
+                  if (debug)
+                    fprintf (stderr, "  empty subject hack\n");
+                  ds->cur.next_tag = 1;
+                  return 5;
+                }
+
               /* mark the remaining as done */
               for (node=node->right; node; node = node->right)
                   node->flags.skip_this = 1;
