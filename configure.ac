@@ -129,8 +129,6 @@ AH_TOP([
 #ifndef _KSBA_CONFIG_H_INCLUDED
 #define _KSBA_CONFIG_H_INCLUDED
 
-/* Enable gpg-error's strerror macro for W32CE.  */
-#define GPG_ERR_ENABLE_ERRNO_MACROS 1
 ])
 
 AH_BOTTOM([

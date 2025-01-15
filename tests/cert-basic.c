@@ -30,10 +30,6 @@
 #include "oidtranstbl.h"
 #include "t-common.h"
 
-#ifdef __MINGW32CE__
-#define getenv(a) (NULL)
-#endif
-
 #define digitp(p)   (*(p) >= '0' && *(p) <= '9')
 
 #define fail_if_err(a) do { if(a) {                                       \
