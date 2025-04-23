@@ -61,12 +61,18 @@ extern "C" {
 #if _KSBA_GCC_VERSION > 30100
 #define _KSBA_DEPRECATED	__attribute__ ((__deprecated__))
 #endif
+#if _KSBA_GCC_VERSION >= 80000
+#define _KSBA_NONSTRING __attribute__((__nonstring__))
+#endif
 #endif /*__GNUC__*/
 
 #ifndef _KSBA_DEPRECATED
 #define _KSBA_DEPRECATED
 #endif
 
+#ifndef _KSBA_NONSTRING
+# define _KSBA_NONSTRING
+#endif
 
 #define KSBA_CLASS_UNIVERSAL   0
 #define KSBA_CLASS_APPLICATION 1
