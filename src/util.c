@@ -61,7 +61,7 @@ ksba_set_malloc_hooks ( void *(*new_alloc_func)(size_t n),
 }
 
 
-/* Register a has function for general use by libksba.  This is
+/* Register a hash function for general use by libksba.  This is
    required to avoid dependencies to specific low-level
    crypolibraries.  The function should be used right at the startup
    of the main program, similar to ksba_set_malloc_hooks.
@@ -99,7 +99,7 @@ ksba_set_hash_buffer_function ( gpg_error_t (*fnc)
 }
 
 /* Hash BUFFER of LENGTH bytes using the algorithjm denoted by OID,
-   where OID may be NULL to demand the use od SHA-1.  The resulting
+   where OID may be NULL to demand the use of SHA-1.  The resulting
    digest will be placed in the provided buffer RESULT which must have
    been allocated by the caller with at LEAST RESULTSIZE bytes; the
    actual length of the result is put into RESULTLEN.

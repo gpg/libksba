@@ -441,6 +441,8 @@ gpg_error_t ksba_ocsp_set_digest_algo (ksba_ocsp_t ocsp, const char *oid);
 gpg_error_t ksba_ocsp_set_requestor (ksba_ocsp_t ocsp, ksba_cert_t cert);
 gpg_error_t ksba_ocsp_add_target (ksba_ocsp_t ocsp,
                                   ksba_cert_t cert, ksba_cert_t issuer_cert);
+
+/* Note that !NONCE and NONCELEN !=0 has a special semantic.  */
 size_t ksba_ocsp_set_nonce (ksba_ocsp_t ocsp,
                             unsigned char *nonce, size_t noncelen);
 

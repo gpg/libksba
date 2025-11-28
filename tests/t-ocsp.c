@@ -36,6 +36,8 @@
 int verbose;
 int debug;
 int no_nonce;
+int sha256_certid;
+
 
 /* Return the description for OID; if no description is available
    NULL is returned. */
@@ -139,6 +141,9 @@ one_request (const char *cert_fname, const char *issuer_cert_fname)
   err = ksba_ocsp_new (&ocsp);
   fail_if_err (err);
 
+  if (sha256_certid)
+    ksba_ocsp_set_nonce (ocsp, NULL, 32);
+
   err = ksba_ocsp_add_target (ocsp, cert, issuer_cert);
   fail_if_err (err);
   ksba_cert_release (cert);
@@ -181,6 +186,9 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
 
   err = ksba_ocsp_new (&ocsp);
   fail_if_err (err);
+
+  if (sha256_certid)
+    ksba_ocsp_set_nonce (ocsp, NULL, 32);
 
   /* We need to build a request, so that the context is properly
      prepared for the response. */
@@ -344,12 +352,22 @@ my_hash_buffer (void *arg, const char *oid,
 {
   (void)arg; /* Not used.  */
 
-  if (oid && strcmp (oid, "1.3.14.3.2.26"))
-    return gpg_error (GPG_ERR_NOT_SUPPORTED); /* We only support SHA-1. */
-  if (resultsize < 20)
-    return gpg_error (GPG_ERR_BUFFER_TOO_SHORT);
-  sha1_hash_buffer (result, buffer, length);
-  *resultlen = 20;
+  if (!oid || !strcmp (oid, "1.3.14.3.2.26"))
+    {
+      if (resultsize < 20)
+        return gpg_error (GPG_ERR_BUFFER_TOO_SHORT);
+      sha1_hash_buffer (result, buffer, length);
+      *resultlen = 20;
+    }
+  else if (!strcmp (oid, "2.16.840.1.101.3.4.2.1"))
+    {
+      if (resultsize < 32)
+        return gpg_error (GPG_ERR_BUFFER_TOO_SHORT);
+      sha256_hash_buffer (result, buffer, length);
+      *resultlen = 32;
+    }
+  else
+    return gpg_error (GPG_ERR_NOT_SUPPORTED); /* Not SHA1 or SHA256. */
   return 0;
 }
 
@@ -426,6 +444,11 @@ main (int argc, char **argv)
       else if (!strcmp (*argv, "--no-nonce"))
         {
           no_nonce = 1;
+          argc--; argv++;
+        }
+      else if (!strcmp (*argv, "--sha256"))
+        {
+          sha256_certid = 1;
           argc--; argv++;
         }
     }

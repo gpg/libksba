@@ -19,6 +19,7 @@
 
 /*-- sha1.c --*/
 void sha1_hash_buffer (char *outbuf, const char *buffer, size_t length);
+void sha256_hash_buffer (char *outbuf, const char *buffer, size_t length);
 
 
 

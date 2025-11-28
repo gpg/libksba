@@ -45,6 +45,7 @@
 
 
 static const char oidstr_sha1[] = "1.3.14.3.2.26";
+static const char oidstr_sha256[] = "2.16.840.1.101.3.4.2.1";
 static const char oidstr_ocsp_basic[] = "1.3.6.1.5.5.7.48.1.1";
 static const char oidstr_ocsp_nonce[] = "1.3.6.1.5.5.7.48.1.2";
 
@@ -192,14 +193,26 @@ ksba_ocsp_add_target (ksba_ocsp_t ocsp,
    To detect the implementation limit (which should be considered as a
    good suggestion), the function may be called with NULL for NONCE,
    in which case the maximal usable noncelength is returned. The
-   function returns the length of the nonce which will be used. */
+   function returns the length of the nonce which will be used.
+
+   If NONCE is NULL _and_ NONCELEN is 32, the request will use SHA256
+   for hashing of the CertID.  IF NONCELEN is 20 the request will use
+   the default of SHA1.  If NONCELEN is zero nothing will be changed.
+*/
 size_t
 ksba_ocsp_set_nonce (ksba_ocsp_t ocsp, unsigned char *nonce, size_t noncelen)
 {
   if (!ocsp)
     return 0;
   if (!nonce)
-    return sizeof ocsp->nonce;
+    {
+      if (noncelen == 32)
+        ocsp->sha256_certid = 1;
+      else if (noncelen == 20)
+        ocsp->sha256_certid = 0;
+
+      return sizeof ocsp->nonce;
+    }
   if (noncelen > sizeof ocsp->nonce)
     noncelen = sizeof ocsp->nonce;
   if (noncelen)
@@ -212,39 +225,53 @@ ksba_ocsp_set_nonce (ksba_ocsp_t ocsp, unsigned char *nonce, size_t noncelen)
 
 
 /* Compute the SHA-1 nameHash for the certificate CERT and put it in
-   the buffer SHA1_BUFFER which must have been allocated to at least
-   20 bytes. */
+   the buffer SHA_BUFFER which must have been allocated to at least
+   32 bytes. */
 static gpg_error_t
-issuer_name_hash (ksba_cert_t cert, unsigned char *sha1_buffer)
+issuer_name_hash (ksba_cert_t cert, unsigned char *sha_buffer, int use_sha256)
 {
   gpg_error_t err;
   const unsigned char *ptr;
   size_t length, dummy;
 
   err = _ksba_cert_get_subject_dn_ptr (cert, &ptr, &length);
-  if (!err)
+  if (!err && use_sha256)
     {
-      err = _ksba_hash_buffer (NULL, ptr, length, 20, sha1_buffer, &dummy);
+      err = _ksba_hash_buffer (oidstr_sha256, ptr, length,
+                               32, sha_buffer, &dummy);
+      if (!err && dummy != 32)
+        err = gpg_error (GPG_ERR_BUG);
+    }
+  else if (!err)
+    {
+      err = _ksba_hash_buffer (NULL, ptr, length, 20, sha_buffer, &dummy);
       if (!err && dummy != 20)
         err = gpg_error (GPG_ERR_BUG);
     }
   return err;
 }
 
-/* Compute the SHA-1 hash of the public key of CERT and put it in teh
-   buffer SHA1_BUFFER which must have been allocated with at least 20
-   bytes. */
+/* Compute the SHA-1 or SHA-256 hash of the public key of CERT and put
+   it in the buffer SHA_BUFFER which must have been allocated with at
+   least 32 bytes (or 20 for sha1). */
 static gpg_error_t
-issuer_key_hash (ksba_cert_t cert, unsigned char *sha1_buffer)
+issuer_key_hash (ksba_cert_t cert, unsigned char *sha_buffer, int use_sha256)
 {
   gpg_error_t err;
   const unsigned char *ptr;
   size_t length, dummy;
 
   err = _ksba_cert_get_public_key_ptr (cert, &ptr, &length);
-  if (!err)
+  if (!err && use_sha256)
     {
-      err = _ksba_hash_buffer (NULL, ptr, length, 20, sha1_buffer, &dummy);
+      err = _ksba_hash_buffer (oidstr_sha256, ptr, length,
+                               32, sha_buffer, &dummy);
+      if (!err && dummy != 32)
+        err = gpg_error (GPG_ERR_BUG);
+    }
+  else if (!err)
+    {
+      err = _ksba_hash_buffer (NULL, ptr, length, 20, sha_buffer, &dummy);
       if (!err && dummy != 20)
         err = gpg_error (GPG_ERR_BUG);
     }
@@ -363,6 +390,7 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
   ksba_writer_t w2 = NULL;
   ksba_writer_t w3 = NULL;
   ksba_writer_t w4, w5, w6, w7; /* Used as aliases. */
+  unsigned int hashlen;
 
   if (!ocsp)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -370,6 +398,8 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
   xfree (ocsp->request_buffer);
   ocsp->request_buffer = NULL;
   ocsp->request_buflen = 0;
+
+  hashlen = ocsp->sha256_certid ? 32 : 20;
 
   if (!ocsp->requestlist)
     return gpg_error (GPG_ERR_MISSING_ACTION);
@@ -396,25 +426,32 @@ ksba_ocsp_prepare_request (ksba_ocsp_t ocsp)
         goto leave;
 
       /* Write the AlgorithmIdentifier. */
-      err = _ksba_der_write_algorithm_identifier (w1, oidstr_sha1, NULL, 0);
+      err = _ksba_der_write_algorithm_identifier (w1,
+                                                  ocsp->sha256_certid?
+                                                  oidstr_sha256 : oidstr_sha1,
+                                                  NULL, 0);
       if (err)
         goto leave;
 
       /* Compute the issuerNameHash and write it into the CertID object. */
-      err = issuer_name_hash (ri->issuer_cert, ri->issuer_name_hash);
+      err = issuer_name_hash (ri->issuer_cert, ri->issuer_name_hash,
+                              ocsp->sha256_certid);
       if (!err)
-        err = _ksba_ber_write_tl (w1, TYPE_OCTET_STRING, CLASS_UNIVERSAL, 0,20);
+        err = _ksba_ber_write_tl (w1, TYPE_OCTET_STRING, CLASS_UNIVERSAL,
+                                  0, hashlen);
       if (!err)
-        err = ksba_writer_write (w1, ri->issuer_name_hash, 20);
+        err = ksba_writer_write (w1, ri->issuer_name_hash, hashlen);
       if(err)
         goto leave;
 
       /* Compute the issuerKeyHash and write it. */
-      err = issuer_key_hash (ri->issuer_cert, ri->issuer_key_hash);
+      err = issuer_key_hash (ri->issuer_cert, ri->issuer_key_hash,
+                             ocsp->sha256_certid);
       if (!err)
-        err = _ksba_ber_write_tl (w1, TYPE_OCTET_STRING, CLASS_UNIVERSAL, 0,20);
+        err = _ksba_ber_write_tl (w1, TYPE_OCTET_STRING, CLASS_UNIVERSAL,
+                                  0, hashlen);
       if (!err)
-        err = ksba_writer_write (w1, ri->issuer_key_hash, 20);
+        err = ksba_writer_write (w1, ri->issuer_key_hash, hashlen);
       if (err)
         goto leave;
 
@@ -949,6 +986,7 @@ parse_single_response (ksba_ocsp_t ocsp,
   const unsigned char *serialno;
   size_t serialnolen;
   struct ocsp_reqitem_s *request_item = NULL;
+  unsigned int hashlen;
 
   /* The SingeResponse sequence. */
   err = parse_sequence (data, datalen, &ti);
@@ -983,8 +1021,15 @@ parse_single_response (ksba_ocsp_t ocsp,
 /*   fprintf (stderr, "issuerNameHash=");  */
 /*   dump_hex (*data, ti.length); */
 /*   putc ('\n', stderr); */
-  if (ti.length != 20)
-    look_for_request = 0; /* Can't be a SHA-1 digest. */
+  if (ti.length == 20)
+    hashlen = 20;
+  else if (ti.length == 32)
+    hashlen = 32;
+  else
+    {
+      hashlen = 0;
+      look_for_request = 0; /* Can't be a SHA-1 or SHA-256 digest. */
+    }
   parse_skip (data, datalen, &ti);
 
   err = parse_octet_string (data, datalen, &ti);
@@ -994,8 +1039,8 @@ parse_single_response (ksba_ocsp_t ocsp,
 /*   fprintf (stderr, "issuerKeyHash=");  */
 /*   dump_hex (*data, ti.length); */
 /*   putc ('\n', stderr); */
-  if (ti.length != 20)
-    look_for_request = 0; /* Can't be a SHA-1 digest. */
+  if (ti.length != hashlen)
+    look_for_request = 0; /* Does not match the issueNameHash length. */
   parse_skip (data, datalen, &ti);
 
   err= parse_integer (data, datalen, &ti);
@@ -1012,8 +1057,8 @@ parse_single_response (ksba_ocsp_t ocsp,
     {
       for (request_item = ocsp->requestlist;
            request_item; request_item = request_item->next)
-        if (!memcmp (request_item->issuer_name_hash, name_hash, 20)
-            && !memcmp (request_item->issuer_key_hash, key_hash, 20)
+        if (!memcmp (request_item->issuer_name_hash, name_hash, hashlen)
+            && !memcmp (request_item->issuer_key_hash, key_hash,hashlen)
             && request_item->serialnolen == serialnolen
             && !memcmp (request_item->serialno, serialno, serialnolen))
             break; /* Got it. */

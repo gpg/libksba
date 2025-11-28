@@ -61,8 +61,8 @@ struct ocsp_reqitem_s {
   ksba_cert_t issuer_cert; /* And the certificate of the issuer. */
 
   /* The next 4 fields are used to match a response with a request. */
-  unsigned char issuer_name_hash[20]; /* The hash as used by the request. */
-  unsigned char issuer_key_hash[20];  /* The hash as used by the request. */
+  unsigned char issuer_name_hash[32]; /* The hash as used by the request. */
+  unsigned char issuer_key_hash[32];  /* The hash as used by the request. */
   unsigned char *serialno; /* A malloced copy of the serial number. */
   size_t serialnolen;      /* and its length. */
 
@@ -88,6 +88,8 @@ struct ksba_ocsp_s {
                                increased, check that the created
                                request will still be valid as we use a
                                hacked implementation. */
+
+  unsigned int sha256_certid; /* If set SHA256 will be used for the CERTID. */
 
   unsigned char *request_buffer; /* Internal buffer to build the request. */
   size_t request_buflen;
