@@ -906,7 +906,7 @@ parse_rdn (const unsigned char *string, const char **endp,
       int need_ia5 = 0;
 
       string = ++s;
-      for (; hexdigitp (s); s++)
+      while (hexdigitp (s))
         s++;
       n = s - string;
       if (!n || (n & 1))
