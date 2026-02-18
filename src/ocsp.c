@@ -1403,6 +1403,10 @@ parse_response (ksba_ocsp_t ocsp, const unsigned char *msg, size_t msglen)
     err = gpg_error (GPG_ERR_TOO_SHORT);
   else if (ti.length > msglen)
     err = gpg_error (GPG_ERR_BAD_BER);
+
+  if (err)
+    return err;
+
   parse_skip (&msg, &msglen, &ti);
   len = len - msglen;
   xfree (ocsp->sigval); ocsp->sigval = NULL;
