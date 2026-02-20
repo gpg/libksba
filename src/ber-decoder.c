@@ -1328,7 +1328,10 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
     err = 0;
 
   if (err)
-    xfree (d->image.buf);
+    {
+      xfree (d->image.buf);
+      d->image.buf = NULL;
+    }
 
   if (r_root && !err)
     {
@@ -1350,6 +1353,11 @@ _ksba_ber_decoder_decode (BerDecoder d, const char *start_name,
           fputs ("Value Tree:\n", stderr);
           _ksba_asn_node_dump_all (*r_root, stderr);
         }
+    }
+  else
+    {
+      _ksba_asn_release_nodes (d->root);
+      d->root = NULL;
     }
 
   decoder_deinit (d);
