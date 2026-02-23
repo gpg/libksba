@@ -1,6 +1,17 @@
-Noteworthy changes in version 1.7.0 (unreleased) [C__/A__/R_]
+Noteworthy changes in version 1.6.8 (2026-02-23) [C22/A14/R8]
 ------------------------------------------------
 
+ * Fix double increment in DN parser while counting hexdigits.  [T8104]
+
+ * Fix a memory leak in the BER decoder's error handling.  [T8105]
+
+ * Fix an assertion failure in the OCSP code.  [T8111]
+
+ * Support SHA256 based CertIDs in OCSP.  [rK2dd35bef66]
+
+ * Use nonstring attribute for gcc-15.  [T7624]
+
+ * Remove remaining WindowsCE support.
 
  Release-info: https://dev.gnupg.org/T7174
 

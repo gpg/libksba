@@ -40,7 +40,7 @@ BEGIN
             VALUE "FileDescription", "Libksba - X.509 and CMS Library\0"
             VALUE "FileVersion", "@LIBKSBA_LT_CURRENT@.@LIBKSBA_LT_AGE@.@LIBKSBA_LT_REVISION@.@BUILD_REVISION@\0"
             VALUE "InternalName", "libksba\0"
-            VALUE "LegalCopyright", "Copyright © 2023 g10 Code GmbH\0"
+            VALUE "LegalCopyright", "Copyright © 2026 g10 Code GmbH\0"
             VALUE "LegalTrademarks", "\0"
             VALUE "OriginalFilename", "libksba.dll\0"
             VALUE "PrivateBuild", "\0"

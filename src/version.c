@@ -108,7 +108,7 @@ cright_blurb (void)
   static const char blurb[] =
     "\n\n"
     "This is Libksba " PACKAGE_VERSION " - An X.509 and CMS Library\n"
-    "Copyright 2001-2006,2010-2015,2018-2021 g10 Code GmbH\n"
+    "Copyright 2001-2006,2010-2015,2018-2026 g10 Code GmbH\n"
     "\n"
     "SPDX-License-Identifier: LGPL-3.0-or-later OR GPL-2.0-or-later\n"
     "(" BUILD_REVISION " " BUILD_TIMESTAMP ")\n"
