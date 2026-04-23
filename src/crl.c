@@ -706,7 +706,7 @@ parse_one_extension (const unsigned char *der, size_t derlen,
   if (err)
     goto failure;
   if (ti.length > derlen)
-    return gpg_error (GPG_ERR_BAD_BER);
+    goto bad_ber;
   if (ti.class == CLASS_UNIVERSAL && ti.tag == TYPE_BOOLEAN
            && !ti.is_constructed)
     {
