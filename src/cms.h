@@ -138,6 +138,7 @@ struct ksba_cms_s {
     int attr_len;
   } authdata;
 
+  int auth_mode;    /* Flag indicating KSBA_CT_AUTHENVELOPED_DATA.  */
   int cms_version;
 
   struct oidlist_s *digest_algos;

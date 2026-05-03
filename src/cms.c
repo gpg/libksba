@@ -1038,10 +1038,12 @@ ksba_cms_get_cert (ksba_cms_t cms, int idx)
 }
 
 
-/*
- * Return the extension attribute messageDigest
- * or for authenvelopeddata the MAC.
- */
+/* In the case of signed data return the extension attribute
+ * messageDigest.  In case of AUTHENVELOPEDDATA return either the MAC
+ * (with IDX 0) or the attributes (with IDX 1).  Note that the parser
+ * currently returns a not-implemented error when it encounters
+ * attributes; we firs need to have some solid sample data to
+ * implement that.   */
 gpg_error_t
 ksba_cms_get_message_digest (ksba_cms_t cms, int idx,
                              char **r_digest, size_t *r_digest_len)
@@ -1744,6 +1746,7 @@ ksba_cms_set_content_type (ksba_cms_t cms, int what, ksba_content_type_t type)
       cms->content.oid     = oid;
       cms->content.ct      = content_handlers[i].ct;
       cms->content.handler = content_handlers[i].build_handler;
+      cms->auth_mode       = (type == KSBA_CT_AUTHENVELOPED_DATA);
     }
   else
     {
@@ -1915,22 +1918,20 @@ ksba_cms_add_smime_capability (ksba_cms_t cms, const char *oid,
 
 
 
-/**
- * ksba_cms_set_message_digest:
- * @cms: A CMS object
- * @idx: The index of the signer
- * @digest: a message digest
- * @digest_len: the length of the message digest
+/* If CMS is used for signed data, this function sets the message
+ * digest (DIGEST,DIGEST_LEN) into the signedAttributes of the signer
+ * with the index IDX.  That index of the signer is determined by the
+ * sequence of ksba_cms_add_signer calls; the first signer has the
+ * index 0. CMS is the usual context.  This function is to be used
+ * when the hash value of the data has been computed and before the
+ * create function requests the sign operation.
  *
- * Set a message digest into the signedAttributes of the signer with
- * the index IDX.  The index of a signer is determined by the sequence
- * of ksba_cms_add_signer() calls; the first signer has the index 0.
- * This function is to be used when the hash value of the data has
- * been calculated and before the create function requests the sign
- * operation.
+ * If CMS is used for AUTHENVELOPEDDATA this function sets the
+ * authentication tag or MAC to (DIGEST,DIGEST_LEN).  IDX must be 0 in
+ * this case.  The function is to be used when the build function
+ * stopped with KSBA_SR_NEED_SIG.
  *
- * Return value: 0 on success or an error code
- **/
+ * Return value: 0 on success or an error code */
 gpg_error_t
 ksba_cms_set_message_digest (ksba_cms_t cms, int idx,
                              const unsigned char *digest, size_t digest_len)
@@ -1939,6 +1940,27 @@ ksba_cms_set_message_digest (ksba_cms_t cms, int idx,
 
   if (!cms || !digest)
     return gpg_error (GPG_ERR_INV_VALUE);
+
+  /* Special processing for AUTHENVELOPEDDATA to set the MAC/authtag.  */
+  if (cms->content.ct == KSBA_CT_AUTHENVELOPED_DATA)
+    {
+      /* (1024 is just an arbitrary value to catch a faulty caller). */
+      if (!digest_len || digest_len > 1024)
+        return gpg_error (GPG_ERR_INV_VALUE);
+      if (idx != 0)
+        return gpg_error (GPG_ERR_INV_INDEX);
+
+      xfree (cms->authdata.mac);
+      cms->authdata.mac_len = digest_len;
+      cms->authdata.mac = xtrymalloc (digest_len);
+      if (!cms->authdata.mac)
+        return gpg_error_from_syserror ();
+      memcpy (cms->authdata.mac, digest, digest_len);
+
+      return 0;
+    }
+
+  /* Standard processing for signed data.  */
   if (!digest_len || digest_len > DIM(cl->msg_digest))
     return gpg_error (GPG_ERR_INV_VALUE);
   if (idx < 0)
@@ -3820,12 +3842,15 @@ build_enveloped_data_header (ksba_cms_t cms)
 }
 
 
+
+/* Note that this function also handles authenveloped_data.  */
 static gpg_error_t
 ct_build_enveloped_data (ksba_cms_t cms)
 {
   enum {
     sSTART,
     sINDATA,
+    sWAITTAG,
     sREST,
     sERROR
   } state = sERROR;
@@ -3841,7 +3866,13 @@ ct_build_enveloped_data (ksba_cms_t cms)
   else if (stop_reason == KSBA_SR_BEGIN_DATA)
     state = sINDATA;
   else if (stop_reason == KSBA_SR_END_DATA)
-    state = sREST;
+    state = cms->auth_mode? sWAITTAG : sREST;
+  else if (stop_reason == KSBA_SR_NEED_SIG)
+    {
+      if (!cms->authdata.mac) /* ksba_cms_set_message_digest not called.  */
+        err = gpg_error (GPG_ERR_MISSING_ACTION);
+      state = sREST;
+    }
   else if (stop_reason == KSBA_SR_RUNNING)
     err = gpg_error (GPG_ERR_INV_STATE);
   else if (stop_reason)
@@ -3855,12 +3886,26 @@ ct_build_enveloped_data (ksba_cms_t cms)
     err = build_enveloped_data_header (cms);
   else if (state == sINDATA)
     err = write_encrypted_cont (cms);
+  else if (state == sWAITTAG)
+    ; /* Nothing to do here.  */
   else if (state == sREST)
     {
       /* SPHINX does not allow for unprotectedAttributes */
 
-      /* Write 5 end tags */
+      /* Write an end tag.  */
       err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
+
+      /* In auth_mode write the tag.  */
+      if (!err && cms->auth_mode)
+        {
+          err = _ksba_ber_write_tl (cms->writer, TYPE_OCTET_STRING,
+                                    CLASS_UNIVERSAL, 0, cms->authdata.mac_len);
+          if (!err)
+            err = ksba_writer_write (cms->writer,
+                                     cms->authdata.mac, cms->authdata.mac_len);
+        }
+
+      /* Write remaining end tags */
       if (!err)
         err = _ksba_ber_write_tl (cms->writer, 0, 0, 0, 0);
       if (!err)
@@ -3882,6 +3927,10 @@ ct_build_enveloped_data (ksba_cms_t cms)
   else if (state == sINDATA)
     { /* tell the user that we wrote everything */
       stop_reason = KSBA_SR_END_DATA;
+    }
+  else if (state == sWAITTAG)
+    {
+      stop_reason = KSBA_SR_NEED_SIG;
     }
   else if (state == sREST)
     {
