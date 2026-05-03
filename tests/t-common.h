@@ -151,6 +151,7 @@ print_sexp (ksba_const_sexp_t p)
                 {
                   for (n=0; n < len; n++, p++)
                     putchar (*p);
+                  putchar (' ');
                 }
             }
         }

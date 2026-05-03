@@ -1035,7 +1035,7 @@ _ksba_cms_parse_enveloped_data_part_2 (ksba_cms_t cms)
    * function which can be used for all kind of attributes would be
    * best.  */
 
-  /* Read authAttr if availabale.  */
+  /* Read authAttr if available.  */
   err = _ksba_ber_read_tl (cms->reader, &ti);
   if (err)
     return err;

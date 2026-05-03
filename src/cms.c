@@ -3496,8 +3496,8 @@ ct_build_signed_data (ksba_cms_t cms)
     state = sDATAREADY;
   else if (stop_reason == KSBA_SR_NEED_SIG)
     {
-      if (!cms->sig_val)
-        err = gpg_error (GPG_ERR_MISSING_ACTION); /* No ksba_cms_set_sig_val () called */
+      if (!cms->sig_val)  /* No ksba_cms_set_sig_val () called */
+        err = gpg_error (GPG_ERR_MISSING_ACTION);
       state = sGOTSIG;
     }
   else if (stop_reason == KSBA_SR_RUNNING)
