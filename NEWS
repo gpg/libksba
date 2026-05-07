@@ -1,5 +1,18 @@
-Noteworthy changes in version 1.7.0 (unreleased) [C22/A14/R_]
+Noteworthy changes in version 1.7.0 (2026-05-07) [C23/A15/R0]
 ------------------------------------------------
+
+ * Add support for building AuthEnvelopedData.  [T3979]
+
+ * New function ksba_cms_add_attribute.  [T4537]
+
+ * Fix silent truncation of 64 bit length fields.  [T8246]
+
+ * Fix incorrect overflow guard condition in _ksba_ber_read_tl.  [T8247]
+
+ * Interface changes relative to the 1.6.0 release:
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ksba_cms_add_attribute           NEW.
+
 
  Release-info: https://dev.gnupg.org/T8121
 
