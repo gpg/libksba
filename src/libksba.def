@@ -209,3 +209,4 @@ EXPORTS
       ksba_der_builder_get            @163
 
       ksba_cms_add_attribute          @164
+      ksba_cms_get_attribute          @165

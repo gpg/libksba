@@ -79,14 +79,21 @@ prepend_srcdir (const char *fname)
 
 
 void
-print_hex (const unsigned char *p, size_t n)
+print_hex (const unsigned char *p, size_t n, int wrapindent)
 {
+  int count = 0;
+
   if (!p)
     fputs ("none", stdout);
   else
     {
       for (; n; n--, p++)
-        printf ("%02X", *p);
+        {
+          if (wrapindent && count && !(count % 32))
+            printf ("\n%*s", wrapindent, "");
+          printf ("%02X", *p);
+          count++;
+        }
     }
 }
 

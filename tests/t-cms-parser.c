@@ -26,6 +26,7 @@
 
 #include "../src/ksba.h"
 
+#include "oidtranstbl.h"
 #include "t-common.h"
 
 
@@ -48,6 +49,31 @@ dummy_writer_cb (void *cb_value, const void *buffer, size_t count)
   (void)buffer;
   (void)count;
   return 0;
+}
+
+/* Return the description for OID; if no description is available
+   NULL is returned. */
+static const char *
+get_oid_desc (const char *oid)
+{
+  int i;
+
+  if (oid)
+    for (i=0; oidtranstbl[i].oid; i++)
+      if (!strcmp (oidtranstbl[i].oid, oid))
+        return oidtranstbl[i].desc;
+  return NULL;
+}
+
+
+static void
+print_oid_and_desc (const char *oid, int with_lf)
+{
+  const char *s = get_oid_desc (oid);
+  printf ("%s%s%s%s",
+          oid, s?" (":"", s?s:"", s?")":"");
+  if (with_lf)
+    putchar ('\n');
 }
 
 
@@ -236,7 +262,7 @@ one_file (const char *fname)
           if (!quiet)
             {
               printf ("signer %d - messageDigest: ", idx);
-              print_hex (dn, n);
+              print_hex (dn, n, 0);
               putchar ('\n');
             }
           ksba_free (dn);
@@ -278,6 +304,46 @@ one_file (const char *fname)
             }
           ksba_free (dn);
         }
+    }
+
+  if (verbose)
+    {
+      char *oid = NULL;
+      unsigned char *der = NULL;
+      size_t derlen;
+      int signer;
+      int uattr;
+      int plen;
+
+      for (signer=0; signer >= 0; signer++)
+        for (uattr = 0; uattr == 0 || uattr == 1; uattr++)
+          for (idx=0; idx >= 0; idx++)
+            {
+              ksba_free (oid);
+              ksba_free (der);
+              err = ksba_cms_get_attribute (cms, signer, idx, uattr,
+                                            &oid, &der, &derlen);
+              if (gpg_err_code (err) == GPG_ERR_EOF)
+                idx = -2;
+              else if (gpg_err_code (err) == GPG_ERR_NOT_FOUND)
+                idx = signer = uattr = -2;
+              else if (err)
+                fail_if_err2 (fname, err);
+              else
+                {
+                  plen = printf ("signer %d - %sattr %d: ",
+                                 signer, uattr?"u":"s", idx);
+                  print_oid_and_desc (oid, 1);
+                  if (der)
+                    {
+                      printf ("%*s", plen, "");
+                      print_hex (der, derlen, plen);
+                      putchar ('\n');
+                    }
+                }
+            }
+      ksba_free (oid);
+      ksba_free (der);
     }
 
   ksba_cms_release (cms);

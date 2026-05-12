@@ -313,7 +313,7 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
                     crit? "crit. ":"",
                     crit?"":"......",
                     s?"(":"", s?s:"", s?") ":"", oid);
-            print_hex (der, derlen);
+            print_hex (der, derlen, 0);
             putchar (')');
             putchar ('\n');
           }
@@ -329,7 +329,7 @@ one_response (const char *cert_fname, const char *issuer_cert_fname,
                     crit? "crit. ":"",
                     crit?"":"......",
                     s?"(":"", s?s:"", s?") ":"", oid);
-            print_hex (der, derlen);
+            print_hex (der, derlen, 0);
             putchar (')');
             putchar ('\n');
           }
