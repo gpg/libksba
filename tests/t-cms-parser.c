@@ -78,6 +78,49 @@ print_oid_and_desc (const char *oid, int with_lf)
 
 
 
+static gpg_error_t
+dump_one_attribute_set (ksba_cms_t cms, int signer, int unprotected)
+{
+  gpg_error_t err;
+  int idx;
+  char *oid = NULL;
+  unsigned char *der = NULL;
+  size_t derlen;
+  int plen;
+
+  for (idx=0; ; idx++)
+    {
+      ksba_free (oid);
+      ksba_free (der);
+      err = ksba_cms_get_attribute (cms, signer, idx, unprotected,
+                                    &oid, &der, &derlen);
+      if (err)
+        break;
+      plen = printf ("signer %d - %sattr %d: ",
+                     signer, unprotected?"u":"s", idx);
+      print_oid_and_desc (oid, 1);
+      if (der)
+        {
+          printf ("%*s", plen, "");
+          if (derlen > 96 && verbose < 2)
+            {
+              print_hex (der, 96, plen);
+              printf ("\n%*s[... --all prints more]",plen,"");
+            }
+          else
+            print_hex (der, derlen, plen);
+          putchar ('\n');
+        }
+    }
+  ksba_free (oid);
+  ksba_free (der);
+
+  if (gpg_err_code (err) == GPG_ERR_EOF)
+    err = 0;
+  return err;
+}
+
+
 static void
 one_file (const char *fname)
 {
@@ -308,42 +351,19 @@ one_file (const char *fname)
 
   if (verbose)
     {
-      char *oid = NULL;
-      unsigned char *der = NULL;
-      size_t derlen;
       int signer;
-      int uattr;
-      int plen;
 
-      for (signer=0; signer >= 0; signer++)
-        for (uattr = 0; uattr == 0 || uattr == 1; uattr++)
-          for (idx=0; idx >= 0; idx++)
-            {
-              ksba_free (oid);
-              ksba_free (der);
-              err = ksba_cms_get_attribute (cms, signer, idx, uattr,
-                                            &oid, &der, &derlen);
-              if (gpg_err_code (err) == GPG_ERR_EOF)
-                idx = -2;
-              else if (gpg_err_code (err) == GPG_ERR_NOT_FOUND)
-                idx = signer = uattr = -2;
-              else if (err)
-                fail_if_err2 (fname, err);
-              else
-                {
-                  plen = printf ("signer %d - %sattr %d: ",
-                                 signer, uattr?"u":"s", idx);
-                  print_oid_and_desc (oid, 1);
-                  if (der)
-                    {
-                      printf ("%*s", plen, "");
-                      print_hex (der, derlen, plen);
-                      putchar ('\n');
-                    }
-                }
-            }
-      ksba_free (oid);
-      ksba_free (der);
+      for (signer=0; ; signer++)
+        {
+          err = dump_one_attribute_set (cms, signer, 0);
+          if (gpg_err_code (err) == GPG_ERR_NOT_FOUND)
+            break;  /* No more signer. */
+          fail_if_err2 (fname, err);
+          err = dump_one_attribute_set (cms, signer, 1);
+          if (gpg_err_code (err) == GPG_ERR_NOT_FOUND)
+            break;  /* No more signer. */
+          fail_if_err2 (fname, err);
+        }
     }
 
   ksba_cms_release (cms);
@@ -365,6 +385,11 @@ main (int argc, char **argv)
   if (argc && !strcmp (*argv, "--verbose"))
     {
       verbose = 1;
+      argc--; argv++;
+    }
+  if (argc && !strcmp (*argv, "--all"))
+    {
+      verbose = 2;
       argc--; argv++;
     }
 

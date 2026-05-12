@@ -496,7 +496,7 @@ copy_nhdr_and_len (unsigned char *buffer, AsnNode node)
   if (tag < 0x1f)
     {
       *p = (class << 6) | tag;
-      if (!_ksba_asn_is_primitive (tag))
+      if (class == CLASS_CONTEXT || !_ksba_asn_is_primitive (tag))
         *p |= 0x20;
       p++;
     }

@@ -1084,7 +1084,7 @@ ksba_cms_get_attribute (ksba_cms_t cms, int signer, int idx, int unprotected,
                         char **r_oid, unsigned char **r_der, size_t *r_derlen)
 {
   gpg_error_t err;
-  AsnNode node, n;
+  AsnNode topnode, node, n;
   struct signer_info_s *si;
 
   if (r_oid)
@@ -1109,13 +1109,13 @@ ksba_cms_get_attribute (ksba_cms_t cms, int signer, int idx, int unprotected,
   node = _ksba_asn_find_node (si->root,
                               unprotected? "SignerInfo.unsignedAttrs"
                               /* */      : "SignerInfo.signedAttrs");
+  topnode = node;
   if (node && node->type == TYPE_TAG)
     node = node->down;
   else
     node = NULL; /* Bad CMS: not a context tag - ignore this.  */
-  for ( ; node && idx >= 0; node = _ksba_asn_walk_tree (si->root, node))
+  for (; node && idx >= 0; node = _ksba_asn_walk_tree (topnode, node))
     {
-
       if (node->type == TYPE_SEQUENCE
           && (n = node->down) && n->type == TYPE_OBJECT_ID
           && n->off != -1 && n->right && n->right->type == TYPE_SET_OF)
@@ -3464,8 +3464,6 @@ build_signed_data_attributes (ksba_cms_t cms)
 }
 
 
-
-
 /* The user has calculated the signatures and we can therefore write
    everything left over to do. */
 static gpg_error_t
@@ -3478,9 +3476,15 @@ build_signed_data_rest (ksba_cms_t cms)
   struct oidlist_s *digestlist;
   struct signer_info_s *si;
   struct sig_val_s *sv;
+  struct oidparmlist_s *opl;
   ksba_writer_t tmpwrt = NULL;
   AsnNode root = NULL;
   ksba_der_t dbld = NULL;
+  struct attrarray_s *attrarray = NULL;
+  int attridx = 0;
+  unsigned int attrsize;
+  AsnNode attr = NULL;
+  int i;
 
   /* Now we can really write the signer info */
   err = ksba_asn_create_tree ("cms", &cms_tree);
@@ -3686,6 +3690,116 @@ build_signed_data_rest (ksba_cms_t cms)
             goto leave;
         }
 
+      /* If we have any unsigned attributes we can now insert them
+       * directly into the tree.  Note that the list may contain
+       * different (i.e. more) unsigned items than when the signed
+       * attributes were hashed.  */
+      for (attrsize = 0, opl = cms->attribute_list; opl; opl = opl->next)
+        {
+          if (!opl->unprotected)
+            continue;
+          if (!(opl->signeridx == -1 || opl->signeridx == signer))
+            continue;
+          attrsize++;
+        }
+
+      if (attrsize) /* We have unsigned attributes - insert them.  */
+        {
+          /* Allocate slots.  */
+          attrarray = xtrycalloc (attrsize, sizeof *attrarray);
+          if (!attrarray)
+            {
+              err = gpg_error_from_syserror ();
+              goto leave;
+            }
+
+          for (opl = cms->attribute_list; opl; opl = opl->next)
+            {
+              if (!opl->unprotected)
+                continue;
+              if (!(opl->signeridx == -1 || opl->signeridx == signer))
+                continue;
+
+              attr = _ksba_asn_expand_tree (cms_tree->parse_tree,
+                                      "CryptographicMessageSyntax.Attribute");
+              if (!attr)
+                {
+                  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+                  goto leave;
+                }
+              n = _ksba_asn_find_node (attr, "Attribute.attrType");
+              if (!n)
+                {
+                  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+                  goto leave;
+                }
+              err = _ksba_der_store_oid (n, opl->oid);
+              if (err)
+                goto leave;
+              n = _ksba_asn_find_node (attr, "Attribute.attrValues");
+              if (!n || !n->down)
+                {
+                  err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+                  goto leave;
+                }
+              n = n->down;
+              gpgrt_log_printhex (opl->parm, opl->parmlen,
+                                  "signer %d, oid=%s der=", signer, opl->oid);
+              err = _ksba_der_store_set_of (n, opl->parm, opl->parmlen);
+              if (err)
+                goto leave;
+
+              err = _ksba_der_encode_tree (attr, &image, &imagelen);
+              if (err)
+                goto leave;
+
+              assert (attridx < attrsize);
+              attrarray[attridx].root = attr;
+              attr = NULL;
+              attrarray[attridx].image = image;
+              attrarray[attridx].imagelen = imagelen;
+              attridx++;
+            }
+
+          qsort (attrarray, attridx, sizeof (struct attrarray_s),
+                 compare_attrarray);
+          /* Now insert them to an SignerInfo tree.  */
+          n = _ksba_asn_find_node (root, "SignerInfo.unsignedAttrs");
+          if (!n || !n->down)
+            {
+              err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+              goto leave;
+            }
+          for (n = n->down->down; n && n->type != TYPE_SEQUENCE; n = n->right)
+            ;
+          if (!n)
+            {
+              err = gpg_error (GPG_ERR_ELEMENT_NOT_FOUND);
+              goto leave;
+            }
+
+          assert (attridx <= attrsize);
+          for (i=0; i < attridx; i++)
+            {
+              if (i)
+                {
+                  if ( !(n=_ksba_asn_insert_copy (n)))
+                    {
+                      err = gpg_error (GPG_ERR_ENOMEM);
+                      goto leave;
+                    }
+                }
+              err = _ksba_der_copy_tree (n, attrarray[i].root,
+                                         attrarray[i].image);
+              if (err)
+                goto leave;
+              _ksba_asn_release_nodes (attrarray[i].root);
+              free (attrarray[i].image);
+              attrarray[i].root = NULL;
+              attrarray[i].image = NULL;
+            }
+        } /* End inserting unsigned attributes.  */
+
       /* Make the DER encoding and write it out. */
       err = _ksba_der_encode_tree (root, &image, &imagelen);
       if (err)
@@ -3727,8 +3841,14 @@ build_signed_data_rest (ksba_cms_t cms)
  leave:
   ksba_asn_tree_release (cms_tree);
   _ksba_asn_release_nodes (root);
+  _ksba_asn_release_nodes (attr);
   ksba_writer_release (tmpwrt);
   _ksba_der_release (dbld);
+  for (i = 0; i < attridx; i++)
+    {
+      _ksba_asn_release_nodes (attrarray[i].root);
+      xfree (attrarray[i].image);
+    }
   return err;
 }
 
