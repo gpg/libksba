@@ -1,6 +1,10 @@
-Noteworthy changes in version 1.8.0 (unreleased) [C23/A15/R_]
+Noteworthy changes in version 1.8.0 (2026-05-13) [C24/A16/R0]
 ------------------------------------------------
 
+ * New function ksba_cms_get_attribute.  [rKf40bfced7c]
+
+ * Support building of unsigned attributes with
+   ksba_cms_add_attribute.  [rK54d7e3bea8]
 
  Release-info: https://dev.gnupg.org/T8253
 

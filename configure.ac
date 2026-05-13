@@ -50,8 +50,8 @@ AC_INIT([mym4_package],[mym4_version],[https://bugs.gnupg.org])
 #   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
 #   (No interfaces changed:                   REVISION++)
 # Please remember to document interface changes in the NEWS file.
-LIBKSBA_LT_CURRENT=23
-LIBKSBA_LT_AGE=15
+LIBKSBA_LT_CURRENT=24
+LIBKSBA_LT_AGE=16
 LIBKSBA_LT_REVISION=0
 #-------------------
 # If the API is changed in an incompatible way: increment the next counter.
