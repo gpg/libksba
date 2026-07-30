@@ -779,14 +779,21 @@ _ksba_cms_parse_signed_data_part_2 (ksba_cms_t cms)
 	  return err;
 	}
 
-      *si_tail = si;
-      si_tail = &si->next;
-
       off2 = ksba_reader_tell (cms->reader);
-      if ( (off2 - off1) > ti.length )
+      if (off2 == off1)
+        {
+          _ksba_asn_release_nodes (si->root);
+          xfree (si->image);
+          xfree (si);
+          break;
+        }
+      else if ( (off2 - off1) > ti.length )
         ti.length = 0;
       else
         ti.length -= off2 - off1;
+
+      *si_tail = si;
+      si_tail = &si->next;
     }
 
   return 0;
@@ -945,14 +952,21 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
               return err;
             }
 
-          *vtend = vt;
-          vtend = &vt->next;
-
           off2 = ksba_reader_tell (cms->reader);
-          if ( (off2 - off1) > ti.length )
+          if (off2 == off1)
+            {
+              _ksba_asn_release_nodes (vt->root);
+              xfree (vt->image);
+              xfree (vt);
+              break;
+            }
+          else if ( (off2 - off1) > ti.length )
             ti.length = 0;
           else
             ti.length -= off2 - off1;
+
+          *vtend = vt;
+          vtend = &vt->next;
         }
     }
 
