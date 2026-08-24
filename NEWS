@@ -1,8 +1,9 @@
-Noteworthy changes in version 1.8.1 (unreleased) [C24/A16/R_]
+Noteworthy changes in version 1.8.1 (2026-08-24) [C24/A16/R1]
 ------------------------------------------------
 
+ * Fix CMS parser to avoid possible infinite loop.  [T8361]
 
- Release-info: https://dev.gnupg.org/T????
+ Release-info: https://dev.gnupg.org/T8253
 
 
 Noteworthy changes in version 1.8.0 (2026-05-13) [C24/A16/R0]
@@ -12,6 +13,11 @@ Noteworthy changes in version 1.8.0 (2026-05-13) [C24/A16/R0]
 
  * Support building of unsigned attributes with
    ksba_cms_add_attribute.  [rK54d7e3bea8]
+
+ * Interface changes relative to the 1.7.0 release:
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ksba_cms_get_attribute           NEW.
+
 
  Release-info: https://dev.gnupg.org/T8253
 
