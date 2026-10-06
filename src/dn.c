@@ -306,7 +306,7 @@ append_ucs4_value (const unsigned char *value, size_t length,
         append_quoted (sb, value, s-value, 3);
       if (n>=length)
         return; /* ready */
-      if (n < 4)
+      if (length - n < 4)
         { /* This is an invalid encoding - better stop after adding
              one impossible characater */
           put_stringbuf_mem (sb, "\xff", 1);
@@ -400,7 +400,7 @@ append_ucs2_value (const unsigned char *value, size_t length,
         append_quoted (sb, value, s-value, 1);
       if (n>=length)
         return; /* ready */
-      if (n < 2)
+      if (length - n < 2)
         { /* This is an invalid encoding - better stop after adding
              one impossible characater */
           put_stringbuf_mem (sb, "\xff", 1);
