@@ -1496,8 +1496,9 @@ ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
      request. This is useful in case of a TryLater response status. */
   ocsp->response_status = KSBA_OCSP_RSPSTATUS_NONE;
   release_ocsp_certlist (ocsp->received_certs);
-  release_ocsp_extensions (ocsp->response_extensions);
   ocsp->received_certs = NULL;
+  release_ocsp_extensions (ocsp->response_extensions);
+  ocsp->response_extensions = NULL;
   ocsp->hash_length = 0;
   ocsp->bad_nonce = 0;
   xfree (ocsp->responder_id.name);
@@ -1512,6 +1513,7 @@ ksba_ocsp_parse_response (ksba_ocsp_t ocsp,
       *ri->revocation_time = 0;
       ri->revocation_reason = 0;
       release_ocsp_extensions (ri->single_extensions);
+      ri->single_extensions = NULL;
     }
 
   /* Run the actual parser.  */
