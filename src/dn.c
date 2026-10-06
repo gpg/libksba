@@ -290,7 +290,7 @@ append_ucs4_value (const unsigned char *value, size_t length,
       value += 4;
       length -= 4;
     }
-  if (length >= 4 && !value[length-4] && !value[length-3]
+  if (!(length & 3) && length >= 4 && !value[length-4] && !value[length-3]
       && !value[length-2] && value[length-1] == ' ')
     {
       space_at_the_end = 1;
@@ -385,7 +385,8 @@ append_ucs2_value (const unsigned char *value, size_t length,
       value += 2;
       length -= 2;
     }
-  if (length >= 2 && !value[length-2] == 0 && value[length-1] == ' ')
+  if (!(length & 1) && length >= 2
+      && !value[length-2] == 0 && value[length-1] == ' ')
     {
       space_at_the_end = 1;
       length -= 2;
