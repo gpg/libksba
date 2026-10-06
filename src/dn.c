@@ -285,7 +285,7 @@ append_ucs4_value (const unsigned char *value, size_t length,
       && (value[3] == ' ' || value[3] == '#'))
     {
       tmp[0] = '\\';
-      tmp[1] = *value;
+      tmp[1] = value[3];
       put_stringbuf_mem (sb, tmp, 2);
       value += 4;
       length -= 4;
@@ -380,7 +380,7 @@ append_ucs2_value (const unsigned char *value, size_t length,
   if (length>1 && !value[0] && (value[1] == ' ' || value[1] == '#'))
     {
       tmp[0] = '\\';
-      tmp[1] = *value;
+      tmp[1] = value[1];
       put_stringbuf_mem (sb, tmp, 2);
       value += 2;
       length -= 2;
