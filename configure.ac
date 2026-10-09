@@ -430,7 +430,7 @@ AC_CHECK_TYPES([u32])
 
 
 # Checks for library functions.
-AC_CHECK_FUNCS([stpcpy gmtime_r getenv])
+AC_CHECK_FUNCS([stpcpy gmtime_r getenv tdestroy])
 
 
 # GNUlib checks

@@ -51,8 +51,8 @@
 #define gpgrt_log_debug(...)  /**/
 #endif
 
-
-static AsnNode resolve_identifier (AsnNode root, AsnNode node, int nestlevel);
+static AsnNode resolve_identifier (void **cache_p,
+                                   AsnNode root, AsnNode node, int nestlevel);
 
 
 static AsnNode
@@ -296,9 +296,10 @@ _ksba_asn_remove_node (AsnNode  node)
 
 /* find the node with the given name.  A name part of "?LAST" matches
    the last element of a SET_OF.  A "+" matches the CHOICE with values
-   set. */
+   set.  CACHE_P is a pointer to a cache table to resolve identifiers.
+   If CACHE_P is NULL, it doesn't resolve identifiers.  */
 static AsnNode
-find_node (AsnNode root, const char *name, int resolve)
+find_node (AsnNode root, const char *name, void **cache_p)
 {
   AsnNode p;
   const char *s;
@@ -363,18 +364,18 @@ find_node (AsnNode root, const char *name, int resolve)
               /*                  __func__, buf, p?p->name:""); */
               if (p->name && !strcmp (p->name, buf))
                 break;
-              if (resolve && p->name && p->type == TYPE_IDENTIFIER)
+              if (cache_p && p->name && p->type == TYPE_IDENTIFIER)
                 {
                   AsnNode p2;
 
-                  p2 = resolve_identifier (root, p, 0);
+                  p2 = resolve_identifier (cache_p, root, p, 0);
                   if (p2 && p2->name && !strcmp (p2->name, buf))
                     break;
                 }
             }
 
-          if (resolve && p && p->type == TYPE_IDENTIFIER)
-            p = resolve_identifier (root, p, 0);
+          if (cache_p && p && p->type == TYPE_IDENTIFIER)
+            p = resolve_identifier (cache_p, root, p, 0);
 	}
     }
 
@@ -384,7 +385,7 @@ find_node (AsnNode root, const char *name, int resolve)
 AsnNode
 _ksba_asn_find_node (AsnNode root, const char *name)
 {
-  return find_node (root, name, 0);
+  return find_node (root, name, NULL);
 }
 
 
@@ -1081,14 +1082,125 @@ copy_tree (AsnNode src_root, AsnNode s)
 }
 
 
+/* We use tsearch and tdestroy when available.
+   Use a fallback implementation if not.  */
+#ifdef HAVE_TDESTROY
+#include <search.h>
+#define t_search tsearch
+#define t_destroy tdestroy
+#else
+/*
+ * Binary tree implementation (fallback).
+ *
+ * t_search offers the same API of tsearch in POSIX.
+ * t_destry offers the same API of tdestry in GNU.
+ */
+typedef struct binary_node {
+  void *vkey;
+  struct binary_node *left, *right;
+} node_t;
+
+static void *
+t_search (const void *vkey, void **vrootp,
+         int (*comp) (const void *, const void *))
+{
+  node_t *q;
+  node_t **rootp = (node_t **)vrootp;
+
+  if (rootp == NULL)
+    return NULL;
+
+  while (*rootp != NULL)
+    {
+      int r;
+
+      if ((r = (*comp) (vkey, (*rootp)->vkey)) == 0)
+        return *rootp;
+
+      rootp = (r < 0) ? &(*rootp)->left : &(*rootp)->right;
+    }
+
+  q = xtrymalloc (sizeof (node_t));
+  if (q != NULL)
+    {
+      *rootp = q;
+      q->vkey = (void *)vkey;
+      q->left = q->right = NULL;
+    }
+
+  return q;
+}
+
+typedef void (*free_fn_t) (void *e);
+
+static void
+t_destroy_internal (node_t *root, free_fn_t free_fn)
+{
+  if (root->left != NULL)
+    t_destroy_internal (root->left, free_fn);
+  if (root->right != NULL)
+    t_destroy_internal (root->right, free_fn);
+  (*free_fn) (root->vkey);
+  xfree (root);
+}
+
+static void
+t_destroy (void *vroot, free_fn_t free_fn)
+{
+  node_t *root = (node_t *)vroot;
+
+  if (root != NULL)
+    t_destroy_internal (root, free_fn);
+}
+#endif
+
+
+/* Cache by binary tree.  */
+struct cache_entry {
+  char *name;
+  AsnNode node;
+};
+
+static int
+compare_cache_entry (const void *pa, const void *pb)
+{
+  const struct cache_entry *ea, *eb;
+
+  ea = pa;
+  eb = pb;
+  return strcmp (ea->name, eb->name);
+}
+
+static void *
+cache_search (const void *e, void **cache_p)
+{
+  return t_search (e, cache_p, compare_cache_entry);
+}
+
+static void
+cache_free_entry (void *e)
+{
+  struct cache_entry *ea = e;
+
+  xfree (ea->name);
+  xfree (ea);
+}
+
+static void
+cache_destroy (void *cache)
+{
+  t_destroy (cache, cache_free_entry);
+}
+
 
 static AsnNode
-resolve_identifier (AsnNode root, AsnNode node, int nestlevel)
+resolve_identifier (void **cache_p, AsnNode root, AsnNode node, int nestlevel)
 {
   char buf_space[50];
   char *buf;
   AsnNode n;
   size_t bufsize;
+  struct cache_entry *e, **ep;
 
   if (nestlevel > 20)
     return NULL;
@@ -1105,11 +1217,29 @@ resolve_identifier (AsnNode root, AsnNode node, int nestlevel)
       return_null_if_fail (buf);
     }
   strcpy (stpcpy (stpcpy (buf, root->name), "."), node->value.v_cstr);
-  n = _ksba_asn_find_node (root, buf);
+
+  e = xmalloc (sizeof (*e));
+  e->name = xstrdup (buf);
+  e->node = NULL;
+
+  ep = cache_search (e, cache_p);
+  if (ep == NULL)
+    /* not enough memory.  */
+    return NULL;
+  else if (*ep != e)
+    {
+      /* found in the cache */
+      xfree (e);
+      return (*ep)->node;
+    }
+
+  n = find_node (root, buf, NULL);
 
   /* We do just a simple indirection. */
   if (n && n->type == TYPE_IDENTIFIER)
-    n = resolve_identifier (root, n, nestlevel+1);
+    n = resolve_identifier (cache_p, root, n, nestlevel+1);
+
+  e->node = n;
 
   if (buf != buf_space)
     xfree (buf);
@@ -1119,7 +1249,7 @@ resolve_identifier (AsnNode root, AsnNode node, int nestlevel)
 
 
 static AsnNode
-do_expand_tree (AsnNode src_root, AsnNode s, int depth)
+do_expand_tree (void **cache_p, AsnNode src_root, AsnNode s, int depth)
 {
   AsnNode first=NULL, dprev=NULL, d, down, tmp;
   AsnNode *link_nextp = NULL;
@@ -1137,7 +1267,7 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
         {
           AsnNode s2, *dp;
 
-          d = resolve_identifier (src_root, s, 0);
+          d = resolve_identifier (cache_p, src_root, s, 0);
           if (!d)
             {
               fprintf (stderr, "RESOLVING IDENTIFIER FAILED\n");
@@ -1207,7 +1337,7 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
             }
           else
             {
-	      tmp = do_expand_tree (src_root, down, depth+1);
+	      tmp = do_expand_tree (cache_p, src_root, down, depth+1);
 	      if (tmp)
 		{
 		  if (link_nextp)
@@ -1248,10 +1378,13 @@ do_expand_tree (AsnNode src_root, AsnNode s, int depth)
 AsnNode
 _ksba_asn_expand_tree (AsnNode parse_tree, const char *name)
 {
-  AsnNode root;
+  AsnNode root, n;
+  void *cache = NULL;
 
-  root = name? find_node (parse_tree, name, 1) : parse_tree;
-  return do_expand_tree (parse_tree, root, 0);
+  root = name? find_node (parse_tree, name, &cache) : parse_tree;
+  n = do_expand_tree (&cache, parse_tree, root, 0);
+  cache_destroy (cache);
+  return n;
 }
 
 
