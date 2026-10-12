@@ -3628,6 +3628,19 @@ build_signed_data_rest (ksba_cms_t cms)
               goto leave;
             }
         }
+      else if (!strncmp (sv->algo, "dilithium", 9) && sv->algo[9] )
+        {
+          gpgrt_log_debug ("ksba: ML_DSA digestoid=='%s'\n", digestlist->oid);
+          if (sv->algo[9] == '3')
+            oid = "2.16.840.1.101.3.4.3.18";
+          else if (sv->algo[9] == '5')
+            oid = "2.16.840.1.101.3.4.3.19";
+          else
+            {
+              err = gpg_error (GPG_ERR_DIGEST_ALGO);
+              goto leave;
+            }
+        }
       else
         oid = sv->algo;
 

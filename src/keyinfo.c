@@ -141,7 +141,7 @@ static const struct algo_table_s pk_algo_table[] = {
     1, PKALGO_MLDSA65, "dilithium3", "p", "\x80" },
 
   { /* 2.16.us.1.gov.csor.nistAlgorithm.sigAlgs.id-ml-dsa-87 */
-    "2.16.840.1.101.3.4.3.18",
+    "2.16.840.1.101.3.4.3.19",
     "\x60\x86\x48\x01\x65\x03\x04\x03\x13", 9,
     1, PKALGO_MLDSA87, "dilithium5", "p", "\x80" },
 
@@ -302,7 +302,7 @@ static const struct algo_table_s sig_algo_table[] = {
     1, PKALGO_MLDSA65, "dilithium3", "s", "\x80" },
 
   { /* 2.16.us.1.gov.csor.nistAlgorithm.sigAlgs.id-ml-dsa-87 */
-    "2.16.840.1.101.3.4.3.18",
+    "2.16.840.1.101.3.4.3.19",
     "\x60\x86\x48\x01\x65\x03\x04\x03\x13", 9,
     1, PKALGO_MLDSA87, "dilithium5", "s", "\x80" },
 
