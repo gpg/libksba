@@ -58,7 +58,9 @@ typedef enum
     PKALGO_X25519,
     PKALGO_X448,
     PKALGO_ED25519,
-    PKALGO_ED448
+    PKALGO_ED448,
+    PKALGO_MLDSA65,
+    PKALGO_MLDSA87
   }
 pkalgo_t;
 
@@ -132,6 +134,16 @@ static const struct algo_table_s pk_algo_table[] = {
     "1.3.101.113", /* Ed448 */
     "\x2b\x65\x71", 3,
     1, PKALGO_ED448, "ecc", "q", "\x80" },
+
+  { /* 2.16.us.1.gov.csor.nistAlgorithm.sigAlgs.id-ml-dsa-65 */
+    "2.16.840.1.101.3.4.3.18",
+    "\x60\x86\x48\x01\x65\x03\x04\x03\x12", 9,
+    1, PKALGO_MLDSA65, "dilithium3", "p", "\x80" },
+
+  { /* 2.16.us.1.gov.csor.nistAlgorithm.sigAlgs.id-ml-dsa-87 */
+    "2.16.840.1.101.3.4.3.18",
+    "\x60\x86\x48\x01\x65\x03\x04\x03\x13", 9,
+    1, PKALGO_MLDSA87, "dilithium5", "p", "\x80" },
 
   {NULL}
 };
@@ -283,6 +295,16 @@ static const struct algo_table_s sig_algo_table[] = {
     "1.3.101.113", /* Ed448 */
     "\x2b\x65\x71", 3,
     1, PKALGO_ED448, "eddsa", "", "", NULL, NULL, NULL },
+
+  { /* 2.16.us.1.gov.csor.nistAlgorithm.sigAlgs.id-ml-dsa-65 */
+    "2.16.840.1.101.3.4.3.18",
+    "\x60\x86\x48\x01\x65\x03\x04\x03\x12", 9,
+    1, PKALGO_MLDSA65, "dilithium3", "s", "\x80" },
+
+  { /* 2.16.us.1.gov.csor.nistAlgorithm.sigAlgs.id-ml-dsa-87 */
+    "2.16.840.1.101.3.4.3.18",
+    "\x60\x86\x48\x01\x65\x03\x04\x03\x13", 9,
+    1, PKALGO_MLDSA87, "dilithium5", "s", "\x80" },
 
   {NULL}
 };
@@ -1318,6 +1340,10 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
       if (curve_oid)
         algo_oid = curve_oid;
       break;
+    case PKALGO_MLDSA65:
+    case PKALGO_MLDSA87:
+      parmdesc = algoinfomode? "" : "p";
+      break;
     default:
       err = gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
       goto leave;
@@ -1392,6 +1418,16 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
                   }
                 else
                   _ksba_der_add_bts (dbld, parm[i].value, parm[i].valuelen, 0);
+                break;
+              }
+        }
+      else if (*parmdesc == 'p' && !parmdesc[1])
+        {
+          /* This is MLDSA - P is directly written as a bit string.  */
+          for (i=0; i < parmidx; i++)
+            if (parm[i].namelen == 1 && parm[i].name[0] == 'p')
+              {
+                _ksba_der_add_bts (dbld, parm[i].value, parm[i].valuelen, 0);
                 break;
               }
         }

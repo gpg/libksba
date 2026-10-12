@@ -88,3 +88,8 @@ ED448 sample self-signed certificate
 
  ed448-ossl-1.crt       generated with OpenSSL
  ed448-ossl-1.key       generated with OpenSSL
+
+ML-DSA sample self-signed certificates
+
+ mldsa65-rfc9881.crt    from RFC9881
+ mldsa87-rfc9881.crt

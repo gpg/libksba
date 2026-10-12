@@ -34,8 +34,9 @@ test_certs = samples/cert_dfn_pca01.der samples/cert_dfn_pca15.der \
              samples/openssl-secp256r1ca.cert.crt \
              samples/ed25519-rfc8410.crt \
              samples/ed25519-ossl-1.crt \
-             samples/ed448-ossl-1.crt
-
+             samples/ed448-ossl-1.crt \
+             samples/mldsa65-rfc9881.crt \
+             samples/mldsa87-rfc9881.crt
 
 test_crls = samples/ov-test-crl.crl
 
