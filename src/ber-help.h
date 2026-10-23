@@ -78,7 +78,7 @@ parse_skip (unsigned char const **buf, size_t *len, struct tag_info *ti)
 {
   if (ti->length)
     {
-      assert (ti->length <= *len);
+      gpgrt_assert (ti->length <= *len);
       *len -= ti->length;
       *buf += ti->length;
     }

@@ -1333,3 +1333,111 @@ ksba_der_builder_get (ksba_der_t d, unsigned char **r_obj, size_t *r_objlen)
 {
   return _ksba_der_builder_get (d, r_obj, r_objlen);
 }
+
+
+/*-- der-parser.c -- */
+
+ksba_parser_t
+_ksba_parser_new (const unsigned char *buffer, size_t bufsize,
+                  int verbosity, ksba_parser_t lastparser,
+                  int lno)
+{        /* note this ---v */
+  return _ksba_parser_new_ (buffer, bufsize, verbosity, lastparser, lno);
+}
+
+ksba_parser_t
+_ksba_parser_release (ksba_parser_t tlv, int lno)
+{        /* note this -------v */
+  return _ksba_parser_release_ (tlv, lno);
+}
+
+gpg_error_t
+_ksba_parser_next (ksba_parser_t tlv, int lno)
+{        /* note this ----v */
+  return _ksba_parser_next_ (tlv, lno);
+}
+
+void
+ksba_parser_skip (ksba_parser_t tlv)
+{
+  _ksba_parser_skip (tlv);
+}
+
+size_t
+ksba_parser_getnumber (ksba_parser_t tlv, ksba_parser_info_t what)
+{
+  return _ksba_parser_getnumber (tlv, what);
+}
+
+const char *
+ksba_parser_getstring (ksba_parser_t tlv, ksba_parser_info_t what)
+{
+  return _ksba_parser_getstring (tlv, what);
+}
+
+void
+ksba_parser_setflag (ksba_parser_t tlv, ksba_parser_info_t flag)
+{
+  _ksba_parser_setflag (tlv, flag);
+}
+
+gpg_error_t
+ksba_expect_sequence (ksba_parser_t tlv)
+{
+  return _ksba_expect_sequence (tlv);
+}
+
+gpg_error_t
+ksba_expect_context_tag (ksba_parser_t tlv, int *r_tag)
+{
+  return _ksba_expect_context_tag (tlv, r_tag);
+}
+
+gpg_error_t
+ksba_expect_set (ksba_parser_t tlv)
+{
+  return _ksba_expect_set (tlv);
+}
+
+gpg_error_t
+ksba_expect_object (ksba_parser_t tlv, int class, int tag,
+                    unsigned char const **r_data,
+                    size_t *r_datalen)
+{
+  return _ksba_expect_object (tlv, class, tag, r_data, r_datalen);
+}
+
+gpg_error_t
+ksba_expect_octet_string (ksba_parser_t tlv,
+                          unsigned char const **r_data,
+                          size_t *r_datalen)
+{
+  return _ksba_expect_octet_string (tlv, r_data, r_datalen);
+}
+
+gpg_error_t
+ksba_expect_integer (ksba_parser_t tlv, int *r_value)
+{
+  return _ksba_expect_integer (tlv, r_value);
+}
+
+gpg_error_t
+ksba_expect_object_id (ksba_parser_t tlv,
+                       unsigned char const **r_oid,
+                       size_t *r_oidlen)
+{
+  return _ksba_expect_object_id (tlv, r_oid, r_oidlen);
+}
+
+gpg_error_t
+ksba_expect_null (ksba_parser_t tlv)
+{
+  return _ksba_expect_null (tlv);
+}
+
+gpg_error_t
+ksba_parse_tag (unsigned char const **buffer, size_t *size,
+                ksba_tlv_t result, const char **r_errstring)
+{
+  return _ksba_parse_tag (buffer, size, result, r_errstring);
+}

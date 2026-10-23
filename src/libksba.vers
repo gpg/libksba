@@ -65,7 +65,9 @@ KSBA_0.9 {
     ksba_cms_get_content_enc_iv; ksba_cms_get_content_oid;
     ksba_cms_get_content_type; ksba_cms_get_digest_algo;
     ksba_cms_get_digest_algo_list; ksba_cms_get_enc_val;
-    ksba_cms_get_issuer_serial; ksba_cms_get_message_digest;
+    ksba_cms_get_recp_ident;
+    ksba_cms_get_issuer_serial;
+    ksba_cms_get_message_digest;
     ksba_cms_get_sig_val; ksba_cms_get_sigattr_oids;
     ksba_cms_get_signing_time; ksba_cms_hash_signed_attrs;
     ksba_cms_identify; ksba_cms_new; ksba_cms_parse; ksba_cms_release;
@@ -115,6 +117,14 @@ KSBA_0.9 {
     ksba_der_add_oid; ksba_der_add_bts; ksba_der_add_der;
     ksba_der_add_tag; ksba_der_add_end;
     ksba_der_builder_get;
+
+    _ksba_parser_new; _ksba_parser_release; _ksba_parser_next;
+    ksba_parser_skip;
+    ksba_parser_getnumber; ksba_parser_getstring; ksba_parser_setflag;
+    ksba_expect_sequence; ksba_expect_context_tag; ksba_expect_set;
+    ksba_expect_object; ksba_expect_octet_string; ksba_expect_integer;
+    ksba_expect_object_id; ksba_expect_null;
+    ksba_parse_tag;
 
   local:
     *;

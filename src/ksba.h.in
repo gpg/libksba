@@ -120,6 +120,23 @@ extern "C" {
 
 typedef gpg_error_t KsbaError _KSBA_DEPRECATED;
 
+
+typedef enum
+  {
+    KSBA_PARSER_TAGLEN = 1,
+    KSBA_PARSER_TAGLENHDR = 2,
+    KSBA_PARSER_LEVEL = 3,
+    KSBA_PARSER_OFFSET = 4,
+    KSBA_PARSER_LASTERR = 5,
+    KSBA_PARSER_LASTFUNC = 6,
+    KSBA_PARSER_PENDING = 7,
+    KSBA_PARSER_T5793 = 8,
+    KSBA_PARSER_DUMPTAG = 9,
+    KSBA_PARSER_DUMPSTATE = 10
+  }
+ksba_parser_info_t;
+
+
 typedef enum
   {
     KSBA_CT_NONE = 0,
@@ -285,6 +302,24 @@ typedef const unsigned char *KsbaConstSexp _KSBA_DEPRECATED;
 struct ksba_der_s;
 typedef struct ksba_der_s *ksba_der_t;
 
+/* The object used for the DER parser functions.  */
+struct ksba_parser_s;
+typedef struct ksba_parser_s *ksba_parser_t;
+
+
+/* An object to convey TLV info.  */
+struct ksba_tlv_s {
+  size_t length;          /* The length of the value.       */
+  unsigned long tag;      /* The tag                        */
+  unsigned char nhdr;     /* The size of the header.        */
+  unsigned int cls:4;     /* The class of the object.       */
+  unsigned int ndef:1;    /* This uses indefinite length.   */
+  unsigned int cons:1;    /* This is a constructed object.  */
+  unsigned int der:1;     /* This is DER compliant encoded. */
+  unsigned int _rfu:1;    /* Reserved for future use.       */
+};
+typedef struct ksba_tlv_s *ksba_tlv_t;
+
 
 /*-- cert.c --*/
 gpg_error_t ksba_cert_new (ksba_cert_t *acert);
@@ -358,6 +393,9 @@ const char *ksba_cms_get_content_oid (ksba_cms_t cms, int what);
 gpg_error_t ksba_cms_get_content_enc_iv (ksba_cms_t cms, void *iv,
                                          size_t maxivlen, size_t *ivlen);
 const char *ksba_cms_get_digest_algo_list (ksba_cms_t cms, int idx);
+gpg_error_t ksba_cms_get_recp_ident (ksba_cms_t cms, int idx,
+                                     char **r_issuer, ksba_sexp_t *r_serial,
+                                     ksba_sexp_t *r_ski);
 gpg_error_t ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
                                         char **r_issuer,
                                         ksba_sexp_t *r_serial);
@@ -625,6 +663,40 @@ void ksba_der_add_end (ksba_der_t d);
 gpg_error_t ksba_der_builder_get (ksba_der_t d,
                                   unsigned char **r_obj, size_t *r_objlen);
 
+
+/*-- der-parser.c --*/
+/* Do not use the next 3 functions but the corresponding macros below.  */
+ksba_parser_t _ksba_parser_new (const unsigned char *buffer, size_t bufsize,
+                                int verbosity, ksba_parser_t lastparser,
+                                int lno);
+ksba_parser_t _ksba_parser_release (ksba_parser_t tlv, int lno);
+gpg_error_t _ksba_parser_next (ksba_parser_t tlv, int lno);
+
+#define ksba_parser_new(a,b,c,d) _ksba_parser_new ((a),(b),(c),(d), __LINE__)
+#define ksba_parser_release(a)   _ksba_parser_release ((a), __LINE__)
+#define ksba_parser_next(a)      _ksba_parser_next ((a), __LINE__)
+
+void ksba_parser_skip (ksba_parser_t tlv);
+size_t ksba_parser_getnumber (ksba_parser_t tlv, ksba_parser_info_t what);
+const char *ksba_parser_getstring (ksba_parser_t tlv, ksba_parser_info_t what);
+void ksba_parser_setflag (ksba_parser_t tlv, ksba_parser_info_t flag);
+gpg_error_t ksba_expect_sequence (ksba_parser_t tlv);
+gpg_error_t ksba_expect_context_tag (ksba_parser_t tlv, int *r_tag);
+gpg_error_t ksba_expect_set (ksba_parser_t tlv);
+gpg_error_t ksba_expect_object (ksba_parser_t tlv, int class, int tag,
+                                unsigned char const **r_data,
+                                size_t *r_datalen);
+gpg_error_t ksba_expect_octet_string (ksba_parser_t tlv,
+                                      unsigned char const **r_data,
+                                      size_t *r_datalen);
+gpg_error_t ksba_expect_integer (ksba_parser_t tlv, int *r_value);
+gpg_error_t ksba_expect_object_id (ksba_parser_t tlv,
+                                   unsigned char const **r_oid,
+                                   size_t *r_oidlen);
+gpg_error_t ksba_expect_null (ksba_parser_t tlv);
+
+gpg_error_t ksba_parse_tag (unsigned char const **buffer, size_t *size,
+                            ksba_tlv_t result, const char **r_errstring);
 
 
 /*-- util.c --*/

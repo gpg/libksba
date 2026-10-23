@@ -207,6 +207,23 @@
 #define ksba_der_add_end                   _ksba_der_add_end
 #define ksba_der_builder_get               _ksba_der_builder_get
 
+#define _ksba_parser_new                   _ksba_parser_new_
+#define _ksba_parser_release               _ksba_parser_release_
+#define _ksba_parser_next                  _ksba_parser_next_
+#define ksba_parser_skip                   _ksba_parser_skip
+#define ksba_parser_getnumber              _ksba_parser_getnumber
+#define ksba_parser_getstring              _ksba_parser_getstring
+#define ksba_parser_setflag                _ksba_parser_setflag
+#define ksba_expect_sequence               _ksba_expect_sequence
+#define ksba_expect_context_tag            _ksba_expect_context_tag
+#define ksba_expect_set                    _ksba_expect_set
+#define ksba_expect_object                 _ksba_expect_object
+#define ksba_expect_octet_string           _ksba_expect_octet_string
+#define ksba_expect_integer                _ksba_expect_integer
+#define ksba_expect_object_id              _ksba_expect_object_id
+#define ksba_expect_null                   _ksba_expect_null
+#define ksba_parse_tag                     _ksba_parse_tag
+
 
 /* Include the main header file to map the public symbols to the
    internal underscore prefixed symbols.  */
@@ -227,11 +244,14 @@
 #ifdef _KSBA_INCLUDED_BY_VISIBILITY_C
 # ifdef KSBA_USE_VISIBILITY
 #  define MARK_VISIBLE(name) \
-     extern __typeof__ (_##name) name _KSBA_VISIBILITY_DEFAULT;
+  extern __typeof__ (_##name) name _KSBA_VISIBILITY_DEFAULT;
+#  define MARK_VISIBLE_SUF(name) \
+  extern __typeof__ (name##_) name _KSBA_VISIBILITY_DEFAULT;
 #  define MARK_VISIBLEX(name) \
      extern __typeof__ (name) name _KSBA_VISIBILITY_DEFAULT;
 # else
 #  define MARK_VISIBLE(name)  /* */
+#  define MARK_VISIBLE_SUF(name)  /* */
 #  define MARK_VISIBLEX(name) /* */
 # endif
 
@@ -416,6 +436,22 @@ int ksba_asn_delete_structure (void *dummy);
 #undef ksba_der_add_end
 #undef ksba_der_builder_get
 
+#undef _ksba_parser_new
+#undef _ksba_parser_release
+#undef _ksba_parser_next
+#undef ksba_parser_skip
+#undef ksba_parser_getnumber
+#undef ksba_parser_getstring
+#undef ksba_parser_setflag
+#undef ksba_expect_sequence
+#undef ksba_expect_context_tag
+#undef ksba_expect_set
+#undef ksba_expect_object
+#undef ksba_expect_octet_string
+#undef ksba_expect_integer
+#undef ksba_expect_object_id
+#undef ksba_expect_null
+#undef ksba_parse_tag
 
 
 /* Mark all symbols.  */
@@ -593,6 +629,23 @@ MARK_VISIBLE (ksba_der_add_der)
 MARK_VISIBLE (ksba_der_add_tag)
 MARK_VISIBLE (ksba_der_add_end)
 MARK_VISIBLE (ksba_der_builder_get)
+
+MARK_VISIBLE_SUF (_ksba_parser_new)
+MARK_VISIBLE_SUF (_ksba_parser_release)
+MARK_VISIBLE_SUF (_ksba_parser_next)
+MARK_VISIBLE (ksba_parser_skip)
+MARK_VISIBLE (ksba_parser_getnumber)
+MARK_VISIBLE (ksba_parser_getstring)
+MARK_VISIBLE (ksba_parser_setflag)
+MARK_VISIBLE (ksba_expect_sequence)
+MARK_VISIBLE (ksba_expect_context_tag)
+MARK_VISIBLE (ksba_expect_set)
+MARK_VISIBLE (ksba_expect_object)
+MARK_VISIBLE (ksba_expect_octet_string)
+MARK_VISIBLE (ksba_expect_integer)
+MARK_VISIBLE (ksba_expect_object_id)
+MARK_VISIBLE (ksba_expect_null)
+MARK_VISIBLE (ksba_parse_tag)
 
 
 #  undef MARK_VISIBLE

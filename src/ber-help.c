@@ -1,4 +1,4 @@
-/* ber-help.c - BER herlper functions
+/* ber-help.c - BER helper functions
  *      Copyright (C) 2001, 2012 g10 Code GmbH
  *
  * This file is part of KSBA.

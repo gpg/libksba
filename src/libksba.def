@@ -210,3 +210,22 @@ EXPORTS
 
       ksba_cms_add_attribute          @164
       ksba_cms_get_attribute          @165
+
+      ksba_cms_get_recp_ident         @166
+
+      _ksba_parser_new                @167
+      _ksba_parser_relase             @168
+      _ksba_parser_next               @169
+      ksba_parser_skip                @170
+      ksba_parser_getnumber           @171
+      ksba_parser_getstring           @172
+      ksba_parser_setflag             @173
+      ksba_expect_sequence            @174
+      ksba_expect_context_tag         @175
+      ksba_expect_set                 @176
+      ksba_expect_object              @177
+      ksba_expect_octet_string        @178
+      ksba_expect_integer             @179
+      ksba_expect_object_id           @180
+      ksba_expect_null                @181
+      ksba_parse_tag                  @182
