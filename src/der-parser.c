@@ -462,7 +462,9 @@ void
 ksba_parser_skip (ksba_parser_t tlv)
 {
   tlv->lastfunc = __func__;
-  gpgrt_assert (tlv->bufsize >= tlv->ti.length);
+  if (!(tlv->bufsize >= tlv->ti.length))
+    gpgrt_log_bug ("ksba:%s: bufsize=%zu length=%zu\n",
+                   __func__, tlv->bufsize, tlv->ti.length);
   tlv->buffer += tlv->ti.length;
   tlv->bufsize -= tlv->ti.length;
 }

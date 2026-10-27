@@ -62,6 +62,9 @@ char *_ksba_xstrdup (const char *p);
 #define xrealloc(a,b)    _ksba_xrealloc((a),(b))
 #define xstrdup(a)       _ksba_xstrdup((a))
 
+ksba_sexp_t _ksba_sexp_from_buffer (const char *buffer, size_t length);
+#define sexp_from_buffer(a,b) _ksba_sexp_from_buffer ((a), (b));
+
 
 #define DIM(v) (sizeof(v)/sizeof((v)[0]))
 #define DIMof(type,member)   DIM(((type *)0)->member)

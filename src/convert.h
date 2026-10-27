@@ -54,6 +54,12 @@ char *_ksba_oid_node_to_str (const unsigned char *image, AsnNode node);
 gpg_error_t _ksba_oid_from_buf (const void *buffer, size_t buflen,
                                 unsigned char **rbuf, size_t *rlength);
 
+const char *_ksba_map_wrap_algo (const char *oid);
+const char *_ksba_map_kdf_algo (const char *oid);
+
+
+
+
 
 /*-- name.c --*/
 gpg_error_t _ksba_name_new_from_der (ksba_name_t *r_name,

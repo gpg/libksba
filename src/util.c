@@ -307,3 +307,31 @@ _ksba_ascii_memcasecmp (const void *a_arg, const void *b_arg, size_t n)
     }
   return 0;
 }
+
+
+
+/* Create a canonical encoded s-expression from a buffer.  Returns
+ * NULL and sets ERRNO on error.  LENGTH must not be zero. */
+ksba_sexp_t
+_ksba_sexp_from_buffer (const char *buffer, size_t length)
+{
+  char numbuf[50];
+  int numbuflen;
+  unsigned char *p;
+
+  if (!length || !buffer)
+    {
+      gpg_err_set_errno (ERANGE);
+      return NULL;
+    }
+  sprintf (numbuf,"(%zu:", length);
+  numbuflen = strlen (numbuf);
+  p = xtrymalloc (numbuflen + length + 2);
+  if (!p)
+    return NULL;
+  strcpy (p, numbuf);
+  memcpy (p+numbuflen, buffer, length);
+  p[numbuflen + length] = ')';
+  p[numbuflen + length + 1] = 0;
+  return p;
+}

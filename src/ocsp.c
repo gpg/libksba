@@ -1622,21 +1622,12 @@ ksba_ocsp_get_responder_id (ksba_ocsp_t ocsp,
     }
   else if (ocsp->responder_id.keyid && r_keyid)
     {
-      char numbuf[50];
-      size_t numbuflen;
-
       if (ocsp->responder_id.keyidlen > MAX_KEYID_DER_LENGTH)
         return gpg_error (GPG_ERR_TOO_LARGE);
-      sprintf (numbuf,"(%lu:", (unsigned long)ocsp->responder_id.keyidlen);
-      numbuflen = strlen (numbuf);
-      *r_keyid = xtrymalloc (numbuflen + ocsp->responder_id.keyidlen + 2);
+      *r_keyid = sexp_from_buffer (ocsp->responder_id.keyid,
+                                   ocsp->responder_id.keyidlen);
       if (!*r_keyid)
         return gpg_error_from_syserror ();
-      strcpy (*r_keyid, numbuf);
-      memcpy (*r_keyid+numbuflen,
-              ocsp->responder_id.keyid, ocsp->responder_id.keyidlen);
-      (*r_keyid)[numbuflen + ocsp->responder_id.keyidlen] = ')';
-      (*r_keyid)[numbuflen + ocsp->responder_id.keyidlen + 1] = 0;
     }
   else
     return gpg_error (GPG_ERR_NO_DATA);

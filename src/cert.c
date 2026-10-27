@@ -498,10 +498,7 @@ ksba_cert_get_digest_algo (ksba_cert_t cert)
 ksba_sexp_t
 ksba_cert_get_serial (ksba_cert_t cert)
 {
-  AsnNode n;
-  char *p;
-  char numbuf[22];
-  int numbuflen;
+  asn_node_t n;
 
   if (!cert || !cert->initialized)
     return NULL;
@@ -520,17 +517,7 @@ ksba_cert_get_serial (ksba_cert_t cert)
 
   if (n->len > MAX_SERIALNO_LENGTH)
     return NULL;
-
-  sprintf (numbuf,"(%u:", (unsigned int)n->len);
-  numbuflen = strlen (numbuf);
-  p = xtrymalloc (numbuflen + n->len + 2);
-  if (!p)
-    return NULL;
-  strcpy (p, numbuf);
-  memcpy (p+numbuflen, cert->image + n->off + n->nhdr, n->len);
-  p[numbuflen + n->len] = ')';
-  p[numbuflen + n->len + 1] = 0;
-  return p;
+  return sexp_from_buffer (cert->image + n->off + n->nhdr, n->len);
 }
 
 
@@ -1822,8 +1809,6 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
   size_t keyid_derlen = 0;
   int idx, crit;
   struct tag_info ti;
-  char numbuf[30];
-  size_t numbuflen;
 
   if (r_keyid)
     *r_keyid = NULL;
@@ -1925,30 +1910,18 @@ ksba_cert_get_auth_key_id (ksba_cert_t cert,
 
   if (ti.length > MAX_SERIALNO_LENGTH)
     return gpg_error (GPG_ERR_INV_CERT_OBJ);
-  sprintf (numbuf,"(%u:", (unsigned int)ti.length);
-  numbuflen = strlen (numbuf);
-  *r_serial = xtrymalloc (numbuflen + ti.length + 2);
+  *r_serial = sexp_from_buffer (der, ti.length);
   if (!*r_serial)
-    return gpg_error (GPG_ERR_ENOMEM);
-  strcpy (*r_serial, numbuf);
-  memcpy (*r_serial+numbuflen, der, ti.length);
-  (*r_serial)[numbuflen + ti.length] = ')';
-  (*r_serial)[numbuflen + ti.length + 1] = 0;
+    return gpg_error_from_syserror ();
 
  build_keyid:
   if (r_keyid && keyid_der && keyid_derlen)
     {
       if (keyid_derlen > MAX_KEYID_DER_LENGTH)
         return gpg_error (GPG_ERR_INV_CERT_OBJ);
-      sprintf (numbuf,"(%u:", (unsigned int)keyid_derlen);
-      numbuflen = strlen (numbuf);
-      *r_keyid = xtrymalloc (numbuflen + keyid_derlen + 2);
+      *r_keyid = sexp_from_buffer (keyid_der, keyid_derlen);
       if (!*r_keyid)
-        return gpg_error (GPG_ERR_ENOMEM);
-      strcpy (*r_keyid, numbuf);
-      memcpy (*r_keyid+numbuflen, keyid_der, keyid_derlen);
-      (*r_keyid)[numbuflen + keyid_derlen] = ')';
-      (*r_keyid)[numbuflen + keyid_derlen + 1] = 0;
+        return gpg_error_from_syserror ();
     }
   return 0;
 }
@@ -1971,8 +1944,6 @@ get_simple_octet_string_ext (ksba_cert_t cert, const char *oid,
   const unsigned char *der;
   int idx, crit;
   struct tag_info ti;
-  char numbuf[30];
-  size_t numbuflen;
 
   if (!r_data)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -2017,15 +1988,9 @@ get_simple_octet_string_ext (ksba_cert_t cert, const char *oid,
 
   if (ti.length > MAX_CERT_EXT_LENGTH)
     return gpg_error (GPG_ERR_INV_CERT_OBJ);
-  sprintf (numbuf,"(%u:", (unsigned int)ti.length);
-  numbuflen = strlen (numbuf);
-  *r_data = xtrymalloc (numbuflen + ti.length + 2);
+  *r_data = sexp_from_buffer (der, ti.length);
   if (!*r_data)
-    return gpg_error (GPG_ERR_ENOMEM);
-  strcpy (*r_data, numbuf);
-  memcpy (*r_data+numbuflen, der, ti.length);
-  (*r_data)[numbuflen + ti.length] = ')';
-  (*r_data)[numbuflen + ti.length + 1] = 0;
+    return gpg_error_from_syserror ();
   if (r_crit)
     *r_crit = crit;
   return 0;

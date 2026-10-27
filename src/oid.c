@@ -279,3 +279,37 @@ _ksba_oid_from_buf (const void *buffer, size_t buflen,
   xfree (string);
   return err;
 }
+
+
+/* Create a mapping from a wrap algo OID to a name.  */
+const char *
+_ksba_map_wrap_algo (const char *oid)
+{
+  if (!oid)
+    return "null-oid";  /* Dummy.  */
+  else if (!strcmp (oid, "2.16.840.1.101.3.4.1.45"))
+    return "aes256-wrap";
+  else if (!strcmp (oid, "2.16.840.1.101.3.4.1.25"))
+    return "aes192-wrap";
+  else if (!strcmp (oid, "2.16.840.1.101.3.4.1.5"))
+    return "aes128-wrap";
+  else
+    return oid;
+}
+
+
+/* Create a mapping from a KDF algo OID to a name.  */
+const char *
+_ksba_map_kdf_algo (const char *oid)
+{
+  if (!oid)
+    return "null-oid";  /* Dummy.  */
+  else if (!strcmp (oid, "1.2.840.113549.1.9.16.3.28"))  /* RFC-8619 */
+    return "hkdf-sha256";
+  else if (!strcmp (oid, "1.2.840.113549.1.9.16.3.29"))
+    return "hkdf-sha384";
+  else if (!strcmp (oid, "1.2.840.113549.1.9.16.3.30"))
+    return "hkdf-sha512";
+  else
+    return oid;
+}

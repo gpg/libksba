@@ -279,8 +279,6 @@ ksba_crl_get_auth_key_id (ksba_crl_t crl,
   const unsigned char *keyid_der = NULL;
   size_t keyid_derlen = 0;
   struct tag_info ti;
-  char numbuf[30];
-  size_t numbuflen;
   crl_extn_t e;
 
   if (r_keyid)
@@ -380,30 +378,18 @@ ksba_crl_get_auth_key_id (ksba_crl_t crl,
 
   if (ti.length > MAX_SERIALNO_LENGTH)
     return gpg_error (GPG_ERR_INV_CERT_OBJ);
-  sprintf (numbuf,"(%u:", (unsigned int)ti.length);
-  numbuflen = strlen (numbuf);
-  *r_serial = xtrymalloc (numbuflen + ti.length + 2);
+  *r_serial = sexp_from_buffer (der, ti.length);
   if (!*r_serial)
-    return gpg_error_from_errno (errno);
-  strcpy (*r_serial, numbuf);
-  memcpy (*r_serial+numbuflen, der, ti.length);
-  (*r_serial)[numbuflen + ti.length] = ')';
-  (*r_serial)[numbuflen + ti.length + 1] = 0;
+    return gpg_error_from_syserror ();
 
  build_keyid:
   if (r_keyid && keyid_der && keyid_derlen)
     {
       if (keyid_derlen > MAX_KEYID_DER_LENGTH)
         return gpg_error (GPG_ERR_INV_CERT_OBJ);
-      sprintf (numbuf,"(%u:", (unsigned int)keyid_derlen);
-      numbuflen = strlen (numbuf);
-      *r_keyid = xtrymalloc (numbuflen + keyid_derlen + 2);
+      *r_keyid = sexp_from_buffer (keyid_der, keyid_derlen);
       if (!*r_keyid)
-        return gpg_error (GPG_ERR_ENOMEM);
-      strcpy (*r_keyid, numbuf);
-      memcpy (*r_keyid+numbuflen, keyid_der, keyid_derlen);
-      (*r_keyid)[numbuflen + keyid_derlen] = ')';
-      (*r_keyid)[numbuflen + keyid_derlen + 1] = 0;
+        return gpg_error_from_syserror ();
     }
   return 0;
 }
@@ -419,8 +405,6 @@ ksba_crl_get_crl_number (ksba_crl_t crl, ksba_sexp_t *number)
   size_t derlen;
   const unsigned char *der;
   struct tag_info ti;
-  char numbuf[30];
-  size_t numbuflen;
   crl_extn_t e;
 
   if (!crl || !number)
@@ -451,15 +435,9 @@ ksba_crl_get_crl_number (ksba_crl_t crl, ksba_sexp_t *number)
 
   if (ti.length > MAX_CRL_NUMBER_LENGTH)
     return gpg_error (GPG_ERR_TOO_LARGE);
-  sprintf (numbuf,"(%u:", (unsigned int)ti.length);
-  numbuflen = strlen (numbuf);
-  *number = xtrymalloc (numbuflen + ti.length + 2);
+  *number = sexp_from_buffer (der, ti.length);
   if (!*number)
-    return gpg_error_from_errno (errno);
-  strcpy (*number, numbuf);
-  memcpy (*number+numbuflen, der, ti.length);
-  (*number)[numbuflen + ti.length] = ')';
-  (*number)[numbuflen + ti.length + 1] = 0;
+    return gpg_error_from_syserror ();
 
   return 0;
 }
@@ -1086,8 +1064,6 @@ parse_crl_entry (ksba_crl_t crl, int *got_entry)
   unsigned long len;
   int ndef;
   unsigned char tmpbuf[4096]; /* for time, serial number and extensions */
-  char numbuf[22];
-  int numbuflen;
 
   /* Check the length to see whether we are at the end of the seq but do
      this only when we know that we have this optional seq of seq. */
@@ -1141,15 +1117,9 @@ parse_crl_entry (ksba_crl_t crl, int *got_entry)
   if (ti.length > MAX_SERIALNO_LENGTH)
     return gpg_error (GPG_ERR_TOO_LARGE);
   xfree (crl->item.serial);
-  sprintf (numbuf,"(%u:", (unsigned int)ti.length);
-  numbuflen = strlen (numbuf);
-  crl->item.serial = xtrymalloc (numbuflen + ti.length + 2);
+  crl->item.serial = sexp_from_buffer (tmpbuf+ti.nhdr, ti.length);
   if (!crl->item.serial)
-    return gpg_error (GPG_ERR_ENOMEM);
-  strcpy (crl->item.serial, numbuf);
-  memcpy (crl->item.serial+numbuflen, tmpbuf+ti.nhdr, ti.length);
-  crl->item.serial[numbuflen + ti.length] = ')';
-  crl->item.serial[numbuflen + ti.length + 1] = 0;
+    return gpg_error_from_syserror ();
   crl->item.reason = 0;
 
   /* get the revocation time */
