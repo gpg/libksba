@@ -230,9 +230,12 @@ one_file (const char *fname)
   ct = ksba_cms_get_content_type (cms, 0);
   if (ct == KSBA_CT_ENVELOPED_DATA || ct == KSBA_CT_AUTHENVELOPED_DATA)
     {
+      ksba_sexp_t ski;
+
       for (idx=0; ; idx++)
         {
-          err = ksba_cms_get_issuer_serial (cms, idx, &dn, &p);
+          dn = NULL; p = NULL; ski = NULL;
+          err = ksba_cms_get_recp_ident (cms, idx, &dn, &p, &ski);
           if (err == -1)
             break; /* ready */
 
@@ -245,13 +248,13 @@ one_file (const char *fname)
           else
             {
               fail_if_err2 (fname, err);
-              if (!quiet)
+              if (!quiet && dn)
                 {
                   printf ("recipient %d - issuer: ", idx);
                   print_dn (dn);
                 }
               ksba_free (dn);
-              if (!quiet)
+              if (!quiet && p)
                 {
                   putchar ('\n');
                   printf ("recipient %d - serial: ", idx);
@@ -259,6 +262,14 @@ one_file (const char *fname)
                   putchar ('\n');
                 }
               ksba_free (p);
+
+              if (!quiet && ski)
+                {
+                  printf ("signer %d - ski: ", idx);
+                  print_sexp_hex (ski);
+                  putchar ('\n');
+                }
+              ksba_free (ski);
             }
 
           dn = ksba_cms_get_enc_val (cms, idx);
@@ -275,7 +286,7 @@ one_file (const char *fname)
     {
       for (idx=0; idx < 1; idx++)
         {
-          err = ksba_cms_get_issuer_serial (cms, idx, &dn, &p);
+          err = ksba_cms_get_recp_ident (cms, idx, &dn, &p, NULL);
           if (gpg_err_code (err) == GPG_ERR_NO_DATA && !idx)
             {
               if (!quiet)
@@ -284,7 +295,7 @@ one_file (const char *fname)
             }
 
           fail_if_err2 (fname, err);
-          if (!quiet)
+          if (!quiet && n)
             {
               printf ("signer %d - issuer: ", idx);
               print_dn (dn);
@@ -292,7 +303,7 @@ one_file (const char *fname)
             }
           ksba_free (dn);
 
-          if (!quiet)
+          if (!quiet && p)
             {
               printf ("signer %d - serial: ", idx);
               print_sexp_hex (p);

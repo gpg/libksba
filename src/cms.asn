@@ -173,7 +173,8 @@ RecipientInfo ::= CHOICE {
    ktri KeyTransRecipientInfo,
    kari [1] KeyAgreeRecipientInfo,
    kekri [2] KEKRecipientInfo,
-   pwri [3] PasswordRecipientInfo }
+   pwri [3] PasswordRecipientInfo,
+   ori  [4] OtherRecipientInfo }
 
 EncryptedKey ::= OCTET STRING
 
@@ -238,6 +239,21 @@ PasswordRecipientInfo ::= SEQUENCE {
   keyEncryptionAlgorithm     KeyEncryptionAlgorithmIdentifier,
   encryptedKey EncryptedKey }
 
+OtherRecipientInfo ::= SEQUENCE {
+  oriType OBJECT IDENTIFIER,
+  oriValue ANY DEFINED BY oriType }
+
+KEMRecipientInfo ::= SEQUENCE {
+  version CMSVersion,  -- always set to 0
+  rid RecipientIdentifier,
+  kem KEMAlgorithmIdentifier,
+  kemct OCTET STRING,
+  kdf KeyDerivationAlgorithmIdentifier,
+  kekLength INTEGER (1..65535),
+  ukm [0] EXPLICIT UserKeyingMaterial OPTIONAL,
+  wrap KeyEncryptionAlgorithmIdentifier,
+  encryptedKey EncryptedKey }
+
 
 DigestedData ::= SEQUENCE {
   version CMSVersion,
@@ -277,6 +293,12 @@ SignatureAlgorithmIdentifier ::= AlgorithmIdentifier
 KeyEncryptionAlgorithmIdentifier ::= AlgorithmIdentifier
 
 KeyDerivationAlgorithmIdentifier ::= AlgorithmIdentifier
+
+-- KEMAlgSet KEM-ALGORITHM ::= { ... }
+
+KEMAlgorithmIdentifier ::= AlgorithmIdentifier
+                           -- { KEM-ALGORITHM, {KEMAlgSet} }
+
 
 ContentEncryptionAlgorithmIdentifier ::= AlgorithmIdentifier
 

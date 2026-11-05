@@ -60,7 +60,9 @@ typedef enum
     PKALGO_ED25519,
     PKALGO_ED448,
     PKALGO_MLDSA65,
-    PKALGO_MLDSA87
+    PKALGO_MLDSA87,
+    PKALGO_MLKEM768,
+    PKALGO_MLKEM1024
   }
 pkalgo_t;
 
@@ -81,6 +83,7 @@ struct algo_table_s {
 
 /* Special values for the supported field.  */
 #define SUPPORTED_RSAPSS 2
+#define SUPPORTED_COMPOSITE 3
 
 
 static const struct algo_table_s pk_algo_table[] = {
@@ -144,6 +147,39 @@ static const struct algo_table_s pk_algo_table[] = {
     "2.16.840.1.101.3.4.3.19",
     "\x60\x86\x48\x01\x65\x03\x04\x03\x13", 9,
     1, PKALGO_MLDSA87, "dilithium5", "p", "\x80" },
+
+  { /* MLKEM768-ECDH-P256-SHA3-256 */
+    "1.3.6.1.5.5.7.6.59",
+    "\x2b\x06\x01\x05\x05\x07\x06\x3b", 8,
+    SUPPORTED_COMPOSITE, PKALGO_MLKEM768, "nistp256"
+    /*      First algo --^   Second algo --^
+     * No element or ctrl strings are given because the dedicated code
+     * is used for building the keyinfo.  */         },
+
+  { /* MLKEM768-ECDH-P384-SHA3-256 */
+    "1.3.6.1.5.5.7.6.60",
+    "\x2b\x06\x01\x05\x05\x07\x06\x3c", 8,
+    SUPPORTED_COMPOSITE, PKALGO_MLKEM768, "nistp384" },
+
+  { /* MLKEM768-ECDH-brainpoolP256r1-SHA3-256 */
+    "1.3.6.1.5.5.7.6.61",
+    "\x2b\x06\x01\x05\x05\x07\x06\x3d", 8,
+    SUPPORTED_COMPOSITE, PKALGO_MLKEM768, "bp256" },
+
+  { /* MLKEM1024-ECDH-P384-SHA3-256 */
+    "1.3.6.1.5.5.7.6.63",
+    "\x2b\x06\x01\x05\x05\x07\x06\x3f", 8,
+    SUPPORTED_COMPOSITE, PKALGO_MLKEM1024, "nistp384" },
+
+  { /* MLKEM1024-ECDH-brainpoolP384r1-SHA3-256 */
+    "1.3.6.1.5.5.7.6.64",
+    "\x2b\x06\x01\x05\x05\x07\x06\x40", 8,
+    SUPPORTED_COMPOSITE, PKALGO_MLKEM1024, "bp384" },
+
+  { /* MLKEM1024-ECDH-P521-SHA3-256 */
+    "1.3.6.1.5.5.7.6.66",
+    "\x2b\x06\x01\x05\x05\x07\x06\x42", 8,
+    SUPPORTED_COMPOSITE, PKALGO_MLKEM1024, "nistp521" },
 
   {NULL}
 };
@@ -905,6 +941,8 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
   const unsigned char *ctrl;
   const char *elem;
   struct stringbuf sb;
+  int sb_initialized = 0;
+  int is_composite;
 
   *r_string = NULL;
 
@@ -934,6 +972,9 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
   if (!pk_algo_table[algoidx].supported)
     return gpg_error (GPG_ERR_UNSUPPORTED_ALGORITHM);
 
+  /* Composite algorithms are stored deserialized in the keyinfo. */
+  is_composite = (pk_algo_table[algoidx].supported == SUPPORTED_COMPOSITE);
+
   if (parm_off && parm_len && parm_type == TYPE_OBJECT_ID)
     parm_oid = ksba_oid_to_str (der+parm_off, parm_len);
   else if (parm_off && parm_len)
@@ -960,41 +1001,109 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
                         __func__);
     }
 
-  /* fixme: we should calculate the initial length form the size of the
+  /* fixme: we should calculate the initial length from the size of the
      sequence, so that we don't need a realloc later */
-  init_stringbuf (&sb, 100);
-  put_stringbuf (&sb, "(10:public-key(");
-
-  /* fixme: we can also use the oidstring here and prefix it with
-     "oid." - this way we can pass more information into Libgcrypt or
-     whatever library is used */
-  put_stringbuf_sexp (&sb, pk_algo_table[algoidx].algo_string);
-
-  /* Insert the curve name for ECC. */
-  if (pk_algo_table[algoidx].pkalgo == PKALGO_ECC && parm_oid)
+  if (is_composite)
     {
-      put_stringbuf (&sb, "(");
-      put_stringbuf_sexp (&sb, "curve");
-      put_stringbuf_sexp (&sb, parm_oid);
-      put_stringbuf (&sb, ")");
-      got_curve = 1;
+      init_stringbuf (&sb, 4096);
+      sb_initialized = 1;
+      put_stringbuf (&sb, "(13:composite-key");
+
+      if (pk_algo_table[algoidx].pkalgo == PKALGO_MLKEM768
+          || pk_algo_table[algoidx].pkalgo == PKALGO_MLKEM1024)
+        {
+          size_t mlkem_len = (pk_algo_table[algoidx].pkalgo
+                              == PKALGO_MLKEM768)? 1184 : 1568;
+
+          if (derlen < mlkem_len)
+            {
+              gpgrt_log_info ("%s: error: ML-KEM key too short (%zu)\n",
+                              __func__, derlen);
+              err = gpg_error (GPG_ERR_INV_KEYINFO);
+              goto leave;
+            }
+          put_stringbuf (&sb, "(");
+          put_stringbuf_sexp (&sb, "public-key");
+          put_stringbuf (&sb, "(");
+          put_stringbuf_sexp (&sb, "kyber768");
+          put_stringbuf (&sb, "(");
+          put_stringbuf_sexp (&sb, "p");
+          put_stringbuf_mem_sexp (&sb, der, mlkem_len);
+          put_stringbuf (&sb, ")))");
+          der += mlkem_len;
+          derlen = mlkem_len;
+
+          /* Do a simple check on the minimal length for a curve
+           * (nistp256) and that we have an odd number of octets which
+           * start with 0x04.  This will need adjustments for X25519
+           * and X448.  */
+          if (derlen < 1+32+32 || (derlen & 1) || *der != 0x04)
+            {
+              gpgrt_log_info ("%s: error: ECC part is invalid (n=%zu)\n",
+                              __func__, derlen);
+              err = gpg_error (GPG_ERR_INV_KEYINFO);
+              goto leave;
+            }
+
+          put_stringbuf (&sb, "(");
+          put_stringbuf_sexp (&sb, "public-key");
+          put_stringbuf (&sb, "(");
+          put_stringbuf_sexp (&sb, "ecdh");
+          put_stringbuf (&sb, "(");
+          put_stringbuf_sexp (&sb, "curve");
+          put_stringbuf_sexp (&sb, pk_algo_table[algoidx].algo_string);
+          put_stringbuf (&sb, ")(");
+          put_stringbuf_sexp (&sb, "q");
+          put_stringbuf_mem_sexp (&sb, der, derlen);
+          put_stringbuf (&sb, ")))");
+
+        }
+      else
+        {
+          gpgrt_log_error ("%s: error: unknown composite algorithm\n",
+                           __func__);
+          err = gpg_error (GPG_ERR_INV_KEYINFO);
+          goto leave;
+        }
     }
-  else if (pk_algo_table[algoidx].pkalgo == PKALGO_ED25519
-           || pk_algo_table[algoidx].pkalgo == PKALGO_ED448
-           || pk_algo_table[algoidx].pkalgo == PKALGO_X25519
-           || pk_algo_table[algoidx].pkalgo == PKALGO_X448)
+  else
     {
-      put_stringbuf (&sb, "(");
-      put_stringbuf_sexp (&sb, "curve");
-      put_stringbuf_sexp (&sb, pk_algo_table[algoidx].oidstring);
-      put_stringbuf (&sb, ")");
+      init_stringbuf (&sb, 100);
+      sb_initialized = 1;
+      put_stringbuf (&sb, "(10:public-key(");
+      /* fixme: we can also use the oidstring here and prefix it with
+       * "oid." - this way we can pass more information into Libgcrypt
+       * or whatever library is used */
+      put_stringbuf_sexp (&sb, pk_algo_table[algoidx].algo_string);
+
+      /* Insert the curve name for ECC. */
+      if (pk_algo_table[algoidx].pkalgo == PKALGO_ECC && parm_oid)
+        {
+          put_stringbuf (&sb, "(");
+          put_stringbuf_sexp (&sb, "curve");
+          put_stringbuf_sexp (&sb, parm_oid);
+          put_stringbuf (&sb, ")");
+          got_curve = 1;
+        }
+      else if (pk_algo_table[algoidx].pkalgo == PKALGO_ED25519
+               || pk_algo_table[algoidx].pkalgo == PKALGO_ED448
+               || pk_algo_table[algoidx].pkalgo == PKALGO_X25519
+               || pk_algo_table[algoidx].pkalgo == PKALGO_X448)
+        {
+          put_stringbuf (&sb, "(");
+          put_stringbuf_sexp (&sb, "curve");
+          put_stringbuf_sexp (&sb, pk_algo_table[algoidx].oidstring);
+          put_stringbuf (&sb, ")");
+        }
     }
 
   /* If parameters are given and we have a description for them, parse
-     them. */
-  if (parmder && parmderlen
-      && pk_algo_table[algoidx].parmelem_string
-      && pk_algo_table[algoidx].parmctrl_string)
+   * them.  */
+  if (is_composite)
+    ; /* Ignore for composite algorithms. */
+  else if (parmder && parmderlen
+           && pk_algo_table[algoidx].parmelem_string
+           && pk_algo_table[algoidx].parmctrl_string)
     {
       elem = pk_algo_table[algoidx].parmelem_string;
       ctrl = pk_algo_table[algoidx].parmctrl_string;
@@ -1063,7 +1172,11 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
   /* FIXME: We don't release the stringbuf in case of error
      better let the macro jump to a label */
   elem = pk_algo_table[algoidx].elem_string;
+  if (!elem)
+    elem = "";
   ctrl = pk_algo_table[algoidx].ctrl_string;
+  if (!ctrl)
+    ctrl = "";
   for (; *elem; ctrl++, elem++)
     {
       int is_int;
@@ -1103,14 +1216,22 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
           put_stringbuf (&sb, ")");
         }
     }
-  put_stringbuf (&sb, "))");
-  xfree (parm_oid);
+
+  put_stringbuf (&sb, "))");  /* Final closing. */
 
   *r_string = get_stringbuf (&sb);
   if (!*r_string)
-    return gpg_error (GPG_ERR_ENOMEM);
+    {
+      err =  gpg_error_from_syserror ();
+      goto leave;
+    }
+  err = 0;
 
-  return 0;
+ leave:
+  if (sb_initialized)
+    deinit_stringbuf (&sb);
+  xfree (parm_oid);
+  return err;
 }
 
 

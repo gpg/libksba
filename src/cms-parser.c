@@ -882,15 +882,15 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
 
   /* Next one is the SET OF RecipientInfo:
    * RecipientInfo ::= CHOICE {
-   *     ktri KeyTransRecipientInfo,
-   *     kari [1] KeyAgreeRecipientInfo,
+   *     ktri      KeyTransRecipientInfo,
+   *     kari  [1] KeyAgreeRecipientInfo,
    *     kekri [2] KEKRecipientInfo,
-   *     pwri [3] PasswordRecipientInfo
+   *     pwri  [3] PasswordRecipientInfo
+   *     kemri [4] KEMRecipientInfo
    * }  */
   if ( !(ti.class == CLASS_UNIVERSAL
          && ti.tag == TYPE_SET && ti.is_constructed))
     return gpg_error (GPG_ERR_INV_CMS_OBJ);
-
 
   vtend = &cms->recp_info;
   if (ti.ndef)
@@ -988,7 +988,7 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
    *     aes-ICVlen       AES-GCM-ICVlen DEFAULT 12 }
    *
    * Under the assumption that the IV is at max 16 bytes (i.e. the
-   * blocksize of AES) and the default ICVlen is used, we modify the
+   * blocksize of AES) and the default ICVlen or 16 is used, we modify the
    * parameter to have just the nonce without any encoding.  */
   if (algo_parmlen > 4 && algo_parm[0] == 0x30 /* Sequence.  */
       && algo_oid
@@ -996,16 +996,29 @@ _ksba_cms_parse_enveloped_data_part_1 (ksba_cms_t cms)
           || !strcmp (algo_oid, "2.16.840.1.101.3.4.1.26")  /*AES192.GCM*/
           || !strcmp (algo_oid, "2.16.840.1.101.3.4.1.6"))) /*AES128.GCM*/
     {
+      /* Example for a specified ICVlen of 16:
+       *  3011 040c 86bc07fbc3dc4a599d90f3e8 0201 10
+       */
       if (algo_parmlen == algo_parm[1] + 2
-          && algo_parm[1] == algo_parm[3] + 2
           && algo_parm[2] == 0x04
           && algo_parm[3] && algo_parm[3] <= 16)
         {
-          algo_parmlen = algo_parm[3];
-          memmove (algo_parm, algo_parm+4, algo_parmlen);
+          if (algo_parm[1] == algo_parm[3] + 2)
+            {
+              algo_parmlen = algo_parm[3];
+              memmove (algo_parm, algo_parm+4, algo_parmlen);
+            }
+          else if (algo_parm[1] == algo_parm[3] + 5)
+            {
+              algo_parmlen = algo_parm[3];
+              memmove (algo_parm, algo_parm+4, algo_parmlen);
+            }
         }
+      /* Fixme: We may return the ICVlen for example using
+       * ksba_cms_get_message_digest with a new IDX value.  That would
+       * allow the caller to cross-check the MAClen.  Whether this is
+       * really required is debatable.  */
     }
-
   cms->inner_cont_len = encr_cont_len;
   cms->inner_cont_ndef = encr_cont_ndef;
   cms->inner_cont_oid = cont_oid;

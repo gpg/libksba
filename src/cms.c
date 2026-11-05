@@ -54,6 +54,7 @@
 #include "sexp-parse.h"
 #include "cert.h"
 #include "der-builder.h"
+#include "der-parser.h"
 #include "stringbuf.h"
 
 static gpg_error_t ct_parse_data (ksba_cms_t cms);
@@ -784,7 +785,7 @@ ksba_cms_get_content_oid (ksba_cms_t cms, int what)
 
 
 /* Copy the initialization vector into iv and its len into ivlen.
-   The caller should proncrvide a suitable large buffer */
+   The caller should provide a suitable large buffer */
 gpg_error_t
 ksba_cms_get_content_enc_iv (ksba_cms_t cms, void *iv,
                              size_t maxivlen, size_t *ivlen)
@@ -830,34 +831,46 @@ ksba_cms_get_digest_algo_list (ksba_cms_t cms, int idx)
 
 
 /**
- * ksba_cms_get_issuer_serial:
+ * ksba_cms_get_recp_ident:
  * @cms: CMS object
  * @idx: index number
  * @r_issuer: returns the issuer
  * @r_serial: returns the serial number
+ * @r_ski: returns the subjectKeyIdentifier
  *
- * This functions returns the issuer and serial number either from the
- * sid or the rid elements of a CMS object.
+ * This functions returns the RecipientIdentifier or SignerIdentifier
+ * either from the sid or the rid elements of a CMS object.  If NULL
+ * is passed for R_SKI the function will return an error in case the
+ * SKI is used.  To distinguished between issuer+s/n and ski the
+ * caller should check whether an issuer is returned and in this case
+ * NULL is stored at SKI; in the other case NULL is stored at R_ISSUER
+ * and R_SERIAL and the SKI is stored at R_SKI.
  *
  * Return value: 0 on success or an error code.  An error code of -1
  * is returned to indicate that there is no issuer with that idx,
- * GPG_ERR_NO_DATA is returned to indicate that there is no issuer at
- * all.
+ * GPG_ERR_NO_DATA is returned to indicate that there is no issuer or
+ * SKI at all.
  **/
 gpg_error_t
-ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
-                            char **r_issuer, ksba_sexp_t *r_serial)
+ksba_cms_get_recp_ident (ksba_cms_t cms, int idx,
+                         char **r_issuer, ksba_sexp_t *r_serial,
+                         ksba_sexp_t *r_ski)
 {
-  gpg_error_t err;
-  const char *issuer_path, *serial_path;
-  AsnNode root;
+  gpg_error_t err = 0;
+  const char *issuer_path = NULL;
+  const char *serial_path = NULL;
+  AsnNode root, n;
   const unsigned char *image;
-  AsnNode n;
+  char *oritype = NULL;
+  ksba_parser_t tlv = NULL;
 
   if (!cms)
     return gpg_error (GPG_ERR_INV_VALUE);
   if (idx < 0)
     return gpg_error (GPG_ERR_INV_INDEX);
+
+  if (r_ski)
+    *r_ski = NULL;
 
   if (cms->signer_info)
     {
@@ -910,6 +923,60 @@ ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
           serial_path = ("kari..recipientEncryptedKeys"
                          "..rid.issuerAndSerialNumber.serialNumber");
         }
+      else if (!strcmp (n->name, "ori")) /* OtherRecipientInfo */
+        {
+          int aint;
+          const unsigned char *ski;
+          size_t skilen;
+
+          if (n->down && n->down->down
+              && (oritype = _ksba_oid_node_to_str (image, n->down->down))
+              && !strcmp (oritype, "1.2.840.113549.1.9.16.13.3"))
+            {
+              n = n->down->down->right;
+              /* fputs ("kemri:\n", stderr); */
+              /* _ksba_asn_node_dump_all (n, stderr); */
+              tlv = ksba_parser_new (image + n->off + n->nhdr, n->len, 0, NULL);
+              if (!tlv)
+                {
+                  err = gpg_error_from_syserror ();
+                  gpgrt_log_debug ("ksba:%s: error creating DER parser: %s\n",
+                                   __func__, gpg_strerror (err));
+                  goto leave;
+                }
+              if ((err = ksba_parser_next(tlv)))
+                goto leave;
+              if ((err = ksba_expect_integer (tlv, &aint)))
+                goto leave;
+              if (aint != 0)
+                {
+                  err = gpg_error (GPG_ERR_INV_VALUE);
+                  gpgrt_log_debug ("ksba:%s: CMS version is not 0 but %d\n",
+                                   __func__, aint);
+                  goto leave;
+                }
+              if ((err = ksba_parser_next(tlv)))
+                goto leave;
+              if ((err = ksba_expect_object (tlv, CLASS_CONTEXT, 0,
+                                             &ski, &skilen)))
+                goto leave;
+              if (!skilen)
+                {
+                  err = gpg_error (GPG_ERR_TOO_SHORT);
+                  goto leave;
+                }
+
+              if (r_ski)
+                {
+                  *r_ski = sexp_from_buffer (ski, skilen);
+                  if (!*r_ski)
+                    err = gpg_error_from_syserror ();
+                  goto leave;
+                }
+            }
+
+          err = gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
+        }
       else if (!strcmp (n->name, "kekri"))
         return gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
       else if (!strcmp (n->name, "pwri"))
@@ -939,8 +1006,6 @@ ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
 
   if (r_serial)
     {
-      char numbuf[22];
-      int numbuflen;
       unsigned char *p;
 
       /* fixme: we do not release the r_issuer stuff on error */
@@ -957,21 +1022,27 @@ ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
 
       if (n->len > MAX_SERIALNO_LENGTH)
         return gpg_error (GPG_ERR_INV_CERT_OBJ);
-      sprintf (numbuf,"(%u:", (unsigned int)n->len);
-      numbuflen = strlen (numbuf);
-      p = xtrymalloc (numbuflen + n->len + 2);
+      p = sexp_from_buffer (image + n->off + n->nhdr, n->len);
       if (!p)
-        return gpg_error (GPG_ERR_ENOMEM);
-      strcpy (p, numbuf);
-      memcpy (p+numbuflen, image + n->off + n->nhdr, n->len);
-      p[numbuflen + n->len] = ')';
-      p[numbuflen + n->len + 1] = 0;
+        return gpg_error_from_syserror ();
       *r_serial = p;
     }
 
-  return 0;
+ leave:
+  ksba_parser_release (tlv);
+  xfree (oritype);
+  return err;
 }
 
+
+/* Legacy version of ksba_cms_get_recp_ident which is not able to
+ * return the subjectKeyIdentifier variant of the RecipientIdentifier. */
+gpg_error_t
+ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
+                            char **r_issuer, ksba_sexp_t *r_serial)
+{
+  return ksba_cms_get_recp_ident (cms, idx, r_issuer, r_serial, NULL);
+}
 
 
 /**
@@ -1555,6 +1626,11 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
   struct tag_info ti;
   const unsigned char *der;
   size_t derlen;
+  ksba_parser_t tlv = NULL;
+  char *oid = NULL;
+  int sb_inuse = 0;  /* Ugly - we should only have one return statement. */
+  struct stringbuf sb;
+
 
   if (!cms)
     return NULL;
@@ -1573,6 +1649,7 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
   if (!root || !root->name)
     return NULL;
 
+  /* gpgrt_log_debug ("%s: idx=%d name=%s\n", __func__, idx, root->name); */
   if (!strcmp (root->name, "ktri"))
     {
       n = _ksba_asn_find_node (root, "ktri.keyEncryptionAlgorithm");
@@ -1721,9 +1798,8 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
        *      (encr-key <key>)))  -- this is the encrypted session key
        */
       {
-        struct stringbuf sb;
-
         init_stringbuf (&sb, 200);
+        sb_inuse = 1;
         put_stringbuf (&sb, "(7:enc-val(4:pwri");
         if (keyderivealgo && parm3)
           {
@@ -1744,8 +1820,214 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
         string = get_stringbuf (&sb);
         if (!string)
           err = gpg_error_from_syserror ();
+        sb_inuse = 0;
       }
 
+    }
+  else if (!strcmp (root->name, "ori")) /* OtherRecipientInfo */
+    {
+      int aint;
+      const unsigned char *buf;
+      size_t buflen;
+
+      xfree (oid); oid = NULL;
+      if (root->down && root->down->down
+          && (oid = _ksba_oid_node_to_str (vt->image, root->down->down))
+          && !strcmp (oid, "1.2.840.113549.1.9.16.13.3"))
+        {
+          n = root->down->down->right;
+          /* fputs ("kemri:\n", stderr); */
+          /* _ksba_asn_node_dump_all (n, stderr); */
+
+          tlv = ksba_parser_new (vt->image + n->off + n->nhdr, n->len, 0, NULL);
+          if (!tlv)
+            {
+              err = gpg_error_from_syserror ();
+              gpgrt_log_debug ("ksba:%s: error creating DER parser: %s\n",
+                               __func__, gpg_strerror (err));
+              goto leave;
+            }
+          if ((err = ksba_parser_next (tlv)))
+            goto leave;
+          if ((err = ksba_expect_integer (tlv, &aint)))
+            goto leave;
+          if (aint != 0)
+            {
+              err = gpg_error (GPG_ERR_INV_VALUE);
+              gpgrt_log_debug ("ksba:%s: CMS version is not 0 but %d\n",
+                               __func__, aint);
+              goto leave;
+            }
+          if ((err = ksba_parser_next (tlv)))
+            goto leave;
+          if ((err = ksba_expect_object (tlv, CLASS_CONTEXT, 0,
+                                         &buf, &buflen)))
+            goto leave;
+          if (!buflen)
+            {
+              err = gpg_error (GPG_ERR_TOO_SHORT);
+              goto leave;
+            }
+          /* FIXME: We do not need the SKI here but it is part of the
+           * sequence we parse.  It would be good to chace this so
+           * that we don't have to parse it again in
+           * ksba_cms_get_recp_ident or vice versa.  */
+
+          /* Parse and build the s-expression.  Example result:
+           *  (enc-val
+           *    (kem
+           *      (pqc kyber768)     -- The PQC algo
+           *      (curve <xyz>)      -- The curve for a composite algo
+           *      (ct <ciphertext>)  -- ciphertext
+           *      (kdf <kdfname>)    -- e.g. hkdf-sha256
+           *      (kek-len 32)       -- length of the key encryption key
+           *      (wrap-algo <algo>) -- e.g. aes256-wrap
+           *      (encr-key <key>))) -- this is the encrypted session key
+           */
+
+          init_stringbuf (&sb, 2048);
+          put_stringbuf (&sb, "(7:enc-val(3:kem");
+
+          if ((err = ksba_parser_next (tlv)))
+            goto leave;
+          if ((err = ksba_expect_sequence (tlv)))
+            goto leave;
+          if ((err = ksba_parser_next (tlv)))
+            goto leave;
+          if ((err = ksba_expect_object_id (tlv, &buf, &buflen)))
+            goto leave;
+          xfree (oid);
+          if (!(oid = ksba_oid_to_str (buf, buflen)))
+            {
+              err = gpg_error_from_syserror ();
+              goto leave;
+            }
+          if (!strcmp (oid, "1.3.6.1.5.5.7.6.58"))
+            {
+              put_stringbuf (&sb, "(3:pqc8:kyber768)");
+              put_stringbuf (&sb, "(5:curve6:X25519)");
+            }
+          else if (!strcmp (oid, "1.3.6.1.5.5.7.6.59"))
+            {
+              put_stringbuf (&sb, "(3:pqc8:kyber768)");
+              put_stringbuf (&sb, "(5:curve8:nistp256)");
+            }
+          else if (!strcmp (oid, "1.3.6.1.5.5.7.6.60"))
+            {
+              put_stringbuf (&sb, "(3:pqc8:kyber768)");
+              put_stringbuf (&sb, "(5:curve8:nistp384)");
+            }
+          else if (!strcmp (oid, "1.3.6.1.5.5.7.6.61"))
+            {
+              put_stringbuf (&sb, "(3:pqc8:kyber768)");
+              put_stringbuf (&sb, "(5:curve5:bp256)");
+            }
+          else if (!strcmp (oid, "1.3.6.1.5.5.7.6.63"))
+            {
+              put_stringbuf (&sb, "(3:pqc9:kyber1024)");
+              put_stringbuf (&sb, "(5:curve8:nistp384)");
+            }
+          else if (!strcmp (oid, "1.3.6.1.5.5.7.6.64"))
+            {
+              put_stringbuf (&sb, "(3:pqc9:kyber1024)");
+              put_stringbuf (&sb, "(5:curve5:bp384)");
+            }
+          else if (!strcmp (oid, "1.3.6.1.5.5.7.6.65"))
+            {
+              put_stringbuf (&sb, "(3:pqc9:kyber1024)");
+              put_stringbuf (&sb, "(5:curve4:X448)");
+            }
+          else if (!strcmp (oid, "1.3.6.1.5.5.7.6.66"))
+            {
+              put_stringbuf (&sb, "(3:pqc9:kyber1024)");
+              put_stringbuf (&sb, "(5:curve8:nistp521)");
+            }
+          else
+            {
+              err = gpg_error (GPG_ERR_PUBKEY_ALGO);
+              gpgrt_log_debug ("ksba:%s: KEM algo %s not yet supported\n",
+                               __func__, oid);
+              goto leave;
+            }
+
+          /* Get the ciphertext */
+          if ((err = ksba_parser_next (tlv)))
+            goto leave;
+          if ((err = ksba_expect_octet_string (tlv, &buf, &buflen)))
+            goto leave;
+          put_stringbuf (&sb, "(2:ct");
+          put_stringbuf_mem_sexp (&sb, buf, buflen);
+          put_stringbuf (&sb, ")");
+          /* Get the KDF info */
+          if ((err = ksba_parser_next (tlv)))
+            goto leave;
+          if ((err = ksba_expect_sequence (tlv)))
+            goto leave;
+          if ((err = ksba_parser_next (tlv)))
+            goto leave;
+          if ((err = ksba_expect_object_id (tlv, &buf, &buflen)))
+            goto leave;
+          xfree (oid);
+          if (!(oid = ksba_oid_to_str (buf, buflen)))
+            {
+              err = gpg_error_from_syserror ();
+              goto leave;
+            }
+          put_stringbuf (&sb, "(3:kdf");
+          put_stringbuf_sexp (&sb, _ksba_map_kdf_algo (oid));
+          put_stringbuf (&sb, ")");
+
+          /* Get the keyLength */
+          if ((err = ksba_parser_next (tlv)))
+            goto leave;
+          if ((err = ksba_expect_integer (tlv, &aint)))
+            goto leave;
+          if (aint < 16)
+            {
+              err = gpg_error (GPG_ERR_INV_LENGTH);
+              gpgrt_log_debug ("ksba:%s: KEK length too short (%d)\n",
+                               __func__, aint);
+              goto leave;
+            }
+          put_stringbuf (&sb, "(7:kek-len");
+          put_stringbuf_uint (&sb, (unsigned int)aint);
+          put_stringbuf (&sb, ")");
+          /* Get the KeyEncryptionAlgorithmIdentifier */
+          if ((err = ksba_parser_next (tlv)))
+            goto leave;
+          if ((err = ksba_expect_sequence (tlv)))
+            goto leave;
+          if ((err = ksba_parser_next (tlv)))
+            goto leave;
+          if ((err = ksba_expect_object_id (tlv, &buf, &buflen)))
+            goto leave;
+          xfree (oid);
+          if (!(oid = ksba_oid_to_str (buf, buflen)))
+            {
+              err = gpg_error_from_syserror ();
+              goto leave;
+            }
+          put_stringbuf (&sb, "(9:wrap-algo");
+          put_stringbuf_sexp (&sb, _ksba_map_wrap_algo (oid));
+          put_stringbuf (&sb, ")");
+
+          /* Get the EncryptedKey */
+          if ((err = ksba_parser_next (tlv)))
+            goto leave;
+          if ((err = ksba_expect_octet_string (tlv, &buf, &buflen)))
+            goto leave;
+          put_stringbuf (&sb, "(8:encr-key");
+          put_stringbuf_mem_sexp (&sb, buf, buflen);
+          put_stringbuf (&sb, ")");
+
+          put_stringbuf (&sb, "))");
+          string = get_stringbuf (&sb);
+          if (!string)
+            err = gpg_error_from_syserror ();
+          sb_inuse = 0;
+        }
+      else
+        err = gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
     }
   else
     return NULL; /*GPG_ERR_INV_CMS_OBJ*/
@@ -1757,6 +2039,10 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
   xfree (parm);
   xfree (parm2);
   xfree (parm3);
+  xfree (oid);
+  if (sb_inuse)
+    deinit_stringbuf (&sb);
+  ksba_parser_release (tlv);
   if (err)
     {
       /* gpgrt_log_debug ("%s: error: %s\n", __func__, gpg_strerror (err)); */

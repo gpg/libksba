@@ -388,6 +388,14 @@ ksba_cms_get_digest_algo_list (ksba_cms_t cms, int idx)
 
 
 gpg_error_t
+ksba_cms_get_recp_ident (ksba_cms_t cms, int idx,
+                         char **r_issuer, ksba_sexp_t *r_serial,
+                         ksba_sexp_t *r_ski)
+{
+  return _ksba_cms_get_recp_ident (cms, idx, r_issuer, r_serial, r_ski);
+}
+
+gpg_error_t
 ksba_cms_get_issuer_serial (ksba_cms_t cms, int idx,
                             char **r_issuer,
                             ksba_sexp_t *r_serial)

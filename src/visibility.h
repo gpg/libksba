@@ -99,6 +99,7 @@
 #define ksba_cms_get_digest_algo           _ksba_cms_get_digest_algo
 #define ksba_cms_get_digest_algo_list      _ksba_cms_get_digest_algo_list
 #define ksba_cms_get_enc_val               _ksba_cms_get_enc_val
+#define ksba_cms_get_recp_ident            _ksba_cms_get_recp_ident
 #define ksba_cms_get_issuer_serial         _ksba_cms_get_issuer_serial
 #define ksba_cms_get_message_digest        _ksba_cms_get_message_digest
 #define ksba_cms_get_sig_val               _ksba_cms_get_sig_val
@@ -328,6 +329,7 @@ int ksba_asn_delete_structure (void *dummy);
 #undef ksba_cms_get_digest_algo
 #undef ksba_cms_get_digest_algo_list
 #undef ksba_cms_get_enc_val
+#undef ksba_cms_get_recp_ident
 #undef ksba_cms_get_issuer_serial
 #undef ksba_cms_get_message_digest
 #undef ksba_cms_get_sig_val
@@ -522,6 +524,7 @@ MARK_VISIBLE (ksba_cms_get_content_type)
 MARK_VISIBLE (ksba_cms_get_digest_algo)
 MARK_VISIBLE (ksba_cms_get_digest_algo_list)
 MARK_VISIBLE (ksba_cms_get_enc_val)
+MARK_VISIBLE (ksba_cms_get_recp_ident)
 MARK_VISIBLE (ksba_cms_get_issuer_serial)
 MARK_VISIBLE (ksba_cms_get_message_digest)
 MARK_VISIBLE (ksba_cms_get_sig_val)
