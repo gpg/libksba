@@ -4,6 +4,7 @@ Noteworthy changes in version 1.9.0 (unreleased) [C__/A__/R_]
  * Interface changes relative to the 1.8.0 release:
    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ksba_cms_get_recp_ident         NEW.
+   ksba_cms_verbosity              NEW.
    ksba_parser_info_t              NEW enum.
    ksba_parser_t                   NEW type.
    ksba_tlv_t                      NEW type.
@@ -26,6 +27,11 @@ Noteworthy changes in version 1.9.0 (unreleased) [C__/A__/R_]
    _ksba_parser_new                NEW (internal).
    _ksba_parser_release            NEW (internal).
    _ksba_parser_next               NEW (internal).
+   KSBA_LOG_NONE                   NEW const.
+   KSBA_LOG_NOVALUE                NEW const.
+   KSBA_LOG_VERBOSE                NEW const.
+   KSBA_LOG_DEBUG                  NEW const.
+   KSBA_LOG_DERPARSER              NEW const
 
 
 Noteworthy changes in version 1.8.1 (2026-08-24) [C24/A16/R1]

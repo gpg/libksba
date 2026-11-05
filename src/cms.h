@@ -118,6 +118,7 @@ struct ksba_cms_s {
 
   ksba_reader_t reader;
   ksba_writer_t writer;
+  unsigned int verbosity;
 
   void (*hash_fnc)(void *, const void *, size_t);
   void *hash_fnc_arg;

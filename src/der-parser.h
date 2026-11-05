@@ -24,7 +24,8 @@
 /* The next 3 functions are only used via macros.  */
 ksba_parser_t _ksba_parser_new_ (const unsigned char *buffer,
                                  size_t bufsize,
-                                 int verbosity, ksba_parser_t lastparser,
+                                 unsigned int verbosity,
+                                 ksba_parser_t lastparser,
                                  int lno);
 ksba_parser_t _ksba_parser_release_ (ksba_parser_t tlv, int lno);
 gpg_error_t _ksba_parser_next_ (ksba_parser_t tlv, int lno);

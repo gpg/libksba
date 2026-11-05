@@ -117,6 +117,13 @@ extern "C" {
 #define KSBA_TYPE_RELATIVE_OID_IRI 36
 
 
+/* Values for certain log functions.  */
+#define KSBA_LOG_NONE      0
+#define KSBA_LOG_VERBOSE   0x0001  /* Verbosity level 1              */
+#define KSBA_LOG_DEBUG     0x0011  /* Standard debug with verbose.   */
+#define KSBA_LOG_DERPARSER 0x0020  /* Debug the internal DER parser. */
+#define KSBA_LOG_NOVALUE ((unsigned int)(-1))
+
 
 typedef gpg_error_t KsbaError _KSBA_DEPRECATED;
 
@@ -382,6 +389,8 @@ ksba_content_type_t ksba_cms_identify (ksba_reader_t reader);
 
 gpg_error_t ksba_cms_new (ksba_cms_t *r_cms);
 void        ksba_cms_release (ksba_cms_t cms);
+unsigned int ksba_cms_verbosity (ksba_cms_t cms, unsigned int verbosity);
+
 gpg_error_t ksba_cms_set_reader_writer (ksba_cms_t cms,
                                         ksba_reader_t r, ksba_writer_t w);
 
@@ -667,7 +676,8 @@ gpg_error_t ksba_der_builder_get (ksba_der_t d,
 /*-- der-parser.c --*/
 /* Do not use the next 3 functions but the corresponding macros below.  */
 ksba_parser_t _ksba_parser_new (const unsigned char *buffer, size_t bufsize,
-                                int verbosity, ksba_parser_t lastparser,
+                                unsigned int verbosity,
+                                ksba_parser_t lastparser,
                                 int lno);
 ksba_parser_t _ksba_parser_release (ksba_parser_t tlv, int lno);
 gpg_error_t _ksba_parser_next (ksba_parser_t tlv, int lno);

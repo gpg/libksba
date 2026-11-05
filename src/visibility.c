@@ -327,6 +327,12 @@ ksba_cms_new (ksba_cms_t *r_cms)
   return _ksba_cms_new (r_cms);
 }
 
+gpg_error_t
+ksba_cms_verbosity (ksba_cms_t cms, unsigned int verbosity)
+{
+  return _ksba_cms_verbosity (cms, verbosity);
+}
+
 
 void
 ksba_cms_release (ksba_cms_t cms)
@@ -1347,7 +1353,7 @@ ksba_der_builder_get (ksba_der_t d, unsigned char **r_obj, size_t *r_objlen)
 
 ksba_parser_t
 _ksba_parser_new (const unsigned char *buffer, size_t bufsize,
-                  int verbosity, ksba_parser_t lastparser,
+                  unsigned int verbosity, ksba_parser_t lastparser,
                   int lno)
 {        /* note this ---v */
   return _ksba_parser_new_ (buffer, bufsize, verbosity, lastparser, lno);

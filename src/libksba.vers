@@ -78,6 +78,7 @@ KSBA_0.9 {
     ksba_cms_add_smime_capability;
     ksba_cms_add_attribute;
     ksba_cms_get_attribute;
+    ksba_cms_verbosity;
 
     ksba_crl_get_digest_algo; ksba_crl_get_issuer; ksba_crl_get_item;
     ksba_crl_get_sig_val; ksba_crl_get_update_times; ksba_crl_new;

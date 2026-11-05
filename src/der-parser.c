@@ -207,7 +207,7 @@ ksba_parse_tag (unsigned char const **buffer, size_t *size,
  * macro.  (note the underscore suffix) */
 ksba_parser_t
 _ksba_parser_new_ (const unsigned char *buffer, size_t bufsize,
-                   int verbosity, ksba_parser_t lastparser, int lno)
+                   unsigned int verbosity, ksba_parser_t lastparser, int lno)
 {
   ksba_parser_t tlv;
 

@@ -108,6 +108,7 @@
 #define ksba_cms_hash_signed_attrs         _ksba_cms_hash_signed_attrs
 #define ksba_cms_identify                  _ksba_cms_identify
 #define ksba_cms_new                       _ksba_cms_new
+#define ksba_cms_verbosity                 _ksba_cms_verbosity
 #define ksba_cms_parse                     _ksba_cms_parse
 #define ksba_cms_release                   _ksba_cms_release
 #define ksba_cms_set_content_enc_algo      _ksba_cms_set_content_enc_algo
@@ -338,6 +339,7 @@ int ksba_asn_delete_structure (void *dummy);
 #undef ksba_cms_hash_signed_attrs
 #undef ksba_cms_identify
 #undef ksba_cms_new
+#undef ksba_cms_verbosity
 #undef ksba_cms_parse
 #undef ksba_cms_release
 #undef ksba_cms_set_content_enc_algo
@@ -533,6 +535,7 @@ MARK_VISIBLE (ksba_cms_get_signing_time)
 MARK_VISIBLE (ksba_cms_hash_signed_attrs)
 MARK_VISIBLE (ksba_cms_identify)
 MARK_VISIBLE (ksba_cms_new)
+MARK_VISIBLE (ksba_cms_verbosity)
 MARK_VISIBLE (ksba_cms_parse)
 MARK_VISIBLE (ksba_cms_release)
 MARK_VISIBLE (ksba_cms_set_content_enc_algo)

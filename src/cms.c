@@ -553,6 +553,25 @@ ksba_cms_new (ksba_cms_t *r_cms)
   return 0;
 }
 
+/* Enable verbose logging for the CMS context.  Values for VERBOSITY
+ * are the KSBA_LOG constants.  The fucntion returns the previous
+ * verbosity level; a value of KSBA_LOG_NOVALUE may be used to not
+ * change verbosity but return the current value.  A value of
+ * KSBA_LOG_NONE clears all bits in the verbosity vector, all other
+ * values (except KSBA_LOG_NOVALUE) are ORed into the vector.  */
+unsigned int
+ksba_cms_verbosity (ksba_cms_t cms, unsigned int verbosity)
+{
+  unsigned int result = cms? cms->verbosity : KSBA_LOG_NOVALUE;
+  if (cms && verbosity != KSBA_LOG_NOVALUE)
+    if (verbosity == KSBA_LOG_NONE)
+      cms->verbosity = 0;
+    else
+      cms->verbosity |= verbosity;
+  return result;
+}
+
+
 /* Release a list of value trees. */
 static void
 release_value_tree (struct value_tree_s *tree)
@@ -936,12 +955,15 @@ ksba_cms_get_recp_ident (ksba_cms_t cms, int idx,
               n = n->down->down->right;
               /* fputs ("kemri:\n", stderr); */
               /* _ksba_asn_node_dump_all (n, stderr); */
-              tlv = ksba_parser_new (image + n->off + n->nhdr, n->len, 0, NULL);
+              tlv = ksba_parser_new (image + n->off + n->nhdr, n->len,
+                                     (cms->verbosity & KSBA_LOG_DERPARSER)? 2:0,
+                                     NULL);
               if (!tlv)
                 {
                   err = gpg_error_from_syserror ();
-                  gpgrt_log_debug ("ksba:%s: error creating DER parser: %s\n",
-                                   __func__, gpg_strerror (err));
+                  if ((cms->verbosity & KSBA_LOG_DEBUG))
+                    gpgrt_log_debug ("ksba:%s: error creating DER parser: %s\n",
+                                     __func__, gpg_strerror (err));
                   goto leave;
                 }
               if ((err = ksba_parser_next(tlv)))
@@ -951,7 +973,8 @@ ksba_cms_get_recp_ident (ksba_cms_t cms, int idx,
               if (aint != 0)
                 {
                   err = gpg_error (GPG_ERR_INV_VALUE);
-                  gpgrt_log_debug ("ksba:%s: CMS version is not 0 but %d\n",
+                  if ((cms->verbosity & KSBA_LOG_VERBOSE))
+                    gpgrt_log_info ("ksba:%s: CMS version is not 0 but %d\n",
                                    __func__, aint);
                   goto leave;
                 }
@@ -1839,12 +1862,15 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
           /* fputs ("kemri:\n", stderr); */
           /* _ksba_asn_node_dump_all (n, stderr); */
 
-          tlv = ksba_parser_new (vt->image + n->off + n->nhdr, n->len, 0, NULL);
+          tlv = ksba_parser_new (vt->image + n->off + n->nhdr, n->len,
+                                 (cms->verbosity & KSBA_LOG_DERPARSER)? 2:0,
+                                 NULL);
           if (!tlv)
             {
               err = gpg_error_from_syserror ();
-              gpgrt_log_debug ("ksba:%s: error creating DER parser: %s\n",
-                               __func__, gpg_strerror (err));
+              if ((cms->verbosity & KSBA_LOG_DEBUG))
+                gpgrt_log_debug ("ksba:%s: error creating DER parser: %s\n",
+                                 __func__, gpg_strerror (err));
               goto leave;
             }
           if ((err = ksba_parser_next (tlv)))
@@ -1854,7 +1880,8 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
           if (aint != 0)
             {
               err = gpg_error (GPG_ERR_INV_VALUE);
-              gpgrt_log_debug ("ksba:%s: CMS version is not 0 but %d\n",
+              if ((cms->verbosity & KSBA_LOG_VERBOSE))
+                gpgrt_log_info ("ksba:%s: CMS version is not 0 but %d\n",
                                __func__, aint);
               goto leave;
             }
@@ -1945,8 +1972,9 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
           else
             {
               err = gpg_error (GPG_ERR_PUBKEY_ALGO);
-              gpgrt_log_debug ("ksba:%s: KEM algo %s not yet supported\n",
-                               __func__, oid);
+              if ((cms->verbosity & KSBA_LOG_VERBOSE))
+                gpgrt_log_info ("ksba:%s: KEM algo %s not yet supported\n",
+                                 __func__, oid);
               goto leave;
             }
 
@@ -1985,8 +2013,9 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
           if (aint < 16)
             {
               err = gpg_error (GPG_ERR_INV_LENGTH);
-              gpgrt_log_debug ("ksba:%s: KEK length too short (%d)\n",
-                               __func__, aint);
+              if ((cms->verbosity & KSBA_LOG_VERBOSE))
+                gpgrt_log_info ("ksba:%s: KEK length too short (%d)\n",
+                                __func__, aint);
               goto leave;
             }
           put_stringbuf (&sb, "(7:kek-len");
@@ -3916,7 +3945,8 @@ build_signed_data_rest (ksba_cms_t cms)
         }
       else if (!strncmp (sv->algo, "dilithium", 9) && sv->algo[9] )
         {
-          gpgrt_log_debug ("ksba: ML_DSA digestoid=='%s'\n", digestlist->oid);
+          if ((cms->verbosity & KSBA_LOG_DEBUG))
+            gpgrt_log_debug ("ksba: ML_DSA digestoid=='%s'\n", digestlist->oid);
           if (sv->algo[9] == '3')
             oid = "2.16.840.1.101.3.4.3.18";
           else if (sv->algo[9] == '5')
@@ -4042,7 +4072,8 @@ build_signed_data_rest (ksba_cms_t cms)
                   goto leave;
                 }
               n = n->down;
-              gpgrt_log_printhex (opl->parm, opl->parmlen,
+              if ((cms->verbosity & KSBA_LOG_DEBUG))
+                gpgrt_log_printhex (opl->parm, opl->parmlen,
                                   "signer %d, oid=%s der=", signer, opl->oid);
               err = _ksba_der_store_set_of (n, opl->parm, opl->parmlen);
               if (err)
