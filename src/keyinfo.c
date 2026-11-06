@@ -1025,19 +1025,19 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
           put_stringbuf (&sb, "(");
           put_stringbuf_sexp (&sb, "public-key");
           put_stringbuf (&sb, "(");
-          put_stringbuf_sexp (&sb, "kyber768");
+          put_stringbuf_sexp (&sb, mlkem_len == 1184? "kyber768":"kyber1024");
           put_stringbuf (&sb, "(");
           put_stringbuf_sexp (&sb, "p");
           put_stringbuf_mem_sexp (&sb, der, mlkem_len);
           put_stringbuf (&sb, ")))");
           der += mlkem_len;
-          derlen = mlkem_len;
+          derlen -= mlkem_len;
 
           /* Do a simple check on the minimal length for a curve
            * (nistp256) and that we have an odd number of octets which
            * start with 0x04.  This will need adjustments for X25519
            * and X448.  */
-          if (derlen < 1+32+32 || (derlen & 1) || *der != 0x04)
+          if (derlen < 1+32+32 || !(derlen & 1) || *der != 0x04)
             {
               gpgrt_log_info ("%s: error: ECC part is invalid (n=%zu)\n",
                               __func__, derlen);
