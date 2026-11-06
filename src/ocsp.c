@@ -1312,7 +1312,8 @@ parse_response_data (ksba_ocsp_t ocsp,
       err = parse_single_response (ocsp, data, datalen);
       if (err)
         return err;
-      assert (responses_length >= savedatalen - *datalen);
+      if (!(responses_length >= savedatalen - *datalen))
+        return gpg_error (GPG_ERR_BAD_BER);
       responses_length -= savedatalen - *datalen;
     }
 
