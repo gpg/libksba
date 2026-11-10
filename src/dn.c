@@ -433,27 +433,21 @@ append_ucs2_value (const unsigned char *value, size_t length,
 }
 
 
-/* Append attribute and value.  ROOT is the sequence */
+/* Assume DER,DERLEN is the OID and print it to the SB.  Also returns
+ * a flag to request hex encoding at R_USE_HEX.  */
 static gpg_error_t
-append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
+append_atv_oid (const unsigned char *der, size_t derlen, struct stringbuf *sb,
+                int *r_use_hex)
 {
-  AsnNode node = root->down;
-  const char *name;
-  int use_hex = 0;
+  const char *name = NULL;
   int i;
 
-  if (!node || node->type != TYPE_OBJECT_ID)
-    return gpg_error (GPG_ERR_UNEXPECTED_TAG);
-  if (node->off == -1)
-    return gpg_error (GPG_ERR_NO_VALUE); /* Hmmm, this might lead to misunderstandings */
-
-  name = NULL;
+  *r_use_hex = 0;
   for (i=0; oid_name_tbl[i].name; i++)
     {
       if (oid_name_tbl[i].source == 1
-          && node->len == oid_name_tbl[i].oidlen
-          && !memcmp (image+node->off+node->nhdr,
-                      oid_name_tbl[i].oid, node->len))
+          && derlen == oid_name_tbl[i].oidlen
+          && !memcmp (der, oid_name_tbl[i].oid, derlen))
         {
           name = oid_name_tbl[i].name;
           break;
@@ -467,9 +461,9 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
          again and use the string as last resort.  */
       char *p;
 
-      p = ksba_oid_to_str (image+node->off+node->nhdr, node->len);
+      p = ksba_oid_to_str (der, derlen);
       if (!p)
-        return gpg_error (GPG_ERR_ENOMEM);
+        return gpg_error_from_syserror ();
 
       for (i=0; *p && oid_name_tbl[i].name; i++)
         {
@@ -485,42 +479,50 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
       else
         {
           put_stringbuf (sb, p);
-          use_hex = 1;
+          *r_use_hex = 1;
         }
       xfree (p);
     }
   put_stringbuf (sb, "=");
-  node = node->right;
-  if (!node || node->off == -1)
-    return gpg_error (GPG_ERR_NO_VALUE);
+  return 0;
+}
 
-  switch (use_hex? 0 : node->type)
+
+/* Assume DER,DERLEN is the VALUE and print it to the SB.  TYPE gives
+ * the type; a 0 forces the use of hex encoding.  */
+static gpg_error_t
+append_atv_val (const unsigned char *der, size_t derlen, node_type_t type,
+                struct stringbuf *sb)
+{
+  int i;
+
+  switch (type)
     {
     case TYPE_UTF8_STRING:
-      append_utf8_value (image+node->off+node->nhdr, node->len, sb);
+      append_utf8_value (der, derlen, sb);
       break;
     case TYPE_PRINTABLE_STRING:
     case TYPE_IA5_STRING:
       /* we assume that wrong encodings are latin-1 */
     case TYPE_TELETEX_STRING: /* Not correct, but mostly used as latin-1 */
-      append_latin1_value (image+node->off+node->nhdr, node->len, sb);
+      append_latin1_value (der, derlen, sb);
       break;
 
     case TYPE_UNIVERSAL_STRING:
-      append_ucs4_value (image+node->off+node->nhdr, node->len, sb);
+      append_ucs4_value (der, derlen, sb);
       break;
 
     case TYPE_BMP_STRING:
-      append_ucs2_value (image+node->off+node->nhdr, node->len, sb);
+      append_ucs2_value (der, derlen, sb);
       break;
 
     case 0: /* forced usage of hex */
     default:
       put_stringbuf (sb, "#");
-      for (i=0; i < node->len; i++)
+      for (i=0; i < derlen; i++)
         {
           char tmp[3];
-          snprintf (tmp, sizeof tmp, "%02X", image[node->off+node->nhdr+i]);
+          snprintf (tmp, sizeof tmp, "%02X", der[i]);
           put_stringbuf (sb, tmp);
         }
       break;
@@ -528,6 +530,35 @@ append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
 
   return 0;
 }
+
+
+/* Append attribute and value.  ROOT is the sequence.  This is the
+ * legacy version which works on an AsnNode.  */
+static gpg_error_t
+append_atv (const unsigned char *image, AsnNode root, struct stringbuf *sb)
+{
+  gpg_error_t err;
+  AsnNode node = root->down;
+  int use_hex;
+
+  if (!node || node->type != TYPE_OBJECT_ID)
+    return gpg_error (GPG_ERR_UNEXPECTED_TAG);
+  if (node->off == -1)
+    return gpg_error (GPG_ERR_NO_VALUE); /* Hmmm, this might lead to
+                                          * misunderstandings */
+
+  err = append_atv_oid (image+node->off+node->nhdr, node->len, sb, &use_hex);
+  if (err)
+    return err;
+
+  node = node->right;
+  if (!node || node->off == -1)
+    return gpg_error (GPG_ERR_NO_VALUE);
+
+  return append_atv_val (image+node->off+node->nhdr, node->len,
+                         use_hex? 0 : node->type, sb);
+}
+
 
 static gpg_error_t
 dn_to_str (const unsigned char *image, AsnNode root, struct stringbuf *sb)
