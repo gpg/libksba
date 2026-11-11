@@ -50,14 +50,17 @@ struct value_tree_s {
 
 struct enc_val_s {
   char *algo;
-  unsigned char *value; /* RSA's "a" or ECDH's "s". (malloced) */
+  unsigned char *value; /* RSA's "a", ECDH's "s" or KEM's "ct".  (malloced) */
   size_t valuelen;
   struct {
-    unsigned char *e; /* Malloced buffer.      */
-    size_t elen;      /* Length of E.          */
-    char *encr_algo;  /* Malloced OID string.  */
-    char *wrap_algo;  /* Malloced OID string.  */
-  } ecdh;
+    unsigned char *e; /* Malloced buffer.     (ecdh or kem) */
+    size_t elen;      /* Length of E.         (ecdh or kem) */
+    char *encr_algo;  /* Malloced OID string. (ecdh) */
+    char *wrap_algo;  /* Malloced OID string. (ecdh or kem) */
+    char *kdf_algo;   /* Malloced OID string. (kem)  */
+    char *pqc_algo;   /* Malloced string.  (kem)  */
+    char *curve;      /* Malloced string.  (kem)  */
+  } ecdh;  /* Used plain and KEM based ecdh.  */
 };
 
 

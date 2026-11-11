@@ -180,6 +180,20 @@ log_sexp (const char *text, ksba_const_sexp_t p)
 #endif /* debug helper */
 
 
+static void *
+xtryallocstr (const void *buffer, size_t bufsize)
+{
+  unsigned char *result;
+
+  result = xtrymalloc (bufsize+1);
+  if (!result)
+    return NULL;
+  memcpy (result, buffer, bufsize);
+  result[bufsize] = 0;
+  return result;
+}
+
+
 /* Helper for read_and_hash_cont().  */
 static gpg_error_t
 read_hash_block (ksba_cms_t cms, unsigned long nleft)
@@ -564,10 +578,12 @@ ksba_cms_verbosity (ksba_cms_t cms, unsigned int verbosity)
 {
   unsigned int result = cms? cms->verbosity : KSBA_LOG_NOVALUE;
   if (cms && verbosity != KSBA_LOG_NOVALUE)
-    if (verbosity == KSBA_LOG_NONE)
-      cms->verbosity = 0;
-    else
-      cms->verbosity |= verbosity;
+    {
+      if (verbosity == KSBA_LOG_NONE)
+        cms->verbosity = 0;
+      else
+        cms->verbosity |= verbosity;
+    }
   return result;
 }
 
@@ -612,8 +628,11 @@ ksba_cms_release (ksba_cms_t cms)
       xfree (cms->cert_list->enc_val.algo);
       xfree (cms->cert_list->enc_val.value);
       xfree (cms->cert_list->enc_val.ecdh.e);
-      xfree (cms->cert_list->enc_val.ecdh.wrap_algo);
       xfree (cms->cert_list->enc_val.ecdh.encr_algo);
+      xfree (cms->cert_list->enc_val.ecdh.wrap_algo);
+      xfree (cms->cert_list->enc_val.ecdh.kdf_algo);
+      xfree (cms->cert_list->enc_val.ecdh.pqc_algo);
+      xfree (cms->cert_list->enc_val.ecdh.curve);
       xfree (cms->cert_list);
       cms->cert_list = cl;
     }
@@ -881,7 +900,8 @@ ksba_cms_get_recp_ident (ksba_cms_t cms, int idx,
   AsnNode root, n;
   const unsigned char *image;
   char *oritype = NULL;
-  ksba_parser_t tlv = NULL;
+  ksba_parser_t parser = NULL;
+  struct ksba_tlv_s tlv;
 
   if (!cms)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -945,20 +965,18 @@ ksba_cms_get_recp_ident (ksba_cms_t cms, int idx,
       else if (!strcmp (n->name, "ori")) /* OtherRecipientInfo */
         {
           int aint;
-          const unsigned char *ski;
-          size_t skilen;
+          const unsigned char *ski, *sn;
+          size_t skilen, snlen;
 
           if (n->down && n->down->down
               && (oritype = _ksba_oid_node_to_str (image, n->down->down))
               && !strcmp (oritype, "1.2.840.113549.1.9.16.13.3"))
             {
               n = n->down->down->right;
-              /* fputs ("kemri:\n", stderr); */
-              /* _ksba_asn_node_dump_all (n, stderr); */
-              tlv = ksba_parser_new (image + n->off + n->nhdr, n->len,
+              parser = ksba_parser_new (image + n->off + n->nhdr, n->len,
                                      (cms->verbosity & KSBA_LOG_DERPARSER)? 2:0,
                                      NULL);
-              if (!tlv)
+              if (!parser)
                 {
                   err = gpg_error_from_syserror ();
                   if ((cms->verbosity & KSBA_LOG_DEBUG))
@@ -966,9 +984,9 @@ ksba_cms_get_recp_ident (ksba_cms_t cms, int idx,
                                      __func__, gpg_strerror (err));
                   goto leave;
                 }
-              if ((err = ksba_parser_next(tlv)))
+              if ((err = ksba_parser_next(parser)))
                 goto leave;
-              if ((err = ksba_expect_integer (tlv, &aint)))
+              if ((err = ksba_expect_integer (parser, &aint)))
                 goto leave;
               if (aint != 0)
                 {
@@ -978,27 +996,70 @@ ksba_cms_get_recp_ident (ksba_cms_t cms, int idx,
                                    __func__, aint);
                   goto leave;
                 }
-              if ((err = ksba_parser_next(tlv)))
+              if ((err = ksba_parser_next(parser)))
                 goto leave;
-              if ((err = ksba_expect_object (tlv, CLASS_CONTEXT, 0,
-                                             &ski, &skilen)))
-                goto leave;
-              if (!skilen)
-                {
-                  err = gpg_error (GPG_ERR_TOO_SHORT);
-                  goto leave;
-                }
+              ksba_parser_get_tag (parser, &tlv);
+              if (tlv.cls == CLASS_CONTEXT && tlv.tag == 0 && r_ski)
+                { /* This is a subjectKeyIdentifier */
+                  err = ksba_expect_object (parser, CLASS_CONTEXT, 0,
+                                            &ski, &skilen);
+                  if (err || !skilen)
+                    {
+                      if (!err)
+                        err = gpg_error (GPG_ERR_TOO_SHORT);
+                      if ((cms->verbosity & KSBA_LOG_VERBOSE))
+                        gpgrt_log_info ("ksba:%s: error in"
+                                        " RecipientIdentifier\n", __func__);
+                      goto leave;
+                    }
 
-              if (r_ski)
-                {
-                  *r_ski = sexp_from_buffer (ski, skilen);
-                  if (!*r_ski)
-                    err = gpg_error_from_syserror ();
-                  goto leave;
+                  if (r_ski)
+                    {
+                      *r_ski = sexp_from_buffer (ski, skilen);
+                      if (!*r_ski)
+                        err = gpg_error_from_syserror ();
+                      goto leave;
+                    }
+                  /* Caller was not prepared to receive the SKI.  */
+                  err = gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
                 }
+              else if (tlv.cls == CLASS_UNIVERSAL && tlv.tag == TYPE_SEQUENCE
+                       && r_issuer)
+                { /* This is an issuerAndSerialNumber.  */
+                  err = _ksba_dn_from_der (parser, r_issuer);
+                  if (err)
+                    {
+                      if ((cms->verbosity & KSBA_LOG_VERBOSE))
+                        gpgrt_log_info ("ksba:%s: error parsing issuer\n",
+                                        __func__);
+                      goto leave;
+                    }
+                  if ((err = ksba_parser_next(parser)))
+                    goto leave;
+                  /* Note that we want the raw value of the Integer.  */
+                  err = ksba_expect_object (parser, CLASS_UNIVERSAL,
+                                            TYPE_INTEGER, &sn, &snlen);
+                  if (err || !sn || !snlen)
+                    {
+                      if (!err)
+                        err = gpg_error (GPG_ERR_BAD_BER);
+                      if ((cms->verbosity & KSBA_LOG_VERBOSE))
+                        gpgrt_log_info ("ksba:%s: error parsing serialno\n",
+                                        __func__);
+                      goto leave;
+                    }
+                  if (r_serial)
+                    {
+                      *r_serial = sexp_from_buffer (sn, snlen);
+                      if (!*r_serial)
+                        err = gpg_error_from_syserror ();
+                    }
+                }
+              else /* bad value or not prepared to receive it.  */
+                err = gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
             }
-
-          err = gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
+          else
+            err = gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
         }
       else if (!strcmp (n->name, "kekri"))
         return gpg_error (GPG_ERR_UNSUPPORTED_CMS_OBJ);
@@ -1009,7 +1070,7 @@ ksba_cms_get_recp_ident (ksba_cms_t cms, int idx,
       root = n;
     }
 
-  if (r_issuer)
+  if (r_issuer && issuer_path)
     {
       n = _ksba_asn_find_node (root, issuer_path);
       if (!n || !n->down)
@@ -1027,7 +1088,7 @@ ksba_cms_get_recp_ident (ksba_cms_t cms, int idx,
         return err;
     }
 
-  if (r_serial)
+  if (r_serial && serial_path)
     {
       unsigned char *p;
 
@@ -1052,7 +1113,7 @@ ksba_cms_get_recp_ident (ksba_cms_t cms, int idx,
     }
 
  leave:
-  ksba_parser_release (tlv);
+  ksba_parser_release (parser);
   xfree (oritype);
   return err;
 }
@@ -1649,7 +1710,7 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
   struct tag_info ti;
   const unsigned char *der;
   size_t derlen;
-  ksba_parser_t tlv = NULL;
+  ksba_parser_t parser = NULL;
   char *oid = NULL;
   int sb_inuse = 0;  /* Ugly - we should only have one return statement. */
   struct stringbuf sb;
@@ -1862,10 +1923,10 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
           /* fputs ("kemri:\n", stderr); */
           /* _ksba_asn_node_dump_all (n, stderr); */
 
-          tlv = ksba_parser_new (vt->image + n->off + n->nhdr, n->len,
-                                 (cms->verbosity & KSBA_LOG_DERPARSER)? 2:0,
-                                 NULL);
-          if (!tlv)
+          parser = ksba_parser_new (vt->image + n->off + n->nhdr, n->len,
+                                    (cms->verbosity & KSBA_LOG_DERPARSER)? 2:0,
+                                    NULL);
+          if (!parser)
             {
               err = gpg_error_from_syserror ();
               if ((cms->verbosity & KSBA_LOG_DEBUG))
@@ -1873,9 +1934,9 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
                                  __func__, gpg_strerror (err));
               goto leave;
             }
-          if ((err = ksba_parser_next (tlv)))
+          if ((err = ksba_parser_next (parser)))
             goto leave;
-          if ((err = ksba_expect_integer (tlv, &aint)))
+          if ((err = ksba_expect_integer (parser, &aint)))
             goto leave;
           if (aint != 0)
             {
@@ -1885,20 +1946,9 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
                                __func__, aint);
               goto leave;
             }
-          if ((err = ksba_parser_next (tlv)))
+          if ((err = ksba_parser_next (parser)))
             goto leave;
-          if ((err = ksba_expect_object (tlv, CLASS_CONTEXT, 0,
-                                         &buf, &buflen)))
-            goto leave;
-          if (!buflen)
-            {
-              err = gpg_error (GPG_ERR_TOO_SHORT);
-              goto leave;
-            }
-          /* FIXME: We do not need the SKI here but it is part of the
-           * sequence we parse.  It would be good to chace this so
-           * that we don't have to parse it again in
-           * ksba_cms_get_recp_ident or vice versa.  */
+          ksba_parser_skip (parser);  /* The RecipientIdentifier */
 
           /* Parse and build the s-expression.  Example result:
            *  (enc-val
@@ -1915,13 +1965,13 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
           init_stringbuf (&sb, 2048);
           put_stringbuf (&sb, "(7:enc-val(3:kem");
 
-          if ((err = ksba_parser_next (tlv)))
+          if ((err = ksba_parser_next (parser)))
             goto leave;
-          if ((err = ksba_expect_sequence (tlv)))
+          if ((err = ksba_expect_sequence (parser)))
             goto leave;
-          if ((err = ksba_parser_next (tlv)))
+          if ((err = ksba_parser_next (parser)))
             goto leave;
-          if ((err = ksba_expect_object_id (tlv, &buf, &buflen)))
+          if ((err = ksba_expect_object_id (parser, &buf, &buflen)))
             goto leave;
           xfree (oid);
           if (!(oid = ksba_oid_to_str (buf, buflen)))
@@ -1979,21 +2029,21 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
             }
 
           /* Get the ciphertext */
-          if ((err = ksba_parser_next (tlv)))
+          if ((err = ksba_parser_next (parser)))
             goto leave;
-          if ((err = ksba_expect_octet_string (tlv, &buf, &buflen)))
+          if ((err = ksba_expect_octet_string (parser, &buf, &buflen)))
             goto leave;
           put_stringbuf (&sb, "(2:ct");
           put_stringbuf_mem_sexp (&sb, buf, buflen);
           put_stringbuf (&sb, ")");
           /* Get the KDF info */
-          if ((err = ksba_parser_next (tlv)))
+          if ((err = ksba_parser_next (parser)))
             goto leave;
-          if ((err = ksba_expect_sequence (tlv)))
+          if ((err = ksba_expect_sequence (parser)))
             goto leave;
-          if ((err = ksba_parser_next (tlv)))
+          if ((err = ksba_parser_next (parser)))
             goto leave;
-          if ((err = ksba_expect_object_id (tlv, &buf, &buflen)))
+          if ((err = ksba_expect_object_id (parser, &buf, &buflen)))
             goto leave;
           xfree (oid);
           if (!(oid = ksba_oid_to_str (buf, buflen)))
@@ -2006,9 +2056,9 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
           put_stringbuf (&sb, ")");
 
           /* Get the keyLength */
-          if ((err = ksba_parser_next (tlv)))
+          if ((err = ksba_parser_next (parser)))
             goto leave;
-          if ((err = ksba_expect_integer (tlv, &aint)))
+          if ((err = ksba_expect_integer (parser, &aint)))
             goto leave;
           if (aint < 16)
             {
@@ -2022,13 +2072,13 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
           put_stringbuf_uint (&sb, (unsigned int)aint);
           put_stringbuf (&sb, ")");
           /* Get the KeyEncryptionAlgorithmIdentifier */
-          if ((err = ksba_parser_next (tlv)))
+          if ((err = ksba_parser_next (parser)))
             goto leave;
-          if ((err = ksba_expect_sequence (tlv)))
+          if ((err = ksba_expect_sequence (parser)))
             goto leave;
-          if ((err = ksba_parser_next (tlv)))
+          if ((err = ksba_parser_next (parser)))
             goto leave;
-          if ((err = ksba_expect_object_id (tlv, &buf, &buflen)))
+          if ((err = ksba_expect_object_id (parser, &buf, &buflen)))
             goto leave;
           xfree (oid);
           if (!(oid = ksba_oid_to_str (buf, buflen)))
@@ -2041,9 +2091,9 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
           put_stringbuf (&sb, ")");
 
           /* Get the EncryptedKey */
-          if ((err = ksba_parser_next (tlv)))
+          if ((err = ksba_parser_next (parser)))
             goto leave;
-          if ((err = ksba_expect_octet_string (tlv, &buf, &buflen)))
+          if ((err = ksba_expect_octet_string (parser, &buf, &buflen)))
             goto leave;
           put_stringbuf (&sb, "(8:encr-key");
           put_stringbuf_mem_sexp (&sb, buf, buflen);
@@ -2071,7 +2121,7 @@ ksba_cms_get_enc_val (ksba_cms_t cms, int idx)
   xfree (oid);
   if (sb_inuse)
     deinit_stringbuf (&sb);
-  ksba_parser_release (tlv);
+  ksba_parser_release (parser);
   if (err)
     {
       /* gpgrt_log_debug ("%s: error: %s\n", __func__, gpg_strerror (err)); */
@@ -2760,6 +2810,7 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
   const char *s, *endp, *name;
   unsigned long n, namelen;
   int ecdh = 0;   /* We expect ECC parameters.  */
+  int kem = 0;    /* We expect KEM parameters.  */
 
   if (!cms)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -2807,6 +2858,14 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
       if (!cl->enc_val.algo)
         return gpg_error (GPG_ERR_ENOMEM);
     }
+  else if (n==3 && !memcmp (s, "kem", n))
+    {
+      /* As a kludge we use the first composite MLKEM OID
+       * (id-MLKEM768-RSA2048-SHA3-256) to pass the algo name */
+      cl->enc_val.algo = xtrystrdup ("1.3.6.1.5.5.7.6.55");
+      if (!cl->enc_val.algo)
+        return gpg_error (GPG_ERR_ENOMEM);
+    }
   else
     {
       cl->enc_val.algo = xtrymalloc (n+1);
@@ -2818,11 +2877,15 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
   s += n;
 
   ecdh = !strcmp (cl->enc_val.algo, "1.2.840.10045.2.1");
+  kem = !strcmp (cl->enc_val.algo, "1.3.6.1.5.5.7.6.55");
 
   xfree (cl->enc_val.value);  cl->enc_val.value = NULL;
   xfree (cl->enc_val.ecdh.e); cl->enc_val.ecdh.e = NULL;
   xfree (cl->enc_val.ecdh.encr_algo); cl->enc_val.ecdh.encr_algo = NULL;
   xfree (cl->enc_val.ecdh.wrap_algo); cl->enc_val.ecdh.wrap_algo = NULL;
+  xfree (cl->enc_val.ecdh.kdf_algo); cl->enc_val.ecdh.kdf_algo = NULL;
+  xfree (cl->enc_val.ecdh.pqc_algo); cl->enc_val.ecdh.pqc_algo = NULL;
+  xfree (cl->enc_val.ecdh.curve); cl->enc_val.ecdh.curve = NULL;
 
   while (*s == '(')
     {
@@ -2844,7 +2907,9 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
         return gpg_error (GPG_ERR_INV_SEXP);
       s++;
 
-      if (namelen == 1 && ((!ecdh && *name == 'a') || (ecdh && *name == 's')))
+      if ((namelen == 1 && ((!ecdh && !kem && *name == 'a')
+                            || (ecdh && *name == 's')))
+          || (namelen == 2 && !memcmp (name, "ct", namelen) && kem))
         {
           /* Store the "main" parameter into value. */
           xfree (cl->enc_val.value);
@@ -2854,9 +2919,10 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
           memcpy (cl->enc_val.value, s, n);
           cl->enc_val.valuelen = n;
         }
-      else if (!ecdh)
+      else if (!ecdh && !kem)
         ; /* Ignore all other parameters for RSA.  */
-      else if (namelen == 1 && *name == 'e')
+      else if ((namelen == 1 && *name == 'e' && ecdh)
+               || (namelen == 8 && !memcmp (name, "encr-key", namelen) && kem))
         {
           xfree (cl->enc_val.ecdh.e);
           cl->enc_val.ecdh.e = xtrymalloc (n);
@@ -2865,23 +2931,51 @@ ksba_cms_set_enc_val (ksba_cms_t cms, int idx, ksba_const_sexp_t encval)
           memcpy (cl->enc_val.ecdh.e, s, n);
           cl->enc_val.ecdh.elen = n;
         }
-      else if (namelen == 9 && !memcmp (name, "encr-algo", 9))
+      else if (namelen == 9 && !memcmp (name, "encr-algo", 9) && ecdh)
         {
           xfree (cl->enc_val.ecdh.encr_algo);
-          cl->enc_val.ecdh.encr_algo = xtrymalloc (n+1);
+          cl->enc_val.ecdh.encr_algo = xtryallocstr (s, n);
           if (!cl->enc_val.ecdh.encr_algo)
-            return gpg_error (GPG_ERR_ENOMEM);
-          memcpy (cl->enc_val.ecdh.encr_algo, s, n);
-          cl->enc_val.ecdh.encr_algo[n] = 0;
+            return gpg_error_from_syserror ();
         }
       else if (namelen == 9 && !memcmp (name, "wrap-algo", 9))
         {
           xfree (cl->enc_val.ecdh.wrap_algo);
-          cl->enc_val.ecdh.wrap_algo = xtrymalloc (n+1);
+          if (n == 11 && !memcmp (s, "aes256-wrap", n))
+            cl->enc_val.ecdh.wrap_algo = xtrystrdup ("2.16.840.1.101.3.4.1.45");
+          else if (n == 11 && !memcmp (s, "aes192-wrap", n))
+            cl->enc_val.ecdh.wrap_algo = xtrystrdup ("2.16.840.1.101.3.4.1.25");
+          else if (n == 11 && !memcmp (s, "aes128-wrap", n))
+            cl->enc_val.ecdh.wrap_algo = xtrystrdup ("2.16.840.1.101.3.4.1.5");
+          else
+            cl->enc_val.ecdh.wrap_algo = xtryallocstr (s, n);
           if (!cl->enc_val.ecdh.wrap_algo)
-            return gpg_error (GPG_ERR_ENOMEM);
-          memcpy (cl->enc_val.ecdh.wrap_algo, s, n);
-          cl->enc_val.ecdh.wrap_algo[n] = 0;
+            return gpg_error_from_syserror ();
+        }
+      else if (namelen == 3 && !memcmp (name, "kdf", namelen) && kem)
+        {
+          xfree (cl->enc_val.ecdh.kdf_algo);
+          if (n == 11 && !memcmp (s, "hkdf-sha256", n))
+            cl->enc_val.ecdh.kdf_algo
+              = xtrystrdup ("1.2.840.113549.1.9.16.3.28");
+          else
+            return gpg_error (GPG_ERR_DIGEST_ALGO);
+          if (!cl->enc_val.ecdh.kdf_algo)
+            return gpg_error_from_syserror ();
+        }
+      else if (namelen == 3 && !memcmp (name, "pqc", namelen) && kem)
+        {
+          xfree (cl->enc_val.ecdh.pqc_algo);
+          cl->enc_val.ecdh.pqc_algo = xtryallocstr (s, n);
+          if (!cl->enc_val.ecdh.pqc_algo)
+            return gpg_error_from_syserror ();
+        }
+      else if (namelen == 5 && !memcmp (name, "curve", namelen) && kem)
+        {
+          xfree (cl->enc_val.ecdh.curve);
+          cl->enc_val.ecdh.curve = xtryallocstr (s, n);
+          if (!cl->enc_val.ecdh.curve)
+            return gpg_error_from_syserror ();
         }
       /* (We ignore all other parameter of the (key value) form.)  */
 
@@ -4285,9 +4379,9 @@ build_enveloped_data_header (ksba_cms_t cms)
 
   /* See whether we have any ECDH recipients.  */
   for (certlist = cms->cert_list; certlist; certlist = certlist->next)
-    if (certlist->enc_val.ecdh.e)
+    if (certlist->enc_val.ecdh.e && !certlist->enc_val.ecdh.pqc_algo)
       {
-        any_ecdh = 1;
+        any_ecdh = 1;  /* plain ECDH is meant.  */
         break;
       }
 
@@ -4432,6 +4526,69 @@ build_enveloped_data_header (ksba_cms_t cms)
                              certlist->enc_val.value,
                              certlist->enc_val.valuelen);
 
+        }
+      else if (certlist->enc_val.ecdh.pqc_algo
+               && certlist->enc_val.ecdh.curve)  /* KEM */
+        {
+          const char *kemalgo;
+
+          _ksba_der_add_tag (dbld, CLASS_CONTEXT, 4); /* ori */
+          _ksba_der_add_oid (dbld, "1.2.840.113549.1.9.16.13.3");
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE); /* KEMRecipientInfo */
+          _ksba_der_add_ptr (dbld, 0, TYPE_INTEGER, "", 1); /* CMSVersion*/
+          /* rid.issuerAndSerialNumber */
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);  /* issuer */
+          err = _ksba_cert_get_issuer_dn_ptr (certlist->cert, &der, &derlen);
+          if (err)
+            goto leave;
+          _ksba_der_add_der (dbld, der, derlen); /* serialnumber */
+          err = _ksba_cert_get_serial_ptr (certlist->cert, &der, &derlen);
+          if (err)
+            goto leave;
+          _ksba_der_add_der (dbld, der, derlen);
+          _ksba_der_add_end (dbld);
+          /* KEMAlgorithmIdentifier */
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
+          kemalgo = _ksba_oid_from_pqc_curve (certlist->enc_val.ecdh.pqc_algo,
+                                              certlist->enc_val.ecdh.curve);
+          if (!kemalgo)
+            { /* No valid combination of pqc and curve found.  */
+              err = gpg_error (GPG_ERR_UNKNOWN_CURVE);
+              goto leave;
+            }
+          _ksba_der_add_oid (dbld, kemalgo);
+          _ksba_der_add_end (dbld);
+
+          /* Some checks.  */
+          if (!certlist->enc_val.value
+              || !certlist->enc_val.ecdh.kdf_algo
+              || !certlist->enc_val.ecdh.wrap_algo
+              || !certlist->enc_val.ecdh.e)
+            {
+              err = gpg_error (GPG_ERR_MISSING_VALUE);
+              goto leave;
+            }
+
+          /* kemct */
+          _ksba_der_add_ptr (dbld, 0, TYPE_OCTET_STRING,
+                             certlist->enc_val.value,
+                             certlist->enc_val.valuelen);
+          /* KeyDerivationAlgorithmIdentifier */
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
+          _ksba_der_add_oid (dbld, certlist->enc_val.ecdh.kdf_algo);
+          _ksba_der_add_end (dbld);
+          /* kekLength */
+          _ksba_der_add_ptr (dbld, 0, TYPE_INTEGER, "\x20", 1); // FIXME
+          /* KeyEncryptionAlgorithmIdentifier */
+          _ksba_der_add_tag (dbld, 0, TYPE_SEQUENCE);
+          _ksba_der_add_oid (dbld, certlist->enc_val.ecdh.wrap_algo);
+          _ksba_der_add_end (dbld);
+          /* EncryptedKey */
+          _ksba_der_add_ptr (dbld, 0, TYPE_OCTET_STRING,
+                             certlist->enc_val.ecdh.e,
+                             certlist->enc_val.ecdh.elen);
+
+          _ksba_der_add_end (dbld);
         }
       else /* ECDH */
         {

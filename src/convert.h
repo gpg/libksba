@@ -48,6 +48,7 @@ gpg_error_t _ksba_dn_to_str (const unsigned char *image, AsnNode node,
 gpg_error_t _ksba_derdn_to_str (const unsigned char *der, size_t derlen,
                               char **r_string);
 gpg_error_t _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength);
+gpg_error_t _ksba_dn_from_der (ksba_parser_t parser, char **r_string);
 
 /*-- oid.c --*/
 char *_ksba_oid_node_to_str (const unsigned char *image, AsnNode node);
@@ -56,6 +57,7 @@ gpg_error_t _ksba_oid_from_buf (const void *buffer, size_t buflen,
 
 const char *_ksba_map_wrap_algo (const char *oid);
 const char *_ksba_map_kdf_algo (const char *oid);
+const char *_ksba_oid_from_pqc_curve (const char *pqcalgo, const char *curve);
 
 
 

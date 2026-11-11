@@ -313,3 +313,35 @@ _ksba_map_kdf_algo (const char *oid)
   else
     return oid;
 }
+
+
+/* Retrun the OID used for composite KEM algoritms with QPCALGO and
+ * CURVE.  Returns NULL on error.  */
+const char *
+_ksba_oid_from_pqc_curve (const char *pqcalgo, const char *curve)
+{
+  int kyber;
+
+  if (!strcmp (pqcalgo, "kyber768"))
+    kyber = 768;
+  else if (!strcmp (pqcalgo, "kyber1024"))
+    kyber = 1024;
+  else
+    return NULL;
+
+  if (!strcmp (curve, "X25519") && kyber == 768)
+    return "1.3.6.1.5.5.7.6.58";
+  else if (!strcmp (curve, "nistp256") && kyber == 768)
+    return "1.3.6.1.5.5.7.6.59";
+  else if (!strcmp (curve, "bp256") && kyber == 768)
+    return "1.3.6.1.5.5.7.6.61";
+  else if (!strcmp (curve, "bp384") && kyber == 1024)
+    return "1.3.6.1.5.5.7.6.64";
+  else if (!strcmp (curve, "X448") && kyber == 1024)
+    return "1.3.6.1.5.5.7.6.65";
+  else if (!strcmp (curve, "nistp521") && kyber == 1024)
+    return "1.3.6.1.5.5.7.6.66";
+  else if (!strcmp (curve, "nistp384"))
+    return kyber == 768 ? "1.3.6.1.5.5.7.6.60" : "1.3.6.1.5.5.7.6.63";
+  return NULL;
+}

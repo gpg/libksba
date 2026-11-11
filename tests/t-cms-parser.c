@@ -362,18 +362,24 @@ one_file (const char *fname)
 
   if (verbose)
     {
-      int signer;
+      int signer, nodata;
 
-      for (signer=0; ; signer++)
+      for (signer=nodata=0; !nodata ; signer++)
         {
           err = dump_one_attribute_set (cms, signer, 0);
           if (gpg_err_code (err) == GPG_ERR_NOT_FOUND)
             break;  /* No more signer. */
-          fail_if_err2 (fname, err);
+          if (gpg_err_code (err) == GPG_ERR_NO_DATA)
+            nodata = 1;
+          else
+            fail_if_err2 (fname, err);
           err = dump_one_attribute_set (cms, signer, 1);
           if (gpg_err_code (err) == GPG_ERR_NOT_FOUND)
             break;  /* No more signer. */
-          fail_if_err2 (fname, err);
+          if (gpg_err_code (err) == GPG_ERR_NO_DATA)
+            nodata = 1;
+          else
+            fail_if_err2 (fname, err);
         }
     }
 
