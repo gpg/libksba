@@ -34,35 +34,74 @@ static int verbose;
 static void
 test_0 (void)
 {
-  static char *good_strings[] = {
-    "C=de,O=g10 Code,OU=qa,CN=Pépé le Moko",
-    "C= de,   O=g10 Code  ,  OU=qa ,CN=Pépé le Moko",
-    "CN=www.gnupg.org",
-    "   CN=www.gnupg.org  ",
-    "C=fr,L=Paris,CN=Julien Duvivier,EMAIL=julien@example.org",
-    NULL
+  static struct
+  { const char *string;
+    const char *canon;
+  } tv[] = {
+    { "C=de,O=g10 Code,OU=qa,CN=Pépé le Moko",
+      "C=de,O=g10 Code,OU=qa,CN=Pépé le Moko" },
+    { "C= de,  O=g10 Code , OU=qa ,CN=Pépé le Moko",
+      "C=de,O=g10 Code,OU=qa,CN=Pépé le Moko" },
+    { "C= de,   O=g10 Code  ,  OU=qa ,CN=Pépé le Moko",
+      "C=de,O=g10 Code,OU=qa,CN=Pépé le Moko" },
+    { "CN=www.gnupg.org",
+      "CN=www.gnupg.org" },
+    { "   CN=www.gnupg.org  ",
+      "CN=www.gnupg.org"       },
+    { "   CN=www.gnupg.org \\  ",
+      "CN=www.gnupg.org \\ "  },
+    { "   CN=www.gnupg.org \\      ",
+      "CN=www.gnupg.org \\ "  },
+    { "   CN=www.gnupg.org  \\ \\     ",  /* Two escaped spaces ... */
+      "CN=www.gnupg.org   \\ "  },        /* -> only last escaped.  */
+    { "CN=Edward Tester,OU=demo,O=g10 Code Gmbh,C=de\\ ",
+      "CN=Edward Tester,OU=demo,O=g10 Code Gmbh,C=de\\ " },
+    { "CN=Edward Tester,OU=demo,O=g10 Code Gmbh,C=de  \\ ",
+      "CN=Edward Tester,OU=demo,O=g10 Code Gmbh,C=de  \\ " },
+    { "CN=Edward Tester,OU=demo,O=g10 Code Gmbh,C=de  \\   ",
+      "CN=Edward Tester,OU=demo,O=g10 Code Gmbh,C=de  \\ " },
+    { "C=fr,L=Paris,CN=Julien Duvivier,EMAIL=julien@example.org",
+      "C=fr,L=Paris,CN=Julien Duvivier,"
+      "1.2.840.113549.1.9.1=#6A756C69656E406578616D706C652E6F7267" }
   };
   gpg_error_t err;
   int i;
   unsigned char *buf;
-  size_t off, len;
+  size_t off, len, buflen;
+  char *string;
 
-  for (i=0; good_strings[i]; i++)
+  for (i=0; i < DIM(tv); i++)
     {
-      err = ksba_dn_str2der (good_strings[i], &buf, &len);
+      err = ksba_dn_str2der (tv[i].string, &buf, &buflen);
       if (err)
         {
           fprintf (stderr, "%s:%d: ksba_dn_str2der failed for `%s': %s\n",
-                   __FILE__,__LINE__, good_strings[i], gpg_strerror (err));
+                   __FILE__,__LINE__, tv[i].string, gpg_strerror (err));
           exit (1);
         }
-      err = ksba_dn_teststr (good_strings[i], 0, &off, &len);
+      err = ksba_dn_teststr (tv[i].string, 0, &off, &len);
       if (err)
         {
           fprintf (stderr, "%s:%d: ksba_dn_teststr failed for `%s': %s\n",
-                   __FILE__,__LINE__, good_strings[i], gpg_strerror (err));
+                   __FILE__,__LINE__, tv[i].string, gpg_strerror (err));
           exit (1);
         }
+      /* Reconvert the string.  */
+      err = ksba_dn_der2str (buf, buflen, &string);
+      if (err)
+        {
+          fprintf (stderr, "%s:%d: ksba_dn_der2str failed for `%s': %s\n",
+                   __FILE__,__LINE__, tv[i].string, gpg_strerror (err));
+          exit (1);
+        }
+      if (strcmp (tv[i].canon, string))
+        {
+          fprintf (stderr, "%s:%d: re-converting failed\n"
+                   "  want: ->%s<-\n"
+                   "   got: ->%s<-\n",
+                   __FILE__,__LINE__, tv[i].canon, string);
+        }
+      xfree (string);
       xfree (buf);
     }
 }
@@ -96,7 +135,7 @@ test_1 (void)
       if (!err)
         fail ("ksba_dn_teststr returned no error");
       if (!quiet)
-        printf ("string ->%s<-  error at %lu.%lu (%.*s)\n",
+        printf ("string ->%s<-  error at %lu.%lu expected (%.*s)\n",
                 empty_elements[i], (unsigned long)off, (unsigned long)len,
                 (int)len, empty_elements[i]+off);
       xfree (buf);
@@ -125,7 +164,7 @@ test_2 (void)
       if (!err)
         fail ("ksba_dn_test_str returned no error");
       if (!quiet)
-        printf ("string ->%s<-  error at %lu.%lu (%.*s)\n",
+        printf ("string ->%s<-  error at %lu.%lu expected (%.*s)\n",
                 invalid_labels[i], (unsigned long)off, (unsigned long)len,
                 (int)len, invalid_labels[i]+off);
       xfree (buf);
@@ -169,6 +208,7 @@ main (int argc, char **argv)
       len = fread (inputbuf, 1, sizeof inputbuf, stdin);
       if (!feof (stdin))
         fail ("read error or input too large");
+      inputbuf[len] = 0;
 
       err = ksba_dn_str2der (inputbuf, &buf, &len);
       fail_if_err (err);

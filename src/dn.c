@@ -46,11 +46,11 @@
 static const struct {
   const char *name;
   int source; /* 0 = unknown
-                 1 = rfc2253
-                 2 = David Chadwick, July 2003
-                 <draft-ietf-pkix-dnstrings-02.txt>
-                 3 = Peter Gutmann
-              */
+               * 1 = rfc2253  -- these are the canonical names.
+               * 2 = David Chadwick, July 2003
+               *     <draft-ietf-pkix-dnstrings-02.txt>
+               * 3 = Peter Gutmann
+               */
   const char *description;
   size_t      oidlen;
   const unsigned char *oid;  /* DER encoded OID.  */
@@ -175,7 +175,7 @@ append_utf8_value (const unsigned char *value, size_t length,
       if (s != value)
         append_quoted (sb, value, s-value, 0);
       if (n==length)
-        return; /* ready */
+        break; /* ready */
       if (!(*s & 0x80))
         nmore = 0; /* Not expected here: high bit not set.  */
       else if ( (*s & 0xe0) == 0xc0 ) /* 110x xxxx */
@@ -252,7 +252,7 @@ append_latin1_value (const unsigned char *value, size_t length,
       if (s != value)
         append_quoted (sb, value, s-value, 0);
       if (n==length)
-        return; /* ready */
+        break; /* ready */
       assert ((*s & 0x80));
       tmp[0] = 0xc0 | ((*s >> 6) & 3);
       tmp[1] = 0x80 | ( *s & 0x3f );
@@ -305,7 +305,7 @@ append_ucs4_value (const unsigned char *value, size_t length,
       if (s != value)
         append_quoted (sb, value, s-value, 3);
       if (n>=length)
-        return; /* ready */
+        break; /* ready */
       if (length - n < 4)
         { /* This is an invalid encoding - better stop after adding
              one impossible characater */
@@ -404,7 +404,7 @@ append_ucs2_value (const unsigned char *value, size_t length,
         { /* This is an invalid encoding - better stop after adding
              one impossible characater */
           put_stringbuf_mem (sb, "\xff", 1);
-          return;
+          break;
         }
       c  = *s++ << 8;
       c |= *s++;
@@ -627,50 +627,105 @@ _ksba_dn_to_str (const unsigned char *image, AsnNode node, char **r_string)
   return err;
 }
 
-
-/* Create a new decoder and run it for the given element */
-/* Fixme: this code is duplicated from cms-parser.c */
+
+/* Worker function for _ksba_dn_from_der.  */
 static gpg_error_t
-create_and_run_decoder (ksba_reader_t reader, const char *elem_name,
-                        AsnNode *r_root,
-                        unsigned char **r_image, size_t *r_imagelen)
+dn_from_der (ksba_parser_t parser, struct stringbuf *sb)
 {
   gpg_error_t err;
-  ksba_asn_tree_t crl_tree;
-  BerDecoder decoder;
+  const unsigned char *buf;
+  size_t buflen;
+  struct ksba_tlv_s tlv;
+  int usehex, any;
 
-  err = ksba_asn_create_tree ("tmttv2", &crl_tree);
-  if (err)
-    return err;
-
-  decoder = _ksba_ber_decoder_new ();
-  if (!decoder)
+  if ((err = ksba_parser_next (parser)))
+    goto leave;
+  if ((err = ksba_expect_sequence (parser)))
+    goto leave;
+  any = 0;
+  while (!(err = ksba_parser_next (parser)))
     {
-      ksba_asn_tree_release (crl_tree);
-      return gpg_error (GPG_ERR_ENOMEM);
-    }
+      if ((err = ksba_expect_set (parser)))
+        goto leave;
+      if ((err = ksba_parser_next (parser)))
+        goto leave;
+      if ((err = ksba_expect_sequence (parser)))
+        goto leave;
+      if ((err = ksba_parser_next (parser)))
+        goto leave;
+      if ((err = ksba_expect_object_id (parser, &buf, &buflen)))
+        goto leave;
 
-  err = _ksba_ber_decoder_set_reader (decoder, reader);
-  if (err)
+      if (any)
+        put_stringbuf (sb, "\x01"); /* to be replaced by ',' */
+      else
+        any = 1;
+      if ((err = append_atv_oid (buf, buflen, sb, &usehex)))
+        goto leave;
+      if ((err = ksba_parser_next (parser)))
+        goto leave;
+      ksba_parser_get_tag (parser, &tlv);
+      if ((err = ksba_expect_object (parser, tlv.cls, tlv.tag, &buf, &buflen)))
+        goto leave;
+      if ((err = append_atv_val (buf, buflen, usehex? 0:tlv.tag, sb)))
+        goto leave;
+    }
+  if (gpg_err_code (err) == GPG_ERR_EOF)
+    err = 0;
+
+ leave:
+  return err;
+}
+
+
+/* This function is an alternative to _ksba_dn_to_str which works on a
+ * DER parser context instead of the AsnNode structure.  */
+gpg_error_t
+_ksba_dn_from_der (ksba_parser_t tlv, char **r_string)
+{
+  gpg_error_t err;
+  struct stringbuf sb;
+  char *tmpstr, *d, *s;
+  int any;
+
+  *r_string = NULL;
+
+  init_stringbuf (&sb, 100);
+  err = dn_from_der (tlv, &sb);
+  if (!err)
     {
-      ksba_asn_tree_release (crl_tree);
-      _ksba_ber_decoder_release (decoder);
-      return err;
+      tmpstr = get_stringbuf (&sb);
+      if (!tmpstr)
+        err = gpg_error_from_syserror ();
+      else if (!*tmpstr)
+        { /* Empty result - that is easy.  */
+          *r_string = tmpstr;
+          tmpstr = NULL;
+        }
+      else if (!(*r_string = xtrymalloc (strlen (tmpstr)+1)))
+        err = gpg_error_from_syserror ();
+      else
+        { /* Revert the string and insert the commas */
+          d = *r_string;
+          any = 0;
+          for (s = tmpstr + strlen (tmpstr) - 1; s > tmpstr; s--)
+            if (*s == '\x01')
+              {
+                *s = 0; /* Terminate so that the next stpcpy works.  */
+                if (any)
+                  *d++ = ',';
+                else
+                  any = 1;
+                d = stpcpy (d, s+1);
+              }
+          if (any)
+            *d++ = ',';
+          stpcpy (d, s);
+        }
+      xfree (tmpstr);
     }
+  deinit_stringbuf (&sb);
 
-  err = _ksba_ber_decoder_set_module (decoder, crl_tree);
-  if (err)
-    {
-      ksba_asn_tree_release (crl_tree);
-      _ksba_ber_decoder_release (decoder);
-      return err;
-    }
-
-  err = _ksba_ber_decoder_decode (decoder, elem_name, 0,
-                                  r_root, r_image, r_imagelen);
-
-  _ksba_ber_decoder_release (decoder);
-  ksba_asn_tree_release (crl_tree);
   return err;
 }
 
@@ -679,48 +734,34 @@ gpg_error_t
 _ksba_derdn_to_str (const unsigned char *der, size_t derlen, char **r_string)
 {
   gpg_error_t err;
-  AsnNode root;
-  unsigned char *image;
-  size_t imagelen;
-  ksba_reader_t reader;
+  ksba_parser_t tlv;
 
-  err = ksba_reader_new (&reader);
-  if (err)
-    return err;
-  err = ksba_reader_set_mem (reader, der, derlen);
-  if (err)
-    {
-      ksba_reader_release (reader);
-      return err;
-    }
-  err = create_and_run_decoder (reader,
-                                "TMTTv2.CertificateList.tbsCertList.issuer",
-                                &root, &image, &imagelen);
-  ksba_reader_release (reader);
-  if (!err)
-    {
-      err = _ksba_dn_to_str (image, root->down, r_string);
-      _ksba_asn_release_nodes (root);
-      xfree (image);
-    }
+  tlv = ksba_parser_new (der, derlen, 1, NULL);
+  if (!tlv)
+    return gpg_error_from_syserror ();
+
+  err = _ksba_dn_from_der (tlv, r_string);
+  ksba_parser_release (tlv);
+
   return err;
 }
 
+
 
 /*
-   Convert a string back to DN
-*/
+ *  Convert a string back to DN
+ */
 
 /* Count the number of bytes in a quoted string, return a pointer to
-   the character after the string or NULL in case of an paring error.
-   The number of bytes needed to store the string verbatim will be
-   return as RESULT.  With V2COMAP true, the string is assumed to be
-   in v2 quoting (but w/o the leading quote character)
- */
+ * the character after the string or NULL in case of an parsing error.
+ * The number of bytes needed to store the string verbatim will be
+ * return as RESULT.  With V2COMPAT true, the string is assumed to be
+ * in v2 quoting (but w/o the leading quote character).  */
 static const char *
-count_quoted_string (const char *string, size_t *result,
+count_quoted_string (const char *string_arg, size_t *result,
                      int v2compat, int *stringtype)
 {
+  const unsigned char *string = string_arg;
   const unsigned char *s;
   int nbytes = 0;
   int highbit = 0;
@@ -781,8 +822,18 @@ count_quoted_string (const char *string, size_t *result,
         }
     }
 
-  /* Fixme: Should be remove spaces or white spces from the end unless
-     they are not escaped or we are in v2compat mode?  See TODO */
+  /* Unless we are in v2compat mode we trim all trailing spaces up
+   * until we see an escaped space while scanning backwards.  */
+  if (!v2compat)
+    {
+      while (s > string && s[-1] == ' '  && nbytes)
+        {
+          s--;
+          if (s > string && s[-1] == '\\')
+            break;  /* escaped space found.  */
+          nbytes--;
+        }
+    }
 
   if (highbit || nonprint)
     *stringtype = TYPE_UTF8_STRING;
@@ -944,7 +995,7 @@ parse_rdn (const unsigned char *string, const char **endp,
     return gpg_error (GPG_ERR_INV_NAME);
 
   s++;
-  while (*s == ' ')
+  while (*s == ' ')  /* Skip leading spaces from the value.  */
     s++;
   string = s;
 
@@ -1202,7 +1253,8 @@ _ksba_dn_from_str (const char *string, char **rbuf, size_t *rlength)
 }
 
 
-
+/* Note that this function will emit only canonical names and uses the
+ * OIDS for the other names.  This is required for consistency.  */
 gpg_error_t
 ksba_dn_der2str (const void *der, size_t derlen, char **rstring)
 {

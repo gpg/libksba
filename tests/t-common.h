@@ -22,6 +22,7 @@ void sha1_hash_buffer (char *outbuf, const char *buffer, size_t length);
 void sha256_hash_buffer (char *outbuf, const char *buffer, size_t length);
 
 
+#define DIM(v) (sizeof(v)/sizeof((v)[0]))
 
 #define digitp(p)   (*(p) >= '0' && *(p) <= '9')
 
