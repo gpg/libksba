@@ -456,6 +456,28 @@ _ksba_parser_next_ (ksba_parser_t tlv, int lno)
 }
 
 
+/* Return information about the current tag; this function may be
+ * called after successful ksba_parser_next.  The return value is the
+ * value of the tag.  RESULT may be NULL if only the return value is
+ * required.  */
+unsigned long
+ksba_parser_get_tag (ksba_parser_t tlv, ksba_tlv_t result)
+{
+  if (result)
+    {
+      result->length = tlv->ti.length;
+      result->tag = tlv->ti.tag;
+      result->nhdr = tlv->ti.nhdr > 255? 255 : tlv->ti.nhdr;
+      result->cls = tlv->ti.class;
+      result->ndef = !!tlv->ti.ndef;
+      result->cons = !!tlv->ti.is_constructed;
+      result->der  = !tlv->ti.non_der;
+      result->_rfu = 0;
+    }
+  return tlv->ti.tag;
+}
+
+
 /* Skip over the value of the current tag.  Does not yet work for ndef
  * containers.  */
 void

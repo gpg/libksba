@@ -1371,6 +1371,12 @@ _ksba_parser_next (ksba_parser_t tlv, int lno)
   return _ksba_parser_next_ (tlv, lno);
 }
 
+unsigned long
+ksba_parser_get_tag (ksba_parser_t tlv, ksba_tlv_t result)
+{
+  return _ksba_parser_get_tag (tlv, result);
+}
+
 void
 ksba_parser_skip (ksba_parser_t tlv)
 {

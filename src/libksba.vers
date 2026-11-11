@@ -120,7 +120,7 @@ KSBA_0.9 {
     ksba_der_builder_get;
 
     _ksba_parser_new; _ksba_parser_release; _ksba_parser_next;
-    ksba_parser_skip;
+    ksba_parser_get_tag; ksba_parser_skip;
     ksba_parser_getnumber; ksba_parser_getstring; ksba_parser_setflag;
     ksba_expect_sequence; ksba_expect_context_tag; ksba_expect_set;
     ksba_expect_object; ksba_expect_octet_string; ksba_expect_integer;

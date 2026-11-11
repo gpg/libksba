@@ -30,6 +30,7 @@ ksba_parser_t _ksba_parser_new_ (const unsigned char *buffer,
 ksba_parser_t _ksba_parser_release_ (ksba_parser_t tlv, int lno);
 gpg_error_t _ksba_parser_next_ (ksba_parser_t tlv, int lno);
 
+unsigned long _ksba_parser_get_tag (ksba_parser_t tlv, ksba_tlv_t result);
 void _ksba_parser_skip (ksba_parser_t tlv);
 
 size_t _ksba_parser_getnumber (ksba_parser_t tlv, ksba_parser_info_t what);

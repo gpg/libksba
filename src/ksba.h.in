@@ -686,6 +686,7 @@ gpg_error_t _ksba_parser_next (ksba_parser_t tlv, int lno);
 #define ksba_parser_release(a)   _ksba_parser_release ((a), __LINE__)
 #define ksba_parser_next(a)      _ksba_parser_next ((a), __LINE__)
 
+unsigned long ksba_parser_get_tag (ksba_parser_t tlv, ksba_tlv_t result);
 void ksba_parser_skip (ksba_parser_t tlv);
 size_t ksba_parser_getnumber (ksba_parser_t tlv, ksba_parser_info_t what);
 const char *ksba_parser_getstring (ksba_parser_t tlv, ksba_parser_info_t what);

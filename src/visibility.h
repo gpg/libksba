@@ -212,6 +212,7 @@
 #define _ksba_parser_new                   _ksba_parser_new_
 #define _ksba_parser_release               _ksba_parser_release_
 #define _ksba_parser_next                  _ksba_parser_next_
+#define ksba_parser_get_tag                _ksba_parser_get_tag
 #define ksba_parser_skip                   _ksba_parser_skip
 #define ksba_parser_getnumber              _ksba_parser_getnumber
 #define ksba_parser_getstring              _ksba_parser_getstring
@@ -443,6 +444,7 @@ int ksba_asn_delete_structure (void *dummy);
 #undef _ksba_parser_new
 #undef _ksba_parser_release
 #undef _ksba_parser_next
+#undef ksba_parser_get_tag
 #undef ksba_parser_skip
 #undef ksba_parser_getnumber
 #undef ksba_parser_getstring
@@ -639,6 +641,7 @@ MARK_VISIBLE (ksba_der_builder_get)
 MARK_VISIBLE_SUF (_ksba_parser_new)
 MARK_VISIBLE_SUF (_ksba_parser_release)
 MARK_VISIBLE_SUF (_ksba_parser_next)
+MARK_VISIBLE (ksba_parser_get_tag)
 MARK_VISIBLE (ksba_parser_skip)
 MARK_VISIBLE (ksba_parser_getnumber)
 MARK_VISIBLE (ksba_parser_getstring)

@@ -229,5 +229,6 @@ EXPORTS
       ksba_expect_object_id           @180
       ksba_expect_null                @181
       ksba_parse_tag                  @182
+      ksba_parser_get_tag             @183
 
-      ksba_cms_verbosity              @183
+      ksba_cms_verbosity              @184
