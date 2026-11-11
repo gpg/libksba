@@ -3,14 +3,9 @@
 * src/dn.c:
 
 ** Check that error handling of bad utf-8 encoding is correct
-** There is an ambiguity in rfc2253.
-This is related to the handling of spaces around delimiters.  At one
-place it talks about whitespace and few lines later it talks about
-just the space characters which must be ignored.  How should that be
-solved?  This is only related to spaces at the beginning or end of a
-name part when old style quoting is not used.
+** Implement multi-value string -> DER
 
-* src/der-decoder.c:  
+* src/der-decoder.c:
 
 ** should work on a stripped down parse tree
 
@@ -30,8 +25,6 @@ name part when old style quoting is not used.
 ** can't handle CRL infos in certificates
    This is not a problem within the Aegypten project as CRL aren't be
    retrieved by online means.
-** cant't handle unprotected attributes
-   e.g. for counter signatures.  Not needed in Aegypten.
 
 
 * src/keyinfo.c

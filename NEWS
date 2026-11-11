@@ -11,6 +11,7 @@ Noteworthy changes in version 1.9.0 (unreleased) [C__/A__/R_]
    ksba_parser_new                 NEW.
    ksba_parser_release             NEW.
    ksba_parser_next                NEW.
+   ksba_parser_get_tag             NEW.
    ksba_parser_skip                NEW.
    ksba_parser_getnumber           NEW.
    ksba_parser_getstring           NEW.

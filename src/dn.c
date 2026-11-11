@@ -636,6 +636,7 @@ dn_from_der (ksba_parser_t parser, struct stringbuf *sb)
   const unsigned char *buf;
   size_t buflen;
   struct ksba_tlv_s tlv;
+  size_t level;
   int usehex, any;
 
   if ((err = ksba_parser_next (parser)))
@@ -643,7 +644,9 @@ dn_from_der (ksba_parser_t parser, struct stringbuf *sb)
   if ((err = ksba_expect_sequence (parser)))
     goto leave;
   any = 0;
-  while (!(err = ksba_parser_next (parser)))
+  level = ksba_parser_getnumber (parser, KSBA_PARSER_LEVEL);
+  while (!(err = ksba_parser_next (parser))
+         && level == ksba_parser_getnumber (parser, KSBA_PARSER_LEVEL))
     {
       if ((err = ksba_expect_set (parser)))
         goto leave;
@@ -670,7 +673,9 @@ dn_from_der (ksba_parser_t parser, struct stringbuf *sb)
       if ((err = append_atv_val (buf, buflen, usehex? 0:tlv.tag, sb)))
         goto leave;
     }
-  if (gpg_err_code (err) == GPG_ERR_EOF)
+  if (!err)
+    ksba_parser_setflag (parser, KSBA_PARSER_PENDING);
+  else if (gpg_err_code (err) == GPG_ERR_EOF)
     err = 0;
 
  leave:
