@@ -386,7 +386,7 @@ append_ucs2_value (const unsigned char *value, size_t length,
       length -= 2;
     }
   if (!(length & 1) && length >= 2
-      && !value[length-2] == 0 && value[length-1] == ' ')
+      && !value[length-2] && value[length-1] == ' ')
     {
       space_at_the_end = 1;
       length -= 2;
@@ -399,7 +399,7 @@ append_ucs2_value (const unsigned char *value, size_t length,
       if (s != value)
         append_quoted (sb, value, s-value, 1);
       if (n>=length)
-        return; /* ready */
+        break; /* ready */
       if (length - n < 2)
         { /* This is an invalid encoding - better stop after adding
              one impossible characater */
