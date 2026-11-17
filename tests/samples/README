@@ -93,3 +93,8 @@ ML-DSA sample self-signed certificates
 
  mldsa65-rfc9881.crt    from RFC9881
  mldsa87-rfc9881.crt
+
+ML-KEM sample certificates
+
+ mlkem768-np256.crt     from draft-ietf-lamps-pq-composite-kem-22.txt
+ mlkem768-np256.pkcs8   from draft-ietf-lamps-pq-composite-kem-22.txt
