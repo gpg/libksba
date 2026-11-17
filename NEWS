@@ -1,4 +1,4 @@
-Noteworthy changes in version 1.9.0 (unreleased) [C__/A__/R_]
+Noteworthy changes in version 1.9.0 (2026-11-17) [C25/A17/R0]
 ------------------------------------------------
 
  * New set of functions for DER and BER parsing.  [rK6d66fba22d]
@@ -60,6 +60,8 @@ Noteworthy changes in version 1.9.0 (unreleased) [C__/A__/R_]
    KSBA_LOG_VERBOSE                NEW const.
    KSBA_LOG_DEBUG                  NEW const.
    KSBA_LOG_DERPARSER              NEW const
+
+ Release-info: https://dev.gnupg.org/T8566
 
 
 Noteworthy changes in version 1.8.1 (2026-08-24) [C24/A16/R1]
