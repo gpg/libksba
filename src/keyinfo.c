@@ -1314,6 +1314,8 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
   unsigned long n;
   const char *algo_oid;
   char *curve_oid = NULL;
+  const unsigned char *curve_name = NULL;
+  int curve_namelen;
   pkalgo_t pkalgo, force_pkalgo;
   int i;
   struct {
@@ -1328,6 +1330,8 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
   ksba_der_t dbld2 = NULL;
   unsigned char *tmpder;
   size_t tmpderlen;
+  int is_composite = 0;
+  int in_secondpart = 0;
 
   if (!sexp)
     return gpg_error (GPG_ERR_INV_VALUE);
@@ -1347,6 +1351,23 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
     s += 7;
   else if (n == 10 || !memcmp (s, "public-key", 10))
     s += 10;
+  else if (n == 13 || !memcmp (s, "composite-key", 13))
+    {
+      is_composite = 1;
+      s += 13;
+      if (*s != '(')
+        return gpg_error (GPG_ERR_INV_SEXP);
+      s++;
+      n = strtoul (s, &endp, 10);
+      s = endp;
+      if (!n || *s != ':')
+        return gpg_error (GPG_ERR_INV_SEXP); /* No empty lengths.  */
+      s++;
+      if (n == 10 || !memcmp (s, "public-key", 10))
+        s += 10;
+      else
+        return gpg_error (GPG_ERR_UNKNOWN_SEXP);
+    }
   else
     return gpg_error (GPG_ERR_UNKNOWN_SEXP);
 
@@ -1363,12 +1384,21 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
 
   algo_oid = oid_from_buffer (s, n, &pkalgo, algoinfomode);
   if (!algo_oid)
-    return gpg_error (GPG_ERR_UNSUPPORTED_ALGORITHM);
+    {
+      if (n == 8 && !strncmp (s, "kyber768", 8))
+        pkalgo = PKALGO_MLKEM768;
+      else if (n == 9 && !strncmp (s, "kyber1024", 9))
+        pkalgo = PKALGO_MLKEM1024;
+      else
+        return gpg_error (GPG_ERR_UNSUPPORTED_ALGORITHM);
+    }
   s += n;
 
   /* Collect all the values.  */
   force_pkalgo = 0;
-  for (parmidx = 0; *s != ')' ; parmidx++)
+  parmidx = 0;
+ second_part:
+  for (; *s != ')' ; parmidx++)
     {
       if (parmidx >= DIM(parm))
         {
@@ -1417,6 +1447,8 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
           && !memcmp (parm[parmidx].name, "curve", 5)
           && !curve_oid)
         {
+          curve_name = parm[parmidx].value;
+          curve_namelen = parm[parmidx].valuelen;
           curve_oid = get_ecc_curve_oid (parm[parmidx].value,
                                          parm[parmidx].valuelen, &force_pkalgo);
           parmidx--; /* No need to store this parameter.  */
@@ -1437,8 +1469,59 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
       err = gpg_error (GPG_ERR_INV_SEXP);
       goto leave;
     }
+  if (is_composite && !in_secondpart)
+    {
+      s++;
+      if (*s != '(')
+        {
+          err = gpg_error (digitp(s)? GPG_ERR_UNKNOWN_SEXP:GPG_ERR_INV_SEXP);
+          goto leave;
+        }
+      s++;
+      n = strtoul (s, &endp, 10);
+      s = endp;
+      if (!n || *s != ':')
+        {
+          err = gpg_error (GPG_ERR_INV_SEXP);
+          goto leave;
+        }
+      s++;
+      if (n == 10 || !memcmp (s, "public-key", 10))
+        s += 10;
+      else
+        {
+          err = gpg_error (GPG_ERR_UNKNOWN_SEXP);
+          goto leave;
+        }
 
-  if (force_pkalgo)
+      if (*s != '(')
+        {
+          err = gpg_error (digitp (s)? GPG_ERR_UNKNOWN_SEXP : GPG_ERR_INV_SEXP);
+          goto leave;
+        }
+      s++;
+      n = strtoul (s, &endp, 10);
+      s = endp;
+      if (!n || *s != ':')
+        {
+          err = gpg_error (GPG_ERR_INV_SEXP);
+          goto leave;
+        }
+      s++;
+      if (!(n == 4 && !strncmp (s, "ecdh", 4)))
+        {
+          gpgrt_log_info ("%s: error: composite key has no \"ecdh\" part\n",
+                          __func__);
+          err = gpg_error (GPG_ERR_INV_KEYINFO);
+          goto leave;
+        }
+      s += n;
+
+      in_secondpart = 1;
+      goto second_part;
+    }
+
+  if (force_pkalgo && !is_composite)
     pkalgo = force_pkalgo;
 
   /* Describe the parameters in the order we want them.  For DSA wie
@@ -1468,6 +1551,23 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
     case PKALGO_MLDSA65:
     case PKALGO_MLDSA87:
       parmdesc = algoinfomode? "" : "p";
+      break;
+    case PKALGO_MLKEM768:
+    case PKALGO_MLKEM1024:
+      /* Scan the table for a Kyber/Curve combination to get the OID.  */
+      algo_oid = NULL;
+      for (i=0; pk_algo_table[i].oid; i++)
+        if (pk_algo_table[i].supported == SUPPORTED_COMPOSITE
+            && curve_name
+            && !strncmp (curve_name, pk_algo_table[i].algo_string,
+                         curve_namelen))
+          {
+            algo_oid = pk_algo_table[i].oidstring;
+            break;
+          }
+      if (!algo_oid)
+        return gpg_error (GPG_ERR_UNSUPPORTED_ALGORITHM);
+      parmdesc = algoinfomode? "" : "pq";
       break;
     default:
       err = gpg_error (GPG_ERR_UNKNOWN_ALGORITHM);
@@ -1555,6 +1655,70 @@ _ksba_keyinfo_from_sexp (ksba_const_sexp_t sexp, int algoinfomode,
                 _ksba_der_add_bts (dbld, parm[i].value, parm[i].valuelen, 0);
                 break;
               }
+        }
+      else if (*parmdesc == 'p' && parmdesc[1] == 'q' && !parmdesc[2])
+        {
+          /* This is MLKEM - P (Kyber pubkey) and Q (ECC pubkey) are
+           * contatenated and directly written as a bit string.  */
+          const unsigned char *part1, *part2;
+          size_t part1len, part2len;
+          unsigned char *both;
+
+          for (i=0; i < parmidx; i++)
+            if (parm[i].namelen == 1 && parm[i].name[0] == 'p')
+              break;
+          if (!(i < parmidx))
+            {
+              err = gpg_error (GPG_ERR_MISSING_VALUE);
+              goto leave;
+            }
+          if (parm[i].valuelen != (pkalgo == PKALGO_MLKEM768? 1184 : 1568))
+            {
+              gpgrt_log_info ("%s: error: "
+                              "invalid length for ML-KEM part (%d)\n",
+                              __func__, parm[i].valuelen);
+              err = gpg_error (GPG_ERR_INV_KEYINFO);
+              goto leave;
+            }
+          part1 = parm[i].value;
+          part1len = parm[i].valuelen;
+
+          for (i=0; i < parmidx; i++)
+            if (parm[i].namelen == 1 && parm[i].name[0] == 'q')
+              break;
+          if (!(i < parmidx))
+            {
+              err = gpg_error (GPG_ERR_MISSING_VALUE);
+              goto leave;
+            }
+
+          /* A simple check on plausibel values.  */
+          if (!(parm[i].valuelen == 1+32+32
+                || parm[i].valuelen == 1+48+48
+                || parm[i].valuelen == 1+64+64
+                || parm[i].valuelen == 1+66+66
+                || parm[i].valuelen == 32
+                || parm[i].valuelen == 56))
+            {
+              gpgrt_log_info ("%s: error: "
+                              "invalid length for ECC part (%d)\n",
+                              __func__, parm[i].valuelen);
+              err = gpg_error (GPG_ERR_INV_KEYINFO);
+              goto leave;
+            }
+          part2 = parm[i].value;
+          part2len = parm[i].valuelen;
+
+          both = xtrymalloc (part1len + part2len);
+          if (!both)
+            {
+              err = gpg_error_from_syserror ();
+              goto leave;
+            }
+          memcpy (both, part1, part1len);
+          memcpy (both+part1len, part2, part2len);
+          _ksba_der_add_bts (dbld, both, part1len+part2len, 0);
+          xfree (both);
         }
       else  /* Non-ECC - embed the values.  */
         {
