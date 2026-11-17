@@ -1094,6 +1094,10 @@ _ksba_keyinfo_to_sexp (const unsigned char *der, size_t derlen,
           put_stringbuf_sexp (&sb, "curve");
           put_stringbuf_sexp (&sb, pk_algo_table[algoidx].oidstring);
           put_stringbuf (&sb, ")");
+          if (pk_algo_table[algoidx].pkalgo == PKALGO_ED25519)
+            put_stringbuf (&sb, "(5:flags5:eddsa)");
+          else if (pk_algo_table[algoidx].pkalgo == PKALGO_X25519)
+            put_stringbuf (&sb, "(5:flags9:djb-tweak)");
         }
     }
 
