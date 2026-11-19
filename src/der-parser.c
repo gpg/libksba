@@ -94,7 +94,7 @@ parser_dump_tag (const char *text, int lno, ksba_parser_t tlv)
   ti = &tlv->ti;
 
   gpgrt_log_debug ("ksba_parser:%s:%d: %zu@%04zu class=%d tag=%lu %c"
-                   " len=%zu%s nhdr=%zu\n",
+                   " len=%lu%s nhdr=%zu\n",
                    text, lno, tlv->origoff,
                    ksba_parser_getnumber (tlv, KSBA_PARSER_OFFSET) - ti->nhdr,
                    ti->class, ti->tag, ti->is_constructed?'c':'p',
@@ -158,7 +158,7 @@ parse_tag (unsigned char const **buffer, size_t *size, struct tag_info *ti,
     {
       /* Data larger than buffer. */
       if (verbose)
-        gpgrt_log_debug ("%s: ti->length=%zu for a buffer of size=%zu\n",
+        gpgrt_log_debug ("%s: ti->length=%lu for a buffer of size=%zu\n",
                          __func__, ti->length, *size);
       if (!ti->err_string)
         ti->err_string = "provided buffer too short to receive the value";
@@ -485,7 +485,7 @@ ksba_parser_skip (ksba_parser_t tlv)
 {
   tlv->lastfunc = __func__;
   if (!(tlv->bufsize >= tlv->ti.length))
-    gpgrt_log_bug ("ksba:%s: bufsize=%zu length=%zu\n",
+    gpgrt_log_bug ("ksba:%s: bufsize=%zu length=%lu\n",
                    __func__, tlv->bufsize, tlv->ti.length);
   tlv->buffer += tlv->ti.length;
   tlv->bufsize -= tlv->ti.length;
@@ -847,7 +847,7 @@ cram_octet_string (ksba_parser_t tlv, int testmode)
           return 0;
         }
       if (tlv->verbosity > 1)
-        gpgrt_log_debug ("%s:%s ti.ndef=%d ti.tag=%lu ti.length=%zu"
+        gpgrt_log_debug ("%s:%s ti.ndef=%d ti.tag=%lu ti.length=%lu"
                          " (n %zu->%zu)\n",
                          __func__, testmode?"test:":"",
                          ti.ndef, ti.tag, ti.length, save_n, n);
