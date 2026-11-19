@@ -1,6 +1,7 @@
-Noteworthy changes in version 1.9.1 (unreleased) [C25/A17/R_]
+Noteworthy changes in version 1.9.1 (2026-11-19) [C25/A17/R1]
 ------------------------------------------------
 
+ * Fix build regression on Windows.
 
  Release-info: https://dev.gnupg.org/T8566
 
